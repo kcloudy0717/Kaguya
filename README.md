@@ -50,7 +50,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - CMake Version 3.15
 - C++ 20
 
-1. Initialize submodules after you have cloned, use CMake GUI to configure and generate visual studio solution.
+1. Initialize submodules after you have cloned, use CMake GUI to configure and generate visual studio solution. (I ran [bfg-repo cleaner](https://rtyley.github.io/bfg-repo-cleaner/) on this repo because I was comitting all my assets, the repo is way smaller now with the downside of unable to see old commit file changes)
 
 2. Download assets from [Releases](https://github.com/KaiH0717/Kaguya/releases/tag/v1.0) and extract the contents into a directory named assets in the root directory of the repo. (There's a build event that'll copy contents from asset to the executable directory)
 
