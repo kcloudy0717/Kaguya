@@ -54,7 +54,9 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 2. Download assets from [Releases](https://github.com/KaiH0717/Kaguya/releases/tag/v1.0) and extract the contents into a directory named assets in the root directory of the repo. (There's a build event that'll copy contents from asset to the executable directory)
 
-3. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a scene folder in the root directory of the project containing all the scenes for the showcase, those can be loaded from the context menu of the Hierarchy window of the application's UI.
+3. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the Hierarchy window of the application's UI.
+
+Let me know if you have any trouble setting up the project and getting it up and running!
 
 # Acknowledgements
 
