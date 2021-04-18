@@ -1,0 +1,21 @@
+[submodule "ext/D3D12MemoryAllocator"]
+	path = ext/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git
+[submodule "ext/ImGuizmo"]
+	path = ext/ImGuizmo
+	url = https://github.com/CedricGuillemet/ImGuizmo.git
+[submodule "ext/imgui"]
+	path = ext/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "ext/spdlog"]
+	path = ext/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "ext/entt"]
+	path = ext/entt
+	url = https://github.com/skypjack/entt.git
+[submodule "ext/wil"]
+	path = ext/wil
+	url = https://github.com/microsoft/wil.git
+[submodule "ext/yaml-cpp"]
+	path = ext/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
