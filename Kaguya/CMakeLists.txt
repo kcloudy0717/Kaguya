@@ -135,6 +135,7 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxil.dll
 	${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/bin/x64/WinPixEventRuntime.dll
+	${CMAKE_SOURCE_DIR}/imgui.ini
 	$<TARGET_FILE_DIR:${PROJECTNAME}>
 DEPENDS ${PROJECTNAME})
 

@@ -35,6 +35,10 @@ class Editor
 public:
 	Editor()
 	{
+		std::string iniFile = (Application::ExecutableFolderPath / "imgui.ini").string();
+
+		ImGui::LoadIniSettingsFromDisk(iniFile.data());
+
 		m_HierarchyWindow.SetContext(&Scene);
 		m_InspectorWindow.SetContext(&Scene, {});
 		m_RenderSystemWindow.SetContext(&Renderer);
