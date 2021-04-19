@@ -5,16 +5,6 @@ using Microsoft::WRL::ComPtr;
 
 static RenderDevice* g_pRenderDevice = nullptr;
 
-namespace D3D12Utility
-{
-	void FlushCommandQueue(UINT64 Value, ID3D12Fence* pFence, ID3D12CommandQueue* pCommandQueue, wil::unique_event& Event)
-	{
-		ThrowIfFailed(pCommandQueue->Signal(pFence, Value));
-		ThrowIfFailed(pFence->SetEventOnCompletion(Value, Event.get()));
-		Event.wait();
-	}
-}
-
 Resource::~Resource()
 {
 	SafeRelease(pAllocation);
@@ -32,12 +22,8 @@ void RenderDevice::Shutdown()
 {
 	if (g_pRenderDevice)
 	{
-		g_pRenderDevice->FlushGraphicsQueue();
-		g_pRenderDevice->FlushComputeQueue();
-		g_pRenderDevice->FlushCopyQueue();
 		delete g_pRenderDevice;
 	}
-	Device::ReportLiveObjects();
 }
 
 RenderDevice& RenderDevice::Instance()
@@ -50,39 +36,46 @@ RenderDevice::RenderDevice()
 {
 	InitializeDXGIObjects();
 
-	Device.Create(m_DXGIAdapter.Get());
+	DeviceOptions deviceOptions = {
+		.FeatureLevel = D3D_FEATURE_LEVEL_12_0,
+		.EnableDebugLayer = true,
+		.EnableGpuBasedValidation = false,
+		.BreakOnCorruption = true,
+		.BreakOnError = true,
+		.BreakOnWarning = true
+	};
+	m_Device = Device(m_Adapter.Get(), deviceOptions);
 
-	GraphicsQueue = CommandQueue(Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	ComputeQueue = CommandQueue(Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	CopyQueue = CommandQueue(Device, D3D12_COMMAND_LIST_TYPE_COPY);
+	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
+	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device);
+
+	// Create our memory allocator
+	D3D12MA::ALLOCATOR_DESC desc = {};
+	desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+	desc.pDevice = m_Device;
+	desc.PreferredBlockSize = 0;
+	desc.pAllocationCallbacks = nullptr;
+	desc.pAdapter = m_Adapter.Get();
+	ThrowIfFailed(CreateAllocator(&desc, &m_Allocator));
+
+	m_GraphicsQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_ComputeQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	m_CopyQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_COPY);
+
+	m_ResourceViewHeaps = ResourceViewHeaps(m_Device);
 
 	InitializeDXGISwapChain();
-
-	m_GlobalOnlineDescriptorHeap = DescriptorHeap(Device, NumGlobalOnlineDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	m_GlobalOnlineSamplerDescriptorHeap = DescriptorHeap(Device, NumGlobalOnlineSamplerDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-	m_RenderTargetDescriptorHeap = DescriptorHeap(Device, NumRenderTargetDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	m_DepthStencilDescriptorHeap = DescriptorHeap(Device, NumDepthStencilDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
-	GraphicsFenceValue = ComputeFenceValue = CopyFenceValue = 1;
-
-	ThrowIfFailed(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(GraphicsFence.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(ComputeFence.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(CopyFence.ReleaseAndGetAddressOf())));
-
-	GraphicsEvent.create();
-	ComputeEvent.create();
-	CopyEvent.create();
 
 	// Allocate RTV for SwapChain
 	for (auto& swapChainDescriptor : m_SwapChainBufferDescriptors)
 	{
-		swapChainDescriptor = AllocateRenderTargetView();
+		swapChainDescriptor = m_ResourceViewHeaps.AllocateRenderTargetView();
 	}
 
-	m_ImGuiDescriptor = AllocateShaderResourceView();
+	m_ImGuiDescriptor = m_ResourceViewHeaps.AllocateResourceView();
 	// Initialize ImGui for d3d12
-	ImGui_ImplDX12_Init(Device, 1,
-		RenderDevice::SwapChainBufferFormat, m_GlobalOnlineDescriptorHeap,
+	ImGui_ImplDX12_Init(m_Device, 1,
+		RenderDevice::SwapChainBufferFormat, m_ResourceViewHeaps.ResourceDescriptorHeap(),
 		m_ImGuiDescriptor.CpuHandle,
 		m_ImGuiDescriptor.GpuHandle);
 }
@@ -90,41 +83,15 @@ RenderDevice::RenderDevice()
 RenderDevice::~RenderDevice()
 {
 	ImGui_ImplDX12_Shutdown();
-}
-
-void RenderDevice::CreateCommandContexts(UINT NumGraphicsContext)
-{
-	// + 1 for Default
-	NumGraphicsContext = NumGraphicsContext + 1;
-	constexpr UINT NumAsyncComputeContext = 1;
-	constexpr UINT NumCopyContext = 1;
-
-	m_GraphicsContexts.reserve(NumGraphicsContext);
-	m_AsyncComputeContexts.reserve(NumAsyncComputeContext);
-	m_CopyContexts.reserve(NumCopyContext);
-
-	for (UINT i = 0; i < NumGraphicsContext; ++i)
-	{
-		m_GraphicsContexts.emplace_back(Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-	}
-
-	for (UINT i = 0; i < NumAsyncComputeContext; ++i)
-	{
-		m_AsyncComputeContexts.emplace_back(Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-	}
-
-	for (UINT i = 0; i < NumCopyContext; ++i)
-	{
-		m_CopyContexts.emplace_back(Device, D3D12_COMMAND_LIST_TYPE_COPY);
-	}
+	SafeRelease(m_Allocator);
 }
 
 DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
 {
 	DXGI_QUERY_VIDEO_MEMORY_INFO memoryInfo = {};
-	if (m_DXGIAdapter)
+	if (m_Adapter)
 	{
-		m_DXGIAdapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &memoryInfo);
+		m_Adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &memoryInfo);
 	}
 	return memoryInfo;
 }
@@ -133,82 +100,51 @@ void RenderDevice::Present(bool VSync)
 {
 	UINT syncInterval = VSync ? 1u : 0u;
 	UINT presentFlags = (m_TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-	HRESULT hr = m_DXGISwapChain->Present(syncInterval, presentFlags);
+	HRESULT hr = m_SwapChain->Present(syncInterval, presentFlags);
 	if (hr == DXGI_ERROR_DEVICE_REMOVED)
 	{
 		// TODO: Handle device removal
 		LOG_ERROR("DXGI_ERROR_DEVICE_REMOVED");
 	}
 
-	m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
+	m_GraphicsMemory->Commit(m_GraphicsQueue);
 }
 
 void RenderDevice::Resize(UINT Width, UINT Height)
 {
-	// Release resources before resize swap chain
-	for (auto& swapChainBuffer : m_SwapChainBuffers)
-	{
-		swapChainBuffer.Reset();
-	}
-
 	// Resize backbuffer
 	// Note: Cannot use ResizeBuffers1 when debugging in Nsight Graphics, it will crash
 	DXGI_SWAP_CHAIN_DESC1 desc = {};
-	ThrowIfFailed(m_DXGISwapChain->GetDesc1(&desc));
-	ThrowIfFailed(m_DXGISwapChain->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, desc.Flags));
+	ThrowIfFailed(m_SwapChain->GetDesc1(&desc));
+	ThrowIfFailed(m_SwapChain->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, desc.Flags));
 
 	// Recreate descriptors
+	ScopedWriteLock SWL(m_GlobalResourceStateTrackerLock);
 	for (uint32_t i = 0; i < RenderDevice::NumSwapChainBuffers; ++i)
 	{
 		ComPtr<ID3D12Resource> pBackBuffer;
-		ThrowIfFailed(m_DXGISwapChain->GetBuffer(i, IID_PPV_ARGS(pBackBuffer.ReleaseAndGetAddressOf())));
+		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
 
 		CreateRenderTargetView(pBackBuffer.Get(), m_SwapChainBufferDescriptors[i]);
 
-		m_SwapChainBuffers[i] = std::move(pBackBuffer);
+		m_GlobalResourceStateTracker.AddResourceState(pBackBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
 	}
-
-	ScopedWriteLock SWL(m_GlobalResourceStateTrackerLock);
-	for (auto& swapChainBuffer : m_SwapChainBuffers)
-	{
-		m_GlobalResourceStateTracker.AddResourceState(swapChainBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
-	}
-
-	// Reset back buffer index
-	m_BackBufferIndex = 0;
 }
 
 void RenderDevice::BindGlobalDescriptorHeap(CommandList& CommandList)
 {
-	CommandList.SetDescriptorHeaps(&m_GlobalOnlineDescriptorHeap, &m_GlobalOnlineSamplerDescriptorHeap);
+	CommandList.SetDescriptorHeaps(m_ResourceViewHeaps);
 }
 
-void RenderDevice::FlushGraphicsQueue()
-{
-	UINT64 value = ++GraphicsFenceValue;
-	D3D12Utility::FlushCommandQueue(value, GraphicsFence.Get(), GraphicsQueue, GraphicsEvent);
-}
-
-void RenderDevice::FlushComputeQueue()
-{
-	UINT64 value = ++ComputeFenceValue;
-	D3D12Utility::FlushCommandQueue(value, ComputeFence.Get(), ComputeQueue, ComputeEvent);
-}
-
-void RenderDevice::FlushCopyQueue()
-{
-	UINT64 value = ++CopyFenceValue;
-	D3D12Utility::FlushCommandQueue(value, CopyFence.Get(), CopyQueue, CopyEvent);
-}
-
-std::shared_ptr<Resource> RenderDevice::CreateResource(const D3D12MA::ALLOCATION_DESC* pAllocDesc,
+std::shared_ptr<Resource> RenderDevice::CreateResource(
+	const D3D12MA::ALLOCATION_DESC* pAllocDesc,
 	const D3D12_RESOURCE_DESC* pResourceDesc,
 	D3D12_RESOURCE_STATES InitialResourceState,
 	const D3D12_CLEAR_VALUE* pOptimizedClearValue)
 {
 	std::shared_ptr<Resource> pResource = std::make_shared<Resource>();
 
-	ThrowIfFailed(Device.Allocator()->CreateResource(pAllocDesc,
+	ThrowIfFailed(m_Allocator->CreateResource(pAllocDesc,
 		pResourceDesc, InitialResourceState, pOptimizedClearValue,
 		&pResource->pAllocation, IID_PPV_ARGS(pResource->pResource.ReleaseAndGetAddressOf())));
 
@@ -231,23 +167,7 @@ RootSignature RenderDevice::CreateRootSignature(std::function<void(RootSignature
 		AddDescriptorTableRootParameterToBuilder(builder);
 	}
 
-	return RootSignature(Device, builder);
-}
-
-PipelineState RenderDevice::CreateGraphicsPipelineState(std::function<void(GraphicsPipelineStateBuilder&)> Configurator)
-{
-	GraphicsPipelineStateBuilder builder = {};
-	Configurator(builder);
-
-	return PipelineState(Device, builder);
-}
-
-PipelineState RenderDevice::CreateComputePipelineState(std::function<void(ComputePipelineStateBuilder&)> Configurator)
-{
-	ComputePipelineStateBuilder builder = {};
-	Configurator(builder);
-
-	return PipelineState(Device, builder);
+	return RootSignature(m_Device, builder);
 }
 
 RaytracingPipelineState RenderDevice::CreateRaytracingPipelineState(std::function<void(RaytracingPipelineStateBuilder&)> Configurator)
@@ -255,66 +175,11 @@ RaytracingPipelineState RenderDevice::CreateRaytracingPipelineState(std::functio
 	RaytracingPipelineStateBuilder builder = {};
 	Configurator(builder);
 
-	return RaytracingPipelineState(Device, builder);
+	return RaytracingPipelineState(m_Device, builder);
 }
 
-Descriptor RenderDevice::AllocateShaderResourceView()
-{
-	UINT index = m_GlobalOnlineDescriptorIndexPool.allocate();
-	return m_GlobalOnlineDescriptorHeap.At(index);
-}
-
-Descriptor RenderDevice::AllocateUnorderedAccessView()
-{
-	UINT index = m_GlobalOnlineDescriptorIndexPool.allocate();
-	return m_GlobalOnlineDescriptorHeap.At(index);
-}
-
-Descriptor RenderDevice::AllocateRenderTargetView()
-{
-	UINT index = m_RenderTargetDescriptorIndexPool.allocate();
-	return m_RenderTargetDescriptorHeap.At(index);
-}
-
-Descriptor RenderDevice::AllocateDepthStencilView()
-{
-	UINT index = m_DepthStencilDescriptorIndexPool.allocate();
-	return m_DepthStencilDescriptorHeap.At(index);
-}
-
-void RenderDevice::ReleaseShaderResourceView(Descriptor Descriptor)
-{
-	if (Descriptor.IsValid())
-	{
-		m_GlobalOnlineDescriptorIndexPool.free(Descriptor.Index);
-	}
-}
-
-void RenderDevice::ReleaseUnorderedAccessView(Descriptor Descriptor)
-{
-	if (Descriptor.IsValid())
-	{
-		m_GlobalOnlineDescriptorIndexPool.free(Descriptor.Index);
-	}
-}
-
-void RenderDevice::ReleaseRenderTargetView(Descriptor Descriptor)
-{
-	if (Descriptor.IsValid())
-	{
-		m_RenderTargetDescriptorIndexPool.free(Descriptor.Index);
-	}
-}
-
-void RenderDevice::ReleaseDepthStencilView(Descriptor Descriptor)
-{
-	if (Descriptor.IsValid())
-	{
-		m_DepthStencilDescriptorIndexPool.free(Descriptor.Index);
-	}
-}
-
-void RenderDevice::CreateShaderResourceView(ID3D12Resource* pResource,
+void RenderDevice::CreateShaderResourceView(
+	ID3D12Resource* pResource,
 	const Descriptor& DestDescriptor,
 	UINT NumElements,
 	UINT Stride,
@@ -340,10 +205,11 @@ void RenderDevice::CreateShaderResourceView(ID3D12Resource* pResource,
 		break;
 	}
 
-	Device->CreateShaderResourceView(pResource, &desc, DestDescriptor.CpuHandle);
+	m_Device->CreateShaderResourceView(pResource, &desc, DestDescriptor.CpuHandle);
 }
 
-void RenderDevice::CreateShaderResourceView(ID3D12Resource* pResource,
+void RenderDevice::CreateShaderResourceView(
+	ID3D12Resource* pResource,
 	const Descriptor& DestDescriptor,
 	std::optional<UINT> MostDetailedMip /*= {}*/,
 	std::optional<UINT> MipLevels /*= {}*/)
@@ -394,10 +260,11 @@ void RenderDevice::CreateShaderResourceView(ID3D12Resource* pResource,
 		break;
 	}
 
-	Device->CreateShaderResourceView(pResource, &desc, DestDescriptor.CpuHandle);
+	m_Device->CreateShaderResourceView(pResource, &desc, DestDescriptor.CpuHandle);
 }
 
-void RenderDevice::CreateUnorderedAccessView(ID3D12Resource* pResource,
+void RenderDevice::CreateUnorderedAccessView(
+	ID3D12Resource* pResource,
 	const Descriptor& DestDescriptor,
 	std::optional<UINT> ArraySlice /*= {}*/,
 	std::optional<UINT> MipSlice /*= {}*/)
@@ -433,10 +300,11 @@ void RenderDevice::CreateUnorderedAccessView(ID3D12Resource* pResource,
 		break;
 	}
 
-	Device->CreateUnorderedAccessView(pResource, nullptr, &desc, DestDescriptor.CpuHandle);
+	m_Device->CreateUnorderedAccessView(pResource, nullptr, &desc, DestDescriptor.CpuHandle);
 }
 
-void RenderDevice::CreateRenderTargetView(ID3D12Resource* pResource,
+void RenderDevice::CreateRenderTargetView(
+	ID3D12Resource* pResource,
 	const Descriptor& DestDescriptor,
 	std::optional<UINT> ArraySlice /*= {}*/,
 	std::optional<UINT> MipSlice /*= {}*/,
@@ -476,10 +344,11 @@ void RenderDevice::CreateRenderTargetView(ID3D12Resource* pResource,
 		break;
 	}
 
-	Device->CreateRenderTargetView(pResource, &desc, DestDescriptor.CpuHandle);
+	m_Device->CreateRenderTargetView(pResource, &desc, DestDescriptor.CpuHandle);
 }
 
-void RenderDevice::CreateDepthStencilView(ID3D12Resource* pResource,
+void RenderDevice::CreateDepthStencilView(
+	ID3D12Resource* pResource,
 	const Descriptor& DestDescriptor,
 	std::optional<UINT> ArraySlice /*= {}*/,
 	std::optional<UINT> MipSlice /*= {}*/,
@@ -530,7 +399,7 @@ void RenderDevice::CreateDepthStencilView(ID3D12Resource* pResource,
 		break;
 	}
 
-	Device->CreateDepthStencilView(pResource, &desc, DestDescriptor.CpuHandle);
+	m_Device->CreateDepthStencilView(pResource, &desc, DestDescriptor.CpuHandle);
 }
 
 void RenderDevice::InitializeDXGIObjects()
@@ -539,11 +408,11 @@ void RenderDevice::InitializeDXGIObjects()
 
 	constexpr UINT flags = DEBUG_MODE ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	ThrowIfFailed(::CreateDXGIFactory2(flags, IID_PPV_ARGS(m_DXGIFactory.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(::CreateDXGIFactory2(flags, IID_PPV_ARGS(m_Factory.ReleaseAndGetAddressOf())));
 
 	// Check tearing support
 	BOOL allowTearing = FALSE;
-	if (FAILED(m_DXGIFactory->CheckFeatureSupport(
+	if (FAILED(m_Factory->CheckFeatureSupport(
 		DXGI_FEATURE_PRESENT_ALLOW_TEARING,
 		&allowTearing, sizeof(allowTearing))))
 	{
@@ -554,7 +423,7 @@ void RenderDevice::InitializeDXGIObjects()
 	// Enumerate hardware for an adapter that supports DX12
 	ComPtr<IDXGIAdapter4> pAdapter4;
 	UINT adapterID = 0;
-	while (m_DXGIFactory->EnumAdapterByGpuPreference(adapterID, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
+	while (m_Factory->EnumAdapterByGpuPreference(adapterID, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
 	{
 		DXGI_ADAPTER_DESC3 desc = {};
 		ThrowIfFailed(pAdapter4->GetDesc3(&desc));
@@ -567,7 +436,7 @@ void RenderDevice::InitializeDXGIObjects()
 
 		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)))
 		{
-			m_DXGIAdapter = pAdapter4;
+			m_Adapter = pAdapter4;
 			m_AdapterDesc = desc;
 			break;
 		}
@@ -594,60 +463,59 @@ void RenderDevice::InitializeDXGISwapChain()
 	desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
 	desc.Flags = m_TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 	ComPtr<IDXGISwapChain1> pSwapChain1;
-	ThrowIfFailed(m_DXGIFactory->CreateSwapChainForHwnd(GraphicsQueue, Window.GetWindowHandle(), &desc, nullptr, nullptr, pSwapChain1.ReleaseAndGetAddressOf()));
-	ThrowIfFailed(m_DXGIFactory->MakeWindowAssociation(Window.GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
-	ThrowIfFailed(pSwapChain1->QueryInterface(IID_PPV_ARGS(m_DXGISwapChain.ReleaseAndGetAddressOf())));
-
-	m_BackBufferIndex = m_DXGISwapChain->GetCurrentBackBufferIndex();
+	ThrowIfFailed(m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue, Window.GetWindowHandle(), &desc, nullptr, nullptr, pSwapChain1.ReleaseAndGetAddressOf()));
+	ThrowIfFailed(m_Factory->MakeWindowAssociation(Window.GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
+	ThrowIfFailed(pSwapChain1->QueryInterface(IID_PPV_ARGS(m_SwapChain.ReleaseAndGetAddressOf())));
 }
 
 CommandQueue& RenderDevice::GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType)
 {
 	switch (CommandListType)
 	{
-	case D3D12_COMMAND_LIST_TYPE_DIRECT: return GraphicsQueue;
-	case D3D12_COMMAND_LIST_TYPE_COMPUTE: return ComputeQueue;
-	case D3D12_COMMAND_LIST_TYPE_COPY: return CopyQueue;
-	default: return GraphicsQueue;
+	case D3D12_COMMAND_LIST_TYPE_DIRECT: return m_GraphicsQueue;
+	case D3D12_COMMAND_LIST_TYPE_COMPUTE: return m_ComputeQueue;
+	case D3D12_COMMAND_LIST_TYPE_COPY: return m_CopyQueue;
+	default: return m_GraphicsQueue;
 	}
 }
 
 void RenderDevice::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder)
 {
+	// TODO: Remove this when shader model 6.6 drops, no longer needed
 	/* Descriptor Tables */
 
 	// ShaderResource
-	RootDescriptorTable shaderResourceDescriptorTable;
+	DescriptorTable shaderResourceDescriptorTable;
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
 
-		shaderResourceDescriptorTable.AddDescriptorRange(DescriptorRange::Type::SRV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 100, Flags, 0)); // g_Texture2DTable
-		shaderResourceDescriptorTable.AddDescriptorRange(DescriptorRange::Type::SRV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 101, Flags, 0)); // g_Texture2DUINT4Table
-		shaderResourceDescriptorTable.AddDescriptorRange(DescriptorRange::Type::SRV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 102, Flags, 0)); // g_Texture2DArrayTable
-		shaderResourceDescriptorTable.AddDescriptorRange(DescriptorRange::Type::SRV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 103, Flags, 0)); // g_TextureCubeTable
-		shaderResourceDescriptorTable.AddDescriptorRange(DescriptorRange::Type::SRV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 104, Flags, 0)); // g_ByteAddressBufferTable
+		shaderResourceDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DTable
+		shaderResourceDescriptorTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DUINT4Table
+		shaderResourceDescriptorTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DArrayTable
+		shaderResourceDescriptorTable.AddDescriptorRange<0, 103>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_TextureCubeTable
+		shaderResourceDescriptorTable.AddDescriptorRange<0, 104>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
 	}
-	RootSignatureBuilder.AddRootDescriptorTableParameter(shaderResourceDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(shaderResourceDescriptorTable);
 
 	// UnorderedAccess
-	RootDescriptorTable unorderedAccessDescriptorTable;
+	DescriptorTable unorderedAccessDescriptorTable;
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
 
-		unorderedAccessDescriptorTable.AddDescriptorRange(DescriptorRange::Type::UAV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 100, Flags, 0)); // g_RWTexture2DTable
-		unorderedAccessDescriptorTable.AddDescriptorRange(DescriptorRange::Type::UAV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 101, Flags, 0)); // g_RWTexture2DArrayTable
-		unorderedAccessDescriptorTable.AddDescriptorRange(DescriptorRange::Type::UAV, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 102, Flags, 0)); // g_RWByteAddressBufferTable
+		unorderedAccessDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DTable
+		unorderedAccessDescriptorTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
+		unorderedAccessDescriptorTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWByteAddressBufferTable
 	}
-	RootSignatureBuilder.AddRootDescriptorTableParameter(unorderedAccessDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(unorderedAccessDescriptorTable);
 
 	// Sampler
-	RootDescriptorTable samplerDescriptorTable;
+	DescriptorTable samplerDescriptorTable;
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 
-		samplerDescriptorTable.AddDescriptorRange(DescriptorRange::Type::Sampler, DescriptorRange(RootSignature::UnboundDescriptorSize, 0, 100, Flags, 0)); // g_SamplerTable
+		samplerDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, UINT_MAX, Flags, 0); // g_SamplerTable
 	}
-	RootSignatureBuilder.AddRootDescriptorTableParameter(samplerDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(samplerDescriptorTable);
 }
 
 void RenderDevice::ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UINT NumCommandLists, CommandList* ppCommandLists[])
@@ -661,9 +529,9 @@ void RenderDevice::ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UIN
 		CommandList* pCommandList = ppCommandLists[i];
 		if (pCommandList->Close(&m_GlobalResourceStateTracker))
 		{
-			commandlistsToBeExecuted.push_back(pCommandList->pPendingCommandList.Get());
+			commandlistsToBeExecuted.push_back(pCommandList->GetPendingCommandList());
 		}
-		commandlistsToBeExecuted.push_back(pCommandList->pCommandList.Get());
+		commandlistsToBeExecuted.push_back(pCommandList->GetCommandList());
 	}
 
 	CommandQueue& CommandQueue = GetCommandQueue(Type);

@@ -1,24 +1,19 @@
 #pragma once
-#include <wil/resource.h>
-#include <wrl/client.h>
-#include <d3d12.h>
+#include "D3D12/d3dx12.h"
+#include "D3D12/Device.h"
+#include <GraphicsMemory.h>
+#include <D3D12MemAlloc.h>
+#include "D3D12/Fence.h"
+#include "D3D12/CommandQueue.h"
+#include "D3D12/ResourceStateTracker.h"
+#include "D3D12/ShaderCompiler.h"
+#include "D3D12/ResourceViewHeaps.h"
+#include "D3D12/CommandList.h"
+#include "D3D12/AccelerationStructure.h"
+#include "D3D12/ShaderTable.h"
 
-#include <memory>
-#include <functional>
-
-#include <Core/Pool.h>
-
-#include "RHI/D3D12/Device.h"
-#include "RHI/D3D12/CommandQueue.h"
-#include "RHI/D3D12/ResourceStateTracker.h"
-#include "RHI/D3D12/ShaderCompiler.h"
-#include "RHI/D3D12/DescriptorHeap.h"
-#include "RHI/D3D12/CommandList.h"
-#include "RHI/D3D12/AccelerationStructure.h"
-
-#include "RHI/D3D12/RootSignatureBuilder.h"
-#include "RHI/D3D12/PipelineStateBuilder.h"
-#include "RHI/D3D12/RaytracingPipelineStateBuilder.h"
+#include "D3D12/RootSignature.h"
+#include "D3D12/RaytracingPipelineState.h"
 
 struct RootParameters
 {
@@ -63,75 +58,49 @@ public:
 	static void Shutdown();
 	static RenderDevice& Instance();
 
-	ID3D12Resource* GetCurrentBackBuffer() const
-	{
-		return m_SwapChainBuffers[m_BackBufferIndex].Get();
-	}
-
-	Descriptor GetCurrentBackBufferRenderTargetView() const
-	{
-		return m_SwapChainBufferDescriptors[m_BackBufferIndex];
-	}
-
-	void CreateCommandContexts(UINT NumGraphicsContext);
-
-	const auto& GetAdapterDesc() const { return m_AdapterDesc; }
-	DXGI_QUERY_VIDEO_MEMORY_INFO QueryLocalVideoMemoryInfo() const;
-
 	void Present(bool VSync);
 
 	void Resize(UINT Width, UINT Height);
 
-	CommandList& GetGraphicsContext(UINT Index) { return m_GraphicsContexts[Index]; }
-	CommandList& GetAsyncComputeContext(UINT Index) { return m_AsyncComputeContexts[Index]; }
-	CommandList& GetCopyContext(UINT Index) { return m_CopyContexts[Index]; }
-
-	CommandList& GetDefaultGraphicsContext() { return GetGraphicsContext(0); }
-	CommandList& GetDefaultAsyncComputeContext() { return GetAsyncComputeContext(0); }
-	CommandList& GetDefaultCopyContext() { return GetCopyContext(0); }
-
 	void BindGlobalDescriptorHeap(CommandList& CommandList);
 
-	template<PipelineState::Type Type>
-	void BindDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
+	void BindGraphicsDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
-		const auto rootParameterOffset = RootSignature.NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto GlobalDescriptorFromStart = m_GlobalOnlineDescriptorHeap.GetDescriptorFromStart();
-		auto GlobalSamplerDescriptorFromStart = m_GlobalOnlineSamplerDescriptorHeap.GetDescriptorFromStart();
+		const auto rootParameterOffset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		auto resourceDescriptorFromStart = m_ResourceViewHeaps.ResourceDescriptorHeap().GetDescriptorFromStart();
+		auto samplerDescriptorFromStart = m_ResourceViewHeaps.SamplerDescriptorHeap().GetDescriptorFromStart();
 
-		auto Bind = [&](ID3D12GraphicsCommandList* pCommandList, void(ID3D12GraphicsCommandList::* pFunction)(UINT, D3D12_GPU_DESCRIPTOR_HANDLE))
-		{
-			(pCommandList->*pFunction)(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + rootParameterOffset, GlobalDescriptorFromStart.GpuHandle);
-			(pCommandList->*pFunction)(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + rootParameterOffset, GlobalDescriptorFromStart.GpuHandle);
-			(pCommandList->*pFunction)(RootParameters::DescriptorTable::SamplerDescriptorTable + rootParameterOffset, GlobalSamplerDescriptorFromStart.GpuHandle);
-		};
+		CommandList->SetGraphicsRootDescriptorTable(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + rootParameterOffset, resourceDescriptorFromStart.GpuHandle);
+		CommandList->SetGraphicsRootDescriptorTable(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + rootParameterOffset, resourceDescriptorFromStart.GpuHandle);
+		CommandList->SetGraphicsRootDescriptorTable(RootParameters::DescriptorTable::SamplerDescriptorTable + rootParameterOffset, samplerDescriptorFromStart.GpuHandle);
+	}
 
-		if constexpr (Type == PipelineState::Type::Graphics)
-		{
-			Bind(CommandList.pCommandList.Get(), &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable);
-		}
-		else if constexpr (Type == PipelineState::Type::Compute)
-		{
-			Bind(CommandList.pCommandList.Get(), &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable);
-		}
+	void BindComputeDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
+	{
+		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
+		const auto rootParameterOffset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		auto resourceDescriptorFromStart = m_ResourceViewHeaps.ResourceDescriptorHeap().GetDescriptorFromStart();
+		auto samplerDescriptorFromStart = m_ResourceViewHeaps.SamplerDescriptorHeap().GetDescriptorFromStart();
+
+		CommandList->SetComputeRootDescriptorTable(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + rootParameterOffset, resourceDescriptorFromStart.GpuHandle);
+		CommandList->SetComputeRootDescriptorTable(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + rootParameterOffset, resourceDescriptorFromStart.GpuHandle);
+		CommandList->SetComputeRootDescriptorTable(RootParameters::DescriptorTable::SamplerDescriptorTable + rootParameterOffset, samplerDescriptorFromStart.GpuHandle);
 	}
 
 	void ExecuteGraphicsContexts(UINT NumCommandLists, CommandList* ppCommandLists[]) { ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_DIRECT, NumCommandLists, ppCommandLists); }
 	void ExecuteAsyncComputeContexts(UINT NumCommandLists, CommandList* ppCommandLists[]) { ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_COMPUTE, NumCommandLists, ppCommandLists); }
 	void ExecuteCopyContexts(UINT NumCommandLists, CommandList* ppCommandLists[]) { ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_COPY, NumCommandLists, ppCommandLists); }
 
-	void FlushGraphicsQueue();
-	void FlushComputeQueue();
-	void FlushCopyQueue();
-
 	// Resource creation
-	[[nodiscard]] std::shared_ptr<Resource> CreateResource(const D3D12MA::ALLOCATION_DESC* pAllocDesc,
+	[[nodiscard]] std::shared_ptr<Resource> CreateResource(
+		const D3D12MA::ALLOCATION_DESC* pAllocDesc,
 		const D3D12_RESOURCE_DESC* pResourceDesc,
 		D3D12_RESOURCE_STATES InitialResourceState,
 		const D3D12_CLEAR_VALUE* pOptimizedClearValue);
 
-	[[nodiscard]] std::shared_ptr<Resource> CreateBuffer(const D3D12MA::ALLOCATION_DESC* pAllocDesc,
+	[[nodiscard]] std::shared_ptr<Resource> CreateBuffer(
+		const D3D12MA::ALLOCATION_DESC* pAllocDesc,
 		UINT64 Width,
 		D3D12_RESOURCE_FLAGS Flags = D3D12_RESOURCE_FLAG_NONE,
 		UINT64 Alignment = 0,
@@ -141,35 +110,32 @@ public:
 		return CreateResource(pAllocDesc, &Desc, InitialResourceState, nullptr);
 	}
 
-	[[nodiscard]] RootSignature CreateRootSignature(std::function<void(RootSignatureBuilder&)> Configurator, bool AddDescriptorTableRootParameters = true);
+	[[nodiscard]] RootSignature CreateRootSignature(
+		std::function<void(RootSignatureBuilder&)> Configurator,
+		bool AddDescriptorTableRootParameters = true);
 
-	[[nodiscard]] PipelineState CreateGraphicsPipelineState(std::function<void(GraphicsPipelineStateBuilder&)> Configurator);
-	[[nodiscard]] PipelineState CreateComputePipelineState(std::function<void(ComputePipelineStateBuilder&)> Configurator);
-	[[nodiscard]] RaytracingPipelineState CreateRaytracingPipelineState(std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
+	template<typename PipelineStateStream>
+	[[nodiscard]] PipelineState CreatePipelineState(
+		PipelineStateStream& Stream)
+	{
+		return PipelineState(m_Device, Stream);
+	}
 
-	// Resource view creation
-	// Thread-Safe
-	// SRV, UAV comes from the same pool
-	[[nodiscard]] Descriptor AllocateShaderResourceView();
-	[[nodiscard]] Descriptor AllocateUnorderedAccessView();
-	[[nodiscard]] Descriptor AllocateRenderTargetView();
-	[[nodiscard]] Descriptor AllocateDepthStencilView();
-
-	void ReleaseShaderResourceView(Descriptor Descriptor);
-	void ReleaseUnorderedAccessView(Descriptor Descriptor);
-	void ReleaseRenderTargetView(Descriptor Descriptor);
-	void ReleaseDepthStencilView(Descriptor Descriptor);
+	[[nodiscard]] RaytracingPipelineState CreateRaytracingPipelineState(
+		std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
 
 	// Thread-Safe
 	// Buffer variation
-	void CreateShaderResourceView(ID3D12Resource* pResource,
+	void CreateShaderResourceView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		UINT NumElements,
 		UINT Stride,
 		bool IsRawBuffer = false);
 
 	template<typename T>
-	void CreateShaderResourceView(ID3D12Resource* pResource,
+	void CreateShaderResourceView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		UINT NumElements)
 	{
@@ -177,72 +143,89 @@ public:
 	}
 
 	// Texture variation
-	void CreateShaderResourceView(ID3D12Resource* pResource,
+	void CreateShaderResourceView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		std::optional<UINT> MostDetailedMip = {},
 		std::optional<UINT> MipLevels = {});
 
-	void CreateUnorderedAccessView(ID3D12Resource* pResource,
+	void CreateUnorderedAccessView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		std::optional<UINT> ArraySlice = {},
 		std::optional<UINT> MipSlice = {});
 
-	void CreateRenderTargetView(ID3D12Resource* pResource,
+	void CreateRenderTargetView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		std::optional<UINT> ArraySlice = {},
 		std::optional<UINT> MipSlice = {},
 		std::optional<UINT> ArraySize = {},
 		bool sRGB = false);
 
-	void CreateDepthStencilView(ID3D12Resource* pResource,
+	void CreateDepthStencilView(
+		ID3D12Resource* pResource,
 		const Descriptor& DestDescriptor,
 		std::optional<UINT> ArraySlice = {},
 		std::optional<UINT> MipSlice = {},
 		std::optional<UINT> ArraySize = {});
+
+	const auto& GetAdapterDesc() const { return m_AdapterDesc; }
+	DXGI_QUERY_VIDEO_MEMORY_INFO QueryLocalVideoMemoryInfo() const;
+
+	Descriptor GetCurrentBackBufferRenderTargetView() const
+	{
+		UINT index = m_SwapChain->GetCurrentBackBufferIndex();
+		return m_SwapChainBufferDescriptors[index];
+	}
+
+	ID3D12Resource* GetCurrentBackBuffer() const
+	{
+		UINT index = m_SwapChain->GetCurrentBackBufferIndex();
+
+		ID3D12Resource* pBackBuffer = nullptr;
+		ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&pBackBuffer)));
+		pBackBuffer->Release();
+		return pBackBuffer;
+	}
+
+	Device& GetDevice() noexcept { return m_Device; }
+	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_GraphicsMemory.get(); }
+
+	ResourceViewHeaps& GetResourceViewHeaps() noexcept { return m_ResourceViewHeaps; }
+
+	CommandQueue& GetGraphicsQueue() noexcept { return m_GraphicsQueue; }
+	CommandQueue& GetComputeQueue() noexcept { return m_ComputeQueue; }
+	CommandQueue& GetCopyQueue() noexcept { return m_CopyQueue; }
+
 private:
 	RenderDevice();
-	RenderDevice(const RenderDevice&) = delete;
-	RenderDevice& operator=(const RenderDevice&) = delete;
 	~RenderDevice();
 
+	RenderDevice(const RenderDevice&) = delete;
+	RenderDevice& operator=(const RenderDevice&) = delete;
+
 	void InitializeDXGIObjects();
+
 	void InitializeDXGISwapChain();
 
 	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType);
 	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
 	void ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UINT NumCommandLists, CommandList* ppCommandLists[]);
+
 private:
-	Microsoft::WRL::ComPtr<IDXGIFactory6> m_DXGIFactory;
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_DXGIAdapter;
+	Microsoft::WRL::ComPtr<IDXGIFactory6> m_Factory;
+	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
 	DXGI_ADAPTER_DESC3 m_AdapterDesc;
 	bool m_TearingSupport;
-	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_DXGISwapChain;
-	UINT m_BackBufferIndex;
+	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_SwapChainBuffers[NumSwapChainBuffers];
-public:
-	Device Device;
-	CommandQueue GraphicsQueue, ComputeQueue, CopyQueue;
-	UINT64 GraphicsFenceValue, ComputeFenceValue, CopyFenceValue;
-	Microsoft::WRL::ComPtr<ID3D12Fence> GraphicsFence, ComputeFence, CopyFence;
-	wil::unique_event GraphicsEvent, ComputeEvent, CopyEvent;
+	Device m_Device;
+	std::unique_ptr<DirectX::GraphicsMemory> m_GraphicsMemory;
+	D3D12MA::Allocator* m_Allocator = nullptr;
 
-	ShaderCompiler ShaderCompiler;
-private:
-	std::vector<CommandList> m_GraphicsContexts;
-	std::vector<CommandList> m_AsyncComputeContexts;
-	std::vector<CommandList> m_CopyContexts;
-
-	DescriptorHeap m_GlobalOnlineDescriptorHeap;
-	DescriptorHeap m_GlobalOnlineSamplerDescriptorHeap;
-	DescriptorHeap m_RenderTargetDescriptorHeap;
-	DescriptorHeap m_DepthStencilDescriptorHeap;
-
-	ThreadSafePool<void, NumGlobalOnlineDescriptors> m_GlobalOnlineDescriptorIndexPool;
-	ThreadSafePool<void, NumGlobalOnlineSamplerDescriptors> m_GlobalOnlineSamplerDescriptorIndexPool;
-	ThreadSafePool<void, NumRenderTargetDescriptors> m_RenderTargetDescriptorIndexPool;
-	ThreadSafePool<void, NumDepthStencilDescriptors> m_DepthStencilDescriptorIndexPool;
+	ResourceViewHeaps m_ResourceViewHeaps;
 
 	Descriptor m_ImGuiDescriptor;
 	Descriptor m_SwapChainBufferDescriptors[NumSwapChainBuffers];
@@ -250,4 +233,8 @@ private:
 	// Global resource state tracker
 	ResourceStateTracker m_GlobalResourceStateTracker;
 	RWLock m_GlobalResourceStateTrackerLock;
+
+	CommandQueue m_GraphicsQueue;
+	CommandQueue m_ComputeQueue;
+	CommandQueue m_CopyQueue;
 };

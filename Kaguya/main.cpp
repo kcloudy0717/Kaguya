@@ -162,6 +162,8 @@ int main(int argc, char* argv[])
 	SET_LEAK_BREAKPOINT(-1);
 #endif
 
+	atexit(Device::ReportLiveObjects);
+
 	Application::Config config =
 	{
 		.Title = L"Kaguya",
@@ -173,8 +175,6 @@ int main(int argc, char* argv[])
 	Application::Initialize(config);
 	RenderDevice::Initialize();
 	AssetManager::Initialize();
-
-	RenderDevice::Instance().ShaderCompiler.SetIncludeDirectory(Application::ExecutableFolderPath / L"Shaders");
 
 	std::unique_ptr<Editor> editor = std::make_unique<Editor>();
 

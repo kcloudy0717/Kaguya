@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <Core/Math.h>
-#include "Shader.h"
 
 /*
 *	========== Miss shader table indexing ==========

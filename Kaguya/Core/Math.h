@@ -4,30 +4,6 @@
 #include <cmath>
 #include <limits>
 
-// NOTE: [] = inclusive, () = exclusive
-
-// Returns random int in [a, b].
-int Rand(int min, int max);
-
-// Returns random float in [0, 1).
-float RandF();
-
-// Returns random float in [a, b).
-float RandF(float min, float max);
-
-DirectX::XMVECTOR CartesianToSpherical(float x, float y, float z);
-DirectX::XMVECTOR SphericalToCartesian(float radius, float theta, float phi);
-
-DirectX::XMVECTOR RandomVector();
-DirectX::XMVECTOR RandomVector(float Min, float Max);
-DirectX::XMVECTOR RandomUnitVector();
-DirectX::XMVECTOR RandomInUnitDisk();
-DirectX::XMVECTOR RandomInUnitSphere();
-DirectX::XMVECTOR RandomInHemisphere(DirectX::FXMVECTOR Normal);
-
-DirectX::XMFLOAT4X4 Identity();
-DirectX::XMVECTOR QuaternionToEulerAngles(DirectX::CXMVECTOR Q);
-
 template<typename T>
 constexpr inline T AlignUp(T Size, T Alignment)
 {
@@ -91,18 +67,18 @@ inline std::size_t ToGiB(std::size_t Byte)
 template <typename T>
 struct Vector2
 {
-	Vector2()
+	constexpr Vector2() noexcept
 	{
 		x = y = static_cast<T>(0);
 	}
 
-	Vector2(T v)
+	constexpr Vector2(T v) noexcept
 		: x(v), y(v)
 	{
 
 	}
 
-	Vector2(T x, T y)
+	constexpr Vector2(T x, T y) noexcept
 		: x(x), y(y)
 	{
 
@@ -120,80 +96,55 @@ struct Vector2
 		return e[i];
 	}
 
-	Vector2 operator-() const
+	Vector2 operator-() const noexcept
 	{
 		return Vector2(-x, -y);
 	}
 
-	Vector2 operator+(const Vector2& v) const
+	Vector2 operator+(const Vector2& v) const noexcept
 	{
 		return Vector2(x + v.x, y + v.y);
 	}
 
-	Vector2& operator+=(const Vector2& v)
+	Vector2& operator+=(const Vector2& v) noexcept
 	{
 		x += v.x; y += v.y;
 		return *this;
 	}
 
-	Vector2 operator-(const Vector2& v) const
+	Vector2 operator-(const Vector2& v) const noexcept
 	{
 		return Vector2(x - v.x, y - v.y);
 	}
 
-	Vector2& operator-=(const Vector2& v)
+	Vector2& operator-=(const Vector2& v) noexcept
 	{
 		x -= v.x; y -= v.y;
 		return *this;
 	}
 
-	Vector2 operator*(T s) const
+	Vector2 operator*(T s) const noexcept
 	{
 		return Vector2(x * s, y * s);
 	}
 
-	Vector2& operator*=(T s)
+	Vector2& operator*=(T s) noexcept
 	{
 		x *= s; y *= s;
 		return *this;
 	}
 
-	Vector2 operator/(T s) const
+	Vector2 operator/(T s) const noexcept
 	{
 		float inv = static_cast<T>(1) / s;
 		return Vector2<T>(x * inv, y * inv);
 	}
 
-	Vector2& operator/=(T s)
+	Vector2& operator/=(T s) noexcept
 	{
 		float inv = static_cast<T>(1) / s;
 		x *= inv; y *= inv;
 		return *this;
-	}
-
-	T LengthSquared() const
-	{
-		return x * x + y * y;
-	}
-
-	T Length() const
-	{
-		return std::sqrt(LengthSquared());
-	}
-
-	bool HasNans() const
-	{
-		return std::isnan(x) || std::isnan(y);
-	}
-
-	DirectX::XMVECTOR ToXMVECTOR() const
-	{
-		return DirectX::XMVectorSet(x, y, 0.0f, 0.0f);
-	}
-
-	void operator=(DirectX::FXMVECTOR v)
-	{
-		XMStoreFloat2(reinterpret_cast<DirectX::XMFLOAT2*>(this), v);
 	}
 
 	union
@@ -207,53 +158,60 @@ struct Vector2
 };
 
 template <typename T>
-inline Vector2<T> operator*(T s, const Vector2<T>& v)
+[[nodiscard]] inline Vector2<T> operator*(T s, const Vector2<T>& v) noexcept
 {
 	return v * s;
 }
 
+template<typename T>
+[[nodiscard]] inline T length(const Vector2<T>& v) noexcept
+{
+	return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
 template <typename T>
-Vector2<T> Abs(const Vector2<T>& v)
+[[nodiscard]] inline Vector2<T> abs(const Vector2<T>& v) noexcept
 {
 	return Vector2<T>(std::abs(v.x), std::abs(v.y));
 }
 
 template <typename T>
-T Dot(const Vector2<T>& v1, const Vector2<T>& v2)
+[[nodiscard]] inline T dot(const Vector2<T>& v1, const Vector2<T>& v2) noexcept
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
 
 template <typename T>
-T AbsDot(const Vector2<T>& v1, const Vector2<T>& v2)
+[[nodiscard]] inline Vector2<T> normalize(const Vector2<T>& v) noexcept
 {
-	return std::abs(Dot(v1, v2));
+	return v / length(v);
 }
 
 template <typename T>
-Vector2<T> Normalize(const Vector2<T>& v)
+[[nodiscard]] inline bool isnan(const Vector2<T>& v) noexcept
 {
-	return v / v.Length();
+	return std::isnan(v.x) || std::isnan(v.y);
 }
 
 using Vector2i = Vector2<int>;
 using Vector2f = Vector2<float>;
+using Vector2d = Vector2<double>;
 
 template <typename T>
 struct Vector3
 {
-	Vector3()
+	constexpr Vector3() noexcept
 	{
 		x = y = z = static_cast<T>(0);
 	}
 
-	Vector3(T v)
+	constexpr Vector3(T v) noexcept
 		: x(v), y(v), z(v)
 	{
 
 	}
 
-	Vector3(T x, T y, T z)
+	constexpr Vector3(T x, T y, T z) noexcept
 		: x(x), y(y), z(z)
 	{
 
@@ -271,81 +229,55 @@ struct Vector3
 		return e[i];
 	}
 
-	Vector3 operator-() const
+	Vector3 operator-() const noexcept
 	{
 		return Vector3(-x, -y, -z);
 	}
 
-	Vector3 operator+(const Vector3& v) const
+	Vector3 operator+(const Vector3& v) const noexcept
 	{
 		return Vector3(x + v.x, y + v.y, z + v.z);
 	}
 
-	Vector3& operator+=(const Vector3& v)
+	Vector3& operator+=(const Vector3& v) noexcept
 	{
 		x += v.x; y += v.y; z += v.z;
 		return *this;
 	}
 
-	Vector3 operator-(const Vector3& v) const
+	Vector3 operator-(const Vector3& v) const noexcept
 	{
 		return Vector3(x - v.x, y - v.y, z - v.z);
 	}
 
-	Vector3& operator-=(const Vector3& v)
+	Vector3& operator-=(const Vector3& v) noexcept
 	{
 		x -= v.x; y -= v.y; z -= v.z;
 		return *this;
 	}
 
-	Vector3 operator*(T s) const
+	Vector3 operator*(T s) const noexcept
 	{
 		return Vector3(x * s, y * s, z * s);
 	}
 
-	Vector3& operator*=(T s)
+	Vector3& operator*=(T s) noexcept
 	{
 		x *= s; y *= s; z *= s;
 		return *this;
 	}
 
-	Vector3 operator/(T s) const
+	Vector3 operator/(T s) const noexcept
 	{
 		float inv = static_cast<T>(1) / s;
 		return Vector3<T>(x * inv, y * inv, z * inv);
 	}
 
-	Vector3& operator/=(T s)
+	Vector3& operator/=(T s) noexcept
 	{
 		float inv = static_cast<T>(1) / s;
 		x *= inv; y *= inv; z *= inv;
 		return *this;
-	}
-
-	T LengthSquared() const
-	{
-		return x * x + y * y + z * z;
-	}
-
-	T Length() const
-	{
-		return std::sqrt(LengthSquared());
-	}
-
-	bool HasNans() const
-	{
-		return std::isnan(x) || std::isnan(y) || std::isnan(z);
-	}
-
-	DirectX::XMVECTOR ToXMVECTOR(bool Homogeneous = false) const
-	{
-		float w = Homogeneous ? 1.0f : 0.0f;
-		return DirectX::XMVectorSet(x, y, z, w);
-	}
-
-	void operator=(DirectX::FXMVECTOR v)
-	{
-		XMStoreFloat3(reinterpret_cast<DirectX::XMFLOAT3*>(this), v);
 	}
 
 	union
@@ -359,31 +291,43 @@ struct Vector3
 };
 
 template <typename T>
-[[nodiscard]] inline Vector3<T> operator*(T s, const Vector3<T>& v)
+[[nodiscard]] inline Vector3<T> operator*(T s, const Vector3<T>& v) noexcept
 {
 	return v * s;
 }
 
 template <typename T>
-[[nodiscard]] inline Vector3<T> Abs(const Vector3<T>& v)
+[[nodiscard]] inline T length(const Vector3<T>& v) noexcept
+{
+	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+}
+
+template <typename T>
+[[nodiscard]] inline Vector3<T> abs(const Vector3<T>& v) noexcept
 {
 	return Vector3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z));
 }
 
 template <typename T>
-[[nodiscard]] inline T Dot(const Vector3<T>& v1, const Vector3<T>& v2)
+[[nodiscard]] inline T dot(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
 template <typename T>
-[[nodiscard]] inline T AbsDot(const Vector3<T>& v1, const Vector3<T>& v2)
+[[nodiscard]] inline Vector3<T> normalize(const Vector3<T>& v) noexcept
 {
-	return std::abs(Dot(v1, v2));
+	return v / length(v);
 }
 
 template <typename T>
-[[nodiscard]] inline Vector3<T> Cross(const Vector3<T>& v1, const Vector3<T>& v2)
+[[nodiscard]] inline bool isnan(const Vector3<T>& v) noexcept
+{
+	return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z);
+}
+
+template <typename T>
+[[nodiscard]] inline Vector3<T> cross(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
 {
 	float v1x = v1.x, v1y = v1.y, v1z = v1.z;
 	float v2x = v2.x, v2y = v2.y, v2z = v2.z;
@@ -393,36 +337,11 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] inline Vector3<T> Normalize(const Vector3<T>& v)
+[[nodiscard]] inline Vector3<T> faceforward(const Vector3<T>& n, const Vector3<T>& v) noexcept
 {
-	return v / v.Length();
+	return (dot(n, v) < 0.0f) ? -n : n;
 }
 
-template <typename T>
-[[nodiscard]] inline Vector3<T> Faceforward(const Vector3<T>& n, const Vector3<T>& v)
-{
-	return (Dot(n, v) < 0.0f) ? -n : n;
-}
-
-template <typename T>
-[[nodiscard]] inline float DistanceSquared(const Vector3<T>& p1, const Vector3<T>& p2)
-{
-	return (p1 - p2).LengthSquared();
-}
-
-template <typename T>
-inline void CoordinateSystem(const Vector3<T>& v1, Vector3<T>* v2, Vector3<T>* v3)
-{
-	if (std::abs(v1.x) > std::abs(v1.y))
-	{
-		*v2 = Vector3<T>(-v1.z, 0.0f, v1.x) / std::sqrt(v1.x * v1.x + v1.z * v1.z);
-	}
-	else
-	{
-		*v2 = Vector3<T>(0.0f, v1.z, -v1.y) / std::sqrt(v1.y * v1.y + v1.z * v1.z);
-	}
-	*v3 = Normalize(Cross(v1, *v2));
-}
-
-using Vector3i = Vector2<int>;
+using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
+using Vector3d = Vector3<double>;

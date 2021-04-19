@@ -3,35 +3,48 @@
 
 #include "RendererRegistry.h"
 
-void ToneMapper::Create()
+ToneMapper::ToneMapper(
+	_In_ RenderDevice& RenderDevice)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
-	m_RTV = RenderDevice.AllocateRenderTargetView();
-	m_SRV = RenderDevice.AllocateShaderResourceView();
+	m_RTV = RenderDevice.GetResourceViewHeaps().AllocateRenderTargetView();
+	m_SRV = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
 
 	m_RS = RenderDevice.CreateRootSignature([](RootSignatureBuilder& Builder)
 	{
-		Builder.AddRootConstantsParameter(RootConstants<void>(0, 0, 1)); // register(b0, space0)
+		Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
 
 		// PointClamp
-		Builder.AddStaticSampler(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+		Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 	});
 
-	m_PSO = RenderDevice.CreateGraphicsPipelineState([=](GraphicsPipelineStateBuilder& Builder)
+	struct PipelineStateStream
 	{
-		Builder.pRootSignature = &m_RS;
-		Builder.pVS = &Shaders::VS::FullScreenTriangle;
-		Builder.pPS = &Shaders::PS::ToneMap;
+		CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE		pRootSignature;
+		CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY	PrimitiveTopologyType;
+		CD3DX12_PIPELINE_STATE_STREAM_VS					VS;
+		CD3DX12_PIPELINE_STATE_STREAM_PS					PS;
+		CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL			DepthStencilState;
+		CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+	} stream;
 
-		Builder.DepthStencilState.SetDepthEnable(false);
+	auto depthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	depthStencilState.DepthEnable = FALSE;
+	D3D12_RT_FORMAT_ARRAY formats = {};
+	formats.RTFormats[formats.NumRenderTargets++] = DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat);
 
-		Builder.PrimitiveTopology = PrimitiveTopology::Triangle;
-		Builder.AddRenderTargetFormat(DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat));
-	});
+	stream.pRootSignature = m_RS;
+	stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	stream.VS = Shaders::VS::FullScreenTriangle;
+	stream.PS = Shaders::PS::ToneMap;
+	stream.DepthStencilState = depthStencilState;
+	stream.RTVFormats = formats;
+
+	m_PSO = RenderDevice.CreatePipelineState(stream);
 }
 
-void ToneMapper::SetResolution(UINT Width, UINT Height)
+void ToneMapper::SetResolution(
+	_In_ UINT Width,
+	_In_ UINT Height)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
@@ -60,9 +73,11 @@ void ToneMapper::SetResolution(UINT Width, UINT Height)
 	RenderDevice.CreateShaderResourceView(m_RenderTarget->pResource.Get(), m_SRV);
 }
 
-void ToneMapper::Apply(Descriptor ShaderResourceView, CommandList& CommandList)
+void ToneMapper::Apply(
+	_In_ Descriptor ShaderResourceView,
+	_In_ CommandList& CommandList)
 {
-	PIXScopedEvent(CommandList.GetApiHandle(), 0, L"Tone Map");
+	PIXScopedEvent(CommandList.GetCommandList(), 0, L"Tonemapping");
 
 	CommandList->SetPipelineState(m_PSO);
 	CommandList->SetGraphicsRootSignature(m_RS);
@@ -83,7 +98,7 @@ void ToneMapper::Apply(Descriptor ShaderResourceView, CommandList& CommandList)
 	settings.InputIndex = ShaderResourceView.Index;
 
 	CommandList->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
-	RenderDevice::Instance().BindDescriptorTable<PipelineState::Type::Graphics>(m_RS, CommandList);
+	RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
 
 	CommandList->DrawInstanced(3, 1, 0, 0);
 }

@@ -74,6 +74,7 @@
 #include <pix3.h>
 
 #include <Core/Application.h>
+#include <Core/Pool.h>
 #include <Core/Utility.h>
 #include <Core/Log.h>
 #include <Core/Math.h>
@@ -81,8 +82,6 @@
 #include <Core/Synchronization/RWLock.h>
 #include <Core/Synchronization/CriticalSection.h>
 #include <Core/Synchronization/ConditionVariable.h>
-
-#include <Graphics/Debug/PIXCapture.h>
 
 template<typename T>
 void SafeRelease(T*& Ptr)
@@ -93,3 +92,13 @@ void SafeRelease(T*& Ptr)
 		Ptr = nullptr;
 	}
 }
+
+inline void ThrowIfFailed(HRESULT hr)
+{
+	if (FAILED(hr))
+	{
+		throw COMException(__FILE__, __LINE__, hr);
+	}
+}
+
+using ShaderIdentifier = std::array<BYTE, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;

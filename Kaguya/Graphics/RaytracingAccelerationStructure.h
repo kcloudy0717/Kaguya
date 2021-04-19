@@ -36,6 +36,7 @@ public:
 	void AddInstance(MeshRenderer* pMeshRenderer);
 
 	void Build(CommandList& CommandList);
+
 private:
 	UINT m_NumHitGroups = 0;
 

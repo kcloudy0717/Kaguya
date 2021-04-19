@@ -26,30 +26,30 @@ public:
 
 	static constexpr UINT NumHitGroups = 1;
 
-	void Create();
+	PathIntegrator() noexcept = default;
+	PathIntegrator(
+		_In_ RenderDevice& RenderDevice);
 
-	void SetResolution(UINT Width, UINT Height);
+	void SetResolution(
+		_In_ UINT Width,
+		_In_ UINT Height);
 
 	void Reset();
 
-	void UpdateShaderTable(const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		CommandList& CommandList);
+	void UpdateShaderTable(
+		_In_ const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
+		_In_ CommandList& CommandList);
 
-	void Render(D3D12_GPU_VIRTUAL_ADDRESS SystemConstants,
-		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		D3D12_GPU_VIRTUAL_ADDRESS Materials,
-		D3D12_GPU_VIRTUAL_ADDRESS Lights,
-		CommandList& CommandList);
+	void Render(
+		_In_ D3D12_GPU_VIRTUAL_ADDRESS SystemConstants,
+		_In_ const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
+		_In_ D3D12_GPU_VIRTUAL_ADDRESS Materials,
+		_In_ D3D12_GPU_VIRTUAL_ADDRESS Lights,
+		_In_ CommandList& CommandList);
 
-	auto GetSRV() const
-	{
-		return m_SRV;
-	}
+	Descriptor GetSRV() const { return m_SRV; }
+	ID3D12Resource* GetRenderTarget() const { return m_RenderTarget->pResource.Get(); }
 
-	auto GetRenderTarget() const
-	{
-		return m_RenderTarget->pResource.Get();
-	}
 private:
 	UINT m_Width = 0, m_Height = 0;
 

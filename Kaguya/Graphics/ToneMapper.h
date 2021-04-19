@@ -9,21 +9,21 @@ public:
 		ACES
 	};
 
-	void Create();
+	ToneMapper() noexcept = default;
+	ToneMapper(
+		_In_ RenderDevice& RenderDevice);
 
-	void SetResolution(UINT Width, UINT Height);
+	void SetResolution(
+		_In_ UINT Width,
+		_In_ UINT Height);
 
-	void Apply(Descriptor ShaderResourceView, CommandList& CommandList);
+	void Apply(
+		_In_ Descriptor ShaderResourceView,
+		_In_ CommandList& CommandList);
 
-	auto GetSRV() const
-	{
-		return m_SRV;
-	}
+	Descriptor GetSRV() const { return m_SRV; }
+	ID3D12Resource* GetRenderTarget() const { return m_RenderTarget->pResource.Get(); }
 
-	auto GetRenderTarget() const
-	{
-		return m_RenderTarget->pResource.Get();
-	}
 private:
 	UINT m_Width = 0, m_Height = 0;
 

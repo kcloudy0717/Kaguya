@@ -6,7 +6,15 @@
 class Exception : public std::exception
 {
 public:
-	explicit Exception(std::string File, int Line) noexcept;
+	Exception() noexcept
+		: m_File{}
+		, m_Line(0)
+	{
+
+	}
+	explicit Exception(
+		std::string File,
+		int Line) noexcept;
 	virtual ~Exception() = default;
 
 	const char* what() const noexcept override;
@@ -14,8 +22,10 @@ public:
 	virtual std::string Type() const noexcept;
 	virtual std::string Error() const noexcept;
 	std::string Origin() const noexcept;
+
 protected:
 	mutable std::string m_ErrorMessage;
+
 private:
 	std::string m_File;
 	int m_Line;
@@ -24,23 +34,18 @@ private:
 class COMException final : public Exception
 {
 public:
-	explicit COMException(std::string File, int Line, HRESULT HR) noexcept;
-	~COMException() override = default;
+	COMException() noexcept
+		: m_HR(S_FALSE)
+	{
+
+	}
+	explicit COMException(
+		std::string File,
+		int Line,
+		HRESULT HR) noexcept;
 
 	std::string Type() const noexcept override;
 	std::string Error() const noexcept override;
 private:
 	HRESULT m_HR;
 };
-
-#ifndef ThrowIfFailed
-#define ThrowIfFailed(HR)								\
-do														\
-{														\
-	HRESULT hr = (HR);									\
-	if (FAILED(hr))										\
-	{													\
-		throw COMException(__FILE__, __LINE__, hr);		\
-	}													\
-} while(false)
-#endif

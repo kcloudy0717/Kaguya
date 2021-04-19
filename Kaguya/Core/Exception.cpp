@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "Exception.h"
 
-Exception::Exception(std::string File, int Line) noexcept
+Exception::Exception(
+	std::string File,
+	int Line) noexcept
 	: m_File(std::move(File))
 	, m_Line(Line)
 {

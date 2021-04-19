@@ -16,7 +16,7 @@ public:
 	DescriptorHeap() = default;
 	DescriptorHeap(ID3D12Device* pDevice, UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type);
 
-	operator auto() const { return m_DescriptorHeap.Get(); }
+	operator ID3D12DescriptorHeap* () const { return m_DescriptorHeap.Get(); }
 
 	inline auto GetDescriptorFromStart() const { return m_StartDescriptor; }
 

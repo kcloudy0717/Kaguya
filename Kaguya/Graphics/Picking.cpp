@@ -27,18 +27,14 @@ void Picking::Create()
 
 	m_GlobalRS = RenderDevice.CreateRootSignature([](RootSignatureBuilder& Builder)
 	{
-		Builder.AddRootCBVParameter(RootCBV(0, 0)); // g_SystemConstants		b0 | space0
-
-		Builder.AddRootSRVParameter(RootSRV(0, 0));	// Scene					t0 | space0
-
-		Builder.AddRootUAVParameter(RootUAV(0, 0));	// PickingResult,			u0 | space0
+		Builder.AddConstantBufferView<0, 0>();	// g_SystemConstants		b0 | space0
+		Builder.AddShaderResourceView<0, 0>();	// Scene					t0 | space0
+		Builder.AddUnorderedAccessView<0, 0>();	// PickingResult,			u0 | space0
 	});
 
 	m_RTPSO = RenderDevice.CreateRaytracingPipelineState([&](RaytracingPipelineStateBuilder& Builder)
 	{
-		const Library* library = &Libraries::Picking;
-
-		Builder.AddLibrary(library,
+		Builder.AddLibrary(Libraries::Picking,
 			{
 				g_RayGeneration,
 				g_Miss,
@@ -47,7 +43,7 @@ void Picking::Create()
 
 		Builder.AddHitGroup(g_HitGroupExport, nullptr, g_ClosestHit, nullptr);
 
-		Builder.SetGlobalRootSignature(&m_GlobalRS);
+		Builder.SetGlobalRootSignature(m_GlobalRS);
 
 		Builder.SetRaytracingShaderConfig(sizeof(int), SizeOfBuiltInTriangleIntersectionAttributes);
 		Builder.SetRaytracingPipelineConfig(1);
@@ -57,7 +53,7 @@ void Picking::Create()
 	g_MissSID = m_RTPSO.GetShaderIdentifier(L"Miss");
 	g_DefaultSID = m_RTPSO.GetShaderIdentifier(L"Default");
 
-	ResourceUploadBatch uploader(RenderDevice.Device);
+	ResourceUploadBatch uploader(RenderDevice.GetDevice());
 
 	uploader.Begin(D3D12_COMMAND_LIST_TYPE_COPY);
 
@@ -71,7 +67,7 @@ void Picking::Create()
 
 		UINT64 sbtSize = m_RayGenerationShaderTable.GetSizeInBytes();
 
-		SharedGraphicsResource rayGenSBTUpload = RenderDevice.Device.GraphicsMemory()->Allocate(sbtSize);
+		SharedGraphicsResource rayGenSBTUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
 		m_RayGenerationSBT = RenderDevice.CreateBuffer(&allocationDesc, sbtSize);
 
 		m_RayGenerationShaderTable.AssociateResource(m_RayGenerationSBT->pResource.Get());
@@ -89,7 +85,7 @@ void Picking::Create()
 
 		UINT64 sbtSize = m_MissShaderTable.GetSizeInBytes();
 
-		SharedGraphicsResource missSBTUpload = RenderDevice.Device.GraphicsMemory()->Allocate(sbtSize);
+		SharedGraphicsResource missSBTUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
 		m_MissSBT = RenderDevice.CreateBuffer(&allocationDesc, sbtSize);
 
 		m_MissShaderTable.AssociateResource(m_MissSBT->pResource.Get());
@@ -98,7 +94,7 @@ void Picking::Create()
 		uploader.Upload(m_MissSBT->pResource.Get(), missSBTUpload);
 	}
 
-	auto finish = uploader.End(RenderDevice.CopyQueue);
+	auto finish = uploader.End(RenderDevice.GetCopyQueue());
 	finish.wait();
 
 	m_HitGroupSBT = RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.GetStrideInBytes() * Scene::MAX_INSTANCE_SUPPORTED);
@@ -136,7 +132,7 @@ void Picking::UpdateShaderTable(const RaytracingAccelerationStructure& Raytracin
 
 	UINT64 sbtSize = m_HitGroupShaderTable.GetSizeInBytes();
 
-	GraphicsResource hitGroupUpload = RenderDevice.Device.GraphicsMemory()->Allocate(sbtSize);
+	GraphicsResource hitGroupUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
 
 	m_HitGroupShaderTable.Generate(static_cast<BYTE*>(hitGroupUpload.Memory()));
 

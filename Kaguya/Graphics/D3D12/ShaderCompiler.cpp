@@ -3,9 +3,63 @@
 
 using Microsoft::WRL::ComPtr;
 
-static WCHAR INCLUDE_DIRECTORY[MAX_PATH] = {};
+ShaderCompiler::ShaderCompiler()
+{
+	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_DxcCompiler.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_DxcUtils.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(m_DxcUtils->CreateDefaultIncludeHandler(m_DxcIncludeHandler.ReleaseAndGetAddressOf()));
+}
 
-std::wstring ShaderProfileString(Shader::Type Type, ShaderCompiler::Profile Profile)
+void ShaderCompiler::SetIncludeDirectory(
+	const std::filesystem::path& pPath)
+{
+	wcscpy_s(m_IncludeDirectory.data(), m_IncludeDirectory.size(), pPath.wstring().data());
+}
+
+Shader ShaderCompiler::CompileShader(
+	Shader::Type Type,
+	const std::filesystem::path& Path,
+	LPCWSTR pEntryPoint,
+	const std::vector<DxcDefine>& ShaderDefines) const
+{
+	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_5);
+
+	IDxcBlob* dxcBlob = nullptr;
+	ID3D12ShaderReflection* shaderReflection = nullptr;
+
+	Compile(Path, pEntryPoint, profileString.data(), ShaderDefines, &dxcBlob);
+
+	DxcBuffer dxcBuffer = {};
+	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
+	dxcBuffer.Size = dxcBlob->GetBufferSize();
+	dxcBuffer.Encoding = CP_ACP;
+	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(&shaderReflection)));
+
+	return Shader(Type, dxcBlob, shaderReflection);
+}
+
+Library ShaderCompiler::CompileLibrary(
+	const std::filesystem::path& Path) const
+{
+	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_5);
+
+	IDxcBlob* dxcBlob = nullptr;
+	ID3D12LibraryReflection* libraryReflection = nullptr;
+
+	Compile(Path, L"", profileString.data(), {}, &dxcBlob);
+
+	DxcBuffer dxcBuffer = {};
+	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
+	dxcBuffer.Size = dxcBlob->GetBufferSize();
+	dxcBuffer.Encoding = CP_ACP;
+	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(&libraryReflection)));
+
+	return Library(dxcBlob, libraryReflection);
+}
+
+std::wstring ShaderCompiler::ShaderProfileString(
+	Shader::Type Type,
+	ShaderCompiler::Profile Profile) const
 {
 	std::wstring profileString;
 	switch (Type)
@@ -29,7 +83,8 @@ std::wstring ShaderProfileString(Shader::Type Type, ShaderCompiler::Profile Prof
 	return profileString;
 }
 
-std::wstring LibraryProfileString(ShaderCompiler::Profile Profile)
+std::wstring ShaderCompiler::LibraryProfileString(
+	ShaderCompiler::Profile Profile) const
 {
 	std::wstring profileString = L"lib_";
 	switch (Profile)
@@ -42,51 +97,14 @@ std::wstring LibraryProfileString(ShaderCompiler::Profile Profile)
 	return profileString;
 }
 
-ShaderCompiler::ShaderCompiler()
+void ShaderCompiler::Compile(
+	const std::filesystem::path& Path,
+	LPCWSTR pEntryPoint,
+	LPCWSTR pProfile,
+	const std::vector<DxcDefine>& ShaderDefines,
+	_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob) const
 {
-	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_DxcCompiler.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_DxcUtils.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(m_DxcUtils->CreateDefaultIncludeHandler(m_DxcIncludeHandler.ReleaseAndGetAddressOf()));
-}
-
-void ShaderCompiler::SetIncludeDirectory(const std::filesystem::path& pPath)
-{
-	wcscpy(INCLUDE_DIRECTORY, pPath.wstring().data());
-}
-
-Shader ShaderCompiler::CompileShader(Shader::Type Type, const std::filesystem::path& Path, LPCWSTR pEntryPoint, const std::vector<DxcDefine>& ShaderDefines) const
-{
-	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_5);
-	auto dxcBlob = Compile(Path, pEntryPoint, profileString.data(), ShaderDefines);
-
-	DxcBuffer dxcBuffer = {};
-	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
-	dxcBuffer.Size = dxcBlob->GetBufferSize();
-	dxcBuffer.Encoding = CP_ACP;
-	ComPtr<ID3D12ShaderReflection> shaderReflection;
-	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(shaderReflection.ReleaseAndGetAddressOf())));
-
-	return Shader(Type, dxcBlob, shaderReflection);
-}
-
-Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
-{
-	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_5);
-	auto dxcBlob = Compile(Path, L"", profileString.data(), {});
-
-	DxcBuffer dxcBuffer = {};
-	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
-	dxcBuffer.Size = dxcBlob->GetBufferSize();
-	dxcBuffer.Encoding = CP_ACP;
-	ComPtr<ID3D12LibraryReflection> libraryReflection;
-	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(libraryReflection.ReleaseAndGetAddressOf())));
-
-	return Library(dxcBlob, libraryReflection);
-}
-
-ComPtr<IDxcBlob> ShaderCompiler::Compile(const std::filesystem::path& Path, LPCWSTR pEntryPoint, LPCWSTR pProfile, const std::vector<DxcDefine>& ShaderDefines) const
-{
-	assert(std::filesystem::exists(Path) && "File Not Found");
+	*ppDxcBlob = nullptr;
 
 	// https://developer.nvidia.com/dx12-dos-and-donts
 	LPCWSTR arguments[] =
@@ -103,7 +121,7 @@ ComPtr<IDxcBlob> ShaderCompiler::Compile(const std::filesystem::path& Path, LPCW
 		L"-O3",				// Optimization level 3
 #endif
 		// Add include directory
-		L"-I", INCLUDE_DIRECTORY
+		L"-I", m_IncludeDirectory.data()
 	};
 
 	ComPtr<IDxcCompilerArgs> dxcCompilerArgs;
@@ -139,9 +157,8 @@ ComPtr<IDxcBlob> ShaderCompiler::Compile(const std::filesystem::path& Path, LPCW
 	{
 		if (SUCCEEDED(hr))
 		{
-			ComPtr<IDxcBlob> dxcBlob;
-				dxcResult->GetResult(dxcBlob.ReleaseAndGetAddressOf());
-				return dxcBlob;
+			dxcResult->GetResult(ppDxcBlob);
+			return;
 		}
 	}
 
@@ -149,8 +166,7 @@ ComPtr<IDxcBlob> ShaderCompiler::Compile(const std::filesystem::path& Path, LPCW
 	ComPtr<IDxcBlobUtf16> outputName;
 	if (SUCCEEDED(dxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(errors.GetAddressOf()), outputName.ReleaseAndGetAddressOf())))
 	{
-		LOG_ERROR("{}", (char*)errors->GetBufferPointer());
+		OutputDebugStringA(std::bit_cast<char*>(errors->GetBufferPointer()));
 		throw std::exception("Failed to compile shader");
 	}
-	return nullptr;
 }

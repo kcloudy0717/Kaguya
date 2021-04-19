@@ -147,7 +147,7 @@ void AssetManager::CreateSystemTextures()
 		scratchImages[i] = std::move(scratchImage);
 	}
 
-	auto resourceAllocationInfo = RenderDevice.Device->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
+	auto resourceAllocationInfo = RenderDevice.GetDevice()->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
 	if (resourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 	{
 		// If the alignment requested is not granted, then let D3D tell us
@@ -156,23 +156,23 @@ void AssetManager::CreateSystemTextures()
 		{
 			resourceDesc.Alignment = 0;
 		}
-		resourceAllocationInfo = RenderDevice.Device->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
+		resourceAllocationInfo = RenderDevice.GetDevice()->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
 	}
 
 	auto heapDesc = CD3DX12_HEAP_DESC(resourceAllocationInfo.SizeInBytes, D3D12_HEAP_TYPE_DEFAULT, 0, D3D12_HEAP_FLAG_DENY_BUFFERS | D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES);
-	RenderDevice.Device->CreateHeap(&heapDesc, IID_PPV_ARGS(m_SystemTextureHeap.ReleaseAndGetAddressOf()));
+	RenderDevice.GetDevice()->CreateHeap(&heapDesc, IID_PPV_ARGS(m_SystemTextureHeap.ReleaseAndGetAddressOf()));
 
-	ResourceUploadBatch uploader(RenderDevice.Device);
+	ResourceUploadBatch uploader(RenderDevice.GetDevice());
 	uploader.Begin(D3D12_COMMAND_LIST_TYPE_COPY);
 
 	for (size_t i = 0; i < AssetTextures::NumSystemTextures; ++i)
 	{
 		UINT64 heapOffset = resourceAllocationInfo1[i].Offset;
-		RenderDevice.Device->CreatePlacedResource(m_SystemTextureHeap.Get(), heapOffset,
+		RenderDevice.GetDevice()->CreatePlacedResource(m_SystemTextureHeap.Get(), heapOffset,
 			&resourceDescs[i], D3D12_RESOURCE_STATE_COMMON, nullptr,
 			IID_PPV_ARGS(m_SystemTextures[i].ReleaseAndGetAddressOf()));
 
-		m_SystemTextureSRVs[i] = RenderDevice.AllocateShaderResourceView();
+		m_SystemTextureSRVs[i] = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
 		RenderDevice.CreateShaderResourceView(m_SystemTextures[i].Get(), m_SystemTextureSRVs[i]); // Create SRV
 
 		// Upload
@@ -190,7 +190,7 @@ void AssetManager::CreateSystemTextures()
 	}
 
 	// Upload the resources to the GPU.
-	auto finish = uploader.End(RenderDevice.CopyQueue);
+	auto finish = uploader.End(RenderDevice.GetCopyQueue());
 	finish.wait();
 }
 
@@ -199,7 +199,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(_In_ PVOID pParameter)
 	auto& RenderDevice = RenderDevice::Instance();
 	auto& AssetManager = AssetManager::Instance();
 
-	ID3D12Device5* pDevice = RenderDevice.Device;
+	ID3D12Device5* pDevice = RenderDevice.GetDevice();
 
 	ResourceUploadBatch uploader(pDevice);
 
@@ -291,7 +291,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(_In_ PVOID pParameter)
 
 				uploader.Upload(Resource->pResource.Get(), 0, subresources.data(), subresources.size());
 
-				Descriptor srv = RenderDevice.AllocateShaderResourceView();
+				Descriptor srv = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
 				RenderDevice.CreateShaderResourceView(Resource->pResource.Get(), srv);
 
 				assetImage->Resource = std::move(Resource);
@@ -370,7 +370,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(_In_ PVOID pParameter)
 			}
 		}
 
-		auto future = uploader.End(RenderDevice.CopyQueue);
+		auto future = uploader.End(RenderDevice.GetCopyQueue());
 		future.wait();
 
 		commandList->Close();

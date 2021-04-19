@@ -43,10 +43,10 @@ void RaytracingAccelerationStructure::Build(CommandList& CommandList)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
-	PIXScopedEvent(CommandList.GetApiHandle(), 0, L"Top Level Acceleration Structure Generation");
+	PIXScopedEvent(CommandList.GetCommandList(), 0, L"Top Level Acceleration Structure Generation");
 
 	UINT64 scratchSize, resultSize;
-	m_TopLevelAccelerationStructure.ComputeMemoryRequirements(RenderDevice.Device, &scratchSize, &resultSize);
+	m_TopLevelAccelerationStructure.ComputeMemoryRequirements(RenderDevice.GetDevice(), &scratchSize, &resultSize);
 
 	D3D12MA::ALLOCATION_DESC allocationDesc = {};
 	allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;

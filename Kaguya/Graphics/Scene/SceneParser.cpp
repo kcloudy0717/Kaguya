@@ -502,7 +502,7 @@ void SceneParser::Load(const std::filesystem::path& Path, Scene* pScene)
 	auto& AssetManager = AssetManager::Instance();
 	AssetManager.GetImageCache().Each_ThreadSafe([](AssetHandle<Asset::Image> Handle)
 	{
-		RenderDevice::Instance().ReleaseShaderResourceView(Handle->SRV);
+		RenderDevice::Instance().GetResourceViewHeaps().ReleaseResourceView(Handle->SRV);
 	});
 
 	AssetManager.GetImageCache().DestroyAll();
