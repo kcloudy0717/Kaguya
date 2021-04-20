@@ -29,7 +29,7 @@ public:
 
 	}
 
-	operator D3D12_SHADER_BYTECODE() const
+	operator D3D12_SHADER_BYTECODE() const noexcept
 	{
 		return D3D12_SHADER_BYTECODE{
 			.pShaderBytecode = m_DxcBlob->GetBufferPointer(),
@@ -61,7 +61,7 @@ public:
 
 	}
 
-	operator D3D12_SHADER_BYTECODE() const
+	operator D3D12_SHADER_BYTECODE() const noexcept
 	{
 		return D3D12_SHADER_BYTECODE{
 			.pShaderBytecode = m_DxcBlob->GetBufferPointer(),
@@ -86,30 +86,30 @@ public:
 	ShaderCompiler();
 
 	void SetIncludeDirectory(
-		const std::filesystem::path& pPath);
+		_In_ const std::filesystem::path& pPath);
 
 	Shader CompileShader(
-		Shader::Type Type,
-		const std::filesystem::path& Path,
-		LPCWSTR pEntryPoint,
-		const std::vector<DxcDefine>& ShaderDefines) const;
+		_In_ Shader::Type Type,
+		_In_ const std::filesystem::path& Path,
+		_In_ LPCWSTR pEntryPoint,
+		_In_ const std::vector<DxcDefine>& ShaderDefines) const;
 
 	Library CompileLibrary(
-		const std::filesystem::path& Path) const;
+		_In_ const std::filesystem::path& Path) const;
 
 private:
 	std::wstring ShaderProfileString(
-		Shader::Type Type,
-		ShaderCompiler::Profile Profile) const;
+		_In_ Shader::Type Type,
+		_In_ ShaderCompiler::Profile Profile) const;
 
 	std::wstring LibraryProfileString(
-		ShaderCompiler::Profile Profile) const;
+		_In_ ShaderCompiler::Profile Profile) const;
 
 	void Compile(
-		const std::filesystem::path& Path,
-		LPCWSTR pEntryPoint,
-		LPCWSTR pProfile,
-		const std::vector<DxcDefine>& ShaderDefines,
+		_In_ const std::filesystem::path& Path,
+		_In_opt_ LPCWSTR pEntryPoint,
+		_In_ LPCWSTR pProfile,
+		_In_ const std::vector<DxcDefine>& ShaderDefines,
 		_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob) const;
 
 private:

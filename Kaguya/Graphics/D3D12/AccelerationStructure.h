@@ -3,21 +3,31 @@
 class BottomLevelAccelerationStructure
 {
 public:
-	BottomLevelAccelerationStructure();
+	BottomLevelAccelerationStructure() noexcept;
 
-	auto size() const
+	auto size() const noexcept
 	{
 		return m_RaytracingGeometryDescs.size();
 	}
 
-	void clear()
+	void clear() noexcept
 	{
 		m_RaytracingGeometryDescs.clear();
 	}
 
-	void AddGeometry(const D3D12_RAYTRACING_GEOMETRY_DESC& Desc);
-	void ComputeMemoryRequirements(ID3D12Device5* pDevice, UINT64* pScratchSizeInBytes, UINT64* pResultSizeInBytes);
-	void Generate(ID3D12GraphicsCommandList6* pCommandList, ID3D12Resource* pScratch, ID3D12Resource* pResult);
+	void AddGeometry(
+		_In_ const D3D12_RAYTRACING_GEOMETRY_DESC& Desc);
+
+	void ComputeMemoryRequirements(
+		_In_ ID3D12Device5* pDevice,
+		_Out_ UINT64* pScratchSizeInBytes,
+		_Out_ UINT64* pResultSizeInBytes);
+
+	void Generate(
+		_In_ ID3D12GraphicsCommandList6* pCommandList,
+		_In_ ID3D12Resource* pScratch,
+		_In_ ID3D12Resource* pResult);
+
 private:
 	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>	m_RaytracingGeometryDescs;
 	UINT64 m_ScratchSizeInBytes;
@@ -31,44 +41,45 @@ class TopLevelAccelerationStructure
 public:
 	TopLevelAccelerationStructure();
 
-	auto size() const
+	auto size() const noexcept
 	{
 		return m_RaytracingInstanceDescs.size();
 	}
 
-	bool empty() const
+	bool empty() const noexcept
 	{
 		return m_RaytracingInstanceDescs.empty();
 	}
 
-	void clear()
+	void clear() noexcept
 	{
 		m_RaytracingInstanceDescs.clear();
 	}
 
-	auto& operator[](size_t i)
-	{
-		return m_RaytracingInstanceDescs[i];
-	}
-
-	auto& operator[](size_t i) const
-	{
-		return m_RaytracingInstanceDescs[i];
-	}
-
-	auto begin()
+	auto begin() noexcept
 	{
 		return m_RaytracingInstanceDescs.begin();
 	}
 
-	auto end()
+	auto end() noexcept
 	{
 		return m_RaytracingInstanceDescs.end();
 	}
 
-	void AddInstance(const D3D12_RAYTRACING_INSTANCE_DESC& Desc);
-	void ComputeMemoryRequirements(ID3D12Device5* pDevice, UINT64* pScratchSizeInBytes, UINT64* pResultSizeInBytes);
-	void Generate(ID3D12GraphicsCommandList6* pCommandList, ID3D12Resource* pScratch, ID3D12Resource* pResult, D3D12_GPU_VIRTUAL_ADDRESS InstanceDescs);
+	void AddInstance(
+		_In_ const D3D12_RAYTRACING_INSTANCE_DESC& Desc);
+
+	void ComputeMemoryRequirements(
+		_In_ ID3D12Device5* pDevice,
+		_Out_ UINT64* pScratchSizeInBytes,
+		_Out_ UINT64* pResultSizeInBytes);
+
+	void Generate(
+		_In_ ID3D12GraphicsCommandList6* pCommandList,
+		_In_ ID3D12Resource* pScratch,
+		_In_ ID3D12Resource* pResult,
+		_In_ D3D12_GPU_VIRTUAL_ADDRESS InstanceDescs);
+
 private:
 	std::vector<D3D12_RAYTRACING_INSTANCE_DESC> m_RaytracingInstanceDescs;
 	UINT64 m_ScratchSizeInBytes;

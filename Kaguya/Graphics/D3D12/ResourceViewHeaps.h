@@ -16,11 +16,36 @@ public:
 	explicit ResourceViewHeaps(
 		_In_ ID3D12Device* pDevice)
 	{
-		m_ResourceDescriptorHeap = DescriptorHeap(pDevice, NumResourceDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		m_SamplerDescriptorHeap = DescriptorHeap(pDevice, NumSamplerDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		m_RenderTargetDescriptorHeap = DescriptorHeap(pDevice, NumRenderTargetDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		m_DepthStencilDescriptorHeap = DescriptorHeap(pDevice, NumDepthStencilDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		m_ResourceDescriptorHeap = DescriptorHeap(
+			pDevice,
+			NumResourceDescriptors,
+			true,
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		m_SamplerDescriptorHeap = DescriptorHeap(
+			pDevice,
+			NumSamplerDescriptors,
+			true,
+			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+		m_RenderTargetDescriptorHeap = DescriptorHeap(
+			pDevice,
+			NumRenderTargetDescriptors,
+			false,
+			D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		m_DepthStencilDescriptorHeap = DescriptorHeap(
+			pDevice,
+			NumDepthStencilDescriptors,
+			false,
+			D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	}
+
+	ResourceViewHeaps(ResourceViewHeaps&&) noexcept = default;
+	ResourceViewHeaps& operator=(ResourceViewHeaps&&) noexcept = default;
+
+	ResourceViewHeaps(const ResourceViewHeaps&) = delete;
+	ResourceViewHeaps& operator=(const ResourceViewHeaps&) = delete;
 
 	[[nodiscard]] Descriptor AllocateResourceView();
 

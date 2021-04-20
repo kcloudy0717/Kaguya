@@ -27,13 +27,7 @@ public:
 	Device& operator=(const Device&) = delete;
 
 	operator ID3D12Device5* () const { return m_Device5.Get(); }
-	ID3D12Device5* operator->() { return m_Device5.Get(); }
-
-private:
-	void CheckRootSignature_1_1Support();
-	void CheckShaderModel6PlusSupport();
-	void CheckRaytracingSupport();
-	void CheckMeshShaderSupport();
+	ID3D12Device5* operator->() const { return m_Device5.Get(); }
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12Device5> m_Device5;

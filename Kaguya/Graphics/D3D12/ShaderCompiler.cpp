@@ -8,19 +8,20 @@ ShaderCompiler::ShaderCompiler()
 	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_DxcCompiler.ReleaseAndGetAddressOf())));
 	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_DxcUtils.ReleaseAndGetAddressOf())));
 	ThrowIfFailed(m_DxcUtils->CreateDefaultIncludeHandler(m_DxcIncludeHandler.ReleaseAndGetAddressOf()));
+	m_IncludeDirectory = {};
 }
 
 void ShaderCompiler::SetIncludeDirectory(
-	const std::filesystem::path& pPath)
+	_In_ const std::filesystem::path& pPath)
 {
 	wcscpy_s(m_IncludeDirectory.data(), m_IncludeDirectory.size(), pPath.wstring().data());
 }
 
 Shader ShaderCompiler::CompileShader(
-	Shader::Type Type,
-	const std::filesystem::path& Path,
-	LPCWSTR pEntryPoint,
-	const std::vector<DxcDefine>& ShaderDefines) const
+	_In_ Shader::Type Type,
+	_In_ const std::filesystem::path& Path,
+	_In_ LPCWSTR pEntryPoint,
+	_In_ const std::vector<DxcDefine>& ShaderDefines) const
 {
 	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_5);
 
@@ -39,7 +40,7 @@ Shader ShaderCompiler::CompileShader(
 }
 
 Library ShaderCompiler::CompileLibrary(
-	const std::filesystem::path& Path) const
+	_In_ const std::filesystem::path& Path) const
 {
 	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_5);
 
@@ -58,8 +59,8 @@ Library ShaderCompiler::CompileLibrary(
 }
 
 std::wstring ShaderCompiler::ShaderProfileString(
-	Shader::Type Type,
-	ShaderCompiler::Profile Profile) const
+	_In_ Shader::Type Type,
+	_In_ ShaderCompiler::Profile Profile) const
 {
 	std::wstring profileString;
 	switch (Type)
@@ -84,7 +85,7 @@ std::wstring ShaderCompiler::ShaderProfileString(
 }
 
 std::wstring ShaderCompiler::LibraryProfileString(
-	ShaderCompiler::Profile Profile) const
+	_In_ ShaderCompiler::Profile Profile) const
 {
 	std::wstring profileString = L"lib_";
 	switch (Profile)
@@ -98,10 +99,10 @@ std::wstring ShaderCompiler::LibraryProfileString(
 }
 
 void ShaderCompiler::Compile(
-	const std::filesystem::path& Path,
-	LPCWSTR pEntryPoint,
-	LPCWSTR pProfile,
-	const std::vector<DxcDefine>& ShaderDefines,
+	_In_ const std::filesystem::path& Path,
+	_In_opt_ LPCWSTR pEntryPoint,
+	_In_ LPCWSTR pProfile,
+	_In_ const std::vector<DxcDefine>& ShaderDefines,
 	_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob) const
 {
 	*ppDxcBlob = nullptr;

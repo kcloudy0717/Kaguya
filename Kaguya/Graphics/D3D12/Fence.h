@@ -14,7 +14,7 @@ public:
 	Fence& operator=(const Fence&) = delete;
 
 	operator ID3D12Fence* () const { return m_Fence.Get(); }
-	ID3D12Fence* operator->() { return m_Fence.Get(); }
+	ID3D12Fence* operator->() const { return m_Fence.Get(); }
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_Fence;

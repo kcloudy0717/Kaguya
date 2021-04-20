@@ -164,13 +164,11 @@ int main(int argc, char* argv[])
 
 	atexit(Device::ReportLiveObjects);
 
-	Application::Config config =
-	{
+	Application::Config config = {
 		.Title = L"Kaguya",
 		.Width = 1280,
 		.Height = 720,
-		.Maximize = false
-	};
+		.Maximize = true };
 
 	Application::Initialize(config);
 	RenderDevice::Initialize();

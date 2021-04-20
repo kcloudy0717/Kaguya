@@ -92,18 +92,18 @@ RootSignature::RootSignature(
 		.Desc_1_1 = Builder.Build()
 	};
 
-	// Serialize the root signature.
+	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 	ThrowIfFailed(::D3D12SerializeVersionedRootSignature(
 		&m_Desc,
-		&serializedRootSignatureBlob,
-		&errorBlob));
+		serializedRootSignatureBlob.ReleaseAndGetAddressOf(),
+		errorBlob.ReleaseAndGetAddressOf()));
 
-	// Create the root signature.
+	// Create the root signature
 	ThrowIfFailed(pDevice->CreateRootSignature(
 		0,
 		serializedRootSignatureBlob->GetBufferPointer(),
 		serializedRootSignatureBlob->GetBufferSize(),
-		IID_PPV_ARGS(&m_RootSignature)));
+		IID_PPV_ARGS(m_RootSignature.ReleaseAndGetAddressOf())));
 }

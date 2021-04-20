@@ -48,7 +48,7 @@ struct RootSignatureAssociation
 
 	}
 
-	ID3D12RootSignature*		pRootSignature;
+	ID3D12RootSignature* pRootSignature;
 	std::vector<std::wstring>	Symbols;
 };
 
@@ -87,14 +87,14 @@ private:
 	std::vector<std::wstring> BuildShaderExportList();
 
 private:
-	CD3DX12_STATE_OBJECT_DESC				m_Desc;
+	CD3DX12_STATE_OBJECT_DESC m_Desc;
 
-	std::vector<DXILLibrary>				m_Libraries;
-	std::vector<HitGroup>					m_HitGroups;
-	std::vector<RootSignatureAssociation>	m_RootSignatureAssociations;
-	ID3D12RootSignature*					m_pGlobalRootSignature;
-	D3D12_RAYTRACING_SHADER_CONFIG			m_ShaderConfig;
-	D3D12_RAYTRACING_PIPELINE_CONFIG		m_PipelineConfig;
+	std::vector<DXILLibrary> m_Libraries;
+	std::vector<HitGroup> m_HitGroups;
+	std::vector<RootSignatureAssociation> m_RootSignatureAssociations;
+	ID3D12RootSignature* m_pGlobalRootSignature;
+	D3D12_RAYTRACING_SHADER_CONFIG m_ShaderConfig;
+	D3D12_RAYTRACING_PIPELINE_CONFIG m_PipelineConfig;
 };
 
 class RaytracingPipelineState
@@ -105,10 +105,17 @@ public:
 		_In_ ID3D12Device5* pDevice,
 		_In_ RaytracingPipelineStateBuilder& Builder);
 
+	RaytracingPipelineState(RaytracingPipelineState&&) noexcept = default;
+	RaytracingPipelineState& operator=(RaytracingPipelineState&&) noexcept = default;
+
+	RaytracingPipelineState(const RaytracingPipelineState&) = delete;
+	RaytracingPipelineState& operator=(const RaytracingPipelineState&) = delete;
+
 	ShaderIdentifier GetShaderIdentifier(
 		_In_ LPCWSTR pExportName);
 
 	operator ID3D12StateObject* () const { return m_StateObject.Get(); }
+	ID3D12StateObject* operator->() const { return m_StateObject.Get(); }
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12StateObject>			m_StateObject;

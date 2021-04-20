@@ -3,7 +3,7 @@
 
 PIXCapture::PIXCapture()
 {
-	if (SUCCEEDED(::DXGIGetDebugInterface1(0, IID_PPV_ARGS(&m_GraphicsAnalysis))))
+	if (SUCCEEDED(::DXGIGetDebugInterface1(0, IID_PPV_ARGS(m_GraphicsAnalysis.ReleaseAndGetAddressOf()))))
 	{
 		m_GraphicsAnalysis->BeginCapture();
 	}

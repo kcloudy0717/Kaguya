@@ -62,8 +62,7 @@ public:
 
 	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE() const
 	{
-		return
-		{
+		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE{
 			.StartAddress = m_Resource->GetGPUVirtualAddress(),
 			.SizeInBytes = GetSizeInBytes()
 		};
@@ -71,12 +70,10 @@ public:
 
 	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE() const
 	{
-		return
-		{
+		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{
 			.StartAddress = m_Resource->GetGPUVirtualAddress(),
 			.SizeInBytes = GetSizeInBytes(),
-			.StrideInBytes = GetStrideInBytes()
-		};
+			.StrideInBytes = GetStrideInBytes() };
 	}
 
 	auto Resource() const
@@ -144,6 +141,7 @@ public:
 			}
 		}
 	}
+
 private:
 	std::vector<Record> m_ShaderRecords;
 	UINT64 m_StrideInBytes;

@@ -44,8 +44,8 @@ public:
 	CommandQueue(const CommandQueue&) = delete;
 	CommandQueue& operator=(const CommandQueue&) = delete;
 
-	operator ID3D12CommandQueue* () { return m_CommandQueue.Get(); }
-	ID3D12CommandQueue* operator->() { return m_CommandQueue.Get(); }
+	operator ID3D12CommandQueue* () const { return m_CommandQueue.Get(); }
+	ID3D12CommandQueue* operator->() const { return m_CommandQueue.Get(); }
 
 	ID3D12CommandAllocator* RequestCommandAllocator(
 		_In_ UINT64 CompletedFenceValue);

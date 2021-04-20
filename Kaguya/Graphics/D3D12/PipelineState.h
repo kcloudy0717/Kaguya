@@ -28,6 +28,7 @@ public:
 	PipelineState& operator=(const PipelineState&) = delete;
 
 	operator ID3D12PipelineState* () const { return m_PipelineState.Get(); }
+	ID3D12PipelineState* operator->() const { return m_PipelineState.Get(); }
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;

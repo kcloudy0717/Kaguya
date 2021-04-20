@@ -8,6 +8,7 @@ class PIXCapture
 public:
 	PIXCapture();
 	~PIXCapture();
+
 private:
 	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> m_GraphicsAnalysis;
 };

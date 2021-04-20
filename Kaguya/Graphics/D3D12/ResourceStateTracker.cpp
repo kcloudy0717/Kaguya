@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "ResourceStateTracker.h"
 
-void ResourceStateTracker::AddResourceState(ID3D12Resource* pResource, D3D12_RESOURCE_STATES ResourceStates)
+void ResourceStateTracker::AddResourceState(
+	_In_ ID3D12Resource* pResource,
+	_In_ D3D12_RESOURCE_STATES ResourceStates)
 {
 	if (pResource)
 	{
@@ -9,7 +11,8 @@ void ResourceStateTracker::AddResourceState(ID3D12Resource* pResource, D3D12_RES
 	}
 }
 
-bool ResourceStateTracker::RemoveResourceState(ID3D12Resource* pResource)
+bool ResourceStateTracker::RemoveResourceState(
+	_In_ ID3D12Resource* pResource)
 {
 	if (pResource)
 	{
@@ -24,7 +27,10 @@ bool ResourceStateTracker::RemoveResourceState(ID3D12Resource* pResource)
 	return false;
 }
 
-void ResourceStateTracker::SetResourceState(ID3D12Resource* pResource, UINT Subresource, D3D12_RESOURCE_STATES ResourceStates)
+void ResourceStateTracker::SetResourceState(
+	_In_ ID3D12Resource* pResource,
+	_In_ UINT Subresource,
+	_In_ D3D12_RESOURCE_STATES ResourceStates)
 {
 	if (pResource)
 	{
@@ -32,7 +38,8 @@ void ResourceStateTracker::SetResourceState(ID3D12Resource* pResource, UINT Subr
 	}
 }
 
-void ResourceStateTracker::UpdateResourceStates(const ResourceStateTracker& ResourceStateTracker)
+void ResourceStateTracker::UpdateResourceStates(
+	_In_ const ResourceStateTracker& ResourceStateTracker)
 {
 	for (const auto& resourceState : ResourceStateTracker.m_ResourceStates)
 	{
@@ -45,7 +52,9 @@ void ResourceStateTracker::Reset()
 	m_ResourceStates.clear();
 }
 
-UINT ResourceStateTracker::FlushPendingResourceBarriers(const ResourceStateTracker& GlobalResourceStateTracker, ID3D12GraphicsCommandList* pCommandList)
+UINT ResourceStateTracker::FlushPendingResourceBarriers(
+	_In_ const ResourceStateTracker& GlobalResourceStateTracker,
+	_In_ ID3D12GraphicsCommandList* pCommandList)
 {
 	std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers;
 	resourceBarriers.reserve(m_PendingResourceBarriers.size());
@@ -102,7 +111,8 @@ UINT ResourceStateTracker::FlushPendingResourceBarriers(const ResourceStateTrack
 	return numBarriers;
 }
 
-UINT ResourceStateTracker::FlushResourceBarriers(ID3D12GraphicsCommandList* pCommandList)
+UINT ResourceStateTracker::FlushResourceBarriers(
+	_In_ ID3D12GraphicsCommandList* pCommandList)
 {
 	UINT numBarriers = m_ResourceBarriers.size();
 	if (numBarriers > 0)
@@ -113,7 +123,8 @@ UINT ResourceStateTracker::FlushResourceBarriers(ID3D12GraphicsCommandList* pCom
 	return numBarriers;
 }
 
-void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& Barrier)
+void ResourceStateTracker::ResourceBarrier(
+	_In_ const D3D12_RESOURCE_BARRIER& Barrier)
 {
 	switch (Barrier.Type)
 	{
@@ -175,7 +186,8 @@ void ResourceStateTracker::ResourceBarrier(const D3D12_RESOURCE_BARRIER& Barrier
 	}
 }
 
-std::optional<CResourceState> ResourceStateTracker::Find(ID3D12Resource* pResource) const
+std::optional<CResourceState> ResourceStateTracker::Find(
+	_In_ ID3D12Resource* pResource) const
 {
 	if (auto iter = m_ResourceStates.find(pResource);
 		iter != m_ResourceStates.end())
