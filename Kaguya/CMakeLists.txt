@@ -97,35 +97,30 @@ ${yaml_cpp})
 
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
 
-# Submodules
+# ext
+include_directories("${CMAKE_SOURCE_DIR}/ext/assimp/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src")
+include_directories("${CMAKE_SOURCE_DIR}/ext/DirectXTex/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/DirectXTK12/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/dxc")
 include_directories("${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt")
 include_directories("${CMAKE_SOURCE_DIR}/ext/imgui")
 include_directories("${CMAKE_SOURCE_DIR}/ext/ImGuizmo")
+include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.9/build/native/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/nativefiledialog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/wil/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include")
 
-# ext
-include_directories("${CMAKE_SOURCE_DIR}/ext/assimp/include")
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/assimp/lib/Release/assimp-vc142-mt.lib)
-
-include_directories("${CMAKE_SOURCE_DIR}/ext/DirectXTex/include")
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/DirectXTex/lib/Debug/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/DirectXTex/lib/Release/DirectXTex.lib)
-
-include_directories("${CMAKE_SOURCE_DIR}/ext/DirectXTK12/include")
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/DirectXTK12/lib/Debug/DirectXTK12.lib)
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/DirectXTK12/lib/Release/DirectXTK12.lib)
-
-include_directories("${CMAKE_SOURCE_DIR}/ext/dxc")
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.lib)
-
-include_directories("${CMAKE_SOURCE_DIR}/ext/nativefiledialog/include")
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Debug/nfd.lib)
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Release/nfd.lib)
-
-include_directories("${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/include")
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)
 
 add_custom_command(
@@ -137,6 +132,13 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/bin/x64/WinPixEventRuntime.dll
 	${CMAKE_SOURCE_DIR}/imgui.ini
 	$<TARGET_FILE_DIR:${PROJECTNAME}>
+DEPENDS ${PROJECTNAME})
+
+add_custom_command(
+TARGET ${PROJECTNAME} PRE_BUILD
+COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.9/build/native/bin/x64
+	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 DEPENDS ${PROJECTNAME})
 
 add_custom_command(

@@ -3,6 +3,10 @@
 
 using Microsoft::WRL::ComPtr;
 
+// https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
+extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = 4; }
+extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
+
 void Device::ReportLiveObjects()
 {
 	ComPtr<IDXGIDebug> pDXGIDebug;
@@ -42,6 +46,15 @@ Device::Device(
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, Options.BreakOnCorruption);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, Options.BreakOnError);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
+	}
+
+	D3D12_FEATURE_DATA_SHADER_MODEL sm = { .HighestShaderModel = D3D_SHADER_MODEL_6_6 };
+	if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
+	{
+		if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)
+		{
+			throw std::runtime_error("Shader Model 6_6 not supported");
+		}
 	}
 }
 

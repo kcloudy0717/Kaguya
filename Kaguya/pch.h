@@ -45,6 +45,21 @@
 // operator <=>
 #include <compare>
 
+// dxgi
+#include <dxgi1_6.h>
+#if defined(_DEBUG)
+#include <dxgidebug.h>
+#endif
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dxguid.lib")
+
+// d3d12
+#include "d3d12.h"
+#include "d3d12sdklayers.h"
+#include "d3d12shader.h"
+#pragma comment(lib, "d3d12.lib")
+#include <pix3.h>
+
 // ext
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
@@ -56,19 +71,6 @@
 #include <GraphicsMemory.h>
 #include <DirectXTex.h>
 #include <nfd.h>
-
-// dxgi
-#include <dxgi1_6.h>
-#if defined(_DEBUG)
-#include <dxgidebug.h>
-#endif
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "dxguid.lib")
-
-// d3d12
-#include <d3d12.h>
-#pragma comment(lib, "d3d12.lib")
-#include <pix3.h>
 
 #include <Core/Application.h>
 #include <Core/Pool.h>
