@@ -45,7 +45,12 @@ RenderDevice::RenderDevice()
 		.BreakOnError = true,
 		.BreakOnWarning = true
 	};
-	m_Device = Device(m_Adapter.Get(), deviceOptions);
+	DeviceCapability deviceCapability = {
+		.Raytracing = true,
+		.DynamicResources = true
+	};
+
+	m_Device = Device(m_Adapter.Get(), deviceOptions, deviceCapability);
 
 	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
 	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device);
@@ -132,7 +137,7 @@ void RenderDevice::Resize(UINT Width, UINT Height)
 	}
 }
 
-void RenderDevice::BindGlobalDescriptorHeap(CommandList& CommandList)
+void RenderDevice::BindResourceViewHeaps(CommandList& CommandList)
 {
 	CommandList.SetDescriptorHeaps(m_ResourceViewHeaps);
 }

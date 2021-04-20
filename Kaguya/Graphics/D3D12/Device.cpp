@@ -18,7 +18,8 @@ void Device::ReportLiveObjects()
 
 Device::Device(
 	_In_ IDXGIAdapter4* pAdapter,
-	_In_ const DeviceOptions& Options)
+	_In_ const DeviceOptions& Options,
+	_In_ const DeviceCapability& Capability)
 {
 	// Enable the D3D12 debug layer
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
@@ -48,12 +49,39 @@ Device::Device(
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
 	}
 
-	D3D12_FEATURE_DATA_SHADER_MODEL sm = { .HighestShaderModel = D3D_SHADER_MODEL_6_6 };
-	if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
+	if (Capability.Raytracing)
 	{
-		if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 o5 = {};
+		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &o5, sizeof(o5))))
 		{
-			throw std::runtime_error("Shader Model 6_6 not supported");
+			if (o5.RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
+			{
+				throw std::runtime_error("Raytracing not supported on device");
+			}
+		}
+	}
+
+	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html
+	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
+	if (Capability.DynamicResources)
+	{
+		D3D12_FEATURE_DATA_SHADER_MODEL sm = {
+			.HighestShaderModel = D3D_SHADER_MODEL_6_6 };
+		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
+		{
+			if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)
+			{
+				throw std::runtime_error("Dynamic resources not supported on device");
+			}
+		}
+
+		D3D12_FEATURE_DATA_D3D12_OPTIONS o0 = {};
+		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &o0, sizeof(o0))))
+		{
+			if (o0.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_3)
+			{
+				throw std::runtime_error("Dynamic resources not supported on device");
+			}
 		}
 	}
 }

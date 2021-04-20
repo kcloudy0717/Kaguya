@@ -23,7 +23,7 @@ Shader ShaderCompiler::CompileShader(
 	_In_ LPCWSTR pEntryPoint,
 	_In_ const std::vector<DxcDefine>& ShaderDefines) const
 {
-	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_5);
+	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_6);
 
 	IDxcBlob* dxcBlob = nullptr;
 	ID3D12ShaderReflection* shaderReflection = nullptr;
@@ -42,7 +42,7 @@ Shader ShaderCompiler::CompileShader(
 Library ShaderCompiler::CompileLibrary(
 	_In_ const std::filesystem::path& Path) const
 {
-	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_5);
+	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_6);
 
 	IDxcBlob* dxcBlob = nullptr;
 	ID3D12LibraryReflection* libraryReflection = nullptr;
@@ -79,6 +79,7 @@ std::wstring ShaderCompiler::ShaderProfileString(
 	case ShaderCompiler::Profile::Profile_6_3:	profileString += L"6_3"; break;
 	case ShaderCompiler::Profile::Profile_6_4:	profileString += L"6_4"; break;
 	case ShaderCompiler::Profile::Profile_6_5:	profileString += L"6_5"; break;
+	case ShaderCompiler::Profile::Profile_6_6:	profileString += L"6_6"; break;
 	}
 
 	return profileString;
@@ -93,6 +94,7 @@ std::wstring ShaderCompiler::LibraryProfileString(
 	case ShaderCompiler::Profile::Profile_6_3:	profileString += L"6_3"; break;
 	case ShaderCompiler::Profile::Profile_6_4:	profileString += L"6_4"; break;
 	case ShaderCompiler::Profile::Profile_6_5:	profileString += L"6_5"; break;
+	case ShaderCompiler::Profile::Profile_6_6:	profileString += L"6_6"; break;
 	}
 
 	return profileString;

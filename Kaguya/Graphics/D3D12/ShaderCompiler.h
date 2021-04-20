@@ -80,7 +80,8 @@ public:
 	{
 		Profile_6_3,
 		Profile_6_4,
-		Profile_6_5
+		Profile_6_5,
+		Profile_6_6
 	};
 
 	ShaderCompiler();

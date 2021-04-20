@@ -83,6 +83,16 @@ void RootSignatureBuilder::DenyMSAccess() noexcept
 	m_Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
 }
 
+void RootSignatureBuilder::AllowResourceDescriptorHeapIndexing() noexcept
+{
+	m_Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+}
+
+void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
+{
+	m_Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+}
+
 RootSignature::RootSignature(
 	_In_ ID3D12Device* pDevice,
 	_In_ RootSignatureBuilder& Builder)

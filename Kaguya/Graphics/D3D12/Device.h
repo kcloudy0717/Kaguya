@@ -10,6 +10,12 @@ struct DeviceOptions
 	bool BreakOnWarning;
 };
 
+struct DeviceCapability
+{
+	bool Raytracing;
+	bool DynamicResources;
+};
+
 class Device
 {
 public:
@@ -18,7 +24,8 @@ public:
 	Device() noexcept = default;
 	Device(
 		_In_ IDXGIAdapter4* pAdapter,
-		_In_ const DeviceOptions& Options);
+		_In_ const DeviceOptions& Options,
+		_In_ const DeviceCapability& Capability);
 	~Device();
 
 	Device(Device&&) noexcept = default;

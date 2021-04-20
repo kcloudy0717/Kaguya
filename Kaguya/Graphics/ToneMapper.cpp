@@ -15,6 +15,8 @@ ToneMapper::ToneMapper(
 
 		// PointClamp
 		Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+	
+		Builder.AllowResourceDescriptorHeapIndexing();
 	});
 
 	struct PipelineStateStream

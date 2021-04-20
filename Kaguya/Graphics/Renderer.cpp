@@ -145,7 +145,7 @@ void Renderer::Render(const Time& Time, Scene& Scene)
 
 	GraphicsResource sceneConstantBuffer = RenderDevice.GraphicsMemory()->AllocateConstant(g_SystemConstants);
 
-	RenderDevice.BindGlobalDescriptorHeap(m_GraphicsCommandList);
+	RenderDevice.BindResourceViewHeaps(m_GraphicsCommandList);
 
 	if (!m_RaytracingAccelerationStructure.empty())
 	{

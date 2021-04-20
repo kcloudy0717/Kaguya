@@ -61,7 +61,7 @@ public:
 
 	void Resize(UINT Width, UINT Height);
 
-	void BindGlobalDescriptorHeap(CommandList& CommandList);
+	void BindResourceViewHeaps(CommandList& CommandList);
 
 	void BindGraphicsDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
 	{

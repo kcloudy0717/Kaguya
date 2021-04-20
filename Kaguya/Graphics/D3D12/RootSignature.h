@@ -131,6 +131,8 @@ public:
 	void SetAsLocalRootSignature() noexcept;
 	void DenyASAccess() noexcept;
 	void DenyMSAccess() noexcept;
+	void AllowResourceDescriptorHeapIndexing() noexcept;
+	void AllowSampleDescriptorHeapIndexing() noexcept;
 private:
 	void AddParameter(
 		_In_ D3D12_ROOT_PARAMETER1 Parameter)

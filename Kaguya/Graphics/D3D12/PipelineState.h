@@ -5,9 +5,11 @@ class PipelineState
 public:
 	PipelineState() noexcept = default;
 	PipelineState(
+		_In_ ID3D12Device* pDevice,
+		_In_ const D3D12_GRAPHICS_PIPELINE_STATE_DESC* Desc);
+	PipelineState(
 		_In_ ID3D12Device2* pDevice,
 		_In_ const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
-
 	template<typename PipelineStateStream>
 	PipelineState(
 		_In_ ID3D12Device2* pDevice,
