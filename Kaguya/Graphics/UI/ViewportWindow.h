@@ -12,9 +12,11 @@ public:
 	std::pair<float, float> GetMousePosition() const;
 
 	void RenderGui();
+
 public:
 	Vector2i Resolution = {};
 	RECT Rect = {};
+
 private:
 	void* m_pImage = nullptr;
 };

@@ -2,8 +2,15 @@
 
 struct Descriptor
 {
-	inline bool IsValid() const { return CpuHandle.ptr != NULL; }
-	inline bool IsReferencedByShader() const { return GpuHandle.ptr != NULL; }
+	bool IsValid() const noexcept
+	{
+		return CpuHandle.ptr != NULL;
+	}
+
+	bool IsReferencedByShader() const noexcept
+	{
+		return GpuHandle.ptr != NULL;
+	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = { NULL };
 	D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle = { NULL };
@@ -29,10 +36,13 @@ public:
 	operator ID3D12DescriptorHeap* () const { return m_DescriptorHeap.Get(); }
 	ID3D12DescriptorHeap* operator->() const { return m_DescriptorHeap.Get(); }
 
-	Descriptor GetDescriptorFromStart() const { return m_StartDescriptor; }
-
 	Descriptor At(
-		_In_ UINT Index) const;
+		_In_ UINT Index) const noexcept;
+
+	Descriptor GetDescriptorFromStart() const noexcept
+	{
+		return m_StartDescriptor;
+	}
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_DescriptorHeap;

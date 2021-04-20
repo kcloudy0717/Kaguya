@@ -25,7 +25,7 @@ DescriptorHeap::DescriptorHeap(
 }
 
 Descriptor DescriptorHeap::At(
-	_In_ UINT Index) const
+	_In_ UINT Index) const noexcept
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = {};
 	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = {};

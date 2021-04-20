@@ -1,5 +1,4 @@
 #pragma once
-#include <wrl/client.h>
 #include <DXProgrammableCapture.h>
 #include <pix3.h>
 

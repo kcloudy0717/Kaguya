@@ -193,6 +193,12 @@ template <typename T>
 	return std::isnan(v.x) || std::isnan(v.y);
 }
 
+template <typename T>
+[[nodiscard]] inline Vector2<T> clamp(const Vector2<T>& v, T min, T max) noexcept
+{
+	return Vector2(std::clamp(v.x, min, max), std::clamp(v.y, min, max));
+}
+
 using Vector2i = Vector2<int>;
 using Vector2f = Vector2<float>;
 using Vector2d = Vector2<double>;

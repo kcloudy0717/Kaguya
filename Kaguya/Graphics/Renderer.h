@@ -24,7 +24,8 @@ public:
 		uint32_t Height);
 
 	Descriptor GetViewportDescriptor() { return m_ToneMapper.GetSRV(); }
-	Entity GetSelectedEntity() { return m_Picking.GetSelectedEntity().value_or(Entity()); }
+	//Entity GetSelectedEntity() { return m_Picking.GetSelectedEntity().value_or(Entity()); }
+	Entity GetSelectedEntity() { return Entity(); }
 
 protected:
 	void Initialize() override;

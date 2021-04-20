@@ -12,36 +12,39 @@ std::pair<float, float> ViewportWindow::GetMousePosition() const
 
 void ViewportWindow::RenderGui()
 {
-	ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
+	Resolution = {};
 
-	UIWindow::Update();
-
-	float w = (float)ImGui::GetWindowWidth();
-	float h = (float)ImGui::GetWindowHeight();
-	ImGuizmo::SetDrawlist();
-	ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, w, h);
-
-	auto viewportOffset = ImGui::GetCursorPos(); // includes tab bar
-	auto viewportPos = ImGui::GetWindowPos();
-	auto viewportSize = ImGui::GetContentRegionAvail();
-	auto windowSize = ImGui::GetWindowSize();
-
-	Rect.left = viewportPos.x + viewportOffset.x;
-	Rect.top = viewportPos.y + viewportOffset.y;
-	Rect.right = Rect.left + windowSize.x;
-	Rect.bottom = Rect.top + windowSize.y;
-
-	Resolution = Vector2i(viewportSize.x, viewportSize.y);
-
-	ImGui::Image((ImTextureID)m_pImage, viewportSize);
-
-	if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
+	if (ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse))
 	{
-		Application::InputHandler.Mouse.UseRawInput = true;
-	}
-	else
-	{
-		Application::InputHandler.Mouse.UseRawInput = false;
+		UIWindow::Update();
+
+		float w = (float)ImGui::GetWindowWidth();
+		float h = (float)ImGui::GetWindowHeight();
+		ImGuizmo::SetDrawlist();
+		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, w, h);
+
+		auto viewportOffset = ImGui::GetCursorPos(); // includes tab bar
+		auto viewportPos = ImGui::GetWindowPos();
+		auto viewportSize = ImGui::GetContentRegionAvail();
+		auto windowSize = ImGui::GetWindowSize();
+
+		Rect.left = viewportPos.x + viewportOffset.x;
+		Rect.top = viewportPos.y + viewportOffset.y;
+		Rect.right = Rect.left + windowSize.x;
+		Rect.bottom = Rect.top + windowSize.y;
+
+		Resolution = Vector2i(viewportSize.x, viewportSize.y);
+
+		ImGui::Image((ImTextureID)m_pImage, viewportSize);
+
+		if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
+		{
+			Application::InputHandler.Mouse.UseRawInput = true;
+		}
+		else
+		{
+			Application::InputHandler.Mouse.UseRawInput = false;
+		}
 	}
 	ImGui::End();
 }

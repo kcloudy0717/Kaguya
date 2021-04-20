@@ -42,9 +42,6 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	if (Width == 0 || Height == 0)
 		return;
 
-	if (Width == UINT_MAX || Width == UINT_MAX)
-		return;
-
 	m_ViewportWidth = Width;
 	m_ViewportHeight = Height;
 
@@ -146,9 +143,9 @@ void Renderer::Render(const Time& Time, Scene& Scene)
 	g_SystemConstants.TotalFrameCount = static_cast<unsigned int>(Statistics::TotalFrameCount);
 	g_SystemConstants.NumLights = numLights;
 
-	GraphicsResource sceneConstantBuffer = RenderDevice::Instance().GraphicsMemory()->AllocateConstant(g_SystemConstants);
+	GraphicsResource sceneConstantBuffer = RenderDevice.GraphicsMemory()->AllocateConstant(g_SystemConstants);
 
-	RenderDevice::Instance().BindGlobalDescriptorHeap(m_GraphicsCommandList);
+	RenderDevice.BindGlobalDescriptorHeap(m_GraphicsCommandList);
 
 	if (!m_RaytracingAccelerationStructure.empty())
 	{
@@ -168,8 +165,8 @@ void Renderer::Render(const Time& Time, Scene& Scene)
 		m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), m_GraphicsCommandList);
 	}
 
-	auto pBackBuffer = RenderDevice::Instance().GetCurrentBackBuffer();
-	auto rtv = RenderDevice::Instance().GetCurrentBackBufferRenderTargetView();
+	auto pBackBuffer = RenderDevice.GetCurrentBackBuffer();
+	auto rtv = RenderDevice.GetCurrentBackBufferRenderTargetView();
 
 	m_GraphicsCommandList.TransitionBarrier(pBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	{
@@ -193,8 +190,8 @@ void Renderer::Render(const Time& Time, Scene& Scene)
 	m_GraphicsCommandList.TransitionBarrier(pBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
 
 	CommandList* pCommandLists[] = { &m_GraphicsCommandList };
-	RenderDevice::Instance().ExecuteGraphicsContexts(1, pCommandLists);
-	RenderDevice::Instance().Present(Settings::VSync);
+	RenderDevice.ExecuteGraphicsContexts(1, pCommandLists);
+	RenderDevice.Present(Settings::VSync);
 
 	UINT64 value = ++m_GraphicsFenceValue;
 	ThrowIfFailed(RenderDevice::Instance().GetGraphicsQueue()->Signal(m_GraphicsFence, value));

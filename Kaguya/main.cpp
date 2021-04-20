@@ -162,8 +162,6 @@ int main(int argc, char* argv[])
 	SET_LEAK_BREAKPOINT(-1);
 #endif
 
-	atexit(Device::ReportLiveObjects);
-
 	Application::Config config = {
 		.Title = L"Kaguya",
 		.Width = 1280,

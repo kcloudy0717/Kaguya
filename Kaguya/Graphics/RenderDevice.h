@@ -189,7 +189,7 @@ public:
 	}
 
 	Device& GetDevice() noexcept { return m_Device; }
-	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_Device.GetGraphicsMemory(); }
+	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_GraphicsMemory.get(); }
 
 	ResourceViewHeaps& GetResourceViewHeaps() noexcept { return m_ResourceViewHeaps; }
 
@@ -222,6 +222,13 @@ private:
 
 	Device m_Device;
 
+	std::unique_ptr<DirectX::GraphicsMemory> m_GraphicsMemory;
+	D3D12MA::Allocator* m_Allocator = nullptr;
+
+	CommandQueue m_GraphicsQueue;
+	CommandQueue m_ComputeQueue;
+	CommandQueue m_CopyQueue;
+
 	ResourceViewHeaps m_ResourceViewHeaps;
 
 	Descriptor m_ImGuiDescriptor;
@@ -230,8 +237,4 @@ private:
 	// Global resource state tracker
 	ResourceStateTracker m_GlobalResourceStateTracker;
 	RWLock m_GlobalResourceStateTrackerLock;
-
-	CommandQueue m_GraphicsQueue;
-	CommandQueue m_ComputeQueue;
-	CommandQueue m_CopyQueue;
 };

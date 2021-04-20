@@ -23,6 +23,7 @@ void RenderDevice::Shutdown()
 	if (g_pRenderDevice)
 	{
 		delete g_pRenderDevice;
+		Device::ReportLiveObjects();
 	}
 }
 
@@ -45,7 +46,18 @@ RenderDevice::RenderDevice()
 		.BreakOnWarning = true
 	};
 	m_Device = Device(m_Adapter.Get(), deviceOptions);
-	m_Device.CreateAllocator(m_Adapter.Get());
+
+	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
+	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device);
+
+	// Create our memory allocator
+	D3D12MA::ALLOCATOR_DESC desc = {};
+	desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+	desc.pDevice = m_Device;
+	desc.PreferredBlockSize = 0;
+	desc.pAllocationCallbacks = nullptr;
+	desc.pAdapter = m_Adapter.Get();
+	ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &m_Allocator));
 
 	m_GraphicsQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_ComputeQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
@@ -72,6 +84,7 @@ RenderDevice::RenderDevice()
 RenderDevice::~RenderDevice()
 {
 	ImGui_ImplDX12_Shutdown();
+	SafeRelease(m_Allocator);
 }
 
 DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
@@ -132,7 +145,7 @@ std::shared_ptr<Resource> RenderDevice::CreateResource(
 {
 	std::shared_ptr<Resource> pResource = std::make_shared<Resource>();
 
-	ThrowIfFailed(m_Device.GetAllocator()->CreateResource(pAllocDesc,
+	ThrowIfFailed(m_Allocator->CreateResource(pAllocDesc,
 		pResourceDesc, InitialResourceState, pOptimizedClearValue,
 		&pResource->pAllocation, IID_PPV_ARGS(pResource->pResource.ReleaseAndGetAddressOf())));
 
@@ -453,7 +466,7 @@ void RenderDevice::InitializeDXGISwapChain()
 	ComPtr<IDXGISwapChain1> pSwapChain1;
 	ThrowIfFailed(m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue, Window.GetWindowHandle(), &desc, nullptr, nullptr, pSwapChain1.ReleaseAndGetAddressOf()));
 	ThrowIfFailed(m_Factory->MakeWindowAssociation(Window.GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
-	ThrowIfFailed(pSwapChain1->QueryInterface(IID_PPV_ARGS(m_SwapChain.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(pSwapChain1.As(&m_SwapChain));
 }
 
 CommandQueue& RenderDevice::GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType)

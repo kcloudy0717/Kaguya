@@ -34,11 +34,13 @@ ID3D12CommandAllocator* CommandAllocatorPool::RequestCommandAllocator(
 	// If no allocator's were ready to be reused, create a new one
 	if (!pCommandAllocator)
 	{
-		ThrowIfFailed(m_pDevice->CreateCommandAllocator(m_Type, IID_PPV_ARGS(&pCommandAllocator)));
-		wchar_t allocatorName[32];
-		swprintf(allocatorName, 32, L"CommandAllocator %zu", m_CommandAllocatorPool.size());
-		pCommandAllocator->SetName(allocatorName);
-		m_CommandAllocatorPool.emplace_back(pCommandAllocator);
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+		ThrowIfFailed(m_pDevice->CreateCommandAllocator(m_Type, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
+		wchar_t AllocatorName[32];
+		swprintf(AllocatorName, 32, L"CommandAllocator %zu", m_CommandAllocatorPool.size());
+		CommandAllocator->SetName(AllocatorName);
+		pCommandAllocator = CommandAllocator.Get();
+		m_CommandAllocatorPool.push_back(CommandAllocator);
 	}
 
 	return pCommandAllocator;
