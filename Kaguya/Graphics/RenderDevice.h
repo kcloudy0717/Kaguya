@@ -2,7 +2,6 @@
 #include "D3D12/d3dx12.h"
 #include "D3D12/Device.h"
 #include <GraphicsMemory.h>
-#include <D3D12MemAlloc.h>
 #include "D3D12/Fence.h"
 #include "D3D12/CommandQueue.h"
 #include "D3D12/ResourceStateTracker.h"
@@ -190,7 +189,7 @@ public:
 	}
 
 	Device& GetDevice() noexcept { return m_Device; }
-	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_GraphicsMemory.get(); }
+	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_Device.GetGraphicsMemory(); }
 
 	ResourceViewHeaps& GetResourceViewHeaps() noexcept { return m_ResourceViewHeaps; }
 
@@ -222,8 +221,6 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
 	Device m_Device;
-	std::unique_ptr<DirectX::GraphicsMemory> m_GraphicsMemory;
-	D3D12MA::Allocator* m_Allocator = nullptr;
 
 	ResourceViewHeaps m_ResourceViewHeaps;
 

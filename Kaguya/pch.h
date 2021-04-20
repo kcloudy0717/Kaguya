@@ -45,18 +45,15 @@
 // operator <=>
 #include <compare>
 
-// submodules
+// ext
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
-
 #include <ImGuizmo.h>
-
 #include <entt.hpp>
-
 #include <wil/resource.h>
-
-// external
+#include <D3D12MemAlloc.h>
+#include <GraphicsMemory.h>
 #include <DirectXTex.h>
 #include <nfd.h>
 

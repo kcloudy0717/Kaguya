@@ -45,18 +45,7 @@ RenderDevice::RenderDevice()
 		.BreakOnWarning = true
 	};
 	m_Device = Device(m_Adapter.Get(), deviceOptions);
-
-	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
-	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device);
-
-	// Create our memory allocator
-	D3D12MA::ALLOCATOR_DESC desc = {};
-	desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-	desc.pDevice = m_Device;
-	desc.PreferredBlockSize = 0;
-	desc.pAllocationCallbacks = nullptr;
-	desc.pAdapter = m_Adapter.Get();
-	ThrowIfFailed(CreateAllocator(&desc, &m_Allocator));
+	m_Device.CreateAllocator(m_Adapter.Get());
 
 	m_GraphicsQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_ComputeQueue = CommandQueue(m_Device, D3D12_COMMAND_LIST_TYPE_COMPUTE);
@@ -83,7 +72,6 @@ RenderDevice::RenderDevice()
 RenderDevice::~RenderDevice()
 {
 	ImGui_ImplDX12_Shutdown();
-	SafeRelease(m_Allocator);
 }
 
 DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
@@ -107,7 +95,7 @@ void RenderDevice::Present(bool VSync)
 		LOG_ERROR("DXGI_ERROR_DEVICE_REMOVED");
 	}
 
-	m_GraphicsMemory->Commit(m_GraphicsQueue);
+	GraphicsMemory()->Commit(m_GraphicsQueue);
 }
 
 void RenderDevice::Resize(UINT Width, UINT Height)
@@ -144,7 +132,7 @@ std::shared_ptr<Resource> RenderDevice::CreateResource(
 {
 	std::shared_ptr<Resource> pResource = std::make_shared<Resource>();
 
-	ThrowIfFailed(m_Allocator->CreateResource(pAllocDesc,
+	ThrowIfFailed(m_Device.GetAllocator()->CreateResource(pAllocDesc,
 		pResourceDesc, InitialResourceState, pOptimizedClearValue,
 		&pResource->pAllocation, IID_PPV_ARGS(pResource->pResource.ReleaseAndGetAddressOf())));
 

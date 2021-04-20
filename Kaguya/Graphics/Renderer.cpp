@@ -42,6 +42,9 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	if (Width == 0 || Height == 0)
 		return;
 
+	if (Width == UINT_MAX || Width == UINT_MAX)
+		return;
+
 	m_ViewportWidth = Width;
 	m_ViewportHeight = Height;
 

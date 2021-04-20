@@ -34,13 +34,34 @@ Device::Device(
 	ThrowIfFailed(::D3D12CreateDevice(
 		pAdapter,
 		Options.FeatureLevel,
-		IID_PPV_ARGS(m_Device5.ReleaseAndGetAddressOf())));
+		IID_PPV_ARGS(m_Device.ReleaseAndGetAddressOf())));
 
 	ComPtr<ID3D12InfoQueue> pInfoQueue;
-	if (SUCCEEDED(m_Device5.As(&pInfoQueue)))
+	if (SUCCEEDED(m_Device.As(&pInfoQueue)))
 	{
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, Options.BreakOnCorruption);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, Options.BreakOnError);
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
 	}
+
+	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
+	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device.Get());
+}
+
+Device::~Device()
+{
+	SafeRelease(m_Allocator);
+}
+
+void Device::CreateAllocator(
+	_In_ IDXGIAdapter4* pAdapter)
+{
+	// Create our memory allocator
+	D3D12MA::ALLOCATOR_DESC desc = {};
+	desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+	desc.pDevice = m_Device.Get();
+	desc.PreferredBlockSize = 0;
+	desc.pAllocationCallbacks = nullptr;
+	desc.pAdapter = pAdapter;
+	ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &m_Allocator));
 }

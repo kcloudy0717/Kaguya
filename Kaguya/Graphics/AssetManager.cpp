@@ -32,8 +32,6 @@ AssetManager& AssetManager::Instance()
 
 AssetManager::AssetManager()
 {
-	CreateSystemTextures();
-
 	m_AsyncImageLoader.SetCallback([&](auto pImage)
 	{
 		std::scoped_lock _(m_UploadCriticalSection);
@@ -75,11 +73,9 @@ void AssetManager::AsyncLoadImage(const std::filesystem::path& Path, bool sRGB)
 		return;
 	}
 
-	Asset::ImageMetadata metadata =
-	{
+	Asset::ImageMetadata metadata = {
 		.Path = Path,
-		.sRGB = sRGB
-	};
+		.sRGB = sRGB };
 	m_AsyncImageLoader.RequestAsyncLoad(1, &metadata);
 }
 
@@ -97,104 +93,14 @@ void AssetManager::AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeo
 		return;
 	}
 
-	Asset::MeshMetadata metadata =
-	{
+	Asset::MeshMetadata metadata = {
 		.Path = Path,
-		.KeepGeometryInRAM = KeepGeometryInRAM,
-	};
+		.KeepGeometryInRAM = KeepGeometryInRAM };
 	m_AsyncMeshLoader.RequestAsyncLoad(1, &metadata);
 }
 
-void AssetManager::CreateSystemTextures()
-{
-	auto& RenderDevice = RenderDevice::Instance();
-
-	const std::filesystem::path assetPaths[AssetTextures::NumSystemTextures] =
-	{
-		Application::ExecutableFolderPath / "Assets/Textures/DefaultWhite.dds",
-		Application::ExecutableFolderPath / "Assets/Textures/DefaultBlack.dds",
-		Application::ExecutableFolderPath / "Assets/Textures/DefaultAlbedoMap.dds",
-		Application::ExecutableFolderPath / "Assets/Textures/DefaultNormalMap.dds",
-		Application::ExecutableFolderPath / "Assets/Textures/DefaultRoughnessMap.dds"
-	};
-
-	D3D12_RESOURCE_DESC resourceDescs[AssetTextures::NumSystemTextures] = {};
-	D3D12_RESOURCE_ALLOCATION_INFO1 resourceAllocationInfo1[AssetTextures::NumSystemTextures] = {};
-	DirectX::TexMetadata texMetadatas[AssetTextures::NumSystemTextures] = {};
-	DirectX::ScratchImage scratchImages[AssetTextures::NumSystemTextures] = {};
-
-	for (size_t i = 0; i < AssetTextures::NumSystemTextures; ++i)
-	{
-		DirectX::TexMetadata texMetadata;
-		DirectX::ScratchImage scratchImage;
-		ThrowIfFailed(DirectX::LoadFromDDSFile(assetPaths[i].c_str(), DirectX::DDS_FLAGS::DDS_FLAGS_FORCE_RGB, &texMetadata, scratchImage));
-
-		resourceDescs[i] = CD3DX12_RESOURCE_DESC::Tex2D(texMetadata.format,
-			texMetadata.width,
-			texMetadata.height,
-			texMetadata.arraySize,
-			texMetadata.mipLevels);
-
-		// Since we are using small resources we can take advantage of 4KB
-		// resource alignments. As long as the most detailed mip can fit in an
-		// allocation less than 64KB, 4KB alignments can be used.
-		//
-		// When dealing with MSAA textures the rules are similar, but the minimum
-		// alignment is 64KB for a texture whose most detailed mip can fit in an
-		// allocation less than 4MB.
-		resourceDescs[i].Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
-		texMetadatas[i] = texMetadata;
-		scratchImages[i] = std::move(scratchImage);
-	}
-
-	auto resourceAllocationInfo = RenderDevice.GetDevice()->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
-	if (resourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
-	{
-		// If the alignment requested is not granted, then let D3D tell us
-		// the alignment that needs to be used for these resources.
-		for (auto& resourceDesc : resourceDescs)
-		{
-			resourceDesc.Alignment = 0;
-		}
-		resourceAllocationInfo = RenderDevice.GetDevice()->GetResourceAllocationInfo1(0, ARRAYSIZE(resourceDescs), resourceDescs, resourceAllocationInfo1);
-	}
-
-	auto heapDesc = CD3DX12_HEAP_DESC(resourceAllocationInfo.SizeInBytes, D3D12_HEAP_TYPE_DEFAULT, 0, D3D12_HEAP_FLAG_DENY_BUFFERS | D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES);
-	RenderDevice.GetDevice()->CreateHeap(&heapDesc, IID_PPV_ARGS(m_SystemTextureHeap.ReleaseAndGetAddressOf()));
-
-	ResourceUploadBatch uploader(RenderDevice.GetDevice());
-	uploader.Begin(D3D12_COMMAND_LIST_TYPE_COPY);
-
-	for (size_t i = 0; i < AssetTextures::NumSystemTextures; ++i)
-	{
-		UINT64 heapOffset = resourceAllocationInfo1[i].Offset;
-		RenderDevice.GetDevice()->CreatePlacedResource(m_SystemTextureHeap.Get(), heapOffset,
-			&resourceDescs[i], D3D12_RESOURCE_STATE_COMMON, nullptr,
-			IID_PPV_ARGS(m_SystemTextures[i].ReleaseAndGetAddressOf()));
-
-		m_SystemTextureSRVs[i] = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
-		RenderDevice.CreateShaderResourceView(m_SystemTextures[i].Get(), m_SystemTextureSRVs[i]); // Create SRV
-
-		// Upload
-		const auto& scratchImage = scratchImages[i];
-		std::vector<D3D12_SUBRESOURCE_DATA> subresources(scratchImage.GetImageCount());
-		const DirectX::Image* pImages = scratchImage.GetImages();
-		for (size_t i = 0; i < scratchImage.GetImageCount(); ++i)
-		{
-			subresources[i].RowPitch = pImages[i].rowPitch;
-			subresources[i].SlicePitch = pImages[i].slicePitch;
-			subresources[i].pData = pImages[i].pixels;
-		}
-
-		uploader.Upload(m_SystemTextures[i].Get(), 0, subresources.data(), subresources.size());
-	}
-
-	// Upload the resources to the GPU.
-	auto finish = uploader.End(RenderDevice.GetCopyQueue());
-	finish.wait();
-}
-
-DWORD WINAPI AssetManager::ResourceUploadThreadProc(_In_ PVOID pParameter)
+DWORD WINAPI AssetManager::ResourceUploadThreadProc(
+	_In_ PVOID pParameter)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 	auto& AssetManager = AssetManager::Instance();
