@@ -7,6 +7,12 @@ Descriptor ResourceViewHeaps::AllocateResourceView()
 	return m_ResourceDescriptorHeap.At(index);
 }
 
+Descriptor ResourceViewHeaps::AllocateSampler()
+{
+	UINT index = m_SamplerDescriptorIndexPool.allocate();
+	return m_SamplerDescriptorHeap.At(index);
+}
+
 Descriptor ResourceViewHeaps::AllocateRenderTargetView()
 {
 	UINT index = m_RenderTargetDescriptorIndexPool.allocate();
@@ -25,6 +31,15 @@ void ResourceViewHeaps::ReleaseResourceView(
 	if (Descriptor.IsValid())
 	{
 		m_ResourceDescriptorIndexPool.free(Descriptor.Index);
+	}
+}
+
+void ResourceViewHeaps::ReleaseSampler(
+	_In_ Descriptor Descriptor)
+{
+	if (Descriptor.IsValid())
+	{
+		m_SamplerDescriptorIndexPool.free(Descriptor.Index);
 	}
 }
 

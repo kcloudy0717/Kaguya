@@ -49,11 +49,16 @@ public:
 
 	[[nodiscard]] Descriptor AllocateResourceView();
 
+	[[nodiscard]] Descriptor AllocateSampler();
+
 	[[nodiscard]] Descriptor AllocateRenderTargetView();
 
 	[[nodiscard]] Descriptor AllocateDepthStencilView();
 
 	void ReleaseResourceView(
+		_In_ Descriptor Descriptor);
+
+	void ReleaseSampler(
 		_In_ Descriptor Descriptor);
 
 	void ReleaseRenderTargetView(
