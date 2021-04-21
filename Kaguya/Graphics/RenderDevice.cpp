@@ -125,7 +125,7 @@ void RenderDevice::Resize(UINT Width, UINT Height)
 	ThrowIfFailed(m_SwapChain->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, desc.Flags));
 
 	// Recreate descriptors
-	ScopedWriteLock SWL(m_GlobalResourceStateTrackerLock);
+	std::scoped_lock _(m_GlobalResourceStateCriticalSection);
 	for (uint32_t i = 0; i < RenderDevice::NumSwapChainBuffers; ++i)
 	{
 		ComPtr<ID3D12Resource> pBackBuffer;
@@ -157,7 +157,7 @@ std::shared_ptr<Resource> RenderDevice::CreateResource(
 	// No need to track resources that have constant resource state throughout their lifetime
 	if (pAllocDesc->HeapType == D3D12_HEAP_TYPE_DEFAULT)
 	{
-		ScopedWriteLock _(m_GlobalResourceStateTrackerLock);
+		std::scoped_lock _(m_GlobalResourceStateCriticalSection);
 		m_GlobalResourceStateTracker.AddResourceState(pResource->pResource.Get(), InitialResourceState);
 	}
 
@@ -528,7 +528,7 @@ void RenderDevice::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder
 
 void RenderDevice::ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UINT NumCommandLists, CommandList* ppCommandLists[])
 {
-	ScopedWriteLock _(m_GlobalResourceStateTrackerLock);
+	std::scoped_lock _(m_GlobalResourceStateCriticalSection);
 
 	std::vector<ID3D12CommandList*> commandlistsToBeExecuted;
 	commandlistsToBeExecuted.reserve(size_t(NumCommandLists) * 2);

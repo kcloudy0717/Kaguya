@@ -6,27 +6,6 @@ RootSignatureBuilder::RootSignatureBuilder() noexcept
 	m_Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 }
 
-D3D12_ROOT_SIGNATURE_DESC RootSignatureBuilder::Build_1_0() noexcept
-{
-	// Go through all the parameters, and set the actual addresses of the heap range descriptors based
-	// on their indices in the range indices vector
-	for (size_t i = 0; i < m_Parameters.size(); ++i)
-	{
-		if (m_Parameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
-		{
-			m_Parameters[i].DescriptorTable.pDescriptorRanges = m_DescriptorRanges[m_DescriptorRangeIndices[i]].data();
-		}
-	}
-
-	D3D12_ROOT_SIGNATURE_DESC desc = {};
-	desc.NumParameters = static_cast<UINT>(m_Parameters.size());
-	desc.pParameters = m_Parameters.data();
-	desc.NumStaticSamplers = static_cast<UINT>(m_StaticSamplers.size());
-	desc.pStaticSamplers = m_StaticSamplers.data();
-	desc.Flags = m_Flags;
-	return desc;
-}
-
 D3D12_ROOT_SIGNATURE_DESC1 RootSignatureBuilder::Build() noexcept
 {
 	// Go through all the parameters, and set the actual addresses of the heap range descriptors based

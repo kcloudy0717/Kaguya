@@ -236,5 +236,5 @@ private:
 
 	// Global resource state tracker
 	ResourceStateTracker m_GlobalResourceStateTracker;
-	RWLock m_GlobalResourceStateTrackerLock;
+	CriticalSection m_GlobalResourceStateCriticalSection;
 };
