@@ -18,6 +18,8 @@
 
 /*
 * Describes ranges of descriptors that might have offsets relative to the initial range descriptor
+* I use this to emulate bindless resource, SM6.6 provides global variables for DescriptorHeaps
+* that you can directly index into
 */
 class DescriptorTable
 {

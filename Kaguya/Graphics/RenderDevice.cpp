@@ -491,37 +491,39 @@ void RenderDevice::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder
 	/* Descriptor Tables */
 
 	// ShaderResource
-	DescriptorTable shaderResourceDescriptorTable;
+	DescriptorTable srvTable;
 	{
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		//constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
 
-		shaderResourceDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DTable
-		shaderResourceDescriptorTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DUINT4Table
-		shaderResourceDescriptorTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DArrayTable
-		shaderResourceDescriptorTable.AddDescriptorRange<0, 103>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_TextureCubeTable
-		shaderResourceDescriptorTable.AddDescriptorRange<0, 104>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
+		srvTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DTable
+		srvTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DUINT4Table
+		srvTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_Texture2DArrayTable
+		srvTable.AddDescriptorRange<0, 103>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_TextureCubeTable
+		srvTable.AddDescriptorRange<0, 104>(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
 	}
-	RootSignatureBuilder.AddDescriptorTable(shaderResourceDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(srvTable);
 
 	// UnorderedAccess
-	DescriptorTable unorderedAccessDescriptorTable;
+	DescriptorTable uavTable;
 	{
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		//constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
 
-		unorderedAccessDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DTable
-		unorderedAccessDescriptorTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
-		unorderedAccessDescriptorTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWByteAddressBufferTable
+		uavTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DTable
+		uavTable.AddDescriptorRange<0, 101>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
+		uavTable.AddDescriptorRange<0, 102>(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, Flags, 0); // g_RWByteAddressBufferTable
 	}
-	RootSignatureBuilder.AddDescriptorTable(unorderedAccessDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(uavTable);
 
 	// Sampler
-	DescriptorTable samplerDescriptorTable;
+	DescriptorTable samplerTable;
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 
-		samplerDescriptorTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, UINT_MAX, Flags, 0); // g_SamplerTable
+		samplerTable.AddDescriptorRange<0, 100>(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, UINT_MAX, Flags, 0); // g_SamplerTable
 	}
-	RootSignatureBuilder.AddDescriptorTable(samplerDescriptorTable);
+	RootSignatureBuilder.AddDescriptorTable(samplerTable);
 }
 
 void RenderDevice::ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UINT NumCommandLists, CommandList* ppCommandLists[])

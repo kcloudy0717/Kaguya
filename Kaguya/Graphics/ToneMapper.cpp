@@ -17,7 +17,13 @@ ToneMapper::ToneMapper(
 		Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 	
 		Builder.AllowResourceDescriptorHeapIndexing();
-	});
+		Builder.AllowSampleDescriptorHeapIndexing();
+	}, false);
+
+	auto depthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	depthStencilState.DepthEnable = FALSE;
+	D3D12_RT_FORMAT_ARRAY formats = {};
+	formats.RTFormats[formats.NumRenderTargets++] = DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat);
 
 	struct PipelineStateStream
 	{
@@ -28,11 +34,6 @@ ToneMapper::ToneMapper(
 		CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL			DepthStencilState;
 		CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
 	} stream;
-
-	auto depthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	depthStencilState.DepthEnable = FALSE;
-	D3D12_RT_FORMAT_ARRAY formats = {};
-	formats.RTFormats[formats.NumRenderTargets++] = DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat);
 
 	stream.pRootSignature = m_RS;
 	stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -100,7 +101,7 @@ void ToneMapper::Apply(
 	settings.InputIndex = ShaderResourceView.Index;
 
 	CommandList->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
-	RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
+	//RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
 
 	CommandList->DrawInstanced(3, 1, 0, 0);
 }
