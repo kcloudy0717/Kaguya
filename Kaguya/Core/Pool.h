@@ -65,6 +65,7 @@ public:
 		m_Elements[Index].Next = m_FreeStart;
 		m_FreeStart = Index;
 	}
+
 private:
 	std::vector<Element> m_Elements;
 	size_t m_FreeStart;
@@ -106,6 +107,7 @@ public:
 		std::scoped_lock _(m_CriticalSection);
 		return m_Pool.free(Index);
 	}
+
 private:
 	Pool<T, Size> m_Pool;
 	CriticalSection m_CriticalSection;

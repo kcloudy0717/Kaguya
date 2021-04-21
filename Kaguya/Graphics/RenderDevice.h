@@ -1,16 +1,15 @@
 #pragma once
-#include "D3D12/d3dx12.h"
-#include "D3D12/Device.h"
 #include <GraphicsMemory.h>
-#include "D3D12/Fence.h"
+
+#include "D3D12/Device.h"
 #include "D3D12/CommandQueue.h"
+#include "D3D12/ResourceViewHeaps.h"
+#include "D3D12/Fence.h"
 #include "D3D12/ResourceStateTracker.h"
 #include "D3D12/ShaderCompiler.h"
-#include "D3D12/ResourceViewHeaps.h"
 #include "D3D12/CommandList.h"
 #include "D3D12/AccelerationStructure.h"
 #include "D3D12/ShaderTable.h"
-
 #include "D3D12/RootSignature.h"
 #include "D3D12/RaytracingPipelineState.h"
 
@@ -42,11 +41,6 @@ public:
 	enum
 	{
 		NumSwapChainBuffers = 3,
-
-		NumGlobalOnlineDescriptors = 1024,
-		NumGlobalOnlineSamplerDescriptors = 512,
-		NumRenderTargetDescriptors = 512,
-		NumDepthStencilDescriptors = 512
 	};
 
 	static constexpr DXGI_FORMAT SwapChainBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;

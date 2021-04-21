@@ -6,8 +6,8 @@ class ResourceViewHeaps
 public:
 	enum
 	{
-		NumResourceDescriptors = 2048,
-		NumSamplerDescriptors = 512,
+		NumResourceDescriptors = 1000000,
+		NumSamplerDescriptors = 2048,
 		NumRenderTargetDescriptors = 512,
 		NumDepthStencilDescriptors = 512
 	};
