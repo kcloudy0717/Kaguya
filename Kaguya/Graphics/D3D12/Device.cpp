@@ -25,14 +25,15 @@ Device::Device(
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
 	{
 		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the device.
-		ComPtr<ID3D12Debug1> pDebug1;
-		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(pDebug1.ReleaseAndGetAddressOf()))))
+		ComPtr<ID3D12Debug5> pDebug5;
+		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(pDebug5.ReleaseAndGetAddressOf()))))
 		{
 			if (Options.EnableDebugLayer)
 			{
-				pDebug1->EnableDebugLayer();
+				pDebug5->EnableDebugLayer();
 			}
-			pDebug1->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
+			pDebug5->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
+			pDebug5->SetEnableAutoName(Options.EnableAutoDebugName);
 		}
 	}
 
@@ -77,8 +78,10 @@ Device::Device(
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
 	if (Features.DynamicResources)
 	{
-		D3D12_FEATURE_DATA_SHADER_MODEL sm = {
-			.HighestShaderModel = D3D_SHADER_MODEL_6_6 };
+		D3D12_FEATURE_DATA_SHADER_MODEL sm =
+		{
+			.HighestShaderModel = D3D_SHADER_MODEL_6_6
+		};
 		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
 		{
 			if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)

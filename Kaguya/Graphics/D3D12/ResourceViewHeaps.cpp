@@ -2,20 +2,55 @@
 #include "ResourceViewHeaps.h"
 
 template<size_t Size>
-inline Descriptor AllocateDescriptor(DescriptorHeap& DescriptorHeap, ThreadSafePool<void, Size>& DescriptorHeapIndexPool)
+inline Descriptor AllocateDescriptor(DescriptorHeap& DescriptorHeap, concurrent_pool<void, Size>& DescriptorHeapIndexPool)
 {
 	auto index = static_cast<UINT>(DescriptorHeapIndexPool.allocate());
 	return DescriptorHeap.At(index);
 }
 
 template<size_t Size>
-inline void ReleaseDescriptor(Descriptor& Descriptor, ThreadSafePool<void, Size>& DescriptorHeapIndexPool)
+inline void ReleaseDescriptor(Descriptor& Descriptor, concurrent_pool<void, Size>& DescriptorHeapIndexPool)
 {
 	if (Descriptor.IsValid())
 	{
 		DescriptorHeapIndexPool.free(Descriptor.Index);
 		Descriptor = {};
 	}
+}
+
+ResourceViewHeaps::ResourceViewHeaps(
+	_In_ ID3D12Device* pDevice)
+{
+	m_ResourceDescriptorHeap = DescriptorHeap(
+		pDevice,
+		NumResourceDescriptors,
+		true,
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	m_SamplerDescriptorHeap = DescriptorHeap(
+		pDevice,
+		NumSamplerDescriptors,
+		true,
+		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+	m_RenderTargetDescriptorHeap = DescriptorHeap(
+		pDevice,
+		NumRenderTargetDescriptors,
+		false,
+		D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	m_DepthStencilDescriptorHeap = DescriptorHeap(
+		pDevice,
+		NumDepthStencilDescriptors,
+		false,
+		D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+#if _DEBUG
+	m_ResourceDescriptorHeap->SetName(L"Resource Descriptor Heap");
+	m_SamplerDescriptorHeap->SetName(L"Sampler Descriptor Heap");
+	m_RenderTargetDescriptorHeap->SetName(L"Render Target Descriptor Heap");
+	m_DepthStencilDescriptorHeap->SetName(L"Depth Stencil Descriptor Heap");
+#endif
 }
 
 Descriptor ResourceViewHeaps::AllocateResourceView()

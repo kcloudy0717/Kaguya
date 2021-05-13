@@ -23,7 +23,7 @@ ToneMapper::ToneMapper(
 	auto depthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	depthStencilState.DepthEnable = FALSE;
 	D3D12_RT_FORMAT_ARRAY formats = {};
-	formats.RTFormats[formats.NumRenderTargets++] = DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat);
+	formats.RTFormats[formats.NumRenderTargets++] = SwapChain::Format_sRGB;
 
 	struct PipelineStateStream
 	{
@@ -63,12 +63,12 @@ void ToneMapper::SetResolution(
 	allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
 	allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-	auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(RenderDevice::SwapChainBufferFormat, Width, Height);
+	auto resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(SwapChain::Format, Width, Height);
 	resourceDesc.MipLevels = 1;
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
 	FLOAT white[] = { 1, 1, 1, 1 };
-	auto ClearValue = CD3DX12_CLEAR_VALUE(DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat), white);
+	auto ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, white);
 
 	m_RenderTarget = RenderDevice.CreateResource(&allocationDesc,
 		&resourceDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &ClearValue);

@@ -72,18 +72,12 @@ RenderDevice::RenderDevice()
 
 	m_ResourceViewHeaps = ResourceViewHeaps(m_Device);
 
-	InitializeDXGISwapChain();
-
-	// Allocate RTV for SwapChain
-	for (auto& swapChainDescriptor : m_SwapChainBufferDescriptors)
-	{
-		swapChainDescriptor = m_ResourceViewHeaps.AllocateRenderTargetView();
-	}
+	m_SwapChain = SwapChain(Application::Window.GetWindowHandle(), m_Factory.Get(), m_Device, m_GraphicsQueue);
 
 	m_ImGuiDescriptor = m_ResourceViewHeaps.AllocateResourceView();
 	// Initialize ImGui for d3d12
 	ImGui_ImplDX12_Init(m_Device, 1,
-		RenderDevice::SwapChainBufferFormat, m_ResourceViewHeaps.ResourceDescriptorHeap(),
+		SwapChain::Format, m_ResourceViewHeaps.ResourceDescriptorHeap(),
 		m_ImGuiDescriptor.CpuHandle,
 		m_ImGuiDescriptor.GpuHandle);
 }
@@ -106,36 +100,21 @@ DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
 
 void RenderDevice::Present(bool VSync)
 {
-	const UINT syncInterval = VSync ? 1u : 0u;
-	const UINT presentFlags = (m_TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-	HRESULT hr = m_SwapChain->Present(syncInterval, presentFlags);
-	if (hr == DXGI_ERROR_DEVICE_REMOVED)
-	{
-		// TODO: Handle device removal
-		LOG_ERROR("DXGI_ERROR_DEVICE_REMOVED");
-	}
+	m_SwapChain.Present(VSync);
 
 	GraphicsMemory()->Commit(m_GraphicsQueue);
 }
 
 void RenderDevice::Resize(UINT Width, UINT Height)
 {
-	// Resize backbuffer
-	// Note: Cannot use ResizeBuffers1 when debugging in Nsight Graphics, it will crash
-	DXGI_SWAP_CHAIN_DESC1 desc = {};
-	ThrowIfFailed(m_SwapChain->GetDesc1(&desc));
-	ThrowIfFailed(m_SwapChain->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, desc.Flags));
+	m_SwapChain.Resize(Width, Height);
 
 	// Recreate descriptors
 	std::scoped_lock _(m_GlobalResourceStateCriticalSection);
-	for (uint32_t i = 0; i < RenderDevice::NumSwapChainBuffers; ++i)
+	for (UINT i = 0; i < SwapChain::BackBufferCount; ++i)
 	{
-		ComPtr<ID3D12Resource> pBackBuffer;
-		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
-
-		CreateRenderTargetView(pBackBuffer.Get(), m_SwapChainBufferDescriptors[i]);
-
-		m_GlobalResourceStateTracker.AddResourceState(pBackBuffer.Get(), D3D12_RESOURCE_STATE_COMMON);
+		ID3D12Resource* pBackBuffer = m_SwapChain.GetBackBuffer(i);
+		m_GlobalResourceStateTracker.AddResourceState(pBackBuffer, D3D12_RESOURCE_STATE_COMMON);
 	}
 }
 
@@ -418,16 +397,6 @@ void RenderDevice::InitializeDXGIObjects()
 	// Create DXGIFactory
 	ThrowIfFailed(::CreateDXGIFactory2(flags, IID_PPV_ARGS(m_Factory.ReleaseAndGetAddressOf())));
 
-	// Check tearing support
-	BOOL allowTearing = FALSE;
-	if (FAILED(m_Factory->CheckFeatureSupport(
-		DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-		&allowTearing, sizeof(allowTearing))))
-	{
-		allowTearing = FALSE;
-	}
-	m_TearingSupport = allowTearing == TRUE;
-
 	// Enumerate hardware for an adapter that supports DX12
 	ComPtr<IDXGIAdapter4> pAdapter4;
 	UINT adapterID = 0;
@@ -451,29 +420,6 @@ void RenderDevice::InitializeDXGIObjects()
 
 		adapterID++;
 	}
-}
-
-void RenderDevice::InitializeDXGISwapChain()
-{
-	const Window& Window = Application::Window;
-
-	// Create DXGISwapChain
-	DXGI_SWAP_CHAIN_DESC1 desc = {};
-	desc.Width = Window.GetWindowWidth();
-	desc.Height = Window.GetWindowHeight();
-	desc.Format = SwapChainBufferFormat;
-	desc.Stereo = FALSE;
-	desc.SampleDesc = DefaultSampleDesc();
-	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferCount = NumSwapChainBuffers;
-	desc.Scaling = DXGI_SCALING_NONE;
-	desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-	desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-	desc.Flags = m_TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	ComPtr<IDXGISwapChain1> pSwapChain1;
-	ThrowIfFailed(m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue, Window.GetWindowHandle(), &desc, nullptr, nullptr, pSwapChain1.ReleaseAndGetAddressOf()));
-	ThrowIfFailed(m_Factory->MakeWindowAssociation(Window.GetWindowHandle(), DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
-	ThrowIfFailed(pSwapChain1.As(&m_SwapChain));
 }
 
 CommandQueue& RenderDevice::GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType)

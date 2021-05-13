@@ -8,6 +8,7 @@ struct DeviceOptions
 	bool BreakOnCorruption;
 	bool BreakOnError;
 	bool BreakOnWarning;
+	bool EnableAutoDebugName;
 };
 
 // Can't use DeviceCapabilities, it conflicts with a macro

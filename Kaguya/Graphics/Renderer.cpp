@@ -167,10 +167,9 @@ void Renderer::Render(Scene& Scene)
 		m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), m_GraphicsCommandList);
 	}
 
-	auto pBackBuffer = RenderDevice.GetCurrentBackBuffer();
-	auto rtv = RenderDevice.GetCurrentBackBufferRenderTargetView();
+	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 
-	m_GraphicsCommandList.TransitionBarrier(pBackBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	m_GraphicsCommandList.TransitionBarrier(pRenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	{
 		m_Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, float(m_Width), float(m_Height));
 		m_ScissorRect = CD3DX12_RECT(0, 0, m_Width, m_Height);
@@ -178,9 +177,9 @@ void Renderer::Render(Scene& Scene)
 		m_GraphicsCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_GraphicsCommandList->RSSetViewports(1, &m_Viewport);
 		m_GraphicsCommandList->RSSetScissorRects(1, &m_ScissorRect);
-		m_GraphicsCommandList->OMSetRenderTargets(1, &rtv.CpuHandle, TRUE, nullptr);
+		m_GraphicsCommandList->OMSetRenderTargets(1, &RenderTargetView.CpuHandle, TRUE, nullptr);
 		FLOAT white[] = { 1, 1, 1, 1 };
-		m_GraphicsCommandList->ClearRenderTargetView(rtv.CpuHandle, white, 0, nullptr);
+		m_GraphicsCommandList->ClearRenderTargetView(RenderTargetView.CpuHandle, white, 0, nullptr);
 
 		// ImGui Render
 		{
@@ -190,7 +189,7 @@ void Renderer::Render(Scene& Scene)
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_GraphicsCommandList);
 		}
 	}
-	m_GraphicsCommandList.TransitionBarrier(pBackBuffer, D3D12_RESOURCE_STATE_PRESENT);
+	m_GraphicsCommandList.TransitionBarrier(pRenderTarget, D3D12_RESOURCE_STATE_PRESENT);
 
 	CommandList* pCommandLists[] = { &m_GraphicsCommandList };
 	RenderDevice.ExecuteGraphicsContexts(1, pCommandLists);
@@ -242,9 +241,9 @@ void Renderer::RequestCapture()
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	auto pBackBuffer = RenderDevice::Instance().GetCurrentBackBuffer();
+	auto [pRenderTarget, RenderTargetView] = RenderDevice::Instance().GetCurrentBackBufferResource();
 	SaveD3D12ResourceToDisk(Application::ExecutableDirectory / L"swapchain.png",
-		pBackBuffer,
+		pRenderTarget,
 		D3D12_RESOURCE_STATE_PRESENT,
 		D3D12_RESOURCE_STATE_PRESENT);
 }

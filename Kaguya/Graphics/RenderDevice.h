@@ -1,16 +1,18 @@
 #pragma once
 #include <GraphicsMemory.h>
 
+#include "D3D12/ShaderCompiler.h"
+#include "d3d12/SwapChain.h"
 #include "D3D12/Device.h"
 #include "D3D12/CommandQueue.h"
 #include "D3D12/ResourceViewHeaps.h"
 #include "D3D12/Fence.h"
 #include "D3D12/ResourceStateTracker.h"
-#include "D3D12/ShaderCompiler.h"
 #include "D3D12/CommandList.h"
 #include "D3D12/AccelerationStructure.h"
 #include "D3D12/ShaderTable.h"
 #include "D3D12/RootSignature.h"
+#include "d3d12/PipelineState.h"
 #include "D3D12/RaytracingPipelineState.h"
 
 struct RootParameters
@@ -38,12 +40,6 @@ struct Resource
 class RenderDevice
 {
 public:
-	enum
-	{
-		NumSwapChainBuffers = 3,
-	};
-
-	static constexpr DXGI_FORMAT SwapChainBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	static constexpr DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT;
 	static constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
@@ -166,20 +162,9 @@ public:
 	const auto& GetAdapterDesc() const { return m_AdapterDesc; }
 	DXGI_QUERY_VIDEO_MEMORY_INFO QueryLocalVideoMemoryInfo() const;
 
-	Descriptor GetCurrentBackBufferRenderTargetView() const
+	auto GetCurrentBackBufferResource() const
 	{
-		UINT index = m_SwapChain->GetCurrentBackBufferIndex();
-		return m_SwapChainBufferDescriptors[index];
-	}
-
-	ID3D12Resource* GetCurrentBackBuffer() const
-	{
-		UINT index = m_SwapChain->GetCurrentBackBufferIndex();
-
-		ID3D12Resource* pBackBuffer = nullptr;
-		ThrowIfFailed(m_SwapChain->GetBuffer(index, IID_PPV_ARGS(&pBackBuffer)));
-		pBackBuffer->Release();
-		return pBackBuffer;
+		return m_SwapChain.GetCurrentBackBufferResource();
 	}
 
 	Device& GetDevice() noexcept { return m_Device; }
@@ -200,8 +185,6 @@ private:
 
 	void InitializeDXGIObjects();
 
-	void InitializeDXGISwapChain();
-
 	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType);
 	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
@@ -211,8 +194,6 @@ private:
 	Microsoft::WRL::ComPtr<IDXGIFactory6> m_Factory;
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
 	DXGI_ADAPTER_DESC3 m_AdapterDesc;
-	bool m_TearingSupport;
-	Microsoft::WRL::ComPtr<IDXGISwapChain4> m_SwapChain;
 
 	Device m_Device;
 
@@ -224,9 +205,9 @@ private:
 	CommandQueue m_CopyQueue;
 
 	ResourceViewHeaps m_ResourceViewHeaps;
+	SwapChain m_SwapChain;
 
 	Descriptor m_ImGuiDescriptor;
-	Descriptor m_SwapChainBufferDescriptors[NumSwapChainBuffers];
 
 	// Global resource state tracker
 	ResourceStateTracker m_GlobalResourceStateTracker;

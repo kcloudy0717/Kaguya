@@ -4,7 +4,7 @@
 #include "Synchronization/CriticalSection.h"
 
 template<typename T, size_t Size>
-class Pool
+class pool
 {
 public:
 	template<typename T>
@@ -22,7 +22,7 @@ public:
 
 	using Element = SElement<T>;
 
-	Pool()
+	pool()
 	{
 		m_Elements.resize(Size);
 		clear();
@@ -73,7 +73,7 @@ private:
 };
 
 template<typename T, size_t Size>
-class ThreadSafePool
+class concurrent_pool
 {
 public:
 	void clear()
@@ -109,6 +109,6 @@ public:
 	}
 
 private:
-	Pool<T, Size> m_Pool;
+	pool<T, Size> m_Pool;
 	CriticalSection m_CriticalSection;
 };

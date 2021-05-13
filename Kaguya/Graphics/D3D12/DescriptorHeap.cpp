@@ -10,11 +10,13 @@ DescriptorHeap::DescriptorHeap(
 {
 	// If you recorded a CPU descriptor handle into the command list (render target or depth stencil) then that descriptor can be reused immediately after the Set call, 
 	// if you recorded a GPU descriptor handle into the command list (everything else) then that descriptor cannot be reused until gpu is done referencing them
-	D3D12_DESCRIPTOR_HEAP_DESC desc = {
+	D3D12_DESCRIPTOR_HEAP_DESC desc =
+	{
 		.Type = Type,
 		.NumDescriptors = NumDescriptors,
 		.Flags = ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		.NodeMask = 0 };
+		.NodeMask = 0
+	};
 
 	ThrowIfFailed(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DescriptorHeap)));
 	m_DescriptorIncrementSize = pDevice->GetDescriptorHandleIncrementSize(Type);

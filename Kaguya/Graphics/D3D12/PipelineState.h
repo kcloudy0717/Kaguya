@@ -18,7 +18,8 @@ public:
 		_In_ ID3D12Device2* pDevice,
 		_In_ PipelineStateStream& Stream)
 		: PipelineState(pDevice,
-			D3D12_PIPELINE_STATE_STREAM_DESC{
+			D3D12_PIPELINE_STATE_STREAM_DESC
+			{
 				.SizeInBytes = sizeof(PipelineStateStream),
 				.pPipelineStateSubobjectStream = &Stream
 			})

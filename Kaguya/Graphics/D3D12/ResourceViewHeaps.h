@@ -14,32 +14,7 @@ public:
 
 	ResourceViewHeaps() noexcept = default;
 	explicit ResourceViewHeaps(
-		_In_ ID3D12Device* pDevice)
-	{
-		m_ResourceDescriptorHeap = DescriptorHeap(
-			pDevice,
-			NumResourceDescriptors,
-			true,
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		m_SamplerDescriptorHeap = DescriptorHeap(
-			pDevice,
-			NumSamplerDescriptors,
-			true,
-			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-		m_RenderTargetDescriptorHeap = DescriptorHeap(
-			pDevice,
-			NumRenderTargetDescriptors,
-			false,
-			D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-		m_DepthStencilDescriptorHeap = DescriptorHeap(
-			pDevice,
-			NumDepthStencilDescriptors,
-			false,
-			D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	}
+		_In_ ID3D12Device* pDevice);
 
 	ResourceViewHeaps(ResourceViewHeaps&&) noexcept = default;
 	ResourceViewHeaps& operator=(ResourceViewHeaps&&) noexcept = default;
@@ -83,8 +58,8 @@ private:
 	DescriptorHeap m_RenderTargetDescriptorHeap;
 	DescriptorHeap m_DepthStencilDescriptorHeap;
 
-	ThreadSafePool<void, NumResourceDescriptors> m_ResourceDescriptorIndexPool;
-	ThreadSafePool<void, NumSamplerDescriptors> m_SamplerDescriptorIndexPool;
-	ThreadSafePool<void, NumRenderTargetDescriptors> m_RenderTargetDescriptorIndexPool;
-	ThreadSafePool<void, NumDepthStencilDescriptors> m_DepthStencilDescriptorIndexPool;
+	concurrent_pool<void, NumResourceDescriptors> m_ResourceDescriptorIndexPool;
+	concurrent_pool<void, NumSamplerDescriptors> m_SamplerDescriptorIndexPool;
+	concurrent_pool<void, NumRenderTargetDescriptors> m_RenderTargetDescriptorIndexPool;
+	concurrent_pool<void, NumDepthStencilDescriptors> m_DepthStencilDescriptorIndexPool;
 };
