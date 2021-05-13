@@ -3,76 +3,97 @@
 
 #include <hidusage.h>
 
-#include "Window.h"
-
-void InputHandler::Create(Window* pWindow)
+InputHandler::InputHandler(
+	_In_ HWND hWnd)
 {
-	m_pWindow = pWindow;
-
 	// Register RAWINPUTDEVICE for handling input
 	RAWINPUTDEVICE rid[2] = {};
 
 	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
 	rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
 	rid[0].dwFlags = RIDEV_INPUTSINK;
-	rid[0].hwndTarget = pWindow->GetWindowHandle();
+	rid[0].hwndTarget = hWnd;
 
 	rid[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
 	rid[1].usUsage = HID_USAGE_GENERIC_KEYBOARD;
 	rid[1].dwFlags = RIDEV_INPUTSINK;
-	rid[1].hwndTarget = pWindow->GetWindowHandle();
+	rid[1].hwndTarget = hWnd;
 
 	if (!::RegisterRawInputDevices(rid, 2, sizeof(rid[0])))
 	{
-		LOG_ERROR("RegisterRawInputDevices Error: {}", ::GetLastError());
+		ErrorExit(TEXT("RegisterRawInputDevices"));
+	}
+
+	this->hWnd = hWnd;
+}
+
+void InputHandler::Handle(
+	_In_ const MSG* pMsg)
+{
+	if (RawInputEnabled)
+	{
+		HandleRawInput(pMsg->message, pMsg->wParam, pMsg->lParam);
+	}
+	else
+	{
+		HandleStandardInput(pMsg->message, pMsg->wParam, pMsg->lParam);
 	}
 }
 
-void InputHandler::Handle(const MSG* pMsg)
+void InputHandler::EnableCursor()
 {
-	switch (pMsg->message)
+	CursorEnabled = true;
+	ShowCursor();
+	FreeCursor();
+}
+
+void InputHandler::DisableCursor()
+{
+	CursorEnabled = false;
+	HideCursor();
+	ConfineCursor();
+}
+
+void InputHandler::ConfineCursor()
+{
+	RECT rect = {};
+	::GetClientRect(hWnd, &rect);
+	::MapWindowPoints(hWnd, nullptr, reinterpret_cast<POINT*>(&rect), 2);
+	::ClipCursor(&rect);
+}
+
+void InputHandler::FreeCursor()
+{
+	::ClipCursor(nullptr);
+}
+
+void InputHandler::ShowCursor()
+{
+	while (::ShowCursor(TRUE) < 0);
+}
+
+void InputHandler::HideCursor()
+{
+	while (::ShowCursor(FALSE) >= 0);
+}
+
+void InputHandler::HandleRawInput(
+	_In_ UINT uMsg,
+	_In_ WPARAM wParam,
+	_In_ LPARAM lParam)
+{
+	Mouse.xRaw = Mouse.yRaw = 0;
+
+	switch (uMsg)
 	{
-	case WM_LBUTTONDOWN: [[fallthrough]];
-	case WM_MBUTTONDOWN: [[fallthrough]];
-	case WM_RBUTTONDOWN:
-	{
-		Mouse::Button button = {};
-		if ((pMsg->message == WM_LBUTTONDOWN)) { button = Mouse::Left; }
-		if ((pMsg->message == WM_MBUTTONDOWN)) { button = Mouse::Middle; }
-		if ((pMsg->message == WM_RBUTTONDOWN)) { button = Mouse::Right; }
-
-		Mouse.OnMouseButtonDown(button);
-	}
-	break;
-
-	case WM_LBUTTONUP: [[fallthrough]];
-	case WM_MBUTTONUP: [[fallthrough]];
-	case WM_RBUTTONUP:
-	{
-		Mouse::Button button = {};
-		if ((pMsg->message == WM_LBUTTONUP)) { button = Mouse::Left; }
-		if ((pMsg->message == WM_MBUTTONUP)) { button = Mouse::Middle; }
-		if ((pMsg->message == WM_RBUTTONUP)) { button = Mouse::Right; }
-
-		Mouse.OnMouseButtonUp(button);
-	}
-	break;
-
-	case WM_KILLFOCUS:
-	{
-		Keyboard.ResetKeyState();
-	}
-	break;
-
 	case WM_INPUT:
 	{
-		if (!Mouse.UseRawInput)
-		{
-			break;
-		}
-
 		UINT dwSize = 0;
-		::GetRawInputData(reinterpret_cast<HRAWINPUT>(pMsg->lParam), RID_INPUT, NULL, &dwSize,
+		::GetRawInputData(
+			reinterpret_cast<HRAWINPUT>(lParam),
+			RID_INPUT,
+			nullptr,
+			&dwSize,
 			sizeof(RAWINPUTHEADER));
 
 		auto lpb = (LPBYTE)_malloca(dwSize);
@@ -81,7 +102,11 @@ void InputHandler::Handle(const MSG* pMsg)
 			break;
 		}
 
-		::GetRawInputData(reinterpret_cast<HRAWINPUT>(pMsg->lParam), RID_INPUT, lpb, &dwSize,
+		::GetRawInputData(
+			reinterpret_cast<HRAWINPUT>(lParam),
+			RID_INPUT,
+			lpb,
+			&dwSize,
 			sizeof(RAWINPUTHEADER));
 
 		auto pRawInput = reinterpret_cast<RAWINPUT*>(lpb);
@@ -90,15 +115,15 @@ void InputHandler::Handle(const MSG* pMsg)
 		{
 		case RIM_TYPEMOUSE:
 		{
-			const auto& mouse = pRawInput->data.mouse;
+			const RAWMOUSE& mouse = pRawInput->data.mouse;
 
-			if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)) { Mouse.OnMouseButtonDown(Mouse::Left); }
-			if ((mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN)) { Mouse.OnMouseButtonDown(Mouse::Middle); }
-			if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)) { Mouse.OnMouseButtonDown(Mouse::Right); }
+			if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)) { Mouse.OnButtonDown(Mouse::Left, mouse.lLastX, mouse.lLastY); }
+			if ((mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN)) { Mouse.OnButtonDown(Mouse::Middle, mouse.lLastX, mouse.lLastY); }
+			if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)) { Mouse.OnButtonDown(Mouse::Right, mouse.lLastX, mouse.lLastY); }
 
-			if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)) { Mouse.OnMouseButtonUp(Mouse::Left); }
-			if ((mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP)) { Mouse.OnMouseButtonUp(Mouse::Middle); }
-			if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)) { Mouse.OnMouseButtonUp(Mouse::Right); }
+			if ((mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)) { Mouse.OnButtonUp(Mouse::Left, mouse.lLastX, mouse.lLastY); }
+			if ((mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP)) { Mouse.OnButtonUp(Mouse::Middle, mouse.lLastX, mouse.lLastY); }
+			if ((mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)) { Mouse.OnButtonUp(Mouse::Right, mouse.lLastX, mouse.lLastY); }
 
 			Mouse.OnRawInput(mouse.lLastX, mouse.lLastY);
 		}
@@ -106,7 +131,7 @@ void InputHandler::Handle(const MSG* pMsg)
 
 		case RIM_TYPEKEYBOARD:
 		{
-			const auto& keyboard = pRawInput->data.keyboard;
+			const RAWKEYBOARD& keyboard = pRawInput->data.keyboard;
 
 			if (keyboard.Message == WM_KEYDOWN || keyboard.Message == WM_SYSKEYDOWN)
 			{
@@ -125,35 +150,121 @@ void InputHandler::Handle(const MSG* pMsg)
 	}
 	break;
 
+	default:
+		break;
+	}
+}
+
+void InputHandler::HandleStandardInput(
+	_In_ UINT uMsg,
+	_In_ WPARAM wParam,
+	_In_ LPARAM lParam)
+{
+	switch (uMsg)
+	{
 	case WM_MOUSEMOVE:
 	{
-		const POINTS points = MAKEPOINTS(pMsg->lParam);
+		const POINTS points = MAKEPOINTS(lParam);
+		RECT rect = {};
+		::GetClientRect(hWnd, &rect);
+		LONG width = rect.right - rect.left;
+		LONG height = rect.bottom - rect.top;
 
 		// Within the range of our window dimension -> log move, and log enter + capture mouse (if not previously in window)
-		if (points.x >= 0 && points.x < m_pWindow->GetWindowWidth() && points.y >= 0 && points.y < m_pWindow->GetWindowHeight())
+		if (points.x >= 0 && points.x < width && points.y >= 0 && points.y < height)
 		{
-			Mouse.OnMouseMove(points.x, points.y);
+			Mouse.OnMove(points.x, points.y);
 			if (!Mouse.IsInWindow())
 			{
-				::SetCapture(m_pWindow->GetWindowHandle());
-				Mouse.OnMouseEnter();
+				::SetCapture(hWnd);
+				Mouse.OnEnter();
 			}
 		}
 		// Outside the range of our window dimension -> log move / maintain capture if button down
 		else
 		{
-			if (pMsg->wParam & (MK_LBUTTON | MK_RBUTTON))
+			if (wParam & (MK_LBUTTON | MK_RBUTTON))
 			{
-				Mouse.OnMouseMove(points.x, points.y);
+				Mouse.OnMove(points.x, points.y);
 			}
 			// button up -> release capture / log event for leaving
 			else
 			{
 				::ReleaseCapture();
-				Mouse.OnMouseLeave();
+				Mouse.OnLeave();
 			}
 		}
 	}
 	break;
+
+	case WM_LBUTTONDOWN: [[fallthrough]];
+	case WM_MBUTTONDOWN: [[fallthrough]];
+	case WM_RBUTTONDOWN:
+	{
+		Mouse::Button button = {};
+		if ((uMsg == WM_LBUTTONDOWN)) { button = Mouse::Left; }
+		if ((uMsg == WM_MBUTTONDOWN)) { button = Mouse::Middle; }
+		if ((uMsg == WM_RBUTTONDOWN)) { button = Mouse::Right; }
+
+		const POINTS pt = MAKEPOINTS(lParam);
+		Mouse.OnButtonDown(button, pt.x, pt.y);
+	}
+	break;
+
+	case WM_LBUTTONUP: [[fallthrough]];
+	case WM_MBUTTONUP: [[fallthrough]];
+	case WM_RBUTTONUP:
+	{
+		Mouse::Button button = {};
+		if ((uMsg == WM_LBUTTONUP)) { button = Mouse::Left; }
+		if ((uMsg == WM_MBUTTONUP)) { button = Mouse::Middle; }
+		if ((uMsg == WM_RBUTTONUP)) { button = Mouse::Right; }
+
+		const POINTS pt = MAKEPOINTS(lParam);
+		Mouse.OnButtonUp(button, pt.x, pt.y);
+	}
+	break;
+
+	case WM_MOUSEWHEEL:
+	{
+		const POINTS pt = MAKEPOINTS(lParam);
+		const int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+		Mouse.OnWheelDelta(delta, pt.x, pt.y);
+	}
+	break;
+
+	// Keyboard messages
+	case WM_KEYDOWN: [[fallthrough]];
+		// syskey commands need to be handled to track ALT key (VK_MENU) and F10
+	case WM_SYSKEYDOWN:
+	{
+		if (!(lParam & 0x40000000) || Keyboard.AutoRepeat) // Filter AutoRepeat
+		{
+			Keyboard.OnKeyDown(static_cast<unsigned char>(wParam));
+		}
+	}
+	break;
+
+	case WM_KEYUP: [[fallthrough]];
+	case WM_SYSKEYUP:
+	{
+		Keyboard.OnKeyUp(static_cast<unsigned char>(wParam));
+	}
+	break;
+
+	case WM_CHAR:
+	{
+		Keyboard.OnChar(static_cast<unsigned char>(wParam));
+	}
+	break;
+
+	case WM_KILLFOCUS:
+	{
+		Keyboard.ResetKeyState();
+	}
+	break;
+
+	default:
+		break;
 	}
 }

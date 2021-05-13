@@ -37,20 +37,22 @@ RenderDevice::RenderDevice()
 {
 	InitializeDXGIObjects();
 
-	DeviceOptions deviceOptions = {
+	DeviceOptions deviceOptions =
+	{
 		.FeatureLevel = D3D_FEATURE_LEVEL_12_0,
 		.EnableDebugLayer = true,
 		.EnableGpuBasedValidation = false,
 		.BreakOnCorruption = true,
 		.BreakOnError = true,
-		.BreakOnWarning = true
+		.BreakOnWarning = false
 	};
-	DeviceCapability deviceCapability = {
+	DeviceFeatures deviceFeatures =
+	{
 		.Raytracing = true,
 		.DynamicResources = true
 	};
 
-	m_Device = Device(m_Adapter.Get(), deviceOptions, deviceCapability);
+	m_Device = Device(m_Adapter.Get(), deviceOptions, deviceFeatures);
 
 	// This class is used to manage video memory allocations for constants, dynamic vertex buffers, dynamic index buffers, etc.
 	m_GraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(m_Device);
@@ -104,8 +106,8 @@ DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
 
 void RenderDevice::Present(bool VSync)
 {
-	UINT syncInterval = VSync ? 1u : 0u;
-	UINT presentFlags = (m_TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+	const UINT syncInterval = VSync ? 1u : 0u;
+	const UINT presentFlags = (m_TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
 	HRESULT hr = m_SwapChain->Present(syncInterval, presentFlags);
 	if (hr == DXGI_ERROR_DEVICE_REMOVED)
 	{
@@ -191,7 +193,7 @@ void RenderDevice::CreateShaderResourceView(
 	UINT Stride,
 	bool IsRawBuffer /*= false*/)
 {
-	const auto resourceDesc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC resourceDesc = pResource->GetDesc();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
 
@@ -220,7 +222,7 @@ void RenderDevice::CreateShaderResourceView(
 	std::optional<UINT> MostDetailedMip /*= {}*/,
 	std::optional<UINT> MipLevels /*= {}*/)
 {
-	const auto resourceDesc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC resourceDesc = pResource->GetDesc();
 
 	UINT mostDetailedMip = MostDetailedMip.value_or(0);
 	UINT mipLevels = MipLevels.value_or(resourceDesc.MipLevels);
@@ -275,7 +277,7 @@ void RenderDevice::CreateUnorderedAccessView(
 	std::optional<UINT> ArraySlice /*= {}*/,
 	std::optional<UINT> MipSlice /*= {}*/)
 {
-	const auto resourceDesc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC resourceDesc = pResource->GetDesc();
 
 	UINT arraySlice = ArraySlice.value_or(0);
 	UINT mipSlice = MipSlice.value_or(0);
@@ -317,7 +319,7 @@ void RenderDevice::CreateRenderTargetView(
 	std::optional<UINT> ArraySize /*= {}*/,
 	bool sRGB /*= false*/)
 {
-	const auto resourceDesc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC resourceDesc = pResource->GetDesc();
 
 	UINT arraySlice = ArraySlice.value_or(0);
 	UINT mipSlice = MipSlice.value_or(0);
@@ -360,7 +362,7 @@ void RenderDevice::CreateDepthStencilView(
 	std::optional<UINT> MipSlice /*= {}*/,
 	std::optional<UINT> ArraySize /*= {}*/)
 {
-	const auto resourceDesc = pResource->GetDesc();
+	const D3D12_RESOURCE_DESC resourceDesc = pResource->GetDesc();
 
 	UINT arraySlice = ArraySlice.value_or(0);
 	UINT mipSlice = MipSlice.value_or(0);

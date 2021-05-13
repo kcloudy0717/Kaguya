@@ -38,10 +38,7 @@ void PathIntegrator::Settings::RenderGui()
 
 		if (dirty)
 		{
-			if (pPathIntegrator)
-			{
-				pPathIntegrator->Reset();
-			}
+			NumAccumulatedSamples = 0;
 		}
 
 		ImGui::TreePop();
@@ -52,62 +49,64 @@ PathIntegrator::PathIntegrator(
 	_In_ RenderDevice& RenderDevice)
 {
 	Settings::RestoreDefaults();
-	Settings::pPathIntegrator = this;
 
 	m_UAV = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
 	m_SRV = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
 
-	m_GlobalRS = RenderDevice.CreateRootSignature([](RootSignatureBuilder& Builder)
-	{
-		Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
-		Builder.AddConstantBufferView<1, 0>(); // g_RenderPassData		b1 | space0
+	m_GlobalRS = RenderDevice.CreateRootSignature(
+		[](RootSignatureBuilder& Builder)
+		{
+			Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
+			Builder.AddConstantBufferView<1, 0>(); // g_RenderPassData		b1 | space0
 
-		Builder.AddShaderResourceView<0, 0>(); // g_Scene				t0 | space0
-		Builder.AddShaderResourceView<1, 0>(); // g_Materials			t1 | space0
-		Builder.AddShaderResourceView<2, 0>(); // g_Lights				t2 | space0
+			Builder.AddShaderResourceView<0, 0>(); // g_Scene				t0 | space0
+			Builder.AddShaderResourceView<1, 0>(); // g_Materials			t1 | space0
+			Builder.AddShaderResourceView<2, 0>(); // g_Lights				t2 | space0
 
-		Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);	// g_SamplerPointWrap			s0 | space0;
-		Builder.AddStaticSampler<1, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);	// g_SamplerPointClamp			s1 | space0;
-		Builder.AddStaticSampler<2, 0>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);	// g_SamplerLinearWrap			s2 | space0;
-		Builder.AddStaticSampler<3, 0>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);	// g_SamplerLinearClamp			s3 | space0;
-		Builder.AddStaticSampler<4, 0>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);			// g_SamplerAnisotropicWrap		s4 | space0;
-		Builder.AddStaticSampler<5, 0>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);			// g_SamplerAnisotropicClamp	s5 | space0;
-	});
+			Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);	// g_SamplerPointWrap			s0 | space0;
+			Builder.AddStaticSampler<1, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);	// g_SamplerPointClamp			s1 | space0;
+			Builder.AddStaticSampler<2, 0>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);	// g_SamplerLinearWrap			s2 | space0;
+			Builder.AddStaticSampler<3, 0>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);	// g_SamplerLinearClamp			s3 | space0;
+			Builder.AddStaticSampler<4, 0>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);			// g_SamplerAnisotropicWrap		s4 | space0;
+			Builder.AddStaticSampler<5, 0>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);			// g_SamplerAnisotropicClamp	s5 | space0;
+		});
 
-	m_LocalHitGroupRS = RenderDevice::Instance().CreateRootSignature([](RootSignatureBuilder& Builder)
-	{
-		Builder.Add32BitConstants<0, 1>(1);		// RootConstants	b0 | space1
+	m_LocalHitGroupRS = RenderDevice::Instance().CreateRootSignature(
+		[](RootSignatureBuilder& Builder)
+		{
+			Builder.Add32BitConstants<0, 1>(1);		// RootConstants	b0 | space1
 
-		Builder.AddShaderResourceView<0, 1>();	// VertexBuffer		t0 | space1
-		Builder.AddShaderResourceView<1, 1>();	// IndexBuffer		t1 | space1
+			Builder.AddShaderResourceView<0, 1>();	// VertexBuffer		t0 | space1
+			Builder.AddShaderResourceView<1, 1>();	// IndexBuffer		t1 | space1
 
-		Builder.SetAsLocalRootSignature();
-	}, false);
+			Builder.SetAsLocalRootSignature();
+		}, false);
 
-	m_RTPSO = RenderDevice.CreateRaytracingPipelineState([&](RaytracingPipelineStateBuilder& Builder)
-	{
-		Builder.AddLibrary(Libraries::PathTrace,
-			{
-				g_RayGeneration,
-				g_Miss,
-				g_ShadowMiss,
-				g_ClosestHit
-			});
+	m_RTPSO = RenderDevice.CreateRaytracingPipelineState(
+		[&](RaytracingPipelineStateBuilder& Builder)
+		{
+			Builder.AddLibrary(Libraries::PathTrace,
+				{
+					g_RayGeneration,
+					g_Miss,
+					g_ShadowMiss,
+					g_ClosestHit
+				});
 
-		Builder.AddHitGroup(g_HitGroupExport, nullptr, g_ClosestHit, nullptr);
+			Builder.AddHitGroup(g_HitGroupExport, nullptr, g_ClosestHit, nullptr);
 
-		Builder.AddRootSignatureAssociation(m_LocalHitGroupRS,
-			{
-				g_HitGroupExport
-			});
+			Builder.AddRootSignatureAssociation(m_LocalHitGroupRS,
+				{
+					g_HitGroupExport
+				});
 
-		Builder.SetGlobalRootSignature(m_GlobalRS);
+			Builder.SetGlobalRootSignature(m_GlobalRS);
 
-		Builder.SetRaytracingShaderConfig(12 * sizeof(float) + 2 * sizeof(unsigned int), SizeOfBuiltInTriangleIntersectionAttributes);
+			Builder.SetRaytracingShaderConfig(12 * sizeof(float) + 2 * sizeof(unsigned int), SizeOfBuiltInTriangleIntersectionAttributes);
 
-		// +1 for Primary, +1 for Shadow
-		Builder.SetRaytracingPipelineConfig(2);
-	});
+			// +1 for Primary, +1 for Shadow
+			Builder.SetRaytracingPipelineConfig(2);
+		});
 
 	g_RayGenerationSID = m_RTPSO.GetShaderIdentifier(L"RayGeneration");
 	g_MissSID = m_RTPSO.GetShaderIdentifier(L"Miss");

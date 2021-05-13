@@ -56,16 +56,16 @@ public:
 	[[nodiscard]] Descriptor AllocateDepthStencilView();
 
 	void ReleaseResourceView(
-		_In_ Descriptor Descriptor);
+		_In_ Descriptor& Descriptor);
 
 	void ReleaseSampler(
-		_In_ Descriptor Descriptor);
+		_In_ Descriptor& Descriptor);
 
 	void ReleaseRenderTargetView(
-		_In_ Descriptor Descriptor);
+		_In_ Descriptor& Descriptor);
 
 	void ReleaseDepthStencilView(
-		_In_ Descriptor Descriptor);
+		_In_ Descriptor& Descriptor);
 
 	DescriptorHeap& ResourceDescriptorHeap() noexcept { return m_ResourceDescriptorHeap; }
 	DescriptorHeap& SamplerDescriptorHeap() noexcept { return m_SamplerDescriptorHeap; }

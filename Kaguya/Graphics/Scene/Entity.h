@@ -42,7 +42,7 @@ struct Entity
 	template<typename T>
 	bool HasComponent()
 	{
-		return pScene->Registry.has<T>(Handle);
+		return pScene->Registry.any_of<T>(Handle);
 	}
 
 	template<typename T>

@@ -3,9 +3,8 @@
 
 #include "RenderDevice.h"
 
-using namespace DirectX;
-
-void RaytracingAccelerationStructure::Create(UINT NumHitGroups)
+RaytracingAccelerationStructure::RaytracingAccelerationStructure(
+	UINT NumHitGroups)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
@@ -26,7 +25,7 @@ void RaytracingAccelerationStructure::AddInstance(MeshRenderer* pMeshRenderer)
 	auto& transform = entity.GetComponent<Transform>();
 
 	D3D12_RAYTRACING_INSTANCE_DESC dxrInstanceDesc = {};
-	XMStoreFloat3x4(reinterpret_cast<XMFLOAT3X4*>(dxrInstanceDesc.Transform), transform.Matrix());
+	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(dxrInstanceDesc.Transform), transform.Matrix());
 	dxrInstanceDesc.InstanceID = m_TopLevelAccelerationStructure.size();
 	dxrInstanceDesc.InstanceMask = RAYTRACING_INSTANCEMASK_ALL;
 	dxrInstanceDesc.InstanceContributionToHitGroupIndex = m_InstanceContributionToHitGroupIndex;

@@ -35,7 +35,7 @@ public:
 		SData Data;
 	};
 
-	Window() = default;
+	Window() noexcept = default;
 	~Window();
 
 	void SetIcon(HANDLE Image);
@@ -60,6 +60,7 @@ public:
 
 	void SetRenderFunc(std::function<void()> RenderFunc);
 	void SetResizeFunc(ResizeFunc ResizeFunc);
+
 private:
 	LRESULT DispatchEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -75,10 +76,12 @@ private:
 		ImGuiContextManager();
 		~ImGuiContextManager();
 	};
+
 public:
 	// Right now this queue is exclusively available to the render thread (it can push and pop) need to
 	// come up with something better in case in the future it might be used by mutiple threads
 	ThreadSafeQueue<Message> MessageQueue;
+
 private:
 	std::wstring m_WindowName;
 	unsigned int m_WindowWidth = 0;

@@ -67,7 +67,8 @@ void ToneMapper::SetResolution(
 	resourceDesc.MipLevels = 1;
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-	auto ClearValue = CD3DX12_CLEAR_VALUE(DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat), DirectX::Colors::White);
+	FLOAT white[] = { 1, 1, 1, 1 };
+	auto ClearValue = CD3DX12_CLEAR_VALUE(DirectX::MakeSRGB(RenderDevice::SwapChainBufferFormat), white);
 
 	m_RenderTarget = RenderDevice.CreateResource(&allocationDesc,
 		&resourceDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &ClearValue);
@@ -92,7 +93,9 @@ void ToneMapper::Apply(
 	CommandList->RSSetViewports(1, &viewport);
 	CommandList->RSSetScissorRects(1, &scissorRect);
 	CommandList->OMSetRenderTargets(1, &m_RTV.CpuHandle, TRUE, nullptr);
-	CommandList->ClearRenderTargetView(m_RTV.CpuHandle, DirectX::Colors::White, 0, nullptr);
+
+	FLOAT white[] = { 1, 1, 1, 1 };
+	CommandList->ClearRenderTargetView(m_RTV.CpuHandle, white, 0, nullptr);
 
 	struct Settings
 	{

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Keyboard.h"
 
-bool Keyboard::IsKeyPressed(unsigned char KeyCode) const
+bool Keyboard::IsPressed(unsigned char KeyCode) const
 {
 	return m_KeyStates[KeyCode];
 }

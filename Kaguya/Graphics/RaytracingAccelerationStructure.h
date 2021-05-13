@@ -9,7 +9,9 @@
 class RaytracingAccelerationStructure
 {
 public:
-	void Create(UINT NumHitGroups);
+	RaytracingAccelerationStructure() noexcept = default;
+	RaytracingAccelerationStructure(
+		UINT NumHitGroups);
 
 	operator auto() const
 	{

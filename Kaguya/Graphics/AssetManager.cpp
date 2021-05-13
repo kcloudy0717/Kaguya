@@ -109,6 +109,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 
 	ResourceUploadBatch uploader(pDevice);
 
+	// TODO: refactor these, this is here because it is used to generate BLAS when the mesh is uploaded
 	ComPtr<ID3D12CommandQueue> commandQueue;
 	ComPtr<ID3D12CommandAllocator> commandAllocator;
 	ComPtr<ID3D12GraphicsCommandList6> commandList;

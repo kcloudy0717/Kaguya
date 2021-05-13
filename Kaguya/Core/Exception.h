@@ -31,15 +31,15 @@ private:
 	int m_Line;
 };
 
-class COMException final : public Exception
+class hresult_exception final : public Exception
 {
 public:
-	COMException() noexcept
+	hresult_exception() noexcept
 		: m_HR(S_FALSE)
 	{
 
 	}
-	explicit COMException(
+	explicit hresult_exception(
 		std::string File,
 		int Line,
 		HRESULT HR) noexcept;

@@ -16,48 +16,43 @@ file(GLOB_RECURSE SourceList
 Core/*.cpp
 Graphics/*.cpp)
 
-set(D3D12MemoryAllocator_PATH ${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src)
 set(D3D12MemoryAllocator
-${D3D12MemoryAllocator_PATH}/D3D12MemAlloc.h
-${D3D12MemoryAllocator_PATH}/D3D12MemAlloc.cpp)
+${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.h
+${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp)
 
-set(entt_PATH ${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt)
-set(entt ${entt_PATH}/entt.hpp)
+set(entt ${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt/entt.hpp)
 
-set(IMGUI_FILE_PATH ${CMAKE_SOURCE_DIR}/ext/imgui)
 set(IMGUI
-${IMGUI_FILE_PATH}/imconfig.h
-${IMGUI_FILE_PATH}/imgui.cpp
-${IMGUI_FILE_PATH}/imgui.h
-${IMGUI_FILE_PATH}/imgui_demo.cpp
-${IMGUI_FILE_PATH}/imgui_draw.cpp
-${IMGUI_FILE_PATH}/imgui_internal.h
-${IMGUI_FILE_PATH}/imgui_tables.cpp
-${IMGUI_FILE_PATH}/imgui_widgets.cpp
-${IMGUI_FILE_PATH}/imstb_rectpack.h
-${IMGUI_FILE_PATH}/imstb_textedit.h
-${IMGUI_FILE_PATH}/imstb_truetype.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imconfig.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui_draw.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui_internal.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui_tables.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/imgui_widgets.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/imstb_rectpack.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imstb_textedit.h
+${CMAKE_SOURCE_DIR}/ext/imgui/imstb_truetype.h
 # Backend
-${IMGUI_FILE_PATH}/backends/imgui_impl_dx12.cpp
-${IMGUI_FILE_PATH}/backends/imgui_impl_dx12.h
-${IMGUI_FILE_PATH}/backends/imgui_impl_win32.cpp
-${IMGUI_FILE_PATH}/backends/imgui_impl_win32.h)
+${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.h
+${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.cpp
+${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.h)
 
-set(IMGUIZMO_FILE_PATH ${CMAKE_SOURCE_DIR}/ext/ImGuizmo)
 set(IMGUIZMO
-${IMGUIZMO_FILE_PATH}/ImCurveEdit.cpp
-${IMGUIZMO_FILE_PATH}/ImCurveEdit.h
-${IMGUIZMO_FILE_PATH}/ImGradient.cpp
-${IMGUIZMO_FILE_PATH}/ImGradient.h
-${IMGUIZMO_FILE_PATH}/ImGuizmo.cpp
-${IMGUIZMO_FILE_PATH}/ImGuizmo.h
-${IMGUIZMO_FILE_PATH}/ImSequencer.cpp
-${IMGUIZMO_FILE_PATH}/ImSequencer.h
-${IMGUIZMO_FILE_PATH}/ImZoomSlider.h)
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.cpp
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.h
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.cpp
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.h
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.cpp
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.h
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.cpp
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.h
+${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImZoomSlider.h)
 
-set(SPDLOG_FILE_PATH ${CMAKE_SOURCE_DIR}/ext/spdlog)
 set(SPDLOG
-${SPDLOG_FILE_PATH}/include/spdlog/spdlog.h)
+${CMAKE_SOURCE_DIR}/ext/spdlog/include/spdlog/spdlog.h)
 
 file(GLOB_RECURSE yaml_cpp
 ${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include/yaml-cpp/*.h
@@ -79,7 +74,6 @@ foreach(Source IN LISTS SourceList)
     set_source_files_properties("${Source}" PROPERTIES COMPILE_FLAGS "/Yupch.h")
 endforeach()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:CONSOLE")
 include_directories(".")
 add_executable(
 ${PROJECTNAME}
@@ -123,6 +117,7 @@ target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/nativefiledia
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Release/nfd.lib)
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)
 
+# copy dlls
 add_custom_command(
 TARGET ${PROJECTNAME} PRE_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy 
@@ -141,6 +136,7 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 DEPENDS ${PROJECTNAME})
 
+# copy assets
 add_custom_command(
 TARGET ${PROJECTNAME} PRE_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -148,6 +144,7 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/assets
 DEPENDS ${PROJECTNAME})
 
+# copy shaders
 add_custom_command(
 TARGET ${PROJECTNAME} PRE_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory

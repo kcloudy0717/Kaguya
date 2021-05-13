@@ -4,8 +4,8 @@
 #include "Time.h"
 
 RenderSystem::RenderSystem(
-	_In_ uint32_t Width,
-	_In_ uint32_t Height) noexcept
+	uint32_t Width,
+	uint32_t Height) noexcept
 	: m_Width(Width)
 	, m_Height(Height)
 	, m_AspectRatio(static_cast<float>(Width) / static_cast<float>(Height))
@@ -19,8 +19,8 @@ void RenderSystem::OnInitialize()
 }
 
 void RenderSystem::OnRender(
-	_In_ const Time& Time,
-	_In_ Scene& Scene)
+	const Stopwatch& Time,
+	Scene& Scene)
 {
 	Statistics::TotalFrameCount++;
 	Statistics::FrameCount++;
@@ -32,12 +32,12 @@ void RenderSystem::OnRender(
 		Statistics::TimeElapsed += 1.0;
 	}
 
-	return Render(Time, Scene);
+	return Render(Scene);
 }
 
 void RenderSystem::OnResize(
-	_In_ uint32_t Width,
-	_In_ uint32_t Height)
+	uint32_t Width,
+	uint32_t Height)
 {
 	m_Width = Width;
 	m_Height = Height;

@@ -2,7 +2,7 @@
 #include <cstdint>
 
 //----------------------------------------------------------------------------------------------------
-class Time;
+class Stopwatch;
 struct Scene;
 
 //----------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ public:
 	void OnInitialize();
 
 	void OnRender(
-		const Time& Time,
+		const Stopwatch& Time,
 		Scene& Scene);
 
 	void OnResize(
@@ -50,9 +50,7 @@ public:
 protected:
 	virtual void Initialize() = 0;
 
-	virtual void Render(
-		const Time& Time,
-		Scene& Scene) = 0;
+	virtual void Render(Scene& Scene) = 0;
 
 	virtual void Resize(
 		uint32_t Width,

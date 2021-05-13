@@ -29,9 +29,7 @@ public:
 protected:
 	void Initialize() override;
 
-	void Render(
-		const Time& Time,
-		Scene& Scene) override;
+	void Render(Scene& Scene) override;
 
 	void Resize(
 		uint32_t Width,

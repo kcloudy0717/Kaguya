@@ -1,62 +1,63 @@
 #include "pch.h"
 #include "ResourceViewHeaps.h"
 
+template<size_t Size>
+inline Descriptor AllocateDescriptor(DescriptorHeap& DescriptorHeap, ThreadSafePool<void, Size>& DescriptorHeapIndexPool)
+{
+	auto index = static_cast<UINT>(DescriptorHeapIndexPool.allocate());
+	return DescriptorHeap.At(index);
+}
+
+template<size_t Size>
+inline void ReleaseDescriptor(Descriptor& Descriptor, ThreadSafePool<void, Size>& DescriptorHeapIndexPool)
+{
+	if (Descriptor.IsValid())
+	{
+		DescriptorHeapIndexPool.free(Descriptor.Index);
+		Descriptor = {};
+	}
+}
+
 Descriptor ResourceViewHeaps::AllocateResourceView()
 {
-	UINT index = m_ResourceDescriptorIndexPool.allocate();
-	return m_ResourceDescriptorHeap.At(index);
+	return AllocateDescriptor(m_ResourceDescriptorHeap, m_ResourceDescriptorIndexPool);
 }
 
 Descriptor ResourceViewHeaps::AllocateSampler()
 {
-	UINT index = m_SamplerDescriptorIndexPool.allocate();
-	return m_SamplerDescriptorHeap.At(index);
+	return AllocateDescriptor(m_SamplerDescriptorHeap, m_SamplerDescriptorIndexPool);
 }
 
 Descriptor ResourceViewHeaps::AllocateRenderTargetView()
 {
-	UINT index = m_RenderTargetDescriptorIndexPool.allocate();
-	return m_RenderTargetDescriptorHeap.At(index);
+	return AllocateDescriptor(m_RenderTargetDescriptorHeap, m_RenderTargetDescriptorIndexPool);
 }
 
 Descriptor ResourceViewHeaps::AllocateDepthStencilView()
 {
-	UINT index = m_DepthStencilDescriptorIndexPool.allocate();
-	return m_DepthStencilDescriptorHeap.At(index);
+	return AllocateDescriptor(m_DepthStencilDescriptorHeap, m_DepthStencilDescriptorIndexPool);
 }
 
 void ResourceViewHeaps::ReleaseResourceView(
-	_In_ Descriptor Descriptor)
+	_In_ Descriptor& Descriptor)
 {
-	if (Descriptor.IsValid())
-	{
-		m_ResourceDescriptorIndexPool.free(Descriptor.Index);
-	}
+	ReleaseDescriptor(Descriptor, m_ResourceDescriptorIndexPool);
 }
 
 void ResourceViewHeaps::ReleaseSampler(
-	_In_ Descriptor Descriptor)
+	_In_ Descriptor& Descriptor)
 {
-	if (Descriptor.IsValid())
-	{
-		m_SamplerDescriptorIndexPool.free(Descriptor.Index);
-	}
+	ReleaseDescriptor(Descriptor, m_SamplerDescriptorIndexPool);
 }
 
 void ResourceViewHeaps::ReleaseRenderTargetView(
-	_In_ Descriptor Descriptor)
+	_In_ Descriptor& Descriptor)
 {
-	if (Descriptor.IsValid())
-	{
-		m_RenderTargetDescriptorIndexPool.free(Descriptor.Index);
-	}
+	ReleaseDescriptor(Descriptor, m_RenderTargetDescriptorIndexPool);
 }
 
 void ResourceViewHeaps::ReleaseDepthStencilView(
-	_In_ Descriptor Descriptor)
+	_In_ Descriptor& Descriptor)
 {
-	if (Descriptor.IsValid())
-	{
-		m_DepthStencilDescriptorIndexPool.free(Descriptor.Index);
-	}
+	ReleaseDescriptor(Descriptor, m_DepthStencilDescriptorIndexPool);
 }

@@ -38,19 +38,19 @@ std::string Exception::Origin() const noexcept
 	return oss.str();
 }
 
-COMException::COMException(std::string File, int Line, HRESULT HR) noexcept
+hresult_exception::hresult_exception(std::string File, int Line, HRESULT HR) noexcept
 	: Exception(std::move(File), Line)
 	, m_HR(HR)
 {
 
 }
 
-std::string COMException::Type() const noexcept
+std::string hresult_exception::Type() const noexcept
 {
 	return "[COM Exception]";
 }
 
-std::string COMException::Error() const noexcept
+std::string hresult_exception::Error() const noexcept
 {
 	TCHAR* szErrMsg;
 

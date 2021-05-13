@@ -175,10 +175,8 @@ LRESULT Window::DispatchEvent(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	// Catch this message so to prevent the window from becoming too small.
 	case WM_GETMINMAXINFO:
 	{
-		auto pMinMaxInfo = reinterpret_cast<MINMAXINFO*>(lParam);
-
-		pMinMaxInfo->ptMinTrackSize.x = Application::MinimumWidth;
-		pMinMaxInfo->ptMinTrackSize.y = Application::MinimumHeight;
+		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
+		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
 	}
 	break;
 

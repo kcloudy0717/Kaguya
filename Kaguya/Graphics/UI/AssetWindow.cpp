@@ -41,9 +41,9 @@ void AssetWindow::RenderGui()
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
 					OpenDialogMultiple("dds,tga,hdr", "", [&](auto Path)
-					{
-						AssetManager::Instance().AsyncLoadImage(Path, sRGB);
-					});
+						{
+							AssetManager::Instance().AsyncLoadImage(Path, sRGB);
+						});
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -73,9 +73,9 @@ void AssetWindow::RenderGui()
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
 					OpenDialogMultiple("obj,stl,ply", "", [&](auto Path)
-					{
-						AssetManager::Instance().AsyncLoadMesh(Path, KeepGeometryInRAM);
-					});
+						{
+							AssetManager::Instance().AsyncLoadMesh(Path, KeepGeometryInRAM);
+						});
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -107,10 +107,10 @@ void AssetWindow::RenderGui()
 		auto& ImageCache = AssetManager::Instance().m_ImageCache;
 		ScopedWriteLock SWL(ImageCache.m_RWLock);
 
-		ImGui::TableSetupColumn("Key",				ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
-		ImGui::TableSetupColumn("Name",				ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
-		ImGui::TableSetupColumn("Payload",			ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn("Reference Count",	ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
+		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
+		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
+		ImGui::TableSetupColumn("Reference Count", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
@@ -159,23 +159,24 @@ void AssetWindow::RenderGui()
 
 	if (addAllMeshToHierarchy)
 	{
-		MeshCache.Each([&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
-		{
-			auto entity = m_pScene->CreateEntity(Resource->Name);
-			auto& meshFilter = entity.AddComponent<MeshFilter>();
-			meshFilter.Key = Key;
+		MeshCache.Each(
+			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
+			{
+				auto entity = m_pScene->CreateEntity(Resource->Name);
+				auto& meshFilter = entity.AddComponent<MeshFilter>();
+				meshFilter.Key = Key;
 
-			auto& meshRenderer = entity.AddComponent<MeshRenderer>();
-		});
+				auto& meshRenderer = entity.AddComponent<MeshRenderer>();
+			});
 	}
 
 	ImGui::Text("Meshes");
 	if (ImGui::BeginTable("MeshCache", 4, flags))
 	{
-		ImGui::TableSetupColumn("Key",				ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
-		ImGui::TableSetupColumn("Name",				ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
-		ImGui::TableSetupColumn("Payload",			ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn("Reference Count",	ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
+		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
+		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
+		ImGui::TableSetupColumn("Reference Count", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 

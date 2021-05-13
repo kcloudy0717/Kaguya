@@ -74,7 +74,7 @@ struct Camera
 {
 	float	NearZ;
 	float	FarZ;
-	float	ExposureValue100;
+	float	_padding0;
 	float	_padding1;
 
 	float	FocalLength;

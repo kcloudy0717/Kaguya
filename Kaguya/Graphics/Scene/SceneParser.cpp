@@ -76,7 +76,7 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshFilter& MeshFilter)
 	Emitter << YAML::Key << "Mesh Filter";
 	Emitter << YAML::BeginMap;
 	{
-		std::string relativePath = MeshFilter.Mesh ? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableFolderPath).string() : "NULL";
+		std::string relativePath = MeshFilter.Mesh ? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string() : "NULL";
 
 		Emitter << YAML::Key << "Name" << relativePath;
 	}
@@ -117,7 +117,7 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshRenderer& MeshRender
 			{
 				const auto& texture = material.Textures[i];
 
-				std::string relativePath = texture ? std::filesystem::relative(texture->Metadata.Path, Application::ExecutableFolderPath).string() : "NULL";
+				std::string relativePath = texture ? std::filesystem::relative(texture->Metadata.Path, Application::ExecutableDirectory).string() : "NULL";
 
 				Emitter << YAML::Key << textureTypes[i] << relativePath;
 			}
@@ -261,7 +261,7 @@ static void SerializeImages(YAML::Emitter& Emitter)
 		{
 			Emitter << YAML::BeginMap;
 			{
-				Emitter << YAML::Key << "Image" << std::filesystem::relative(SortedImage.second->Metadata.Path, Application::ExecutableFolderPath).string();
+				Emitter << YAML::Key << "Image" << std::filesystem::relative(SortedImage.second->Metadata.Path, Application::ExecutableDirectory).string();
 				Emitter << YAML::Key << "Metadata";
 				Emitter << YAML::BeginMap;
 				{
@@ -291,7 +291,7 @@ static void SerializeMeshes(YAML::Emitter& Emitter)
 		{
 			Emitter << YAML::BeginMap;
 			{
-				Emitter << YAML::Key << "Mesh" << YAML::Value << std::filesystem::relative(SortedMeshe.second->Metadata.Path, Application::ExecutableFolderPath).string();
+				Emitter << YAML::Key << "Mesh" << YAML::Value << std::filesystem::relative(SortedMeshe.second->Metadata.Path, Application::ExecutableDirectory).string();
 				Emitter << YAML::Key << "Metadata";
 				Emitter << YAML::BeginMap;
 				{
@@ -393,7 +393,7 @@ static void DeserializeImage(const YAML::Node& Node)
 	auto& AssetManager = AssetManager::Instance();
 
 	auto path = Node["Image"].as<std::string>();
-	path = (Application::ExecutableFolderPath / path).string();
+	path = (Application::ExecutableDirectory / path).string();
 	auto metadata = Node["Metadata"];
 
 	bool sRGB = metadata["sRGB"].as<bool>();
@@ -406,7 +406,7 @@ static void DeserializeMesh(const YAML::Node& Node)
 	auto& AssetManager = AssetManager::Instance();
 
 	auto path = Node["Mesh"].as<std::string>();
-	path = (Application::ExecutableFolderPath / path).string();
+	path = (Application::ExecutableDirectory / path).string();
 	auto metadata = Node["Metadata"];
 
 	bool keepGeometryInRAM = metadata["KeepGeometryInRAM"].as<bool>();
@@ -446,7 +446,7 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 		auto path = Node["Name"].as<std::string>();
 		if (path != "NULL")
 		{
-			path = (Application::ExecutableFolderPath / path).string();
+			path = (Application::ExecutableDirectory / path).string();
 
 			MeshFilter.Key = entt::hashed_string(path.data());
 		}
@@ -479,7 +479,7 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 			auto path = material[textureTypes[i]].as<std::string>();
 			if (path != "NULL")
 			{
-				path = (Application::ExecutableFolderPath / path).string();
+				path = (Application::ExecutableDirectory / path).string();
 
 				MeshRenderer.Material.TextureKeys[i] = entt::hashed_string(path.data());
 			}

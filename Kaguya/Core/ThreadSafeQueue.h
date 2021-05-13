@@ -7,7 +7,11 @@ template<typename T>
 class ThreadSafeQueue
 {
 public:
-	ThreadSafeQueue() = default;
+	ThreadSafeQueue() noexcept = default;
+
+	ThreadSafeQueue(ThreadSafeQueue&&) noexcept = default;
+	ThreadSafeQueue& operator=(ThreadSafeQueue&&) noexcept = default;
+
 	ThreadSafeQueue(const ThreadSafeQueue&) = delete;
 	ThreadSafeQueue& operator=(const ThreadSafeQueue&) = delete;
 

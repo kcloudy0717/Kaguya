@@ -2,21 +2,40 @@
 #include "Mouse.h"
 #include "Keyboard.h"
 
-//----------------------------------------------------------------------------------------------------
-class Window;
-
-//----------------------------------------------------------------------------------------------------
 class InputHandler
 {
 public:
-	InputHandler() = default;
+	InputHandler() noexcept = default;
+	InputHandler(
+		_In_ HWND hWnd);
 
-	void Create(Window* pWindow);
+	void Handle(
+		_In_ const MSG* pMsg);
 
-	void Handle(const MSG* pMsg);
+	void EnableCursor();
+	void DisableCursor();
+
+	void ConfineCursor();
+	void FreeCursor();
+	void ShowCursor();
+	void HideCursor();
+
+private:
+	void HandleRawInput(
+		_In_ UINT uMsg,
+		_In_ WPARAM wParam,
+		_In_ LPARAM lParam);
+
+	void HandleStandardInput(
+		_In_ UINT uMsg,
+		_In_ WPARAM wParam,
+		_In_ LPARAM lParam);
+
 public:
+	HWND hWnd = nullptr;
 	Mouse Mouse;
 	Keyboard Keyboard;
-private:
-	Window* m_pWindow = nullptr;
+
+	bool RawInputEnabled = false;
+	bool CursorEnabled = true;
 };

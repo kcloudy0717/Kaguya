@@ -351,3 +351,8 @@ template <typename T>
 using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;
+
+[[nodiscard]] inline constexpr float lerp(float x, float y, float s)
+{
+	return x + s * (y - x);
+}

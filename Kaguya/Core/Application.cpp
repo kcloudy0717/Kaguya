@@ -1,75 +1,55 @@
 #include "pch.h"
 #include "Application.h"
 
-#include <windowsx.h>
 #include <shellapi.h>
-#include <shellscalingapi.h>
-#pragma comment(lib, "shcore.lib")
 
-void Application::Initialize(const Config& Config)
+#pragma comment(lib, "runtimeobject.lib") 
+
+void Application::InitializeComponents()
 {
-	Log::Create();
-
-	ThrowIfFailed(CoInitializeEx(nullptr, tagCOINIT::COINIT_APARTMENTTHREADED));
-	SetProcessDpiAwareness(PROCESS_DPI_AWARENESS::PROCESS_SYSTEM_DPI_AWARE);
-
 	int argc;
 	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 	if (argv)
 	{
 		std::filesystem::path executablePath{ argv[0] };
-		ExecutableFolderPath = executablePath.parent_path();
+		ExecutableDirectory = executablePath.parent_path();
 		LocalFree(argv);
 	}
+}
 
-	auto icoFile = Application::ExecutableFolderPath / "Assets/Kaguya.ico";
+void Application::Initialize(const ApplicationOptions& Options)
+{
+	Log::Create();
+
+	auto icoFile = Application::ExecutableDirectory / "Assets/Kaguya.ico";
 	Window.SetIcon(::LoadImage(0, icoFile.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE));
-	Window.Create(Config.Title.data(), Config.Width, Config.Height, Config.X, Config.Y, Config.Maximize);
-	InputHandler.Create(&Window);
-
-	MinimumWidth = GetSystemMetrics(SM_CXMINTRACK);
-	MinimumHeight = GetSystemMetrics(SM_CYMINTRACK);
+	Window.Create(Options.Title.data(), Options.Width, Options.Height, Options.X, Options.Y, Options.Maximize);
+	
+	// Initialize input handler
+	m_InputHandler = InputHandler(Window.GetWindowHandle());
 }
 
 int Application::Run(std::function<void()> ShutdownFunc)
 {
-	int exitCode = EXIT_SUCCESS;
+	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
 
-	try
+	// Begin our render thread
+	RenderThread = wil::unique_handle(::CreateThread(nullptr, 0, Application::RenderThreadProc, nullptr, 0, nullptr));
+	if (!RenderThread)
 	{
-		// Begin our render thread
-		RenderThread = wil::unique_handle(::CreateThread(nullptr, 0, Application::RenderThreadProc, nullptr, 0, nullptr));
-		if (!RenderThread)
-		{
-			LOG_ERROR("Failed to create thread (error={})", ::GetLastError());
-			Quit();
-		}
-
-		MSG msg = {};
-		while (msg.message != WM_QUIT)
-		{
-			if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-			{
-				::TranslateMessage(&msg);
-				::DispatchMessage(&msg);
-
-				InputHandler.Handle(&msg);
-			}
-		}
-
-		Application::Quit();
-
-		exitCode = (int)msg.wParam;
+		LOG_ERROR("Failed to create thread (error={})", ::GetLastError());
 	}
-	catch (std::exception& e)
+
+	MSG msg = {};
+	while (msg.message != WM_QUIT)
 	{
-		exitCode = EXIT_FAILURE;
-		MessageBoxA(nullptr, e.what(), "Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
-	}
-	catch (...)
-	{
-		exitCode = EXIT_FAILURE;
-		MessageBoxA(nullptr, nullptr, "Unknown Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		if (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			::TranslateMessage(&msg);
+			::DispatchMessage(&msg);
+
+			m_InputHandler.Handle(&msg);
+		}
 	}
 
 	// Set ExitRenderThread to true and wait for it to join
@@ -84,24 +64,20 @@ int Application::Run(std::function<void()> ShutdownFunc)
 		ShutdownFunc();
 	}
 
-	CoUninitialize();
+	int exitCode = (int)msg.wParam;
 	LOG_INFO("Exit Code: {}", exitCode);
 	return exitCode;
-}
-
-void Application::Quit()
-{
-	QuitApplication = true;
 }
 
 DWORD WINAPI Application::RenderThreadProc(_In_ PVOID pParameter)
 {
 	SetThreadDescription(GetCurrentThread(), L"Render Thread");
-	ThrowIfFailed(CoInitializeEx(nullptr, tagCOINIT::COINIT_APARTMENTTHREADED));
+
+	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
 
 	while (true)
 	{
-		if (ExitRenderThread || QuitApplication)
+		if (ExitRenderThread)
 		{
 			break;
 		}
@@ -130,10 +106,9 @@ DWORD WINAPI Application::RenderThreadProc(_In_ PVOID pParameter)
 			}
 		}
 
-		Application::Window.Render();
+		Window.Render();
 	}
 
-	CoUninitialize();
 	return EXIT_SUCCESS;
 }
 
@@ -143,7 +118,7 @@ bool Application::HandleRenderMessage(const Window::Message& Message)
 	{
 	case Window::Message::EType::Resize:
 	{
-		Application::Window.Resize(Message.Data.Width, Message.Data.Height);
+		Window.Resize(Message.Data.Width, Message.Data.Height);
 		return true;
 	}
 	break;

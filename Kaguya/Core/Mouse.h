@@ -42,20 +42,20 @@ public:
 		struct SData
 		{
 			int X; int Y;
-			bool LeftMouseButtonIsPressed;
-			bool MiddleMouseButtonIsPressed;
-			bool RightMouseButtonIsPressed;
+			bool LeftIsPressed;
+			bool MiddleIsPressed;
+			bool RightIsPressed;
 		};
 
 		Event() = default;
 		Event(EType Type, const Mouse& Mouse)
 			: Type(Type)
 		{
-			Data.X = Mouse.X;
-			Data.Y = Mouse.Y;
-			Data.LeftMouseButtonIsPressed = Mouse.IsLMBPressed();
-			Data.MiddleMouseButtonIsPressed = Mouse.IsMMBPressed();
-			Data.RightMouseButtonIsPressed = Mouse.IsRMBPressed();
+			Data.X = Mouse.x;
+			Data.Y = Mouse.y;
+			Data.LeftIsPressed = Mouse.IsLeftPressed();
+			Data.MiddleIsPressed = Mouse.IsMiddlePressed();
+			Data.RightIsPressed = Mouse.IsRightPressed();
 		}
 
 		EType Type = EType::Invalid;
@@ -67,29 +67,30 @@ public:
 		int X, Y;
 	};
 
-	bool IsMouseButtonPressed(Button Button) const;
-	bool IsLMBPressed() const;
-	bool IsMMBPressed() const;
-	bool IsRMBPressed() const;
+	bool IsPressed(Button Button) const;
+	bool IsLeftPressed() const;
+	bool IsMiddlePressed() const;
+	bool IsRightPressed() const;
 	bool IsInWindow() const;
 
 	std::optional<Mouse::Event> Read();
 
 	std::optional<Mouse::RawInput> ReadRawInput();
+
 private:
-	void OnMouseMove(int X, int Y);
-	void OnMouseEnter();
-	void OnMouseLeave();
+	void OnMove(int x, int y);
+	void OnEnter();
+	void OnLeave();
 
-	void OnMouseButtonDown(Button Button);
+	void OnButtonDown(Button Button, int x, int y);
 
-	void OnMouseButtonUp(Button Button);
+	void OnButtonUp(Button Button, int x, int y);
 
-	void OnWheelDown();
-	void OnWheelUp();
-	void OnWheelDelta(int WheelDelta);
+	void OnWheelDown(int x, int y);
+	void OnWheelUp(int x, int y);
+	void OnWheelDelta(int WheelDelta, int x, int y);
 
-	void OnRawInput(int X, int Y);
+	void OnRawInput(int x, int y);
 
 	template<class T>
 	void TrimBuffer(ThreadSafeQueue<T>& QueueBuffer)
@@ -100,12 +101,13 @@ private:
 			QueueBuffer.pop(item, 0);
 		}
 	}
+
 public:
-	bool UseRawInput = false;
-	int	X = 0;
-	int	Y = 0;
-	int	RawX = 0;
-	int	RawY = 0;
+	int	x = 0;
+	int	y = 0;
+	int	xRaw = 0;
+	int	yRaw = 0;
+
 private:
 	std::bitset<NumButtons> m_ButtonStates;
 	bool m_IsInWindow = false;

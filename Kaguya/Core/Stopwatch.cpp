@@ -1,19 +1,19 @@
 #include "pch.h"
-#include "Time.h"
+#include "Stopwatch.h"
 
-Time::Time()
+Stopwatch::Stopwatch()
 {
 	::QueryPerformanceFrequency(&m_Frequency);
 	m_Period = 1.0 / static_cast<double>(m_Frequency.QuadPart);
 	::QueryPerformanceCounter(&m_StartTime);
 }
 
-double Time::DeltaTime() const
+double Stopwatch::DeltaTime() const
 {
 	return m_DeltaTime;
 }
 
-double Time::TotalTime() const
+double Stopwatch::TotalTime() const
 {
 	// If we are stopped, do not count the time that has passed since we stopped.
 	// Moreover, if we previously already had a pause, the distance 
@@ -36,14 +36,14 @@ double Time::TotalTime() const
 	return ((m_CurrentTime.QuadPart - m_PausedTime.QuadPart) - m_TotalTime.QuadPart) * m_Period;
 }
 
-double Time::TotalTimePrecise() const
+double Stopwatch::TotalTimePrecise() const
 {
 	LARGE_INTEGER currentTime;
 	::QueryPerformanceCounter(&currentTime);
 	return (currentTime.QuadPart - m_StartTime.QuadPart) * m_Period;
 }
 
-void Time::Resume()
+void Stopwatch::Resume()
 {
 	::QueryPerformanceCounter(&m_CurrentTime);
 	// Accumulate the time elapsed between stop and start pairs.
@@ -60,7 +60,7 @@ void Time::Resume()
 	}
 }
 
-void Time::Pause()
+void Stopwatch::Pause()
 {
 	if (!m_Paused)
 	{
@@ -70,7 +70,7 @@ void Time::Pause()
 	}
 }
 
-void Time::Signal()
+void Stopwatch::Signal()
 {
 	if (m_Paused)
 	{
@@ -93,7 +93,7 @@ void Time::Signal()
 	}
 }
 
-void Time::Restart()
+void Stopwatch::Restart()
 {
 	::QueryPerformanceCounter(&m_CurrentTime);
 	m_TotalTime = m_CurrentTime;

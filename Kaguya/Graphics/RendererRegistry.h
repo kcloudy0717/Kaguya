@@ -42,7 +42,7 @@ struct Shaders
 
 	static void Compile(const ShaderCompiler& ShaderCompiler)
 	{
-		const auto& ExecutableFolderPath = Application::ExecutableFolderPath;
+		const auto& ExecutableFolderPath = Application::ExecutableDirectory;
 
 		// Load VS
 		{
@@ -75,7 +75,7 @@ struct Libraries
 
 	static void Compile(const ShaderCompiler& ShaderCompiler)
 	{
-		const auto& ExecutableFolderPath = Application::ExecutableFolderPath;
+		const auto& ExecutableFolderPath = Application::ExecutableDirectory;
 
 		PathTrace = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/PathTrace.hlsl");
 		Picking = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/Picking.hlsl");

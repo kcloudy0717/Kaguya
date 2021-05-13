@@ -5,10 +5,12 @@
 
 #include "../AssetManager.h"
 
-Scene::Scene()
+Scene::Scene() noexcept
 {
 	Camera.Transform.Position = { 0.0f, 5.0f, -10.0f };
 	PreviousCamera = Camera;
+
+	CameraController = std::make_unique<FPSCamera>(Camera);
 }
 
 void Scene::Clear()
@@ -17,8 +19,12 @@ void Scene::Clear()
 	Registry.clear();
 }
 
-void Scene::Update()
+void Scene::Update(float dt)
 {
+	PreviousCamera = Camera;
+
+	CameraController->Update(dt);
+
 	// Update all mesh filters
 	Registry.view<MeshFilter>().each([](auto&& MeshFilter)
 	{

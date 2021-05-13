@@ -39,11 +39,11 @@ void ViewportWindow::RenderGui()
 
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
 		{
-			Application::InputHandler.Mouse.UseRawInput = true;
+			Application::GetInputHandler().RawInputEnabled = true;
 		}
 		else
 		{
-			Application::InputHandler.Mouse.UseRawInput = false;
+			Application::GetInputHandler().RawInputEnabled = false;
 		}
 	}
 	ImGui::End();

@@ -10,8 +10,12 @@ struct DeviceOptions
 	bool BreakOnWarning;
 };
 
-struct DeviceCapability
+// Can't use DeviceCapabilities, it conflicts with a macro
+// Specify whether or not you want to require the device to have these features
+// if any is not supported, ctor throws
+struct DeviceFeatures
 {
+	bool WaveOperation;
 	bool Raytracing;
 	bool DynamicResources;
 };
@@ -25,7 +29,7 @@ public:
 	Device(
 		_In_ IDXGIAdapter4* pAdapter,
 		_In_ const DeviceOptions& Options,
-		_In_ const DeviceCapability& Capability);
+		_In_ const DeviceFeatures& Features);
 	~Device();
 
 	Device(Device&&) noexcept = default;

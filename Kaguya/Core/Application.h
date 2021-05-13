@@ -3,44 +3,50 @@
 #include <type_traits>
 #include <string_view>
 
-#include "Time.h"
+#include "Stopwatch.h"
 #include "Window.h"
 #include "InputHandler.h"
 
-//----------------------------------------------------------------------------------------------------
+struct ApplicationOptions
+{
+	std::wstring Title = L"Application";
+	int Width = CW_USEDEFAULT;
+	int Height = CW_USEDEFAULT;
+	int X = CW_USEDEFAULT;
+	int Y = CW_USEDEFAULT;
+	bool Maximize = true;
+};
+
 class Application
 {
 public:
-	struct Config
-	{
-		std::wstring Title = L"Application";
-		int Width = CW_USEDEFAULT;
-		int Height = CW_USEDEFAULT;
-		int X = CW_USEDEFAULT;
-		int Y = CW_USEDEFAULT;
-		bool Maximize = true;
-	};
+	static void InitializeComponents();
 
-	static void Initialize(const Config& Config);
+	static void Initialize(const ApplicationOptions& Options);
 
 	static int Run(std::function<void()> ShutdownFunc);
 
-	static void Quit();
+	static int Width() { return Window.GetWindowWidth(); }
+	static int Height() { return Window.GetWindowHeight(); }
+	static float AspectRatio() { return (float)Width() / (float)Height(); }
+
+	static InputHandler& GetInputHandler() { return m_InputHandler; }
+	static Mouse& GetMouse() { return m_InputHandler.Mouse; }
+	static Keyboard& GetKeyboard() { return m_InputHandler.Keyboard; }
+
 private:
 	static DWORD WINAPI RenderThreadProc(_In_ PVOID pParameter);
 	static bool HandleRenderMessage(const Window::Message& Message);
-public:
-	inline static std::filesystem::path ExecutableFolderPath;
-	inline static Time Time;
-	inline static Window Window;
-	inline static InputHandler InputHandler;
 
-	inline static int MinimumWidth = 0;
-	inline static int MinimumHeight = 0;
+public:
+	inline static std::filesystem::path ExecutableDirectory;
+	inline static Stopwatch Time;
+	inline static Window Window;
+
 private:
-	inline static std::atomic<bool> QuitApplication = false;
 	inline static wil::unique_handle RenderThread;
 	inline static std::atomic<bool> ExitRenderThread = false;
+	inline static InputHandler m_InputHandler;
 };
 
 template<class T>

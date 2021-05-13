@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Renderer.h"
 #include "Core/Window.h"
-#include "Core/Time.h"
+#include "Core/Stopwatch.h"
 
 #include "RenderDevice.h"
 #include "Scene/Entity.h"
@@ -54,7 +54,7 @@ void Renderer::Initialize()
 	auto& RenderDevice = RenderDevice::Instance();
 
 	ShaderCompiler shaderCompiler;
-	shaderCompiler.SetIncludeDirectory(Application::ExecutableFolderPath / L"Shaders");
+	shaderCompiler.SetIncludeDirectory(Application::ExecutableDirectory / L"Shaders");
 
 	Shaders::Compile(shaderCompiler);
 	Libraries::Compile(shaderCompiler);
@@ -66,7 +66,7 @@ void Renderer::Initialize()
 	m_GraphicsCommandList = CommandList(RenderDevice.GetDevice(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_ComputeCommandList = CommandList(RenderDevice.GetDevice(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
 
-	m_RaytracingAccelerationStructure.Create(PathIntegrator::NumHitGroups);
+	m_RaytracingAccelerationStructure = RaytracingAccelerationStructure(PathIntegrator::NumHitGroups);
 
 	m_PathIntegrator = PathIntegrator(RenderDevice::Instance());
 	m_Picking.Create();
@@ -82,25 +82,27 @@ void Renderer::Initialize()
 	ThrowIfFailed(m_Lights->pResource->Map(0, nullptr, reinterpret_cast<void**>(&m_pLights)));
 }
 
-void Renderer::Render(const Time& Time, Scene& Scene)
+void Renderer::Render(Scene& Scene)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
 	UINT numMaterials = 0, numLights = 0;
 
 	m_RaytracingAccelerationStructure.clear();
-	Scene.Registry.view<MeshFilter, MeshRenderer>().each([&](auto&& MeshFilter, auto&& MeshRenderer)
-	{
-		if (MeshFilter.Mesh)
+	Scene.Registry.view<MeshFilter, MeshRenderer>().each(
+		[&](auto&& MeshFilter, auto&& MeshRenderer)
 		{
-			m_RaytracingAccelerationStructure.AddInstance(&MeshRenderer);
-			m_pMaterials[numMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
-		}
-	});
-	Scene.Registry.view<Transform, Light>().each([&](auto&& Transform, auto&& Light)
-	{
-		m_pLights[numLights++] = GetHLSLLightDesc(Transform, Light);
-	});
+			if (MeshFilter.Mesh)
+			{
+				m_RaytracingAccelerationStructure.AddInstance(&MeshRenderer);
+				m_pMaterials[numMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
+			}
+		});
+	Scene.Registry.view<Transform, Light>().each(
+		[&](auto&& Transform, auto&& Light)
+		{
+			m_pLights[numLights++] = GetHLSLLightDesc(Transform, Light);
+		});
 
 	if (!m_RaytracingAccelerationStructure.empty())
 	{
@@ -177,7 +179,8 @@ void Renderer::Render(const Time& Time, Scene& Scene)
 		m_GraphicsCommandList->RSSetViewports(1, &m_Viewport);
 		m_GraphicsCommandList->RSSetScissorRects(1, &m_ScissorRect);
 		m_GraphicsCommandList->OMSetRenderTargets(1, &rtv.CpuHandle, TRUE, nullptr);
-		m_GraphicsCommandList->ClearRenderTargetView(rtv.CpuHandle, DirectX::Colors::White, 0, nullptr);
+		FLOAT white[] = { 1, 1, 1, 1 };
+		m_GraphicsCommandList->ClearRenderTargetView(rtv.CpuHandle, white, 0, nullptr);
 
 		// ImGui Render
 		{
@@ -234,13 +237,13 @@ void Renderer::RequestCapture()
 	};
 
 	auto pTexture = m_ToneMapper.GetRenderTarget();
-	SaveD3D12ResourceToDisk(Application::ExecutableFolderPath / L"viewport.png",
+	SaveD3D12ResourceToDisk(Application::ExecutableDirectory / L"viewport.png",
 		pTexture,
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	auto pBackBuffer = RenderDevice::Instance().GetCurrentBackBuffer();
-	SaveD3D12ResourceToDisk(Application::ExecutableFolderPath / L"swapchain.png",
+	SaveD3D12ResourceToDisk(Application::ExecutableDirectory / L"swapchain.png",
 		pBackBuffer,
 		D3D12_RESOURCE_STATE_PRESENT,
 		D3D12_RESOURCE_STATE_PRESENT);

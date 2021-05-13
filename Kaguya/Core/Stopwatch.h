@@ -1,10 +1,10 @@
 #pragma once
 #include <winnt.h>
 
-class Time
+class Stopwatch
 {
 public:
-	Time();
+	Stopwatch();
 
 	double DeltaTime() const;
 	double TotalTime() const;
@@ -22,7 +22,7 @@ private:
 	LARGE_INTEGER m_StopTime = {};
 	LARGE_INTEGER m_PreviousTime = {};
 	LARGE_INTEGER m_CurrentTime = {};
-	double m_Period = 0.0; // Represents the amount of time it takes for 1 tick/oscilation
+	double m_Period = 0.0;
 	double m_DeltaTime = 0.0;
 
 	bool m_Paused = false;

@@ -19,7 +19,7 @@ void Device::ReportLiveObjects()
 Device::Device(
 	_In_ IDXGIAdapter4* pAdapter,
 	_In_ const DeviceOptions& Options,
-	_In_ const DeviceCapability& Capability)
+	_In_ const DeviceFeatures& Features)
 {
 	// Enable the D3D12 debug layer
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
@@ -49,7 +49,19 @@ Device::Device(
 		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
 	}
 
-	if (Capability.Raytracing)
+	if (Features.WaveOperation)
+	{
+		D3D12_FEATURE_DATA_D3D12_OPTIONS1 o1 = {};
+		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &o1, sizeof(o1))))
+		{
+			if (!o1.WaveOps)
+			{
+				throw std::runtime_error("Wave operation not supported on device");
+			}
+		}
+	}
+
+	if (Features.Raytracing)
 	{
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 o5 = {};
 		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &o5, sizeof(o5))))
@@ -63,7 +75,7 @@ Device::Device(
 
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
-	if (Capability.DynamicResources)
+	if (Features.DynamicResources)
 	{
 		D3D12_FEATURE_DATA_SHADER_MODEL sm = {
 			.HighestShaderModel = D3D_SHADER_MODEL_6_6 };

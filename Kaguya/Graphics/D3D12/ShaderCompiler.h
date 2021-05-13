@@ -1,6 +1,6 @@
 #pragma once
-#include <dxcapi.h>
-#include <d3d12shader.h>
+#include "dxcapi.h"
+#include "d3d12shader.h"
 
 class Shader
 {
@@ -14,32 +14,46 @@ public:
 		Geometry,
 		Pixel,
 		Compute,
-		Mesh
+		Amplification,
+		Mesh,
 	};
 
 	Shader() noexcept = default;
 	Shader(
 		Type Type,
-		_In_ IDxcBlob* DxcBlob,
-		_In_ ID3D12ShaderReflection* ShaderReflection) noexcept
-		: m_Type(Type)
-		, m_DxcBlob(DxcBlob)
-		, m_ShaderReflection(ShaderReflection)
+		IDxcBlob* DxcBlob,
+		IDxcBlob* PdbBlob,
+		std::wstring&& PdbName) noexcept
+		: m_DxcBlob(DxcBlob)
+		, m_PdbBlob(PdbBlob)
+		, m_PdbName(std::move(PdbName))
 	{
 
 	}
 
-	operator D3D12_SHADER_BYTECODE() const noexcept
+	operator D3D12_SHADER_BYTECODE() const
 	{
-		return D3D12_SHADER_BYTECODE{
+		return D3D12_SHADER_BYTECODE
+		{
 			.pShaderBytecode = m_DxcBlob->GetBufferPointer(),
-			.BytecodeLength = m_DxcBlob->GetBufferSize() };
+			.BytecodeLength = m_DxcBlob->GetBufferSize()
+		};
+	}
+
+	D3D12_SHADER_BYTECODE GetPdb() const
+	{
+		return D3D12_SHADER_BYTECODE
+		{
+			.pShaderBytecode = m_DxcBlob->GetBufferPointer(),
+			.BytecodeLength = m_DxcBlob->GetBufferSize()
+		};
 	}
 
 private:
 	Type m_Type;
 	Microsoft::WRL::ComPtr<IDxcBlob> m_DxcBlob;
-	Microsoft::WRL::ComPtr<ID3D12ShaderReflection> m_ShaderReflection;
+	Microsoft::WRL::ComPtr<IDxcBlob> m_PdbBlob;
+	std::wstring m_PdbName;
 };
 
 /*
@@ -53,15 +67,17 @@ class Library
 public:
 	Library() noexcept = default;
 	Library(
-		_In_ IDxcBlob* DxcBlob,
-		_In_ ID3D12LibraryReflection* LibraryReflection) noexcept
+		IDxcBlob* DxcBlob,
+		IDxcBlob* PdbBlob,
+		std::wstring&& PdbName) noexcept
 		: m_DxcBlob(DxcBlob)
-		, m_LibraryReflection(LibraryReflection)
+		, m_PdbBlob(PdbBlob)
+		, m_PdbName(std::move(PdbName))
 	{
 
 	}
 
-	operator D3D12_SHADER_BYTECODE() const noexcept
+	operator D3D12_SHADER_BYTECODE() const
 	{
 		return D3D12_SHADER_BYTECODE{
 			.pShaderBytecode = m_DxcBlob->GetBufferPointer(),
@@ -70,52 +86,51 @@ public:
 
 private:
 	Microsoft::WRL::ComPtr<IDxcBlob> m_DxcBlob;
-	Microsoft::WRL::ComPtr<ID3D12LibraryReflection> m_LibraryReflection;
+	Microsoft::WRL::ComPtr<IDxcBlob> m_PdbBlob;
+	std::wstring m_PdbName;
 };
 
 class ShaderCompiler
 {
 public:
-	enum class Profile
-	{
-		Profile_6_3,
-		Profile_6_4,
-		Profile_6_5,
-		Profile_6_6
-	};
-
 	ShaderCompiler();
 
+	void SetShaderModel(
+		D3D_SHADER_MODEL ShaderModel);
+
 	void SetIncludeDirectory(
-		_In_ const std::filesystem::path& pPath);
+		const std::filesystem::path& pPath);
 
 	Shader CompileShader(
-		_In_ Shader::Type Type,
-		_In_ const std::filesystem::path& Path,
-		_In_ LPCWSTR pEntryPoint,
-		_In_ const std::vector<DxcDefine>& ShaderDefines) const;
+		Shader::Type Type,
+		const std::filesystem::path& Path,
+		LPCWSTR pEntryPoint,
+		const std::vector<DxcDefine>& ShaderDefines) const;
 
 	Library CompileLibrary(
-		_In_ const std::filesystem::path& Path) const;
+		const std::filesystem::path& Path) const;
 
 private:
 	std::wstring ShaderProfileString(
-		_In_ Shader::Type Type,
-		_In_ ShaderCompiler::Profile Profile) const;
+		Shader::Type Type,
+		D3D_SHADER_MODEL ShaderModel) const;
 
 	std::wstring LibraryProfileString(
-		_In_ ShaderCompiler::Profile Profile) const;
+		D3D_SHADER_MODEL ShaderModel) const;
 
 	void Compile(
-		_In_ const std::filesystem::path& Path,
-		_In_opt_ LPCWSTR pEntryPoint,
-		_In_ LPCWSTR pProfile,
-		_In_ const std::vector<DxcDefine>& ShaderDefines,
-		_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob) const;
+		const std::filesystem::path& Path,
+		LPCWSTR pEntryPoint,
+		LPCWSTR pProfile,
+		const std::vector<DxcDefine>& ShaderDefines,
+		_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob,
+		_Outptr_result_maybenull_ IDxcBlob** ppPdbBlob,
+		std::wstring& PdbName) const;
 
 private:
 	Microsoft::WRL::ComPtr<IDxcCompiler3> m_DxcCompiler;
 	Microsoft::WRL::ComPtr<IDxcUtils> m_DxcUtils;
 	Microsoft::WRL::ComPtr<IDxcIncludeHandler> m_DxcIncludeHandler;
-	std::array<WCHAR, MAX_PATH> m_IncludeDirectory;
+	D3D_SHADER_MODEL m_ShaderModel;
+	std::wstring m_IncludeDirectory;
 };

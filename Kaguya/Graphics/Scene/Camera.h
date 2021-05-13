@@ -1,16 +1,26 @@
 #pragma once
 #include "Components/Transform.h"
 
-using FStop = float;
-using ISO = float;
-using EV = float;
-
 struct Camera
 {
-	Camera();
-	void RenderGui();
+	using FStop = float;
+	using ISO = float;
+	using EV = float;
 
-	auto operator<=>(const Camera&) const = default;
+	Camera();
+
+	bool operator==(const Camera& Camera) const
+	{
+		return Transform == Camera.Transform &&
+			FoVY == Camera.FoVY &&
+			NearZ == Camera.NearZ &&
+			FarZ == Camera.FarZ;
+	}
+
+	bool operator!=(const Camera& Camera) const
+	{
+		return !(*this == Camera);
+	}
 
 	float static CalculateFoVX(int w, int h, float FoVY)
 	{
@@ -24,19 +34,17 @@ struct Camera
 	DirectX::XMVECTOR GetUVector() const;
 	DirectX::XMVECTOR GetVVector() const;
 	DirectX::XMVECTOR GetWVector() const;
-	EV ExposureValue100() const;
 
-	DirectX::XMMATRIX ViewMatrix() const;
-	DirectX::XMMATRIX ProjectionMatrix() const;
-	DirectX::XMMATRIX ViewProjectionMatrix() const;
-	DirectX::XMMATRIX InverseViewMatrix() const;
-	DirectX::XMMATRIX InverseProjectionMatrix() const;
-	DirectX::XMMATRIX InverseViewProjectionMatrix() const;
+	void SetLookAt(
+		DirectX::XMVECTOR EyePosition,
+		DirectX::XMVECTOR FocusPosition,
+		DirectX::XMVECTOR UpDirection);
 
-	void SetLookAt(DirectX::XMVECTOR EyePosition, DirectX::XMVECTOR FocusPosition, DirectX::XMVECTOR UpDirection);
+	void Rotate(
+		float AngleX,
+		float AngleY);
 
-	void Translate(float DeltaX, float DeltaY, float DeltaZ);
-	void Rotate(float AngleX, float AngleY);
+	void Update();
 
 	Transform Transform;
 
@@ -49,4 +57,14 @@ struct Camera
 	FStop RelativeAperture;	// controls how wide the aperture is opened. Impacts the depth of field.
 	float ShutterTime;		// controls how long the aperture is opened. Impacts the motion blur.
 	ISO SensorSensitivity;	// controls how photons are counted/quantized on the digital sensor.
+
+	DirectX::XMMATRIX ViewMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX ProjectionMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX ViewProjectionMatrix = DirectX::XMMatrixIdentity();
+
+	DirectX::XMMATRIX InverseViewMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX InverseProjectionMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX InverseViewProjectionMatrix = DirectX::XMMatrixIdentity();
+
+	DirectX::XMMATRIX PrevViewProjectionMatrix = DirectX::XMMatrixIdentity();
 };

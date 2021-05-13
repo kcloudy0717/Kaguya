@@ -35,7 +35,7 @@ class Editor
 public:
 	Editor()
 	{
-		std::string iniFile = (Application::ExecutableFolderPath / "imgui.ini").string();
+		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 
 		ImGui::LoadIniSettingsFromDisk(iniFile.data());
 
@@ -54,9 +54,10 @@ public:
 
 	void Render()
 	{
-		Time& Time = Application::Time;
-		Mouse& Mouse = Application::InputHandler.Mouse;
-		Keyboard& Keyboard = Application::InputHandler.Keyboard;
+		Stopwatch& Time = Application::Time;
+		InputHandler& InputHandler = Application::GetInputHandler();
+		Mouse& Mouse = Application::GetMouse();
+		Keyboard& Keyboard = Application::GetKeyboard();
 
 		Time.Signal();
 		float dt = Time.DeltaTime();
@@ -96,41 +97,15 @@ public:
 		uint32_t viewportWidth = m_ViewportWindow.Resolution.x, viewportHeight = m_ViewportWindow.Resolution.y;
 #endif
 
-		// Update
-		Scene.PreviousCamera = Scene.Camera;
-
-		Scene.Camera.AspectRatio = static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);
-
 		// Update selected entity
 		// If LMB is pressed and we are not handling raw input and if we are not hovering over any imgui stuff then we update the
 		// instance id for editor
-		if (Mouse.IsLMBPressed() && !Mouse.UseRawInput && m_ViewportWindow.IsHovered && !ImGuizmo::IsUsing())
+		if (Mouse.IsLeftPressed() && !InputHandler.RawInputEnabled && m_ViewportWindow.IsHovered && !ImGuizmo::IsUsing())
 		{
 			m_HierarchyWindow.SetSelectedEntity(Renderer.GetSelectedEntity());
 		}
 
-		if (Mouse.UseRawInput)
-		{
-			if (Keyboard.IsKeyPressed('W'))
-				Scene.Camera.Translate(0.0f, 0.0f, dt);
-			if (Keyboard.IsKeyPressed('A'))
-				Scene.Camera.Translate(-dt, 0.0f, 0.0f);
-			if (Keyboard.IsKeyPressed('S'))
-				Scene.Camera.Translate(0.0f, 0.0f, -dt);
-			if (Keyboard.IsKeyPressed('D'))
-				Scene.Camera.Translate(dt, 0.0f, 0.0f);
-			if (Keyboard.IsKeyPressed('E'))
-				Scene.Camera.Translate(0.0f, dt, 0.0f);
-			if (Keyboard.IsKeyPressed('Q'))
-				Scene.Camera.Translate(0.0f, -dt, 0.0f);
-
-			while (const auto rawInput = Mouse.ReadRawInput())
-			{
-				Scene.Camera.Rotate(rawInput->Y * dt, rawInput->X * dt);
-			}
-		}
-
-		Scene.Update();
+		Scene.Update(dt);
 
 		// Render
 		Renderer.SetViewportMousePosition(vpx, vpy);
@@ -162,33 +137,39 @@ int main(int argc, char* argv[])
 	SET_LEAK_BREAKPOINT(-1);
 #endif
 
-	Application::Config config = {
+	ApplicationOptions options =
+	{
 		.Title = L"Kaguya",
 		.Width = 1280,
 		.Height = 720,
-		.Maximize = true };
+		.Maximize = true
+	};
 
-	Application::Initialize(config);
+	Application::InitializeComponents();
+	Application::Initialize(options);
 	RenderDevice::Initialize();
 	AssetManager::Initialize();
 
 	std::unique_ptr<Editor> editor = std::make_unique<Editor>();
 
-	Application::Window.SetRenderFunc([&]()
-	{
-		editor->Render();
-	});
+	Application::Window.SetRenderFunc(
+		[&]()
+		{
+			editor->Render();
+		});
 
-	Application::Window.SetResizeFunc([&](UINT Width, UINT Height)
-	{
-		editor->Resize(Width, Height);
-	});
+	Application::Window.SetResizeFunc(
+		[&](UINT Width, UINT Height)
+		{
+			editor->Resize(Width, Height);
+		});
 
 	Application::Time.Restart();
-	return Application::Run([&]()
-	{
-		editor.reset();
-		AssetManager::Shutdown();
-		RenderDevice::Shutdown();
-	});
+	return Application::Run(
+		[&]()
+		{
+			editor.reset();
+			AssetManager::Shutdown();
+			RenderDevice::Shutdown();
+		});
 }

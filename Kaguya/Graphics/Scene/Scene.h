@@ -2,6 +2,7 @@
 #include <entt.hpp>
 
 #include "Camera.h"
+#include "CameraController.h"
 #include "Components/Tag.h"
 #include "Components/Transform.h"
 #include "Components/MeshFilter.h"
@@ -24,11 +25,11 @@ struct Scene
 	static constexpr UINT64 MAX_LIGHT_SUPPORTED = 100;
 	static constexpr UINT64 MAX_INSTANCE_SUPPORTED = 1000;
 
-	Scene();
+	Scene() noexcept;
 
 	void Clear();
 
-	void Update();
+	void Update(float dt);
 
 	Entity CreateEntity(const std::string& Name);
 	void DestroyEntity(Entity Entity);
@@ -40,6 +41,7 @@ struct Scene
 	entt::registry Registry;
 
 	Camera Camera, PreviousCamera;
+	std::unique_ptr<CameraController> CameraController;
 };
 
 inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
@@ -134,18 +136,18 @@ inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
 	XMStoreFloat4(&V, Camera.GetVVector());
 	XMStoreFloat4(&W, Camera.GetWVector());
 
-	XMStoreFloat4x4(&View, XMMatrixTranspose(Camera.ViewMatrix()));
-	XMStoreFloat4x4(&Projection, XMMatrixTranspose(Camera.ProjectionMatrix()));
-	XMStoreFloat4x4(&ViewProjection, XMMatrixTranspose(Camera.ViewProjectionMatrix()));
-	XMStoreFloat4x4(&InvView, XMMatrixTranspose(Camera.InverseViewMatrix()));
-	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix()));
-	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix()));
+	XMStoreFloat4x4(&View, XMMatrixTranspose(Camera.ViewMatrix));
+	XMStoreFloat4x4(&Projection, XMMatrixTranspose(Camera.ProjectionMatrix));
+	XMStoreFloat4x4(&ViewProjection, XMMatrixTranspose(Camera.ViewProjectionMatrix));
+	XMStoreFloat4x4(&InvView, XMMatrixTranspose(Camera.InverseViewMatrix));
+	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix));
+	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix));
 
 	return
 	{
 		.NearZ = Camera.NearZ,
 		.FarZ = Camera.FarZ,
-		.ExposureValue100 = Camera.ExposureValue100(),
+		._padding0 = 0.0f,
 		._padding1 = 0.0f,
 
 		.FocalLength = Camera.FocalLength,

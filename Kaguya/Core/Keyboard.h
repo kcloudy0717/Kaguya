@@ -23,29 +23,36 @@ public:
 			Release
 		};
 
-		struct SData
-		{
-			unsigned char Code;
-		};
-
 		Event() = default;
 		Event(EType Type, unsigned char Code)
 			: Type(Type)
+			, Code(Code)
 		{
-			Data.Code = Code;
+
+		}
+
+		bool IsPressed() const
+		{
+			return Type == EType::Press;
+		}
+
+		bool IsReleased()
+		{
+			return Type == EType::Release;
 		}
 
 		EType Type = EType::Invalid;
-		SData Data = {};
+		unsigned char Code = {};
 	};
 
-	bool IsKeyPressed(unsigned char KeyCode) const;
+	bool IsPressed(unsigned char KeyCode) const;
 
 	std::optional<Keyboard::Event> ReadKey();
 	bool KeyBufferIsEmpty() const;
 
 	unsigned char ReadChar();
 	bool CharBufferIsEmpty() const;
+
 private:
 	void ResetKeyState();
 	void OnKeyDown(unsigned char KeyCode);
@@ -61,8 +68,10 @@ private:
 			QueueBuffer.pop(item, 0);
 		}
 	}
+
 public:
 	bool AutoRepeat = false;
+
 private:
 	std::bitset<NumKeyStates> m_KeyStates;
 	ThreadSafeQueue<Keyboard::Event> m_KeyBuffer;

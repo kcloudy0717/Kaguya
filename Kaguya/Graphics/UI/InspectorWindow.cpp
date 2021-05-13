@@ -304,213 +304,213 @@ void InspectorWindow::RenderGui()
 	{
 		RenderComponent<Tag, true>("Tag", m_SelectedEntity,
 			[](Tag& Component)
-		{
-			char buffer[MAX_PATH] = {};
-			memcpy(buffer, Component.Name.data(), Component.Name.size());
-			if (ImGui::InputText("Tag", buffer, MAX_PATH))
 			{
-				Component.Name = buffer;
-			}
+				char buffer[MAX_PATH] = {};
+				memcpy(buffer, Component.Name.data(), Component.Name.size());
+				if (ImGui::InputText("Tag", buffer, MAX_PATH))
+				{
+					Component.Name = buffer;
+				}
 
-			return false;
-		},
+				return false;
+			},
 			nullptr);
 
 		RenderComponent<Transform, true>("Transform", m_SelectedEntity,
 			[&](Transform& Component)
-		{
-			bool isEdited = false;
-
-			DirectX::XMFLOAT4X4 world, view, projection;
-
-			// Dont transpose this
-			XMStoreFloat4x4(&world, Component.Matrix());
-
-			float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-			ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&world), matrixTranslation, matrixRotation, matrixScale);
-			isEdited |= RenderFloat3Control("Translation", matrixTranslation);
-			isEdited |= RenderFloat3Control("Rotation", matrixRotation);
-			isEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
-			ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, reinterpret_cast<float*>(&world));
-
-			// Dont transpose this
-			XMStoreFloat4x4(&view, m_pScene->Camera.ViewMatrix());
-			XMStoreFloat4x4(&projection, m_pScene->Camera.ProjectionMatrix());
-
-			// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
-			isEdited |= EditTransform(
-				Component,
-				reinterpret_cast<float*>(&view),
-				reinterpret_cast<float*>(&projection),
-				reinterpret_cast<float*>(&world));
-
-			if (isEdited)
 			{
-				DirectX::XMMATRIX mWorld = XMLoadFloat4x4(&world);
-				Component.SetTransform(mWorld);
-			}
+				bool isEdited = false;
 
-			return isEdited;
-		},
+				DirectX::XMFLOAT4X4 world, view, projection;
+
+				// Dont transpose this
+				XMStoreFloat4x4(&world, Component.Matrix());
+
+				float matrixTranslation[3], matrixRotation[3], matrixScale[3];
+				ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&world), matrixTranslation, matrixRotation, matrixScale);
+				isEdited |= RenderFloat3Control("Translation", matrixTranslation);
+				isEdited |= RenderFloat3Control("Rotation", matrixRotation);
+				isEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
+				ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, reinterpret_cast<float*>(&world));
+
+				// Dont transpose this
+				XMStoreFloat4x4(&view, m_pScene->Camera.ViewMatrix);
+				XMStoreFloat4x4(&projection, m_pScene->Camera.ProjectionMatrix);
+
+				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
+				isEdited |= EditTransform(
+					Component,
+					reinterpret_cast<float*>(&view),
+					reinterpret_cast<float*>(&projection),
+					reinterpret_cast<float*>(&world));
+
+				if (isEdited)
+				{
+					DirectX::XMMATRIX mWorld = XMLoadFloat4x4(&world);
+					Component.SetTransform(mWorld);
+				}
+
+				return isEdited;
+			},
 			[](auto Component)
-		{
-			bool isEdited = false;
-
-			if (isEdited |= ImGui::MenuItem("Reset"))
 			{
-				Component = Transform();
-			}
+				bool isEdited = false;
 
-			return isEdited;
-		});
+				if (isEdited |= ImGui::MenuItem("Reset"))
+				{
+					Component = Transform();
+				}
+
+				return isEdited;
+			});
 
 		RenderComponent<MeshFilter, false>("Mesh Filter", m_SelectedEntity,
 			[&](MeshFilter& Component)
-		{
-			bool isEdited = false;
-
-			auto handle = AssetManager::Instance().GetMeshCache().Load(Component.Key);
-
-			ImGui::Text("Mesh: ");
-			ImGui::SameLine();
-			if (handle)
 			{
-				ImGui::Button(handle->Name.data());
-			}
-			else
-			{
-				ImGui::Button("NULL");
-			}
+				bool isEdited = false;
 
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH");
-					payload)
+				auto handle = AssetManager::Instance().GetMeshCache().Load(Component.Key);
+
+				ImGui::Text("Mesh: ");
+				ImGui::SameLine();
+				if (handle)
 				{
-					IM_ASSERT(payload->DataSize == sizeof(UINT64));
-					Component.Key = (*(UINT64*)payload->Data);
-					Component.Mesh = AssetManager::Instance().GetMeshCache().Load(Component.Key);
-
-					isEdited = true;
+					ImGui::Button(handle->Name.data());
 				}
-				ImGui::EndDragDropTarget();
-			}
+				else
+				{
+					ImGui::Button("NULL");
+				}
 
-			return isEdited;
-		},
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH");
+						payload)
+					{
+						IM_ASSERT(payload->DataSize == sizeof(UINT64));
+						Component.Key = (*(UINT64*)payload->Data);
+						Component.Mesh = AssetManager::Instance().GetMeshCache().Load(Component.Key);
+
+						isEdited = true;
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				return isEdited;
+			},
 			nullptr);
 
 		RenderComponent<MeshRenderer, false>("Mesh Renderer", m_SelectedEntity,
 			[](MeshRenderer& Component)
-		{
-			bool isEdited = false;
-
-			if (ImGui::TreeNode("Material"))
 			{
-				auto& Material = Component.Material;
+				bool isEdited = false;
 
-				ImGui::Text("Attributes");
-
-				const char* BSDFTypes[BSDFTypes::NumBSDFTypes] = { "Lambertian", "Mirror", "Glass", "Disney" };
-				isEdited |= ImGui::Combo("Type", &Material.BSDFType, BSDFTypes, ARRAYSIZE(BSDFTypes), ARRAYSIZE(BSDFTypes));
-
-				switch (Material.BSDFType)
+				if (ImGui::TreeNode("Material"))
 				{
-				case BSDFTypes::Lambertian:
-					isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+					auto& Material = Component.Material;
+
+					ImGui::Text("Attributes");
+
+					const char* BSDFTypes[BSDFTypes::NumBSDFTypes] = { "Lambertian", "Mirror", "Glass", "Disney" };
+					isEdited |= ImGui::Combo("Type", &Material.BSDFType, BSDFTypes, ARRAYSIZE(BSDFTypes), ARRAYSIZE(BSDFTypes));
+
+					switch (Material.BSDFType)
+					{
+					case BSDFTypes::Lambertian:
+						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						break;
+					case BSDFTypes::Mirror:
+						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						break;
+					case BSDFTypes::Glass:
+						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						isEdited |= RenderFloat3Control("T", &Material.T.x);
+						isEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
+						isEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
+						break;
+					case BSDFTypes::Disney:
+						isEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
+						isEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
+						isEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
+						isEdited |= ImGui::SliderFloat("Specular", &Material.specular, 0, 1);
+						isEdited |= ImGui::SliderFloat("Roughness", &Material.roughness, 0, 1);
+						isEdited |= ImGui::SliderFloat("SpecularTint", &Material.specularTint, 0, 1);
+						isEdited |= ImGui::SliderFloat("Anisotropic", &Material.anisotropic, 0, 1);
+						isEdited |= ImGui::SliderFloat("Sheen", &Material.sheen, 0, 1);
+						isEdited |= ImGui::SliderFloat("SheenTint", &Material.sheenTint, 0, 1);
+						isEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
+						isEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
+						break;
+					default:
+						break;
+					}
+
+					auto ImageBox = [&](TextureTypes TextureType, UINT64& Key, std::string_view Name)
+					{
+						auto handle = AssetManager::Instance().GetImageCache().Load(Key);
+
+						ImGui::Text(Name.data());
+						ImGui::SameLine();
+						if (handle)
+						{
+							ImGui::Button(handle->Name.data());
+							Material.TextureIndices[TextureType] = handle->SRV.Index;
+						}
+						else
+						{
+							ImGui::Button("NULL");
+							Material.TextureIndices[TextureType] = -1;
+						}
+
+						if (ImGui::BeginDragDropTarget())
+						{
+							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE");
+								payload)
+							{
+								IM_ASSERT(payload->DataSize == sizeof(UINT64));
+								Key = (*(UINT64*)payload->Data);
+
+								isEdited = true;
+							}
+							ImGui::EndDragDropTarget();
+						}
+					};
+
+					ImageBox(TextureTypes::AlbedoIdx, Material.TextureKeys[0], "Albedo: ");
+
+					ImGui::TreePop();
+				}
+
+				return isEdited;
+			},
+			nullptr);
+
+		RenderComponent<Light, false>("Light", m_SelectedEntity,
+			[](Light& Component)
+			{
+				bool isEdited = false;
+
+				auto pType = (int*)&Component.Type;
+
+				const char* LightTypes[] = { "Point", "Quad" };
+				isEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
+
+				switch (Component.Type)
+				{
+				case PointLight:
+					isEdited |= RenderFloat3Control("I", &Component.I.x);
 					break;
-				case BSDFTypes::Mirror:
-					isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
-					break;
-				case BSDFTypes::Glass:
-					isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
-					isEdited |= RenderFloat3Control("T", &Material.T.x);
-					isEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
-					isEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
-					break;
-				case BSDFTypes::Disney:
-					isEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
-					isEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
-					isEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
-					isEdited |= ImGui::SliderFloat("Specular", &Material.specular, 0, 1);
-					isEdited |= ImGui::SliderFloat("Roughness", &Material.roughness, 0, 1);
-					isEdited |= ImGui::SliderFloat("SpecularTint", &Material.specularTint, 0, 1);
-					isEdited |= ImGui::SliderFloat("Anisotropic", &Material.anisotropic, 0, 1);
-					isEdited |= ImGui::SliderFloat("Sheen", &Material.sheen, 0, 1);
-					isEdited |= ImGui::SliderFloat("SheenTint", &Material.sheenTint, 0, 1);
-					isEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
-					isEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
+				case QuadLight:
+					isEdited |= RenderFloat3Control("I", &Component.I.x);
+					isEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
+					isEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
 					break;
 				default:
 					break;
 				}
 
-				auto ImageBox = [&](TextureTypes TextureType, UINT64& Key, std::string_view Name)
-				{
-					auto handle = AssetManager::Instance().GetImageCache().Load(Key);
-
-					ImGui::Text(Name.data());
-					ImGui::SameLine();
-					if (handle)
-					{
-						ImGui::Button(handle->Name.data());
-						Material.TextureIndices[TextureType] = handle->SRV.Index;
-					}
-					else
-					{
-						ImGui::Button("NULL");
-						Material.TextureIndices[TextureType] = -1;
-					}
-
-					if (ImGui::BeginDragDropTarget())
-					{
-						if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE");
-							payload)
-						{
-							IM_ASSERT(payload->DataSize == sizeof(UINT64));
-							Key = (*(UINT64*)payload->Data);
-
-							isEdited = true;
-						}
-						ImGui::EndDragDropTarget();
-					}
-				};
-
-				ImageBox(TextureTypes::AlbedoIdx, Material.TextureKeys[0], "Albedo: ");
-
-				ImGui::TreePop();
-			}
-
-			return isEdited;
-		},
-			nullptr);
-
-		RenderComponent<Light, false>("Light", m_SelectedEntity,
-			[](Light& Component)
-		{
-			bool isEdited = false;
-
-			auto pType = (int*)&Component.Type;
-
-			const char* LightTypes[] = { "Point", "Quad" };
-			isEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
-
-			switch (Component.Type)
-			{
-			case PointLight:
-				isEdited |= RenderFloat3Control("I", &Component.I.x);
-				break;
-			case QuadLight:
-				isEdited |= RenderFloat3Control("I", &Component.I.x);
-				isEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
-				isEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
-				break;
-			default:
-				break;
-			}
-
-			return isEdited;
-		},
+				return isEdited;
+			},
 			nullptr);
 
 		if (ImGui::Button("Add Component"))

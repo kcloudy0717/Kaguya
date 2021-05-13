@@ -8,106 +8,104 @@ ShaderCompiler::ShaderCompiler()
 	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_DxcCompiler.ReleaseAndGetAddressOf())));
 	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_DxcUtils.ReleaseAndGetAddressOf())));
 	ThrowIfFailed(m_DxcUtils->CreateDefaultIncludeHandler(m_DxcIncludeHandler.ReleaseAndGetAddressOf()));
-	m_IncludeDirectory = {};
+	m_ShaderModel = D3D_SHADER_MODEL_6_6;
+}
+
+void ShaderCompiler::SetShaderModel(
+	D3D_SHADER_MODEL ShaderModel)
+{
+	m_ShaderModel = ShaderModel;
 }
 
 void ShaderCompiler::SetIncludeDirectory(
-	_In_ const std::filesystem::path& pPath)
+	const std::filesystem::path& pPath)
 {
-	wcscpy_s(m_IncludeDirectory.data(), m_IncludeDirectory.size(), pPath.wstring().data());
+	m_IncludeDirectory = pPath.wstring();
 }
 
 Shader ShaderCompiler::CompileShader(
-	_In_ Shader::Type Type,
-	_In_ const std::filesystem::path& Path,
-	_In_ LPCWSTR pEntryPoint,
-	_In_ const std::vector<DxcDefine>& ShaderDefines) const
+	Shader::Type Type,
+	const std::filesystem::path& Path,
+	LPCWSTR pEntryPoint,
+	const std::vector<DxcDefine>& ShaderDefines) const
 {
-	auto profileString = ShaderProfileString(Type, ShaderCompiler::Profile::Profile_6_6);
+	auto profileString = ShaderProfileString(Type, m_ShaderModel);
 
-	IDxcBlob* dxcBlob = nullptr;
-	ID3D12ShaderReflection* shaderReflection = nullptr;
+	IDxcBlob* shader = nullptr;
+	IDxcBlob* pdb = nullptr;
+	std::wstring pdbName;
+	Compile(Path, pEntryPoint, profileString.data(), ShaderDefines, &shader, &pdb, pdbName);
 
-	Compile(Path, pEntryPoint, profileString.data(), ShaderDefines, &dxcBlob);
-
-	DxcBuffer dxcBuffer = {};
-	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
-	dxcBuffer.Size = dxcBlob->GetBufferSize();
-	dxcBuffer.Encoding = CP_ACP;
-	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(&shaderReflection)));
-
-	return Shader(Type, dxcBlob, shaderReflection);
+	return Shader(Type, shader, pdb, std::move(pdbName));
 }
 
 Library ShaderCompiler::CompileLibrary(
-	_In_ const std::filesystem::path& Path) const
+	const std::filesystem::path& Path) const
 {
-	auto profileString = LibraryProfileString(ShaderCompiler::Profile::Profile_6_6);
+	auto profileString = LibraryProfileString(m_ShaderModel);
 
-	IDxcBlob* dxcBlob = nullptr;
-	ID3D12LibraryReflection* libraryReflection = nullptr;
+	IDxcBlob* shader = nullptr;
+	IDxcBlob* pdb = nullptr;
+	std::wstring pdbName;
+	Compile(Path, L"", profileString.data(), {}, &shader, &pdb, pdbName);
 
-	Compile(Path, L"", profileString.data(), {}, &dxcBlob);
-
-	DxcBuffer dxcBuffer = {};
-	dxcBuffer.Ptr = dxcBlob->GetBufferPointer();
-	dxcBuffer.Size = dxcBlob->GetBufferSize();
-	dxcBuffer.Encoding = CP_ACP;
-	ThrowIfFailed(m_DxcUtils->CreateReflection(&dxcBuffer, IID_PPV_ARGS(&libraryReflection)));
-
-	return Library(dxcBlob, libraryReflection);
+	return Library(shader, pdb, std::move(pdbName));
 }
 
 std::wstring ShaderCompiler::ShaderProfileString(
-	_In_ Shader::Type Type,
-	_In_ ShaderCompiler::Profile Profile) const
+	Shader::Type Type,
+	D3D_SHADER_MODEL ShaderModel) const
 {
 	std::wstring profileString;
 	switch (Type)
 	{
-	case Shader::Type::Vertex:					profileString = L"vs_"; break;
-	case Shader::Type::Hull:					profileString = L"hs_"; break;
-	case Shader::Type::Domain:					profileString = L"ds_"; break;
-	case Shader::Type::Geometry:				profileString = L"gs_"; break;
-	case Shader::Type::Pixel:					profileString = L"ps_"; break;
-	case Shader::Type::Compute:					profileString = L"cs_"; break;
-	case Shader::Type::Mesh:					profileString = L"ms_"; break;
+	case Shader::Type::Vertex:			profileString = L"vs_"; break;
+	case Shader::Type::Hull:			profileString = L"hs_"; break;
+	case Shader::Type::Domain:			profileString = L"ds_"; break;
+	case Shader::Type::Geometry:		profileString = L"gs_"; break;
+	case Shader::Type::Pixel:			profileString = L"ps_"; break;
+	case Shader::Type::Compute:			profileString = L"cs_"; break;
+	case Shader::Type::Amplification:	profileString = L"as_"; break;
+	case Shader::Type::Mesh:			profileString = L"ms_"; break;
 	}
 
-	switch (Profile)
+	switch (ShaderModel)
 	{
-	case ShaderCompiler::Profile::Profile_6_3:	profileString += L"6_3"; break;
-	case ShaderCompiler::Profile::Profile_6_4:	profileString += L"6_4"; break;
-	case ShaderCompiler::Profile::Profile_6_5:	profileString += L"6_5"; break;
-	case ShaderCompiler::Profile::Profile_6_6:	profileString += L"6_6"; break;
+	case D3D_SHADER_MODEL_6_3: profileString += L"6_3"; break;
+	case D3D_SHADER_MODEL_6_4: profileString += L"6_4"; break;
+	case D3D_SHADER_MODEL_6_5: profileString += L"6_5"; break;
+	case D3D_SHADER_MODEL_6_6: profileString += L"6_6"; break;
 	}
 
 	return profileString;
 }
 
 std::wstring ShaderCompiler::LibraryProfileString(
-	_In_ ShaderCompiler::Profile Profile) const
+	D3D_SHADER_MODEL ShaderModel) const
 {
 	std::wstring profileString = L"lib_";
-	switch (Profile)
+	switch (ShaderModel)
 	{
-	case ShaderCompiler::Profile::Profile_6_3:	profileString += L"6_3"; break;
-	case ShaderCompiler::Profile::Profile_6_4:	profileString += L"6_4"; break;
-	case ShaderCompiler::Profile::Profile_6_5:	profileString += L"6_5"; break;
-	case ShaderCompiler::Profile::Profile_6_6:	profileString += L"6_6"; break;
+	case D3D_SHADER_MODEL_6_3: profileString += L"6_3"; break;
+	case D3D_SHADER_MODEL_6_4: profileString += L"6_4"; break;
+	case D3D_SHADER_MODEL_6_5: profileString += L"6_5"; break;
+	case D3D_SHADER_MODEL_6_6: profileString += L"6_6"; break;
 	}
 
 	return profileString;
 }
 
 void ShaderCompiler::Compile(
-	_In_ const std::filesystem::path& Path,
-	_In_opt_ LPCWSTR pEntryPoint,
-	_In_ LPCWSTR pProfile,
-	_In_ const std::vector<DxcDefine>& ShaderDefines,
-	_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob) const
+	const std::filesystem::path& Path,
+	LPCWSTR pEntryPoint,
+	LPCWSTR pProfile,
+	const std::vector<DxcDefine>& ShaderDefines,
+	_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob,
+	_Outptr_result_maybenull_ IDxcBlob** ppPdbBlob,
+	std::wstring& PdbName) const
 {
 	*ppDxcBlob = nullptr;
+	*ppPdbBlob = nullptr;
 
 	// https://developer.nvidia.com/dx12-dos-and-donts
 	LPCWSTR arguments[] =
@@ -127,8 +125,10 @@ void ShaderCompiler::Compile(
 		L"-I", m_IncludeDirectory.data()
 	};
 
+	// Build arguments
 	ComPtr<IDxcCompilerArgs> dxcCompilerArgs;
-	ThrowIfFailed(m_DxcUtils->BuildArguments(Path.c_str(),
+	ThrowIfFailed(m_DxcUtils->BuildArguments(
+		Path.c_str(),
 		pEntryPoint,
 		pProfile,
 		arguments, ARRAYSIZE(arguments),
@@ -138,7 +138,10 @@ void ShaderCompiler::Compile(
 	ComPtr<IDxcBlobEncoding> source;
 	UINT32 codePage = CP_ACP;
 
-	ThrowIfFailed(m_DxcUtils->LoadFile(Path.c_str(), &codePage, source.ReleaseAndGetAddressOf()));
+	ThrowIfFailed(m_DxcUtils->LoadFile(
+		Path.c_str(),
+		&codePage,
+		source.ReleaseAndGetAddressOf()));
 
 	BOOL sourceKnown = FALSE;
 	UINT sourceCodePage = 0;
@@ -155,21 +158,26 @@ void ShaderCompiler::Compile(
 		m_DxcIncludeHandler.Get(),
 		IID_PPV_ARGS(dxcResult.ReleaseAndGetAddressOf())));
 
-	HRESULT hr;
-	if (SUCCEEDED(dxcResult->GetStatus(&hr)))
+	HRESULT status;
+	dxcResult->GetStatus(&status);
+	if (FAILED(status))
 	{
-		if (SUCCEEDED(hr))
+		ComPtr<IDxcBlobUtf8> errors;
+		ComPtr<IDxcBlobUtf16> outputName;
+		if (SUCCEEDED(dxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(errors.GetAddressOf()), outputName.ReleaseAndGetAddressOf())))
 		{
-			dxcResult->GetResult(ppDxcBlob);
-			return;
+			OutputDebugStringA(std::bit_cast<char*>(errors->GetBufferPointer()));
+			throw std::exception("Failed to compile shader");
 		}
 	}
 
-	ComPtr<IDxcBlobUtf8> errors;
-	ComPtr<IDxcBlobUtf16> outputName;
-	if (SUCCEEDED(dxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(errors.GetAddressOf()), outputName.ReleaseAndGetAddressOf())))
+	dxcResult->GetResult(ppDxcBlob);
+	if (dxcResult->HasOutput(DXC_OUT_PDB))
 	{
-		OutputDebugStringA(std::bit_cast<char*>(errors->GetBufferPointer()));
-		throw std::exception("Failed to compile shader");
+		ComPtr<IDxcBlobUtf16> pPdbName;
+		dxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(ppPdbBlob), pPdbName.ReleaseAndGetAddressOf());
+		{
+			PdbName = pPdbName->GetStringPointer();
+		}
 	}
 }

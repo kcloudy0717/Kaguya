@@ -13,8 +13,6 @@ public:
 		inline static UINT MaxDepth;
 		inline static UINT NumAccumulatedSamples;
 
-		inline static PathIntegrator* pPathIntegrator = nullptr;
-
 		static void RestoreDefaults()
 		{
 			MaxDepth = 16;
