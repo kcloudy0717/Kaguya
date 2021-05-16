@@ -118,6 +118,7 @@ public:
 	{
 		Renderer.OnResize(Width, Height);
 	}
+
 private:
 	HierarchyWindow	m_HierarchyWindow;
 	ViewportWindow m_ViewportWindow;
@@ -137,39 +138,47 @@ int main(int argc, char* argv[])
 	SET_LEAK_BREAKPOINT(-1);
 #endif
 
-	ApplicationOptions options =
+	try
 	{
-		.Title = L"Kaguya",
-		.Width = 1280,
-		.Height = 720,
-		.Maximize = true
-	};
-
-	Application::InitializeComponents();
-	Application::Initialize(options);
-	RenderDevice::Initialize();
-	AssetManager::Initialize();
-
-	std::unique_ptr<Editor> editor = std::make_unique<Editor>();
-
-	Application::Window.SetRenderFunc(
-		[&]()
+		ApplicationOptions options =
 		{
-			editor->Render();
-		});
+			.Title = L"Kaguya",
+			.Width = 1280,
+			.Height = 720,
+			.Maximize = true
+		};
 
-	Application::Window.SetResizeFunc(
-		[&](UINT Width, UINT Height)
-		{
-			editor->Resize(Width, Height);
-		});
+		Application::InitializeComponents();
+		Application::Initialize(options);
+		RenderDevice::Initialize();
+		AssetManager::Initialize();
 
-	Application::Time.Restart();
-	return Application::Run(
-		[&]()
-		{
-			editor.reset();
-			AssetManager::Shutdown();
-			RenderDevice::Shutdown();
-		});
+		std::unique_ptr<Editor> editor = std::make_unique<Editor>();
+
+		Application::Window.SetRenderFunc(
+			[&]()
+			{
+				editor->Render();
+			});
+
+		Application::Window.SetResizeFunc(
+			[&](UINT Width, UINT Height)
+			{
+				editor->Resize(Width, Height);
+			});
+
+		Application::Time.Restart();
+		Application::Run();
+
+		editor.reset();
+		AssetManager::Shutdown();
+		RenderDevice::Shutdown();
+	}
+	catch (std::exception& e)
+	{
+		MessageBoxA(nullptr, e.what(), "Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		return 1;
+	}
+
+	return 0;
 }

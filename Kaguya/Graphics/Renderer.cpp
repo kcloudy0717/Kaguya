@@ -126,7 +126,7 @@ void Renderer::Render(Scene& Scene)
 	// Begin recording graphics command
 	m_GraphicsCommandList.Reset(m_GraphicsFenceValue, m_GraphicsFence->GetCompletedValue(), &RenderDevice.GetGraphicsQueue());
 
-	struct SystemConstants
+	struct GlobalConstants
 	{
 		HLSL::Camera Camera;
 
@@ -138,14 +138,14 @@ void Renderer::Render(Scene& Scene)
 
 		uint TotalFrameCount;
 		uint NumLights;
-	} g_SystemConstants = {};
-	g_SystemConstants.Camera = GetHLSLCameraDesc(Scene.Camera);
-	g_SystemConstants.Resolution = { float(m_ViewportWidth), float(m_ViewportHeight), 1.0f / float(m_ViewportWidth), 1.0f / float(m_ViewportHeight) };
-	g_SystemConstants.MousePosition = { m_ViewportMouseX, m_ViewportMouseY };
-	g_SystemConstants.TotalFrameCount = static_cast<unsigned int>(Statistics::TotalFrameCount);
-	g_SystemConstants.NumLights = numLights;
+	} g_GlobalConstants = {};
+	g_GlobalConstants.Camera = GetHLSLCameraDesc(Scene.Camera);
+	g_GlobalConstants.Resolution = { float(m_ViewportWidth), float(m_ViewportHeight), 1.0f / float(m_ViewportWidth), 1.0f / float(m_ViewportHeight) };
+	g_GlobalConstants.MousePosition = { m_ViewportMouseX, m_ViewportMouseY };
+	g_GlobalConstants.TotalFrameCount = static_cast<unsigned int>(Statistics::TotalFrameCount);
+	g_GlobalConstants.NumLights = numLights;
 
-	GraphicsResource sceneConstantBuffer = RenderDevice.GraphicsMemory()->AllocateConstant(g_SystemConstants);
+	GraphicsResource sceneConstantBuffer = RenderDevice.GraphicsMemory()->AllocateConstant(g_GlobalConstants);
 
 	RenderDevice.BindResourceViewHeaps(m_GraphicsCommandList);
 

@@ -29,16 +29,12 @@ void Application::Initialize(const ApplicationOptions& Options)
 	m_InputHandler = InputHandler(Window.GetWindowHandle());
 }
 
-int Application::Run(std::function<void()> ShutdownFunc)
+int Application::Run()
 {
 	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
 
 	// Begin our render thread
 	RenderThread = wil::unique_handle(::CreateThread(nullptr, 0, Application::RenderThreadProc, nullptr, 0, nullptr));
-	if (!RenderThread)
-	{
-		LOG_ERROR("Failed to create thread (error={})", ::GetLastError());
-	}
 
 	MSG msg = {};
 	while (msg.message != WM_QUIT)
@@ -59,14 +55,7 @@ int Application::Run(std::function<void()> ShutdownFunc)
 		::WaitForSingleObject(RenderThread.get(), INFINITE);
 	}
 
-	if (ShutdownFunc)
-	{
-		ShutdownFunc();
-	}
-
-	int exitCode = (int)msg.wParam;
-	LOG_INFO("Exit Code: {}", exitCode);
-	return exitCode;
+	return (int)msg.wParam;
 }
 
 DWORD WINAPI Application::RenderThreadProc(_In_ PVOID pParameter)

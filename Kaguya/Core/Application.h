@@ -24,7 +24,7 @@ public:
 
 	static void Initialize(const ApplicationOptions& Options);
 
-	static int Run(std::function<void()> ShutdownFunc);
+	static int Run();
 
 	static int Width() { return Window.GetWindowWidth(); }
 	static int Height() { return Window.GetWindowHeight(); }
