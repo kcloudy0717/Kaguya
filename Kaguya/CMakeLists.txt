@@ -100,7 +100,7 @@ include_directories("${CMAKE_SOURCE_DIR}/ext/dxc")
 include_directories("${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt")
 include_directories("${CMAKE_SOURCE_DIR}/ext/imgui")
 include_directories("${CMAKE_SOURCE_DIR}/ext/ImGuizmo")
-include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.9/build/native/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/nativefiledialog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/wil/include")
@@ -132,7 +132,7 @@ DEPENDS ${PROJECTNAME})
 add_custom_command(
 TARGET ${PROJECTNAME} PRE_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.9/build/native/bin/x64
+	${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 DEPENDS ${PROJECTNAME})
 

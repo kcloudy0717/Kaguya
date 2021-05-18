@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>Microsoft.Direct3D.D3D12</id>
+    <version>1.4.10</version>
+    <title>Microsoft.Direct3D.D3D12</title>
+    <authors>Microsoft</authors>
+    <owners>Direct3D,Microsoft</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="file">LICENSE.txt</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>icon.png</icon>
+    <projectUrl>https://aka.ms/directx12agility</projectUrl>
+    <description>DirectX 12 Agility SDK</description>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+    <tags>DirectX Direct3D D3D12 Direct3D12 DirectX12 Agility</tags>
+  </metadata>
+</package>

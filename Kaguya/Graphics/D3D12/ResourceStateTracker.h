@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <optional>
 
-// https://www.youtube.com/watch?v=nmB2XMasz2o&t=1036s, Resource state tracking
+// https://www.youtube.com/watch?v=nmB2XMasz2o, Resource state tracking
 
 // Custom resource states
 #define D3D12_RESOURCE_STATE_UNKNOWN (static_cast<D3D12_RESOURCE_STATES>(-1))
