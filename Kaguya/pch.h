@@ -86,6 +86,7 @@
 #include <Core/Synchronization/RWLock.h>
 #include <Core/Synchronization/CriticalSection.h>
 #include <Core/Synchronization/ConditionVariable.h>
+#include <Graphics/D3D12/PIXCapture.h>
 
 inline void ThrowIfFailed(HRESULT hr)
 {

@@ -11,15 +11,8 @@
 class CResourceState
 {
 public:
-	auto begin()
-	{
-		return m_SubresourceState.begin();
-	}
-
-	auto end()
-	{
-		return m_SubresourceState.end();
-	}
+	auto begin() noexcept { return m_SubresourceState.begin(); }
+	auto end() noexcept { return m_SubresourceState.end(); }
 
 	// Returns true if all subresources have the same state
 	bool AreAllSubresourcesSame() const noexcept
