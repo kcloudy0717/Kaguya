@@ -18,12 +18,12 @@
 *	GeometryContributionToHitGroupIndex is a system generated index of geometry in bottom-level acceleration structure (0,1,2,3..)
 */
 
-// ShaderRecord = {{Shader Identifier}, {RootArguments}}
+// RaytracingShaderRecord = {{Shader Identifier}, {RootArguments}}
 template<typename T>
-struct ShaderRecord
+struct RaytracingShaderRecord
 {
-	ShaderRecord() = default;
-	ShaderRecord(ShaderIdentifier ShaderIdentifier, T RootArguments)
+	RaytracingShaderRecord() = default;
+	RaytracingShaderRecord(ShaderIdentifier ShaderIdentifier, T RootArguments)
 		: ShaderIdentifier(ShaderIdentifier)
 		, RootArguments(RootArguments)
 	{
@@ -35,10 +35,10 @@ struct ShaderRecord
 };
 
 template<>
-struct ShaderRecord<void>
+struct RaytracingShaderRecord<void>
 {
-	ShaderRecord() = default;
-	ShaderRecord(ShaderIdentifier ShaderIdentifier)
+	RaytracingShaderRecord() = default;
+	RaytracingShaderRecord(ShaderIdentifier ShaderIdentifier)
 		: ShaderIdentifier(ShaderIdentifier)
 	{
 
@@ -48,21 +48,26 @@ struct ShaderRecord<void>
 };
 
 template<typename T>
-class ShaderTable
+class RaytracingShaderTable
 {
 public:
-	using Record = ShaderRecord<T>;
+	using Record = RaytracingShaderRecord<T>;
 
-	ShaderTable()
-		: m_StrideInBytes(AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT))
-		, m_Resource(nullptr)
+	enum
+	{
+		StrideInBytes = AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)
+	};
+
+	RaytracingShaderTable()
+		: m_Resource(nullptr)
 	{
 
 	}
 
 	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE() const
 	{
-		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE{
+		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE
+		{
 			.StartAddress = m_Resource->GetGPUVirtualAddress(),
 			.SizeInBytes = GetSizeInBytes()
 		};
@@ -70,10 +75,12 @@ public:
 
 	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE() const
 	{
-		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{
+		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE
+		{
 			.StartAddress = m_Resource->GetGPUVirtualAddress(),
 			.SizeInBytes = GetSizeInBytes(),
-			.StrideInBytes = GetStrideInBytes() };
+			.StrideInBytes = StrideInBytes
+		};
 	}
 
 	auto Resource() const
@@ -118,14 +125,9 @@ public:
 
 	auto GetSizeInBytes() const
 	{
-		UINT64 SizeInBytes = static_cast<UINT64>(m_ShaderRecords.size()) * m_StrideInBytes;
+		UINT64 SizeInBytes = static_cast<UINT64>(m_ShaderRecords.size()) * StrideInBytes;
 		SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 		return SizeInBytes;
-	}
-
-	auto GetStrideInBytes() const
-	{
-		return m_StrideInBytes;
 	}
 
 	void Generate(BYTE* pHostMemory)
@@ -137,13 +139,12 @@ public:
 				// Copy record data
 				memcpy(pHostMemory, &Record, sizeof(Record));
 
-				pHostMemory += m_StrideInBytes;
+				pHostMemory += StrideInBytes;
 			}
 		}
 	}
 
 private:
 	std::vector<Record> m_ShaderRecords;
-	UINT64 m_StrideInBytes;
 	ID3D12Resource* m_Resource;
 };

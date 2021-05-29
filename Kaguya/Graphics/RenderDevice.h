@@ -10,10 +10,10 @@
 #include "D3D12/ResourceStateTracker.h"
 #include "D3D12/CommandList.h"
 #include "D3D12/AccelerationStructure.h"
-#include "D3D12/ShaderTable.h"
 #include "D3D12/RootSignature.h"
 #include "d3d12/PipelineState.h"
 #include "D3D12/RaytracingPipelineState.h"
+#include "D3D12/RaytracingShaderTable.h"
 
 struct RootParameters
 {

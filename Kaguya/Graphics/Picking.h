@@ -23,8 +23,8 @@ private:
 	std::shared_ptr<Resource> m_Result;
 	std::shared_ptr<Resource> m_Readback;
 
-	ShaderTable<void> m_RayGenerationShaderTable;
-	ShaderTable<void> m_MissShaderTable;
-	ShaderTable<void> m_HitGroupShaderTable;
+	RaytracingShaderTable<void> m_RayGenerationShaderTable;
+	RaytracingShaderTable<void> m_MissShaderTable;
+	RaytracingShaderTable<void> m_HitGroupShaderTable;
 	std::vector<Entity> m_Entities;
 };

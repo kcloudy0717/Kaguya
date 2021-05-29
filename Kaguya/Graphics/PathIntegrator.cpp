@@ -155,7 +155,7 @@ PathIntegrator::PathIntegrator(
 	auto finish = uploader.End(RenderDevice.GetCopyQueue());
 	finish.wait();
 
-	m_HitGroupSBT = RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.GetStrideInBytes() * Scene::MAX_INSTANCE_SUPPORTED);
+	m_HitGroupSBT = RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.StrideInBytes * Scene::MAX_INSTANCE_SUPPORTED);
 
 	m_HitGroupShaderTable.reserve(Scene::MAX_INSTANCE_SUPPORTED);
 	m_HitGroupShaderTable.AssociateResource(m_HitGroupSBT->pResource.Get());
@@ -211,7 +211,7 @@ void PathIntegrator::UpdateShaderTable(
 		const auto& vertexBuffer = meshFilter->Mesh->VertexResource->pResource;
 		const auto& indexBuffer = meshFilter->Mesh->IndexResource->pResource;
 
-		ShaderTable<RootArgument>::Record shaderRecord = {};
+		RaytracingShaderTable<RootArgument>::Record shaderRecord = {};
 		shaderRecord.ShaderIdentifier = g_DefaultSID;
 		shaderRecord.RootArguments =
 		{

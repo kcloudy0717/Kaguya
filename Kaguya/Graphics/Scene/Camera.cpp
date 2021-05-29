@@ -42,8 +42,6 @@ void Camera::SetLookAt(
 
 void Camera::Rotate(float AngleX, float AngleY)
 {
-	AngleX = XMConvertToRadians(AngleX);
-	AngleY = XMConvertToRadians(AngleY);
 	Transform.Rotate(AngleX, AngleY, 0.0f);
 }
 

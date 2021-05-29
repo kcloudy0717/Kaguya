@@ -3,11 +3,7 @@
 
 #include "Camera.h"
 #include "CameraController.h"
-#include "Components/Tag.h"
-#include "Components/Transform.h"
-#include "Components/MeshFilter.h"
-#include "Components/MeshRenderer.h"
-#include "Components/Light.h"
+#include "Components.h"
 
 #include "../SharedTypes.h"
 
@@ -88,7 +84,7 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 
 	XMMATRIX M = Transform.Matrix();
 
-	float4 Orientation; XMStoreFloat4(&Orientation, DirectX::XMVector3Normalize(Transform.Forward()));
+	DirectX::XMFLOAT4 Orientation; XMStoreFloat4(&Orientation, DirectX::XMVector3Normalize(Transform.Forward()));
 	float halfWidth = Light.Width * 0.5f;
 	float halfHeight = Light.Height * 0.5f;
 	// Get local space point
@@ -99,7 +95,7 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 
 	// Precompute the light points here so ray generation shader doesnt have to do it for every ray
 	// Move points to light's location
-	float3 points[4] = {};
+	DirectX::XMFLOAT3 points[4] = {};
 	XMStoreFloat3(&points[0], XMVector3TransformCoord(p0, M));
 	XMStoreFloat3(&points[1], XMVector3TransformCoord(p1, M));
 	XMStoreFloat3(&points[2], XMVector3TransformCoord(p2, M));

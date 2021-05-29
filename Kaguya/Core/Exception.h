@@ -3,49 +3,18 @@
 #include <exception>
 #include <string>
 
-class Exception : public std::exception
+inline std::string hresult_to_string(HRESULT hr)
+{
+	char s_str[64] = {};
+	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
+	return std::string(s_str);
+}
+
+class hresult_exception : public std::runtime_error
 {
 public:
-	Exception() noexcept
-		: m_File{}
-		, m_Line(0)
-	{
-
-	}
-	explicit Exception(
-		std::string File,
-		int Line) noexcept;
-	virtual ~Exception() = default;
-
-	const char* what() const noexcept override;
-
-	virtual std::string Type() const noexcept;
-	virtual std::string Error() const noexcept;
-	std::string Origin() const noexcept;
-
-protected:
-	mutable std::string m_ErrorMessage;
-
+	hresult_exception(HRESULT hr) : std::runtime_error(hresult_to_string(hr)), m_hr(hr) {}
+	HRESULT Error() const { return m_hr; }
 private:
-	std::string m_File;
-	int m_Line;
-};
-
-class hresult_exception final : public Exception
-{
-public:
-	hresult_exception() noexcept
-		: m_HR(S_FALSE)
-	{
-
-	}
-	explicit hresult_exception(
-		std::string File,
-		int Line,
-		HRESULT HR) noexcept;
-
-	std::string Type() const noexcept override;
-	std::string Error() const noexcept override;
-private:
-	HRESULT m_HR;
+	const HRESULT m_hr;
 };

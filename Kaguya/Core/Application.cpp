@@ -1,12 +1,30 @@
 #include "pch.h"
 #include "Application.h"
 
+#if defined(_DEBUG)
+// memory leak
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
+#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
+#define SET_LEAK_BREAKPOINT(x) _CrtSetBreakAlloc(x)
+#else
+#define ENABLE_LEAK_DETECTION() 0
+#define SET_LEAK_BREAKPOINT(X) X
+#endif
+
 #include <shellapi.h>
 
 #pragma comment(lib, "runtimeobject.lib") 
 
 void Application::InitializeComponents()
 {
+#if defined(_DEBUG)
+	ENABLE_LEAK_DETECTION();
+	SET_LEAK_BREAKPOINT(-1);
+#endif
+
+	// Initialize ExecutableDirectory
 	int argc;
 	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 	if (argv)
@@ -15,16 +33,24 @@ void Application::InitializeComponents()
 		ExecutableDirectory = executablePath.parent_path();
 		LocalFree(argv);
 	}
+
+	// Initialize Log
+	Log::Create();
 }
 
-void Application::Initialize(const ApplicationOptions& Options)
+void Application::Initialize(
+	const ApplicationOptions& Options)
 {
-	Log::Create();
+	int x = Options.x.value_or(CW_USEDEFAULT);
+	int y = Options.y.value_or(CW_USEDEFAULT);
 
-	auto icoFile = Application::ExecutableDirectory / "Assets/Kaguya.ico";
-	Window.SetIcon(::LoadImage(0, icoFile.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE));
-	Window.Create(Options.Title.data(), Options.Width, Options.Height, Options.X, Options.Y, Options.Maximize);
-	
+	Window.SetIcon(::LoadImage(0, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE));
+
+	Window.Create(
+		Options.Name.data(),
+		Options.Width, Options.Height,
+		x, y, Options.Maximize);
+
 	// Initialize input handler
 	m_InputHandler = InputHandler(Window.GetWindowHandle());
 }
@@ -34,7 +60,7 @@ int Application::Run()
 	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
 
 	// Begin our render thread
-	RenderThread = wil::unique_handle(::CreateThread(nullptr, 0, Application::RenderThreadProc, nullptr, 0, nullptr));
+	m_RenderThread = wil::unique_handle(::CreateThread(nullptr, 0, Application::RenderThreadProc, nullptr, 0, nullptr));
 
 	MSG msg = {};
 	while (msg.message != WM_QUIT)
@@ -48,11 +74,11 @@ int Application::Run()
 		}
 	}
 
-	// Set ExitRenderThread to true and wait for it to join
-	if (RenderThread)
+	// Set m_ExitRenderThread to true and wait for it to join
+	if (m_RenderThread)
 	{
-		ExitRenderThread = true;
-		::WaitForSingleObject(RenderThread.get(), INFINITE);
+		m_ExitRenderThread = true;
+		::WaitForSingleObject(m_RenderThread.get(), INFINITE);
 	}
 
 	return (int)msg.wParam;
@@ -66,7 +92,7 @@ DWORD WINAPI Application::RenderThreadProc(_In_ PVOID pParameter)
 
 	while (true)
 	{
-		if (ExitRenderThread)
+		if (m_ExitRenderThread)
 		{
 			break;
 		}

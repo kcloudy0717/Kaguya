@@ -1,5 +1,4 @@
 #pragma once
-
 #include <type_traits>
 // http://blog.bitwigglers.org/using-enum-classes-as-type-safe-bitmasks/
 
@@ -78,21 +77,6 @@ struct EnableBitMaskOperators<Enum>							\
 inline bool EnumMaskBitSet(Enum Mask, Enum Component)		\
 {															\
     return (Mask & Component) == Component;					\
-}
-
-#include <codecvt>
-#include <string>
-
-inline std::wstring UTF8ToUTF16(const std::string& utf8Str)
-{
-	static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-	return conv.from_bytes(utf8Str);
-}
-
-inline std::string UTF16ToUTF8(const std::wstring& utf16Str)
-{
-	static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-	return conv.to_bytes(utf16Str);
 }
 
 // https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x

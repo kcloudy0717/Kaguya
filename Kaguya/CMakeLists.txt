@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.15)
 set(PROJECTNAME Kaguya)
 set(Main "main.cpp")
 set(PCH_Header "pch.h")
-set(PCH_Source "pch.h" "pch.cpp")
+set(PCH_Source "pch.cpp")
 set_source_files_properties("pch.cpp" PROPERTIES COMPILE_FLAGS "/Ycpch.h")
 
 file(GLOB_RECURSE HeaderList
@@ -16,47 +16,49 @@ file(GLOB_RECURSE SourceList
 Core/*.cpp
 Graphics/*.cpp)
 
+# ext
 set(D3D12MemoryAllocator
-${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.h
-${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp)
+	${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.h
+	${CMAKE_SOURCE_DIR}/ext/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp)
 
-set(entt ${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt/entt.hpp)
+set(entt
+	${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt/entt.hpp)
 
 set(IMGUI
-${CMAKE_SOURCE_DIR}/ext/imgui/imconfig.h
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui.h
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui_draw.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui_internal.h
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui_tables.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/imgui_widgets.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/imstb_rectpack.h
-${CMAKE_SOURCE_DIR}/ext/imgui/imstb_textedit.h
-${CMAKE_SOURCE_DIR}/ext/imgui/imstb_truetype.h
-# Backend
-${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.h
-${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.cpp
-${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.h)
+	${CMAKE_SOURCE_DIR}/ext/imgui/imconfig.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui_demo.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui_draw.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui_internal.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui_tables.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/imgui_widgets.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/imstb_rectpack.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/imstb_textedit.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/imstb_truetype.h
+	# Backend
+	${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_dx12.h
+	${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.cpp
+	${CMAKE_SOURCE_DIR}/ext/imgui/backends/imgui_impl_win32.h)
 
 set(IMGUIZMO
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.cpp
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.h
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.cpp
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.h
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.cpp
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.h
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.cpp
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.h
-${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImZoomSlider.h)
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.cpp
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImCurveEdit.h
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.cpp
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGradient.h
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.cpp
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImGuizmo.h
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.cpp
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.h
+	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImZoomSlider.h)
 
 set(SPDLOG
-${CMAKE_SOURCE_DIR}/ext/spdlog/include/spdlog/spdlog.h)
+	${CMAKE_SOURCE_DIR}/ext/spdlog/include/spdlog/spdlog.h)
 
 file(GLOB_RECURSE yaml_cpp
-${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include/yaml-cpp/*.h
-${CMAKE_SOURCE_DIR}/ext/yaml-cpp/src/*.cpp)
+	${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include/yaml-cpp/*.h
+	${CMAKE_SOURCE_DIR}/ext/yaml-cpp/src/*.cpp)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${PCH_Header})
@@ -74,22 +76,28 @@ foreach(Source IN LISTS SourceList)
     set_source_files_properties("${Source}" PROPERTIES COMPILE_FLAGS "/Yupch.h")
 endforeach()
 
-include_directories(".")
+if (MSVC)
+    add_compile_options(/W3) # warning level 3
+	add_compile_options(/MP) # Multi-processor compilation
+endif()
+
 add_executable(
-${PROJECTNAME}
-${Main}
-${PCH_Header}
-${PCH_Source}
-${HeaderList}
-${SourceList}
-${D3D12MemoryAllocator}
-${entt}
-${IMGUI}
-${IMGUIZMO}
-${SPDLOG}
-${yaml_cpp})
+	${PROJECTNAME}
+	${Main}
+	${PCH_Header}
+	${PCH_Source}
+	${HeaderList}
+	${SourceList}
+	${D3D12MemoryAllocator}
+	${entt}
+	${IMGUI}
+	${IMGUIZMO}
+	${SPDLOG}
+	${yaml_cpp})
 
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # ext
 include_directories("${CMAKE_SOURCE_DIR}/ext/assimp/include")
@@ -117,9 +125,10 @@ target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/nativefiledia
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Release/nfd.lib)
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/WinPixEventRuntime/bin/x64/WinPixEventRuntime.lib)
 
+# ext
 # copy dlls
 add_custom_command(
-TARGET ${PROJECTNAME} PRE_BUILD
+TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy 
 	${CMAKE_SOURCE_DIR}/ext/assimp/bin/release/assimp-vc142-mt.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.dll
@@ -130,7 +139,7 @@ COMMAND ${CMAKE_COMMAND} -E copy
 DEPENDS ${PROJECTNAME})
 
 add_custom_command(
-TARGET ${PROJECTNAME} PRE_BUILD
+TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
@@ -138,7 +147,7 @@ DEPENDS ${PROJECTNAME})
 
 # copy assets
 add_custom_command(
-TARGET ${PROJECTNAME} PRE_BUILD
+TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/assets
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/assets
@@ -146,7 +155,7 @@ DEPENDS ${PROJECTNAME})
 
 # copy shaders
 add_custom_command(
-TARGET ${PROJECTNAME} PRE_BUILD
+TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/shaders
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/shaders

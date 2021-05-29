@@ -40,7 +40,7 @@ public:
 	}
 
 	auto GetDescriptorRanges() const noexcept { return m_DescriptorRanges; }
-	size_t size() const noexcept { return m_DescriptorRanges.size(); }
+	UINT size() const noexcept { return static_cast<UINT>(m_DescriptorRanges.size()); }
 
 private:
 	std::vector<D3D12_DESCRIPTOR_RANGE1> m_DescriptorRanges;
@@ -64,7 +64,7 @@ public:
 		// The descriptor table descriptor ranges require a pointer to the descriptor ranges. Since new
 		// ranges can be dynamically added in the vector, we separately store the index of the range set.
 		// The actual address will be solved when generating the actual root signature
-		m_DescriptorRangeIndices.push_back(m_DescriptorRanges.size());
+		m_DescriptorRangeIndices.push_back(static_cast<UINT>(m_DescriptorRanges.size()));
 		m_DescriptorRanges.push_back(DescriptorTable.GetDescriptorRanges());
 	}
 

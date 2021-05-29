@@ -9,12 +9,12 @@
 
 struct ApplicationOptions
 {
-	std::wstring Title = L"Application";
-	int Width = CW_USEDEFAULT;
-	int Height = CW_USEDEFAULT;
-	int X = CW_USEDEFAULT;
-	int Y = CW_USEDEFAULT;
-	bool Maximize = true;
+	std::wstring_view Name;
+	int Width = CW_USEDEFAULT, Height = CW_USEDEFAULT;
+	std::optional<int> x, y;
+	bool Maximize = false;
+
+	std::filesystem::path Icon;
 };
 
 class Application
@@ -22,7 +22,8 @@ class Application
 public:
 	static void InitializeComponents();
 
-	static void Initialize(const ApplicationOptions& Options);
+	static void Initialize(
+		const ApplicationOptions& Options);
 
 	static int Run();
 
@@ -44,8 +45,8 @@ public:
 	inline static Window Window;
 
 private:
-	inline static wil::unique_handle RenderThread;
-	inline static std::atomic<bool> ExitRenderThread = false;
+	inline static wil::unique_handle m_RenderThread;
+	inline static std::atomic<bool> m_ExitRenderThread = false;
 	inline static InputHandler m_InputHandler;
 };
 

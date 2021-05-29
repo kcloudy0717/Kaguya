@@ -2,18 +2,6 @@
 //
 #include "pch.h"
 
-#if defined(_DEBUG)
-// memory leak
-#define _CRTDBG_MAP_ALLOC
-#include <cstdlib>
-#include <crtdbg.h>
-#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
-#define SET_LEAK_BREAKPOINT(x) _CrtSetBreakAlloc(x)
-#else
-#define ENABLE_LEAK_DETECTION() 0
-#define SET_LEAK_BREAKPOINT(X) X
-#endif
-
 #define NOMINMAX
 #include <Core/Application.h>
 #include <Graphics/RenderDevice.h>
@@ -133,23 +121,20 @@ private:
 
 int main(int argc, char* argv[])
 {
-#if defined(_DEBUG)
-	ENABLE_LEAK_DETECTION();
-	SET_LEAK_BREAKPOINT(-1);
-#endif
-
 	try
 	{
+		Application::InitializeComponents();
+
 		ApplicationOptions options =
 		{
-			.Title = L"Kaguya",
+			.Name = L"Kaguya",
 			.Width = 1280,
 			.Height = 720,
-			.Maximize = true
+			.Maximize = true,
+			.Icon = Application::ExecutableDirectory / "Assets/Kaguya.ico"
 		};
-
-		Application::InitializeComponents();
 		Application::Initialize(options);
+
 		RenderDevice::Initialize();
 		AssetManager::Initialize();
 

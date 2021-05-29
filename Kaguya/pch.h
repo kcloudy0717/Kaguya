@@ -92,7 +92,7 @@ inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
 	{
-		throw hresult_exception(__FILE__, __LINE__, hr);
+		throw hresult_exception(hr);
 	}
 }
 

@@ -38,7 +38,7 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const DirectX::XMFLOAT4& Float
 	return Emitter;
 }
 
-template<IsAComponent T>
+template<is_component T>
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, const T& Component)
 {
 	return Emitter;
@@ -252,10 +252,11 @@ static void SerializeImages(YAML::Emitter& Emitter)
 	Emitter << YAML::Key << "Images" << YAML::Value << YAML::BeginSeq;
 	{
 		std::map<std::string, AssetHandle<Asset::Image>> sortedImages;
-		ImageCache.Each_ThreadSafe([&](UINT64 Key, AssetHandle<Asset::Image> Resource)
-		{
-			sortedImages.insert({ Resource->Metadata.Path.string(), Resource });
-		});
+		ImageCache.Each_ThreadSafe(
+			[&](UINT64 Key, AssetHandle<Asset::Image> Resource)
+			{
+				sortedImages.insert({ Resource->Metadata.Path.string(), Resource });
+			});
 
 		for (auto& SortedImage : sortedImages)
 		{
@@ -282,10 +283,11 @@ static void SerializeMeshes(YAML::Emitter& Emitter)
 	Emitter << YAML::Key << "Meshes" << YAML::Value << YAML::BeginSeq;
 	{
 		std::map<std::string, AssetHandle<Asset::Mesh>> sortedMeshes;
-		MeshCache.Each_ThreadSafe([&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
-		{
-			sortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });
-		});
+		MeshCache.Each_ThreadSafe(
+			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
+			{
+				sortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });
+			});
 
 		for (auto& SortedMeshe : sortedMeshes)
 		{
@@ -305,7 +307,7 @@ static void SerializeMeshes(YAML::Emitter& Emitter)
 	Emitter << YAML::EndSeq;
 }
 
-template<IsAComponent T>
+template<is_component T>
 void SerializeComponent(YAML::Emitter& Emitter, Entity Entity)
 {
 	if (Entity.HasComponent<T>())
@@ -346,15 +348,15 @@ void SceneParser::Save(const std::filesystem::path& Path, Scene* pScene)
 		emitter << YAML::Key << "WorldBegin" << YAML::Value << YAML::BeginSeq;
 		{
 			pScene->Registry.each([&](auto Handle)
-			{
-				Entity entity(Handle, pScene);
-				if (!entity)
 				{
-					return;
-				}
+					Entity entity(Handle, pScene);
+					if (!entity)
+					{
+						return;
+					}
 
-				SerializeEntity(emitter, entity);
-			});
+					SerializeEntity(emitter, entity);
+				});
 		}
 		emitter << YAML::EndSeq;
 	}
@@ -414,7 +416,7 @@ static void DeserializeMesh(const YAML::Node& Node)
 	AssetManager.AsyncLoadMesh(path, keepGeometryInRAM);
 }
 
-template<IsAComponent T, typename DeserializeFunction>
+template<is_component T, typename DeserializeFunction>
 void DeserializeComponent(const YAML::Node& Node, Entity* pEntity, DeserializeFunction Deserialize)
 {
 	if (Node)
@@ -434,65 +436,69 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 	Entity entity = pScene->CreateEntity(name);
 
 	// TODO: Come up with some template meta programming for serialize/deserialize
-	DeserializeComponent<Transform>(Node["Transform"], &entity, [](auto& Node, auto& Transform)
-	{
-		Transform.Position = Node["Position"].as<DirectX::XMFLOAT3>();
-		Transform.Scale = Node["Scale"].as<DirectX::XMFLOAT3>();
-		Transform.Orientation = Node["Orientation"].as<DirectX::XMFLOAT4>();
-	});
-
-	DeserializeComponent<MeshFilter>(Node["Mesh Filter"], &entity, [&](auto& Node, auto& MeshFilter)
-	{
-		auto path = Node["Name"].as<std::string>();
-		if (path != "NULL")
+	DeserializeComponent<Transform>(Node["Transform"], &entity,
+		[](auto& Node, auto& Transform)
 		{
-			path = (Application::ExecutableDirectory / path).string();
+			Transform.Position = Node["Position"].as<DirectX::XMFLOAT3>();
+			Transform.Scale = Node["Scale"].as<DirectX::XMFLOAT3>();
+			Transform.Orientation = Node["Orientation"].as<DirectX::XMFLOAT4>();
+		});
 
-			MeshFilter.Key = entt::hashed_string(path.data());
-		}
-	});
-
-	DeserializeComponent<MeshRenderer>(Node["Mesh Renderer"], &entity, [](auto& Node, MeshRenderer& MeshRenderer)
-	{
-		auto& material = Node["Material"];
-		MeshRenderer.Material.BSDFType = material["BSDFType"].as<int>();
-
-		MeshRenderer.Material.baseColor = material["baseColor"].as<DirectX::XMFLOAT3>();
-		MeshRenderer.Material.metallic = material["metallic"].as<float>();
-		MeshRenderer.Material.subsurface = material["subsurface"].as<float>();
-		MeshRenderer.Material.specular = material["specular"].as<float>();
-		MeshRenderer.Material.roughness = material["roughness"].as<float>();
-		MeshRenderer.Material.specularTint = material["specularTint"].as<float>();
-		MeshRenderer.Material.anisotropic = material["anisotropic"].as<float>();
-		MeshRenderer.Material.sheen = material["sheen"].as<float>();
-		MeshRenderer.Material.sheenTint = material["sheenTint"].as<float>();
-		MeshRenderer.Material.clearcoat = material["clearcoat"].as<float>();
-		MeshRenderer.Material.clearcoatGloss = material["clearcoatGloss"].as<float>();
-
-		MeshRenderer.Material.T = material["T"].as<DirectX::XMFLOAT3>();
-		MeshRenderer.Material.etaA = material["etaA"].as<float>();
-		MeshRenderer.Material.etaB = material["etaB"].as<float>();
-
-		const char* textureTypes[TextureTypes::NumTextureTypes] = { "Albedo", "Normal", "Roughness", "Metallic" };
-		for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
+	DeserializeComponent<MeshFilter>(Node["Mesh Filter"], &entity,
+		[](auto& Node, auto& MeshFilter)
 		{
-			auto path = material[textureTypes[i]].as<std::string>();
+			auto path = Node["Name"].as<std::string>();
 			if (path != "NULL")
 			{
 				path = (Application::ExecutableDirectory / path).string();
 
-				MeshRenderer.Material.TextureKeys[i] = entt::hashed_string(path.data());
+				MeshFilter.Key = entt::hashed_string(path.data());
 			}
-		}
-	});
+		});
 
-	DeserializeComponent<Light>(Node["Light"], &entity, [](auto& Node, auto& Light)
-	{
-		Light.Type = (LightType)Node["Type"].as<int>();
-		Light.I = Node["I"].as<DirectX::XMFLOAT3>();
-		Light.Width = Node["Width"].as<float>();
-		Light.Height = Node["Height"].as<float>();
-	});
+	DeserializeComponent<MeshRenderer>(Node["Mesh Renderer"], &entity,
+		[](auto& Node, MeshRenderer& MeshRenderer)
+		{
+			auto& material = Node["Material"];
+			MeshRenderer.Material.BSDFType = material["BSDFType"].as<int>();
+
+			MeshRenderer.Material.baseColor = material["baseColor"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.metallic = material["metallic"].as<float>();
+			MeshRenderer.Material.subsurface = material["subsurface"].as<float>();
+			MeshRenderer.Material.specular = material["specular"].as<float>();
+			MeshRenderer.Material.roughness = material["roughness"].as<float>();
+			MeshRenderer.Material.specularTint = material["specularTint"].as<float>();
+			MeshRenderer.Material.anisotropic = material["anisotropic"].as<float>();
+			MeshRenderer.Material.sheen = material["sheen"].as<float>();
+			MeshRenderer.Material.sheenTint = material["sheenTint"].as<float>();
+			MeshRenderer.Material.clearcoat = material["clearcoat"].as<float>();
+			MeshRenderer.Material.clearcoatGloss = material["clearcoatGloss"].as<float>();
+
+			MeshRenderer.Material.T = material["T"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.etaA = material["etaA"].as<float>();
+			MeshRenderer.Material.etaB = material["etaB"].as<float>();
+
+			const char* textureTypes[TextureTypes::NumTextureTypes] = { "Albedo", "Normal", "Roughness", "Metallic" };
+			for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
+			{
+				auto path = material[textureTypes[i]].as<std::string>();
+				if (path != "NULL")
+				{
+					path = (Application::ExecutableDirectory / path).string();
+
+					MeshRenderer.Material.TextureKeys[i] = entt::hashed_string(path.data());
+				}
+			}
+		});
+
+	DeserializeComponent<Light>(Node["Light"], &entity,
+		[](auto& Node, auto& Light)
+		{
+			Light.Type = static_cast<Light::EType>(Node["Type"].as<int>());
+			Light.I = Node["I"].as<DirectX::XMFLOAT3>();
+			Light.Width = Node["Width"].as<float>();
+			Light.Height = Node["Height"].as<float>();
+		});
 }
 
 void SceneParser::Load(const std::filesystem::path& Path, Scene* pScene)
@@ -500,10 +506,11 @@ void SceneParser::Load(const std::filesystem::path& Path, Scene* pScene)
 	pScene->Clear();
 
 	auto& AssetManager = AssetManager::Instance();
-	AssetManager.GetImageCache().Each_ThreadSafe([](AssetHandle<Asset::Image> Handle)
-	{
-		RenderDevice::Instance().GetResourceViewHeaps().ReleaseResourceView(Handle->SRV);
-	});
+	AssetManager.GetImageCache().Each_ThreadSafe(
+		[](AssetHandle<Asset::Image> Handle)
+		{
+			RenderDevice::Instance().GetResourceViewHeaps().ReleaseResourceView(Handle->SRV);
+		});
 
 	AssetManager.GetImageCache().DestroyAll();
 	AssetManager.GetMeshCache().DestroyAll();

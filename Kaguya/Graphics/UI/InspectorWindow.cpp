@@ -11,7 +11,7 @@ concept IsUIFunction = requires(T F, Component C)
 	{ F(C) } -> std::convertible_to<bool>;
 };
 
-template<IsAComponent T, bool IsCoreComponent, IsUIFunction<T> UIFunction>
+template<is_component T, bool IsCoreComponent, IsUIFunction<T> UIFunction>
 static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, bool(*UISettingFunction)(T&))
 {
 	if (Entity.HasComponent<T>())
@@ -79,7 +79,7 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, boo
 	}
 }
 
-template<IsAComponent T>
+template<is_component T>
 static void AddNewComponent(const char* pName, Entity Entity)
 {
 	if (ImGui::MenuItem(pName))
@@ -497,10 +497,10 @@ void InspectorWindow::RenderGui()
 
 				switch (Component.Type)
 				{
-				case PointLight:
+				case Light::Point:
 					isEdited |= RenderFloat3Control("I", &Component.I.x);
 					break;
-				case QuadLight:
+				case Light::Quad:
 					isEdited |= RenderFloat3Control("I", &Component.I.x);
 					isEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
 					isEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);

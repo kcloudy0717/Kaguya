@@ -70,7 +70,7 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	ShaderTable<void> m_RayGenerationShaderTable;
-	ShaderTable<void> m_MissShaderTable;
-	ShaderTable<RootArgument> m_HitGroupShaderTable;
+	RaytracingShaderTable<void> m_RayGenerationShaderTable;
+	RaytracingShaderTable<void> m_MissShaderTable;
+	RaytracingShaderTable<RootArgument> m_HitGroupShaderTable;
 };

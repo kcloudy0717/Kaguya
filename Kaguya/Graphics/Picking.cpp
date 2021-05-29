@@ -78,7 +78,7 @@ void Picking::Create()
 
 	// Miss Shader Table
 	{
-		ShaderTable<void>::Record Record = {};
+		RaytracingShaderTable<void>::Record Record = {};
 		Record.ShaderIdentifier = g_MissSID;
 
 		m_MissShaderTable.AddShaderRecord(Record);
@@ -97,7 +97,7 @@ void Picking::Create()
 	auto finish = uploader.End(RenderDevice.GetCopyQueue());
 	finish.wait();
 
-	m_HitGroupSBT = RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.GetStrideInBytes() * Scene::MAX_INSTANCE_SUPPORTED);
+	m_HitGroupSBT = RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.StrideInBytes * Scene::MAX_INSTANCE_SUPPORTED);
 
 	allocationDesc = {};
 	allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;

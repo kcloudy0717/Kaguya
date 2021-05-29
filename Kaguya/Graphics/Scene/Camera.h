@@ -1,5 +1,5 @@
 #pragma once
-#include "Components/Transform.h"
+#include "Components.h"
 
 struct Camera
 {
