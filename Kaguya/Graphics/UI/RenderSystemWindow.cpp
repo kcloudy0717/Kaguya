@@ -11,9 +11,9 @@ void RenderSystemWindow::RenderGui()
 
 	UIWindow::Update();
 
-	const auto& AdapterDesc = RenderDevice::Instance().GetAdapterDesc();
-	auto localVideoMemoryInfo = RenderDevice::Instance().QueryLocalVideoMemoryInfo();
-	auto usageInMiB = ToMiB(localVideoMemoryInfo.CurrentUsage);
+	const auto& AdapterDesc			 = RenderDevice::Instance().GetAdapterDesc();
+	auto		localVideoMemoryInfo = RenderDevice::Instance().QueryLocalVideoMemoryInfo();
+	auto		usageInMiB			 = ToMiB(localVideoMemoryInfo.CurrentUsage);
 	ImGui::Text("GPU: %ls", AdapterDesc.Description);
 	ImGui::Text("VRAM Usage: %d Mib", usageInMiB);
 

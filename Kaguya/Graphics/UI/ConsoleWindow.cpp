@@ -35,7 +35,7 @@ void ConsoleWindow::RenderGui()
 		ImGui::LogToClipboard();
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-	const char* buf = Log::Buf.begin();
+	const char* buf		= Log::Buf.begin();
 	const char* buf_end = Log::Buf.end();
 	if (Log::Filter.IsActive())
 	{
@@ -46,7 +46,8 @@ void ConsoleWindow::RenderGui()
 		for (int line_no = 0; line_no < Log::LineOffsets.Size; line_no++)
 		{
 			const char* line_start = buf + Log::LineOffsets[line_no];
-			const char* line_end = (line_no + 1 < Log::LineOffsets.Size) ? (buf + Log::LineOffsets[line_no + 1] - 1) : buf_end;
+			const char* line_end =
+				(line_no + 1 < Log::LineOffsets.Size) ? (buf + Log::LineOffsets[line_no + 1] - 1) : buf_end;
 			if (Log::Filter.PassFilter(line_start, line_end))
 				ImGui::TextUnformatted(line_start, line_end);
 		}
@@ -73,7 +74,8 @@ void ConsoleWindow::RenderGui()
 			for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
 			{
 				const char* line_start = buf + Log::LineOffsets[line_no];
-				const char* line_end = (line_no + 1 < Log::LineOffsets.Size) ? (buf + Log::LineOffsets[line_no + 1] - 1) : buf_end;
+				const char* line_end =
+					(line_no + 1 < Log::LineOffsets.Size) ? (buf + Log::LineOffsets[line_no + 1] - 1) : buf_end;
 				ImGui::TextUnformatted(line_start, line_end);
 			}
 		}

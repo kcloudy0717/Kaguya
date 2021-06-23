@@ -13,7 +13,8 @@ struct imgui_sink : public spdlog::sinks::base_sink<Mutex>
 		// log_msg is a struct containing the log entry info like level, timestamp, thread id etc.
 		// msg.raw contains pre formatted log
 
-		// If needed (very likely but not mandatory), the sink formats the message before sending it to its final destination:
+		// If needed (very likely but not mandatory), the sink formats the message before sending it to its final
+		// destination:
 		spdlog::memory_buf_t formatted;
 		spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
 		std::string s = fmt::to_string(formatted); // formatted string
@@ -25,10 +26,7 @@ struct imgui_sink : public spdlog::sinks::base_sink<Mutex>
 				Log::LineOffsets.push_back(old_size + 1);
 	}
 
-	void flush_() override
-	{
-
-	}
+	void flush_() override {}
 };
 
 using imgui_sink_mt = imgui_sink<std::mutex>;

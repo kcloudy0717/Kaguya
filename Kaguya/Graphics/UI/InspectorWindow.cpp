@@ -8,11 +8,13 @@
 template<class T, class Component>
 concept IsUIFunction = requires(T F, Component C)
 {
-	{ F(C) } -> std::convertible_to<bool>;
+	{
+		F(C)
+		} -> std::convertible_to<bool>;
 };
 
 template<is_component T, bool IsCoreComponent, IsUIFunction<T> UIFunction>
-static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, bool(*UISettingFunction)(T&))
+static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, bool (*UISettingFunction)(T&))
 {
 	if (Entity.HasComponent<T>())
 	{
@@ -20,11 +22,9 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, boo
 
 		ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
 
-		const ImGuiTreeNodeFlags TreeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen |
-			ImGuiTreeNodeFlags_Framed |
-			ImGuiTreeNodeFlags_SpanAvailWidth |
-			ImGuiTreeNodeFlags_AllowItemOverlap |
-			ImGuiTreeNodeFlags_FramePadding;
+		const ImGuiTreeNodeFlags TreeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+												 ImGuiTreeNodeFlags_SpanAvailWidth |
+												 ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 		float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
@@ -86,7 +86,11 @@ static void AddNewComponent(const char* pName, Entity Entity)
 	{
 		if (Entity.HasComponent<T>())
 		{
-			MessageBoxA(nullptr, "Cannot add existing component", "Add Component Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+			MessageBoxA(
+				nullptr,
+				"Cannot add existing component",
+				"Add Component Error",
+				MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
 		}
 		else
 		{
@@ -95,18 +99,23 @@ static void AddNewComponent(const char* pName, Entity Entity)
 	}
 }
 
-static bool RenderButtonDragFloatControl(std::string_view ButtonLabel, std::string_view DragFloatLabel, float* pFloat, float ResetValue,
-	float Min, float Max,
-	ImVec4 ButtonColor,
-	ImVec4 ButtonHoveredColor,
-	ImVec4 ButtonActiveColor)
+static bool RenderButtonDragFloatControl(
+	std::string_view ButtonLabel,
+	std::string_view DragFloatLabel,
+	float*			 pFloat,
+	float			 ResetValue,
+	float			 Min,
+	float			 Max,
+	ImVec4			 ButtonColor,
+	ImVec4			 ButtonHoveredColor,
+	ImVec4			 ButtonActiveColor)
 {
 	bool isEdited = false;
 
-	ImGuiIO& IO = ImGui::GetIO();
-	auto boldFont = IO.Fonts->Fonts[0];
+	ImGuiIO& IO		  = ImGui::GetIO();
+	auto	 boldFont = IO.Fonts->Fonts[0];
 
-	const float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
+	const float	 lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
 	const ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
 
 	ImGui::PushStyleColor(ImGuiCol_Button, ButtonColor);
@@ -128,7 +137,12 @@ static bool RenderButtonDragFloatControl(std::string_view ButtonLabel, std::stri
 	return isEdited;
 }
 
-static bool RenderFloatControl(std::string_view Label, float* pFloat, float ResetValue = 0.0f, float Min = 0.0f, float Max = 0.0f)
+static bool RenderFloatControl(
+	std::string_view Label,
+	float*			 pFloat,
+	float			 ResetValue = 0.0f,
+	float			 Min		= 0.0f,
+	float			 Max		= 0.0f)
 {
 	bool isEdited = false;
 	if (ImGui::BeginTable("Float", 2, ImGuiTableFlags_BordersInnerV))
@@ -144,8 +158,13 @@ static bool RenderFloatControl(std::string_view Label, float* pFloat, float Rese
 
 		//==============================
 		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl("X", "##X", &pFloat[0], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"X",
+			"##X",
+			&pFloat[0],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
@@ -157,7 +176,12 @@ static bool RenderFloatControl(std::string_view Label, float* pFloat, float Rese
 	return isEdited;
 }
 
-static bool RenderFloat2Control(std::string_view Label, float* pFloat2, float ResetValue = 0.0f, float Min = 0.0f, float Max = 0.0f)
+static bool RenderFloat2Control(
+	std::string_view Label,
+	float*			 pFloat2,
+	float			 ResetValue = 0.0f,
+	float			 Min		= 0.0f,
+	float			 Max		= 0.0f)
 {
 	bool isEdited = false;
 	if (ImGui::BeginTable("Float2", 3, ImGuiTableFlags_BordersInnerV))
@@ -173,16 +197,26 @@ static bool RenderFloat2Control(std::string_view Label, float* pFloat2, float Re
 
 		//==============================
 		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl("X", "##X", &pFloat2[0], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"X",
+			"##X",
+			&pFloat2[0],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
 
 		//==============================
 		ImGui::TableSetColumnIndex(2);
-		isEdited |= RenderButtonDragFloatControl("Y", "##Y", &pFloat2[1], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"Y",
+			"##Y",
+			&pFloat2[1],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.1f, 0.9f, 0.1f, 1.0f },
 			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f },
 			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f });
@@ -194,7 +228,12 @@ static bool RenderFloat2Control(std::string_view Label, float* pFloat2, float Re
 	return isEdited;
 }
 
-static bool RenderFloat3Control(std::string_view Label, float* pFloat3, float ResetValue = 0.0f, float Min = 0.0f, float Max = 0.0f)
+static bool RenderFloat3Control(
+	std::string_view Label,
+	float*			 pFloat3,
+	float			 ResetValue = 0.0f,
+	float			 Min		= 0.0f,
+	float			 Max		= 0.0f)
 {
 	bool isEdited = false;
 	if (ImGui::BeginTable("Float3", 4, ImGuiTableFlags_BordersInnerV))
@@ -210,24 +249,39 @@ static bool RenderFloat3Control(std::string_view Label, float* pFloat3, float Re
 
 		//==============================
 		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl("X", "##X", &pFloat3[0], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"X",
+			"##X",
+			&pFloat3[0],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
 			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
 
 		//==============================
 		ImGui::TableSetColumnIndex(2);
-		isEdited |= RenderButtonDragFloatControl("Y", "##Y", &pFloat3[1], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"Y",
+			"##Y",
+			&pFloat3[1],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.1f, 0.9f, 0.1f, 1.0f },
 			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f },
 			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f });
 
 		//==============================
 		ImGui::TableSetColumnIndex(3);
-		isEdited |= RenderButtonDragFloatControl("Z", "##Z", &pFloat3[2], ResetValue,
-			Min, Max,
+		isEdited |= RenderButtonDragFloatControl(
+			"Z",
+			"##Z",
+			&pFloat3[2],
+			ResetValue,
+			Min,
+			Max,
 			ImVec4{ 0.1f, 0.1f, 0.9f, 1.0f },
 			ImVec4{ 0.2f, 0.2f, 1.0f, 1.0f },
 			ImVec4{ 0.2f, 0.2f, 1.0f, 1.0f });
@@ -239,13 +293,9 @@ static bool RenderFloat3Control(std::string_view Label, float* pFloat3, float Re
 	return isEdited;
 }
 
-static bool EditTransform(
-	Transform& Transform,
-	const float* pCameraView,
-	float* pCameraProjection,
-	float* pMatrix)
+static bool EditTransform(Transform& Transform, const float* pCameraView, float* pCameraProjection, float* pMatrix)
 {
-	static float s_Snap[3] = { 1, 1, 1 };
+	static float		  s_Snap[3]			 = { 1, 1, 1 };
 	static ImGuizmo::MODE s_CurrentGizmoMode = ImGuizmo::WORLD;
 
 	bool isEdited = false;
@@ -286,9 +336,12 @@ static bool EditTransform(
 	}
 
 	isEdited |= ImGuizmo::Manipulate(
-		pCameraView, pCameraProjection,
-		(ImGuizmo::OPERATION)Transform.CurrentGizmoOperation, s_CurrentGizmoMode,
-		pMatrix, nullptr,
+		pCameraView,
+		pCameraProjection,
+		(ImGuizmo::OPERATION)Transform.CurrentGizmoOperation,
+		s_CurrentGizmoMode,
+		pMatrix,
+		nullptr,
 		Transform.UseSnap ? s_Snap : nullptr);
 
 	return isEdited;
@@ -302,7 +355,9 @@ void InspectorWindow::RenderGui()
 
 	if (m_SelectedEntity)
 	{
-		RenderComponent<Tag, true>("Tag", m_SelectedEntity,
+		RenderComponent<Tag, true>(
+			"Tag",
+			m_SelectedEntity,
 			[](Tag& Component)
 			{
 				char buffer[MAX_PATH] = {};
@@ -316,7 +371,9 @@ void InspectorWindow::RenderGui()
 			},
 			nullptr);
 
-		RenderComponent<Transform, true>("Transform", m_SelectedEntity,
+		RenderComponent<Transform, true>(
+			"Transform",
+			m_SelectedEntity,
 			[&](Transform& Component)
 			{
 				bool isEdited = false;
@@ -327,11 +384,19 @@ void InspectorWindow::RenderGui()
 				XMStoreFloat4x4(&world, Component.Matrix());
 
 				float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-				ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&world), matrixTranslation, matrixRotation, matrixScale);
+				ImGuizmo::DecomposeMatrixToComponents(
+					reinterpret_cast<float*>(&world),
+					matrixTranslation,
+					matrixRotation,
+					matrixScale);
 				isEdited |= RenderFloat3Control("Translation", matrixTranslation);
 				isEdited |= RenderFloat3Control("Rotation", matrixRotation);
 				isEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
-				ImGuizmo::RecomposeMatrixFromComponents(matrixTranslation, matrixRotation, matrixScale, reinterpret_cast<float*>(&world));
+				ImGuizmo::RecomposeMatrixFromComponents(
+					matrixTranslation,
+					matrixRotation,
+					matrixScale,
+					reinterpret_cast<float*>(&world));
 
 				// Dont transpose this
 				XMStoreFloat4x4(&view, m_pScene->Camera.ViewMatrix);
@@ -364,7 +429,9 @@ void InspectorWindow::RenderGui()
 				return isEdited;
 			});
 
-		RenderComponent<MeshFilter, false>("Mesh Filter", m_SelectedEntity,
+		RenderComponent<MeshFilter, false>(
+			"Mesh Filter",
+			m_SelectedEntity,
 			[&](MeshFilter& Component)
 			{
 				bool isEdited = false;
@@ -384,11 +451,10 @@ void InspectorWindow::RenderGui()
 
 				if (ImGui::BeginDragDropTarget())
 				{
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH");
-						payload)
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH"); payload)
 					{
 						IM_ASSERT(payload->DataSize == sizeof(UINT64));
-						Component.Key = (*(UINT64*)payload->Data);
+						Component.Key  = (*(UINT64*)payload->Data);
 						Component.Mesh = AssetManager::Instance().GetMeshCache().Load(Component.Key);
 
 						isEdited = true;
@@ -400,7 +466,9 @@ void InspectorWindow::RenderGui()
 			},
 			nullptr);
 
-		RenderComponent<MeshRenderer, false>("Mesh Renderer", m_SelectedEntity,
+		RenderComponent<MeshRenderer, false>(
+			"Mesh Renderer",
+			m_SelectedEntity,
 			[](MeshRenderer& Component)
 			{
 				bool isEdited = false;
@@ -412,7 +480,8 @@ void InspectorWindow::RenderGui()
 					ImGui::Text("Attributes");
 
 					const char* BSDFTypes[BSDFTypes::NumBSDFTypes] = { "Lambertian", "Mirror", "Glass", "Disney" };
-					isEdited |= ImGui::Combo("Type", &Material.BSDFType, BSDFTypes, ARRAYSIZE(BSDFTypes), ARRAYSIZE(BSDFTypes));
+					isEdited |=
+						ImGui::Combo("Type", &Material.BSDFType, BSDFTypes, ARRAYSIZE(BSDFTypes), ARRAYSIZE(BSDFTypes));
 
 					switch (Material.BSDFType)
 					{
@@ -464,8 +533,7 @@ void InspectorWindow::RenderGui()
 
 						if (ImGui::BeginDragDropTarget())
 						{
-							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE");
-								payload)
+							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); payload)
 							{
 								IM_ASSERT(payload->DataSize == sizeof(UINT64));
 								Key = (*(UINT64*)payload->Data);
@@ -485,7 +553,9 @@ void InspectorWindow::RenderGui()
 			},
 			nullptr);
 
-		RenderComponent<Light, false>("Light", m_SelectedEntity,
+		RenderComponent<Light, false>(
+			"Light",
+			m_SelectedEntity,
 			[](Light& Component)
 			{
 				bool isEdited = false;

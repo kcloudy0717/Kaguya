@@ -41,7 +41,8 @@ public:
 
 		struct SData
 		{
-			int X; int Y;
+			int	 X;
+			int	 Y;
 			bool LeftIsPressed;
 			bool MiddleIsPressed;
 			bool RightIsPressed;
@@ -51,11 +52,11 @@ public:
 		Event(EType Type, const Mouse& Mouse)
 			: Type(Type)
 		{
-			Data.X = Mouse.x;
-			Data.Y = Mouse.y;
-			Data.LeftIsPressed = Mouse.IsLeftPressed();
+			Data.X				 = Mouse.x;
+			Data.Y				 = Mouse.y;
+			Data.LeftIsPressed	 = Mouse.IsLeftPressed();
 			Data.MiddleIsPressed = Mouse.IsMiddlePressed();
-			Data.RightIsPressed = Mouse.IsRightPressed();
+			Data.RightIsPressed	 = Mouse.IsRightPressed();
 		}
 
 		EType Type = EType::Invalid;
@@ -103,15 +104,15 @@ private:
 	}
 
 public:
-	int	x = 0;
-	int	y = 0;
-	int	xRaw = 0;
-	int	yRaw = 0;
+	int x	 = 0;
+	int y	 = 0;
+	int xRaw = 0;
+	int yRaw = 0;
 
 private:
-	std::bitset<NumButtons> m_ButtonStates;
-	bool m_IsInWindow = false;
-	int m_WheelDeltaCarry = 0;
+	std::bitset<NumButtons>		  m_ButtonStates;
+	bool						  m_IsInWindow		= false;
+	int							  m_WheelDeltaCarry = 0;
 	ThreadSafeQueue<Mouse::Event> m_MouseBuffer;
-	ThreadSafeQueue<RawInput> m_RawDeltaBuffer;
+	ThreadSafeQueue<RawInput>	  m_RawDeltaBuffer;
 };

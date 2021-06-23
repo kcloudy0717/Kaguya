@@ -18,47 +18,27 @@ class AssetHandle
 	AssetHandle(std::shared_ptr<T> Resource)
 		: Resource(std::move(Resource))
 	{
-
 	}
+
 public:
 	AssetHandle() = default;
 
 	auto operator<=>(const AssetHandle&) const = default;
 
-	explicit operator bool() const
-	{
-		return static_cast<bool>(Resource);
-	}
+	explicit operator bool() const { return static_cast<bool>(Resource); }
 
-	[[nodiscard]] const T& Get() const
-	{
-		return *Resource;
-	}
+	[[nodiscard]] const T& Get() const { return *Resource; }
 
-	[[nodiscard]] T& Get()
-	{
-		return *Resource;
-	}
+	[[nodiscard]] T& Get() { return *Resource; }
 
-	[[nodiscard]] const T& operator*() const
-	{
-		return Get();
-	}
+	[[nodiscard]] const T& operator*() const { return Get(); }
 
-	[[nodiscard]] T& operator*()
-	{
-		return Get();
-	}
+	[[nodiscard]] T& operator*() { return Get(); }
 
-	T* operator->() const
-	{
-		return Resource.get();
-	}
+	T* operator->() const { return Resource.get(); }
 
-	T* operator->()
-	{
-		return Resource.get();
-	}
+	T* operator->() { return Resource.get(); }
+
 private:
 	std::shared_ptr<T> Resource;
 };
@@ -75,10 +55,7 @@ public:
 
 	AssetCache& operator=(AssetCache&&) = default;
 
-	auto size() const
-	{
-		return m_Cache.size();
-	}
+	auto size() const { return m_Cache.size(); }
 
 	void DestroyAll()
 	{
@@ -102,8 +79,7 @@ public:
 	{
 		ScopedWriteLock _(m_RWLock);
 
-		if (auto it = m_Cache.find(Key);
-			it != m_Cache.end())
+		if (auto it = m_Cache.find(Key); it != m_Cache.end())
 		{
 			m_Cache.erase(it);
 		}
@@ -115,8 +91,7 @@ public:
 		ScopedReadLock _(m_RWLock);
 
 		Handle Handle = {};
-		if (auto it = m_Cache.find(Key);
-			it != m_Cache.end())
+		if (auto it = m_Cache.find(Key); it != m_Cache.end())
 		{
 			Handle = it->second;
 		}
@@ -135,7 +110,7 @@ public:
 	void Each(Functor F) const
 	{
 		auto begin = m_Cache.begin();
-		auto end = m_Cache.end();
+		auto end   = m_Cache.end();
 		while (begin != end)
 		{
 			auto current = begin++;
@@ -160,8 +135,8 @@ public:
 	void Each_ThreadSafe(Functor F) const
 	{
 		ScopedWriteLock _(m_RWLock);
-		auto begin = m_Cache.begin();
-		auto end = m_Cache.end();
+		auto			begin = m_Cache.begin();
+		auto			end	  = m_Cache.end();
 		while (begin != end)
 		{
 			auto current = begin++;
@@ -180,9 +155,10 @@ public:
 			}
 		}
 	}
+
 private:
 	std::unordered_map<UINT64, std::shared_ptr<T>> m_Cache;
-	mutable RWLock m_RWLock;
+	mutable RWLock								   m_RWLock;
 
 	friend class AssetWindow;
 	friend class SceneParser;

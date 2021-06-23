@@ -59,7 +59,8 @@ SurfaceInteraction GetSurfaceInteraction(in BuiltInTriangleIntersectionAttribute
 	int AlbedoTexture = material.TextureIndices[AlbedoIdx];
 	if (AlbedoTexture != -1)
 	{
-		material.baseColor = g_Texture2DTable[AlbedoTexture].SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
+		Texture2D Texture = ResourceDescriptorHeap[AlbedoTexture];
+		material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
 	}
 	
 	si.BSDF = InitBSDF(si.GeometryFrame.z, si.ShadingFrame, material);
@@ -219,6 +220,7 @@ void RayGeneration()
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
 	{
+		// TODO: Replace sampler with sobol
 		// Calculate subpixel camera jitter for anti aliasing
 		const float2 jitter = float2(RandomFloat01(seed), RandomFloat01(seed)) - 0.5f;
 		const float2 pixel = (float2(launchIndex) + jitter) / float2(launchDimensions);
@@ -237,6 +239,8 @@ void RayGeneration()
 	L.g = isnan(L.g) ? 0.0f : L.g;
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
+	//RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_RenderPassData.RenderTarget];
+	//RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[1];
 	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_RenderPassData.RenderTarget];
 	
 	// Progressive accumulation

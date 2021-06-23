@@ -9,12 +9,13 @@ class InspectorWindow : public UIWindow
 public:
 	void SetContext(Scene* pScene, Entity Entity)
 	{
-		m_pScene = pScene;
+		m_pScene		 = pScene;
 		m_SelectedEntity = Entity;
 	}
 
 	void RenderGui();
+
 private:
-	Scene* m_pScene = nullptr;
+	Scene* m_pScene			= nullptr;
 	Entity m_SelectedEntity = {};
 };

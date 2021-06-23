@@ -7,15 +7,15 @@
 #include <cstdlib>
 #include <crtdbg.h>
 #define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
-#define SET_LEAK_BREAKPOINT(x) _CrtSetBreakAlloc(x)
+#define SET_LEAK_BREAKPOINT(x)	_CrtSetBreakAlloc(x)
 #else
 #define ENABLE_LEAK_DETECTION() 0
-#define SET_LEAK_BREAKPOINT(X) X
+#define SET_LEAK_BREAKPOINT(X)	X
 #endif
 
 #include <shellapi.h>
 
-#pragma comment(lib, "runtimeobject.lib") 
+#pragma comment(lib, "runtimeobject.lib")
 
 void Application::InitializeComponents()
 {
@@ -25,7 +25,7 @@ void Application::InitializeComponents()
 #endif
 
 	// Initialize ExecutableDirectory
-	int argc;
+	int		argc;
 	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 	if (argv)
 	{
@@ -38,18 +38,14 @@ void Application::InitializeComponents()
 	Log::Create();
 }
 
-void Application::Initialize(
-	const ApplicationOptions& Options)
+void Application::Initialize(const ApplicationOptions& Options)
 {
 	int x = Options.x.value_or(CW_USEDEFAULT);
 	int y = Options.y.value_or(CW_USEDEFAULT);
 
 	Window.SetIcon(::LoadImage(0, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE));
 
-	Window.Create(
-		Options.Name.data(),
-		Options.Width, Options.Height,
-		x, y, Options.Maximize);
+	Window.Create(Options.Name.data(), Options.Width, Options.Height, x, y, Options.Maximize);
 
 	// Initialize input handler
 	m_InputHandler = InputHandler(Window.GetWindowHandle());

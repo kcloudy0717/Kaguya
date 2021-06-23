@@ -40,7 +40,10 @@ void AssetWindow::RenderGui()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					OpenDialogMultiple("dds,tga,hdr", "", [&](auto Path)
+					OpenDialogMultiple(
+						"dds,tga,hdr",
+						"",
+						[&](auto Path)
 						{
 							AssetManager::Instance().AsyncLoadImage(Path, sRGB);
 						});
@@ -49,7 +52,10 @@ void AssetWindow::RenderGui()
 				}
 				ImGui::SetItemDefaultFocus();
 				ImGui::SameLine();
-				if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+				if (ImGui::Button("Cancel", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+				}
 				ImGui::EndPopup();
 			}
 		}
@@ -72,7 +78,10 @@ void AssetWindow::RenderGui()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					OpenDialogMultiple("obj,stl,ply", "", [&](auto Path)
+					OpenDialogMultiple(
+						"obj,stl,ply",
+						"",
+						[&](auto Path)
 						{
 							AssetManager::Instance().AsyncLoadMesh(Path, KeepGeometryInRAM);
 						});
@@ -81,7 +90,10 @@ void AssetWindow::RenderGui()
 				}
 				ImGui::SetItemDefaultFocus();
 				ImGui::SameLine();
-				if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+				if (ImGui::Button("Cancel", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+				}
 				ImGui::EndPopup();
 			}
 		}
@@ -94,23 +106,24 @@ void AssetWindow::RenderGui()
 		ImGui::EndPopup();
 	}
 
-	constexpr ImGuiTableFlags flags = ImGuiTableFlags_Resizable |
-		ImGuiTableFlags_Reorderable |
-		ImGuiTableFlags_Hideable |
-		ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_BordersOuter |
-		ImGuiTableFlags_BordersV;
+	constexpr ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+									  ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter |
+									  ImGuiTableFlags_BordersV;
 
 	ImGui::Text("Images");
 	if (ImGui::BeginTable("ImageCache", 4, flags))
 	{
-		auto& ImageCache = AssetManager::Instance().m_ImageCache;
+		auto&			ImageCache = AssetManager::Instance().m_ImageCache;
 		ScopedWriteLock SWL(ImageCache.m_RWLock);
 
 		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn("Reference Count", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
+		ImGui::TableSetupColumn(
+			"Reference Count",
+			ImGuiTableColumnFlags_WidthFixed,
+			5.0f,
+			AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
@@ -154,7 +167,7 @@ void AssetWindow::RenderGui()
 		ImGui::EndTable();
 	}
 
-	auto& MeshCache = AssetManager::Instance().m_MeshCache;
+	auto&			MeshCache = AssetManager::Instance().m_MeshCache;
 	ScopedWriteLock SWL(MeshCache.m_RWLock);
 
 	if (addAllMeshToHierarchy)
@@ -162,9 +175,9 @@ void AssetWindow::RenderGui()
 		MeshCache.Each(
 			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
 			{
-				auto entity = m_pScene->CreateEntity(Resource->Name);
+				auto  entity	 = m_pScene->CreateEntity(Resource->Name);
 				auto& meshFilter = entity.AddComponent<MeshFilter>();
-				meshFilter.Key = Key;
+				meshFilter.Key	 = Key;
 
 				auto& meshRenderer = entity.AddComponent<MeshRenderer>();
 			});
@@ -176,7 +189,11 @@ void AssetWindow::RenderGui()
 		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn("Reference Count", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_ReferenceCount);
+		ImGui::TableSetupColumn(
+			"Reference Count",
+			ImGuiTableColumnFlags_WidthFixed,
+			5.0f,
+			AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 

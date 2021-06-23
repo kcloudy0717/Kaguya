@@ -9,15 +9,14 @@ struct Entity
 		: Handle(Handle)
 		, pScene(pScene)
 	{
-
 	}
 
 	template<typename T, typename... Args>
 	T& AddComponent(Args&&... args)
 	{
-		T& component = pScene->Registry.emplace<T>(Handle, std::forward<Args>(args)...);
-		component.Handle = Handle;
-		component.pScene = pScene;
+		T& component	   = pScene->Registry.emplace<T>(Handle, std::forward<Args>(args)...);
+		component.Handle   = Handle;
+		component.pScene   = pScene;
 		component.IsEdited = true;
 		pScene->OnComponentAdded<T>(*this, component);
 		return component;
@@ -51,31 +50,16 @@ struct Entity
 		pScene->Registry.remove<T>(Handle);
 	}
 
-	operator bool() const
-	{
-		return Handle != entt::null;
-	}
+	operator bool() const { return Handle != entt::null; }
 
-	operator entt::entity() const
-	{
-		return Handle;
-	}
+	operator entt::entity() const { return Handle; }
 
-	operator uint32_t() const
-	{
-		return (uint32_t)Handle;
-	}
+	operator uint32_t() const { return (uint32_t)Handle; }
 
-	bool operator==(const Entity& other) const
-	{
-		return Handle == other.Handle && pScene == other.pScene;
-	}
+	bool operator==(const Entity& other) const { return Handle == other.Handle && pScene == other.pScene; }
 
-	bool operator!=(const Entity& other) const
-	{
-		return !(*this == other);
-	}
+	bool operator!=(const Entity& other) const { return !(*this == other); }
 
 	entt::entity Handle = entt::null;
-	Scene* pScene = nullptr;
+	Scene*		 pScene = nullptr;
 };

@@ -28,8 +28,7 @@ bool Mouse::IsInWindow() const
 
 std::optional<Mouse::Event> Mouse::Read()
 {
-	if (Mouse::Event e;
-		m_MouseBuffer.pop(e, 0))
+	if (Mouse::Event e; m_MouseBuffer.pop(e, 0))
 	{
 		return e;
 	}
@@ -38,8 +37,7 @@ std::optional<Mouse::Event> Mouse::Read()
 
 std::optional<Mouse::RawInput> Mouse::ReadRawInput()
 {
-	if (Mouse::RawInput e;
-		m_RawDeltaBuffer.pop(e, 0))
+	if (Mouse::RawInput e; m_RawDeltaBuffer.pop(e, 0))
 	{
 		return e;
 	}
@@ -73,10 +71,17 @@ void Mouse::OnButtonDown(Button Button, int x, int y)
 	m_ButtonStates[Button] = true;
 	switch (Button)
 	{
-	case Mouse::Left: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBPress, *this)); break;
-	case Mouse::Middle: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBPress, *this)); break;
-	case Mouse::Right: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBPress, *this)); break;
-	case Mouse::NumButtons: [[fallthrough]];
+	case Mouse::Left:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBPress, *this));
+		break;
+	case Mouse::Middle:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBPress, *this));
+		break;
+	case Mouse::Right:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBPress, *this));
+		break;
+	case Mouse::NumButtons:
+		[[fallthrough]];
 	default:
 		break;
 	}
@@ -89,10 +94,17 @@ void Mouse::OnButtonUp(Button Button, int x, int y)
 	m_ButtonStates[Button] = false;
 	switch (Button)
 	{
-	case Mouse::Left: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBRelease, *this)); break;
-	case Mouse::Middle: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBRelease, *this)); break;
-	case Mouse::Right: m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBRelease, *this)); break;
-	case Mouse::NumButtons: [[fallthrough]];
+	case Mouse::Left:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBRelease, *this));
+		break;
+	case Mouse::Middle:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBRelease, *this));
+		break;
+	case Mouse::Right:
+		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBRelease, *this));
+		break;
+	case Mouse::NumButtons:
+		[[fallthrough]];
 	default:
 		break;
 	}
@@ -116,7 +128,7 @@ void Mouse::OnWheelUp(int x, int y)
 void Mouse::OnWheelDelta(int WheelDelta, int x, int y)
 {
 	m_WheelDeltaCarry += WheelDelta;
-	// Generate events for every 120 
+	// Generate events for every 120
 	while (m_WheelDeltaCarry >= WHEEL_DELTA)
 	{
 		m_WheelDeltaCarry -= WHEEL_DELTA;

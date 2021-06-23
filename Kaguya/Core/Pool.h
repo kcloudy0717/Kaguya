@@ -10,7 +10,7 @@ public:
 	template<typename T>
 	struct SElement
 	{
-		T Value;
+		T	   Value;
 		size_t Next;
 	};
 
@@ -28,19 +28,13 @@ public:
 		clear();
 	}
 
-	auto& operator[](size_t Index)
-	{
-		return m_Elements[Index];
-	}
+	auto& operator[](size_t Index) { return m_Elements[Index]; }
 
-	const auto& operator[](size_t Index) const
-	{
-		return m_Elements[Index];
-	}
+	const auto& operator[](size_t Index) const { return m_Elements[Index]; }
 
 	void clear()
 	{
-		m_FreeStart = 0;
+		m_FreeStart			= 0;
 		m_NumActiveElements = 0;
 		for (size_t i = 0; i < Size; ++i)
 		{
@@ -55,7 +49,7 @@ public:
 		assert(m_NumActiveElements < Size && "Consider increasing the size of the pool");
 		m_NumActiveElements++;
 		size_t index = m_FreeStart;
-		m_FreeStart = m_Elements[index].Next;
+		m_FreeStart	 = m_Elements[index].Next;
 		return index;
 	}
 
@@ -63,13 +57,13 @@ public:
 	{
 		m_NumActiveElements--;
 		m_Elements[Index].Next = m_FreeStart;
-		m_FreeStart = Index;
+		m_FreeStart			   = Index;
 	}
 
 private:
 	std::vector<Element> m_Elements;
-	size_t m_FreeStart;
-	size_t m_NumActiveElements;
+	size_t				 m_FreeStart;
+	size_t				 m_NumActiveElements;
 };
 
 template<typename T, size_t Size>
@@ -109,6 +103,6 @@ public:
 	}
 
 private:
-	pool<T, Size> m_Pool;
+	pool<T, Size>	m_Pool;
 	CriticalSection m_CriticalSection;
 };

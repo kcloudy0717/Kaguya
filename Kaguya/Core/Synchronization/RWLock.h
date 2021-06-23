@@ -4,35 +4,17 @@
 class RWLock : public SRWLOCK
 {
 public:
-	RWLock()
-	{
-		::InitializeSRWLock(this);
-	}
+	RWLock() { ::InitializeSRWLock(this); }
 
-	~RWLock()
-	{
+	~RWLock() {}
 
-	}
+	void AcquireShared() { ::AcquireSRWLockShared(this); }
 
-	void AcquireShared()
-	{
-		::AcquireSRWLockShared(this);
-	}
+	void ReleaseShared() { ::ReleaseSRWLockShared(this); }
 
-	void ReleaseShared()
-	{
-		::ReleaseSRWLockShared(this);
-	}
+	void AcquireExclusive() { ::AcquireSRWLockExclusive(this); }
 
-	void AcquireExclusive()
-	{
-		::AcquireSRWLockExclusive(this);
-	}
-
-	void ReleaseExclusive()
-	{
-		::ReleaseSRWLockExclusive(this);
-	}
+	void ReleaseExclusive() { ::ReleaseSRWLockExclusive(this); }
 };
 
 class ScopedReadLock
@@ -44,10 +26,7 @@ public:
 		::AcquireSRWLockShared(&Lock);
 	}
 
-	~ScopedReadLock()
-	{
-		::ReleaseSRWLockShared(&Lock);
-	}
+	~ScopedReadLock() { ::ReleaseSRWLockShared(&Lock); }
 
 private:
 	SRWLOCK& Lock;
@@ -62,10 +41,7 @@ public:
 		::AcquireSRWLockExclusive(&Lock);
 	}
 
-	~ScopedWriteLock()
-	{
-		::ReleaseSRWLockExclusive(&Lock);
-	}
+	~ScopedWriteLock() { ::ReleaseSRWLockExclusive(&Lock); }
 
 private:
 	SRWLOCK& Lock;

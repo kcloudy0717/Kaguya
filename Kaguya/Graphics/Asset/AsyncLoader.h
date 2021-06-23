@@ -7,22 +7,19 @@
 #include "AssetCache.h"
 
 /*
-* All inherited loader must implement a method called AsyncLoad,
-* it takes in the TMetadata and returns a TResourcePtr
-*/
+ * All inherited loader must implement a method called AsyncLoad,
+ * it takes in the TMetadata and returns a TResourcePtr
+ */
 template<typename T, typename Metadata, typename Loader>
 class AsyncLoader
 {
 public:
-	using TResource = T;
+	using TResource	   = T;
 	using TResourcePtr = std::shared_ptr<TResource>;
-	using TMetadata = Metadata;
-	using TDelegate = std::function<void(TResourcePtr)>;
+	using TMetadata	   = Metadata;
+	using TDelegate	   = std::function<void(TResourcePtr)>;
 
-	AsyncLoader()
-	{
-		m_Thread.reset(::CreateThread(nullptr, 0, &AsyncThreadProc, this, 0, nullptr));
-	}
+	AsyncLoader() { m_Thread.reset(::CreateThread(nullptr, 0, &AsyncThreadProc, this, 0, nullptr)); }
 
 	~AsyncLoader()
 	{
@@ -32,10 +29,7 @@ public:
 		::WaitForSingleObject(m_Thread.get(), INFINITE);
 	}
 
-	void SetCallback(TDelegate Delegate)
-	{
-		this->m_Delegate = Delegate;
-	}
+	void SetCallback(TDelegate Delegate) { this->m_Delegate = Delegate; }
 
 	void RequestAsyncLoad(UINT NumMetadata, Metadata* pMetadata)
 	{
@@ -46,6 +40,7 @@ public:
 		}
 		m_ConditionVariable.Wake();
 	}
+
 private:
 	static DWORD WINAPI AsyncThreadProc(_In_ PVOID pParameter)
 	{
@@ -76,14 +71,15 @@ private:
 
 		return EXIT_SUCCESS;
 	}
+
 private:
-	CriticalSection m_CriticalSection;
-	ConditionVariable m_ConditionVariable;
+	CriticalSection			  m_CriticalSection;
+	ConditionVariable		  m_ConditionVariable;
 	ThreadSafeQueue<Metadata> m_MetadataQueue;
-	TDelegate m_Delegate = nullptr;
+	TDelegate				  m_Delegate = nullptr;
 
 	wil::unique_handle m_Thread;
-	std::atomic<bool> m_Shutdown = false;
+	std::atomic<bool>  m_Shutdown = false;
 };
 
 class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>

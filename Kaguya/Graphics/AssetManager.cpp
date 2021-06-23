@@ -32,21 +32,23 @@ AssetManager& AssetManager::Instance()
 
 AssetManager::AssetManager()
 {
-	m_AsyncImageLoader.SetCallback([&](auto pImage)
-	{
-		std::scoped_lock _(m_UploadCriticalSection);
+	m_AsyncImageLoader.SetCallback(
+		[&](auto pImage)
+		{
+			std::scoped_lock _(m_UploadCriticalSection);
 
-		m_ImageUploadQueue.push(std::move(pImage));
-		m_UploadConditionVariable.Wake();
-	});
+			m_ImageUploadQueue.push(std::move(pImage));
+			m_UploadConditionVariable.Wake();
+		});
 
-	m_AsyncMeshLoader.SetCallback([&](auto pMesh)
-	{
-		std::scoped_lock _(m_UploadCriticalSection);
+	m_AsyncMeshLoader.SetCallback(
+		[&](auto pMesh)
+		{
+			std::scoped_lock _(m_UploadCriticalSection);
 
-		m_MeshUploadQueue.push(std::move(pMesh));
-		m_UploadConditionVariable.Wake();
-	});
+			m_MeshUploadQueue.push(std::move(pMesh));
+			m_UploadConditionVariable.Wake();
+		});
 
 	m_Thread.reset(::CreateThread(nullptr, 0, &ResourceUploadThreadProc, nullptr, 0, nullptr));
 }
@@ -73,9 +75,7 @@ void AssetManager::AsyncLoadImage(const std::filesystem::path& Path, bool sRGB)
 		return;
 	}
 
-	Asset::ImageMetadata metadata = {
-		.Path = Path,
-		.sRGB = sRGB };
+	Asset::ImageMetadata metadata = { .Path = Path, .sRGB = sRGB };
 	m_AsyncImageLoader.RequestAsyncLoad(1, &metadata);
 }
 
@@ -93,14 +93,11 @@ void AssetManager::AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeo
 		return;
 	}
 
-	Asset::MeshMetadata metadata = {
-		.Path = Path,
-		.KeepGeometryInRAM = KeepGeometryInRAM };
+	Asset::MeshMetadata metadata = { .Path = Path, .KeepGeometryInRAM = KeepGeometryInRAM };
 	m_AsyncMeshLoader.RequestAsyncLoad(1, &metadata);
 }
 
-DWORD WINAPI AssetManager::ResourceUploadThreadProc(
-	_In_ PVOID pParameter)
+DWORD WINAPI AssetManager::ResourceUploadThreadProc(_In_ PVOID pParameter)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 	auto& AssetManager = AssetManager::Instance();
@@ -110,20 +107,27 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 	ResourceUploadBatch uploader(pDevice);
 
 	// TODO: refactor these, this is here because it is used to generate BLAS when the mesh is uploaded
-	ComPtr<ID3D12CommandQueue> commandQueue;
-	ComPtr<ID3D12CommandAllocator> commandAllocator;
+	ComPtr<ID3D12CommandQueue>		   commandQueue;
+	ComPtr<ID3D12CommandAllocator>	   commandAllocator;
 	ComPtr<ID3D12GraphicsCommandList6> commandList;
-	UINT64 fenceValue = 0;
-	ComPtr<ID3D12Fence> fence;
+	UINT64							   fenceValue = 0;
+	ComPtr<ID3D12Fence>				   fence;
 
 	D3D12_COMMAND_QUEUE_DESC desc = {};
-	desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-	desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	desc.NodeMask = 0;
+	desc.Type					  = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+	desc.Priority				  = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	desc.NodeMask				  = 0;
 	ThrowIfFailed(pDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(commandQueue.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(pDevice->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_COMPUTE, commandAllocator.Get(), nullptr, IID_PPV_ARGS(commandList.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(pDevice->CreateCommandAllocator(
+		D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		IID_PPV_ARGS(commandAllocator.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(pDevice->CreateCommandList(
+		1,
+		D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		commandAllocator.Get(),
+		nullptr,
+		IID_PPV_ARGS(commandList.ReleaseAndGetAddressOf())));
 	commandList->Close();
 	ThrowIfFailed(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.ReleaseAndGetAddressOf())));
 
@@ -145,14 +149,14 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 
 		// container to store assets after it has been uploaded to be added to the AssetCache
 		std::vector<std::shared_ptr<Asset::Image>> uploadedImages;
-		std::vector<std::shared_ptr<Asset::Mesh>> uploadedMeshes;
+		std::vector<std::shared_ptr<Asset::Mesh>>  uploadedMeshes;
 
 		// Process Image
 		{
 			std::shared_ptr<Asset::Image> assetImage;
 			while (AssetManager.m_ImageUploadQueue.pop(assetImage, 0))
 			{
-				const auto& Image = assetImage->Image;
+				const auto& Image	 = assetImage->Image;
 				const auto& Metadata = Image.GetMetadata();
 
 				DXGI_FORMAT format = Metadata.format;
@@ -163,20 +167,23 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 				switch (Metadata.dimension)
 				{
 				case TEX_DIMENSION::TEX_DIMENSION_TEXTURE1D:
-					resourceDesc = CD3DX12_RESOURCE_DESC::Tex1D(format,
+					resourceDesc = CD3DX12_RESOURCE_DESC::Tex1D(
+						format,
 						static_cast<UINT64>(Metadata.width),
 						static_cast<UINT16>(Metadata.arraySize));
 					break;
 
 				case TEX_DIMENSION::TEX_DIMENSION_TEXTURE2D:
-					resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(format,
+					resourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+						format,
 						static_cast<UINT64>(Metadata.width),
 						static_cast<UINT>(Metadata.height),
 						static_cast<UINT16>(Metadata.arraySize));
 					break;
 
 				case TEX_DIMENSION::TEX_DIMENSION_TEXTURE3D:
-					resourceDesc = CD3DX12_RESOURCE_DESC::Tex3D(format,
+					resourceDesc = CD3DX12_RESOURCE_DESC::Tex3D(
+						format,
 						static_cast<UINT64>(Metadata.width),
 						static_cast<UINT>(Metadata.height),
 						static_cast<UINT16>(Metadata.depth));
@@ -184,17 +191,18 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 				}
 
 				std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());
-				const auto pImages = Image.GetImages();
+				const auto							pImages = Image.GetImages();
 				for (size_t i = 0; i < Image.GetImageCount(); ++i)
 				{
-					subresources[i].RowPitch = pImages[i].rowPitch;
+					subresources[i].RowPitch   = pImages[i].rowPitch;
 					subresources[i].SlicePitch = pImages[i].slicePitch;
-					subresources[i].pData = pImages[i].pixels;
+					subresources[i].pData	   = pImages[i].pixels;
 				}
 
 				D3D12MA::ALLOCATION_DESC allocationDesc = {};
-				allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-				auto Resource = RenderDevice.CreateResource(&allocationDesc, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr);
+				allocationDesc.HeapType					= D3D12_HEAP_TYPE_DEFAULT;
+				auto Resource =
+					RenderDevice.CreateResource(&allocationDesc, &resourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr);
 
 				uploader.Upload(Resource->pResource.Get(), 0, subresources.data(), subresources.size());
 
@@ -202,7 +210,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 				RenderDevice.CreateShaderResourceView(Resource->pResource.Get(), srv);
 
 				assetImage->Resource = std::move(Resource);
-				assetImage->SRV = std::move(srv);
+				assetImage->SRV		 = std::move(srv);
 
 				uploadedImages.push_back(assetImage);
 			}
@@ -214,44 +222,49 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 			while (AssetManager.m_MeshUploadQueue.pop(assetMesh, 0))
 			{
 				UINT64 vertexBufferSizeInBytes = assetMesh->Vertices.size() * sizeof(Vertex);
-				UINT64 indexBufferSizeInBytes = assetMesh->Indices.size() * sizeof(unsigned int);
+				UINT64 indexBufferSizeInBytes  = assetMesh->Indices.size() * sizeof(unsigned int);
 
 				D3D12MA::ALLOCATION_DESC allocationDesc = {};
-				allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+				allocationDesc.HeapType					= D3D12_HEAP_TYPE_DEFAULT;
 
 				auto vertexBuffer = RenderDevice.CreateBuffer(&allocationDesc, vertexBufferSizeInBytes);
-				auto indexBuffer = RenderDevice.CreateBuffer(&allocationDesc, indexBufferSizeInBytes);
+				auto indexBuffer  = RenderDevice.CreateBuffer(&allocationDesc, indexBufferSizeInBytes);
 
 				// Upload vertex data
 				D3D12_SUBRESOURCE_DATA subresource = {};
-				subresource.pData = assetMesh->Vertices.data();
-				subresource.RowPitch = vertexBufferSizeInBytes;
-				subresource.SlicePitch = vertexBufferSizeInBytes;
+				subresource.pData				   = assetMesh->Vertices.data();
+				subresource.RowPitch			   = vertexBufferSizeInBytes;
+				subresource.SlicePitch			   = vertexBufferSizeInBytes;
 
 				uploader.Upload(vertexBuffer->pResource.Get(), 0, &subresource, 1);
 
 				// Upload index data
-				subresource.pData = assetMesh->Indices.data();
-				subresource.RowPitch = indexBufferSizeInBytes;
+				subresource.pData	   = assetMesh->Indices.data();
+				subresource.RowPitch   = indexBufferSizeInBytes;
 				subresource.SlicePitch = indexBufferSizeInBytes;
 
 				uploader.Upload(indexBuffer->pResource.Get(), 0, &subresource, 1);
 
 				assetMesh->VertexResource = std::move(vertexBuffer);
-				assetMesh->IndexResource = std::move(indexBuffer);
+				assetMesh->IndexResource  = std::move(indexBuffer);
 
 				for (const auto& submesh : assetMesh->Submeshes)
 				{
 					D3D12_RAYTRACING_GEOMETRY_DESC dxrGeometryDesc = {};
-					dxrGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-					dxrGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-					dxrGeometryDesc.Triangles.Transform3x4 = NULL;
-					dxrGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-					dxrGeometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT; // Position attribute of the vertex
-					dxrGeometryDesc.Triangles.IndexCount = submesh.IndexCount;
+					dxrGeometryDesc.Type						   = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+					dxrGeometryDesc.Flags						   = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+					dxrGeometryDesc.Triangles.Transform3x4		   = NULL;
+					dxrGeometryDesc.Triangles.IndexFormat		   = DXGI_FORMAT_R32_UINT;
+					dxrGeometryDesc.Triangles.VertexFormat =
+						DXGI_FORMAT_R32G32B32_FLOAT; // Position attribute of the vertex
+					dxrGeometryDesc.Triangles.IndexCount  = submesh.IndexCount;
 					dxrGeometryDesc.Triangles.VertexCount = submesh.VertexCount;
-					dxrGeometryDesc.Triangles.IndexBuffer = assetMesh->IndexResource->pResource->GetGPUVirtualAddress() + submesh.StartIndexLocation * sizeof(unsigned int);
-					dxrGeometryDesc.Triangles.VertexBuffer.StartAddress = assetMesh->VertexResource->pResource->GetGPUVirtualAddress() + submesh.BaseVertexLocation * sizeof(Vertex);
+					dxrGeometryDesc.Triangles.IndexBuffer =
+						assetMesh->IndexResource->pResource->GetGPUVirtualAddress() +
+						submesh.StartIndexLocation * sizeof(unsigned int);
+					dxrGeometryDesc.Triangles.VertexBuffer.StartAddress =
+						assetMesh->VertexResource->pResource->GetGPUVirtualAddress() +
+						submesh.BaseVertexLocation * sizeof(Vertex);
 					dxrGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 
 					assetMesh->BLAS.AddGeometry(dxrGeometryDesc);
@@ -262,11 +275,21 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 
 				// ASB seems to require a committed resource otherwise PIX gives you invalid
 				// parameter when trying to view it in the Event list
-				allocationDesc = {};
-				allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+				allocationDesc			= {};
+				allocationDesc.Flags	= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 				allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-				auto scratch = RenderDevice.CreateBuffer(&allocationDesc, scratchSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, 0, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-				auto result = RenderDevice.CreateBuffer(&allocationDesc, resultSize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, 0, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+				auto scratch			= RenderDevice.CreateBuffer(
+					   &allocationDesc,
+					   scratchSize,
+					   D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+					   0,
+					   D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				auto result = RenderDevice.CreateBuffer(
+					&allocationDesc,
+					resultSize,
+					D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+					0,
+					D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 
 				assetMesh->BLAS.Generate(commandList.Get(), scratch->pResource.Get(), result->pResource.Get());
 
@@ -292,7 +315,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 
 			AssetManager.m_ImageCache.Create(hs);
 			auto Asset = AssetManager.m_ImageCache.Load(hs);
-			*Asset = std::move(*image);
+			*Asset	   = std::move(*image);
 		}
 
 		for (auto& mesh : uploadedMeshes)
@@ -301,7 +324,7 @@ DWORD WINAPI AssetManager::ResourceUploadThreadProc(
 
 			AssetManager.m_MeshCache.Create(hs);
 			auto Asset = AssetManager.m_MeshCache.Load(hs);
-			*Asset = std::move(*mesh);
+			*Asset	   = std::move(*mesh);
 		}
 	}
 

@@ -11,25 +11,19 @@
 
 using namespace DirectX;
 
-static Assimp::Importer s_Importer;
+static Assimp::Importer	  s_Importer;
 static constexpr uint32_t s_ImporterFlags =
-aiProcess_ConvertToLeftHanded |
-aiProcess_JoinIdenticalVertices |
-aiProcess_Triangulate |
-aiProcess_SortByPType |
-aiProcess_GenNormals |
-aiProcess_GenUVCoords |
-aiProcess_OptimizeMeshes |
-aiProcess_ValidateDataStructure;
+	aiProcess_ConvertToLeftHanded | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
+	aiProcess_GenNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes | aiProcess_ValidateDataStructure;
 
 AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const TMetadata& Metadata)
 {
 	const auto start = std::chrono::high_resolution_clock::now();
 
-	const auto& path = Metadata.Path;
-	const auto extension = path.extension().string();
+	const auto& path	  = Metadata.Path;
+	const auto	extension = path.extension().string();
 
-	TexMetadata texMetadata = {};
+	TexMetadata	 texMetadata  = {};
 	ScratchImage scratchImage = {};
 	if (extension == ".dds")
 	{
@@ -54,13 +48,13 @@ AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const TMetadata& Meta
 		ThrowIfFailed(GenerateMipMaps(*baseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, scratchImage, false));
 	}
 
-	auto assetImage = std::make_shared<Asset::Image>();
-	assetImage->Metadata = Metadata;
+	auto assetImage		   = std::make_shared<Asset::Image>();
+	assetImage->Metadata   = Metadata;
 	assetImage->Resolution = Vector2i(texMetadata.width, texMetadata.height);
-	assetImage->Name = path.filename().string();
-	assetImage->Image = std::move(scratchImage);
+	assetImage->Name	   = path.filename().string();
+	assetImage->Image	   = std::move(scratchImage);
 
-	const auto stop = std::chrono::high_resolution_clock::now();
+	const auto stop		= std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 	LOG_INFO("{} loaded in {}(ms)", path.string(), duration.count());
 
@@ -81,13 +75,13 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const TMetadata& Metada
 		return {};
 	}
 
-	auto assetMesh = std::make_shared<Asset::Mesh>();
+	auto assetMesh		= std::make_shared<Asset::Mesh>();
 	assetMesh->Metadata = Metadata;
-	assetMesh->Name = Metadata.Path.filename().string();
+	assetMesh->Name		= Metadata.Path.filename().string();
 	assetMesh->Submeshes.reserve(paiScene->mNumMeshes);
 
 	uint32_t numVertices = 0;
-	uint32_t numIndices = 0;
+	uint32_t numIndices	 = 0;
 	for (size_t m = 0; m < paiScene->mNumMeshes; ++m)
 	{
 		const aiMesh* paiMesh = paiScene->mMeshes[m];
@@ -129,20 +123,26 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const TMetadata& Metada
 		}
 
 		// Parse submesh indices
-		Asset::Submesh& assetSubmesh = assetMesh->Submeshes.emplace_back();
-		assetSubmesh.IndexCount = indices.size();
+		Asset::Submesh& assetSubmesh	= assetMesh->Submeshes.emplace_back();
+		assetSubmesh.IndexCount			= indices.size();
 		assetSubmesh.StartIndexLocation = numIndices;
-		assetSubmesh.VertexCount = vertices.size();
+		assetSubmesh.VertexCount		= vertices.size();
 		assetSubmesh.BaseVertexLocation = numVertices;
 
-		assetMesh->Vertices.insert(assetMesh->Vertices.end(), std::make_move_iterator(vertices.begin()), std::make_move_iterator(vertices.end()));
-		assetMesh->Indices.insert(assetMesh->Indices.end(), std::make_move_iterator(indices.begin()), std::make_move_iterator(indices.end()));
+		assetMesh->Vertices.insert(
+			assetMesh->Vertices.end(),
+			std::make_move_iterator(vertices.begin()),
+			std::make_move_iterator(vertices.end()));
+		assetMesh->Indices.insert(
+			assetMesh->Indices.end(),
+			std::make_move_iterator(indices.begin()),
+			std::make_move_iterator(indices.end()));
 
 		numIndices += indices.size();
 		numVertices += vertices.size();
 	}
 
-	const auto stop = std::chrono::high_resolution_clock::now();
+	const auto stop		= std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 	LOG_INFO("{} loaded in {}(ms)", Metadata.Path.string(), duration.count());
 

@@ -18,37 +18,31 @@ void ApplyMomentum(float& oldValue, float& newValue, float deltaTime)
 FPSCamera::FPSCamera(Camera& Camera)
 	: CameraController(Camera)
 {
-	m_MoveSpeed = 50.0f;
-	m_StrafeSpeed = 50.0f;
+	m_MoveSpeed			= 50.0f;
+	m_StrafeSpeed		= 50.0f;
 	m_MouseSensitivityX = 15.0f;
 	m_MouseSensitivityY = 15.0f;
 
 	m_Momentum = true;
 
 	m_LastForward = 0.0f;
-	m_LastStrafe = 0.0f;
-	m_LastAscent = 0.0f;
+	m_LastStrafe  = 0.0f;
+	m_LastAscent  = 0.0f;
 }
 
 void FPSCamera::Update(float dt)
 {
 	InputHandler& InputHandler = Application::GetInputHandler();
-	Mouse& Mouse = Application::GetMouse();
-	Keyboard& Keyboard = Application::GetKeyboard();
+	Mouse&		  Mouse		   = Application::GetMouse();
+	Keyboard&	  Keyboard	   = Application::GetKeyboard();
 
 	m_TargetCamera.AspectRatio = Application::AspectRatio();
 
 	if (InputHandler.RawInputEnabled)
 	{
-		float forward = m_MoveSpeed * (
-			(Keyboard.IsPressed('W') * dt) +
-			(Keyboard.IsPressed('S') * -dt));
-		float strafe = m_StrafeSpeed * (
-			(Keyboard.IsPressed('D') * dt) +
-			(Keyboard.IsPressed('A') * -dt));
-		float ascent = m_StrafeSpeed * (
-			(Keyboard.IsPressed('E') * dt) +
-			(Keyboard.IsPressed('Q') * -dt));
+		float forward = m_MoveSpeed * ((Keyboard.IsPressed('W') * dt) + (Keyboard.IsPressed('S') * -dt));
+		float strafe  = m_StrafeSpeed * ((Keyboard.IsPressed('D') * dt) + (Keyboard.IsPressed('A') * -dt));
+		float ascent  = m_StrafeSpeed * ((Keyboard.IsPressed('E') * dt) + (Keyboard.IsPressed('Q') * -dt));
 
 		if (m_Momentum)
 		{

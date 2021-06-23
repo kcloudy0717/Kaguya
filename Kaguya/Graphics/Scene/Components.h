@@ -11,9 +11,9 @@
 
 struct Component
 {
-	entt::entity Handle = entt::null;
-	struct Scene* pScene = nullptr;
-	bool IsEdited = false;
+	entt::entity  Handle   = entt::null;
+	struct Scene* pScene   = nullptr;
+	bool		  IsEdited = false;
 };
 
 template<class T>
@@ -25,11 +25,10 @@ struct Tag : Component
 	Tag(std::string_view Name)
 		: Name(Name)
 	{
-
 	}
 
-	operator std::string& () { return Name; }
-	operator const std::string& () const { return Name; }
+	operator std::string&() { return Name; }
+	operator const std::string&() const { return Name; }
 
 	std::string Name;
 };
@@ -64,7 +63,7 @@ struct Transform : Component
 	DirectX::XMFLOAT3 Scale;
 	DirectX::XMFLOAT4 Orientation;
 
-	bool UseSnap = false;
+	bool UseSnap			   = false;
 	UINT CurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
 };
 
@@ -86,7 +85,7 @@ struct Light : Component
 struct MeshFilter : Component
 {
 	// Key into the MeshCache
-	UINT64 Key = 0;
+	UINT64					 Key  = 0;
 	AssetHandle<Asset::Mesh> Mesh = {};
 };
 
@@ -99,10 +98,10 @@ enum TextureTypes
 	NumTextureTypes
 };
 
-#define TEXTURE_CHANNEL_RED		0
-#define TEXTURE_CHANNEL_GREEN	1
-#define TEXTURE_CHANNEL_BLUE	2
-#define TEXTURE_CHANNEL_ALPHA	3
+#define TEXTURE_CHANNEL_RED	  0
+#define TEXTURE_CHANNEL_GREEN 1
+#define TEXTURE_CHANNEL_BLUE  2
+#define TEXTURE_CHANNEL_ALPHA 3
 
 enum BSDFTypes
 {
@@ -126,33 +125,33 @@ struct Material
 		}
 	}
 
-	int BSDFType = BSDFTypes::Disney;
-	float3 baseColor = { 1, 1, 1 };
-	float metallic = 0.0f;
-	float subsurface = 0.0f;
-	float specular = 0.5f;
-	float roughness = 0.5f;
-	float specularTint = 0.0f;
-	float anisotropic = 0.0f;
-	float sheen = 0.0f;
-	float sheenTint = 0.5f;
-	float clearcoat = 0.0f;
-	float clearcoatGloss = 1.0f;
+	int	   BSDFType		  = BSDFTypes::Disney;
+	float3 baseColor	  = { 1, 1, 1 };
+	float  metallic		  = 0.0f;
+	float  subsurface	  = 0.0f;
+	float  specular		  = 0.5f;
+	float  roughness	  = 0.5f;
+	float  specularTint	  = 0.0f;
+	float  anisotropic	  = 0.0f;
+	float  sheen		  = 0.0f;
+	float  sheenTint	  = 0.5f;
+	float  clearcoat	  = 0.0f;
+	float  clearcoatGloss = 1.0f;
 
 	// Used by Glass BxDF
-	float3 T = { 1, 1, 1 };
-	float etaA = 1.000277f; // air
-	float etaB = 1.5046f; // glass
+	float3 T	= { 1, 1, 1 };
+	float  etaA = 1.000277f; // air
+	float  etaB = 1.5046f;	 // glass
 
 	int TextureIndices[NumTextureTypes];
 	int TextureChannel[NumTextureTypes];
 
-	UINT64 TextureKeys[NumTextureTypes];
+	UINT64					  TextureKeys[NumTextureTypes];
 	AssetHandle<Asset::Image> Textures[NumTextureTypes];
 };
 
 struct MeshRenderer : Component
 {
 	MeshFilter* pMeshFilter = nullptr;
-	Material Material;
+	Material	Material;
 };

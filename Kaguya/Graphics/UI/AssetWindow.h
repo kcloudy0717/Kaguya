@@ -7,12 +7,10 @@
 class AssetWindow : public UIWindow
 {
 public:
-	void SetContext(Scene* pScene)
-	{
-		m_pScene = pScene;
-	}
+	void SetContext(Scene* pScene) { m_pScene = pScene; }
 
 	void RenderGui();
+
 private:
 	Scene* m_pScene = nullptr;
 };

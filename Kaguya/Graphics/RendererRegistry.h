@@ -46,24 +46,38 @@ struct Shaders
 
 		// Load VS
 		{
-			VS::FullScreenTriangle = ShaderCompiler.CompileShader(Shader::Type::Vertex, ExecutableFolderPath / L"Shaders/FullScreenTriangle.hlsl", g_VSEntryPoint, {});
+			VS::FullScreenTriangle = ShaderCompiler.CompileShader(
+				Shader::Type::Vertex,
+				ExecutableFolderPath / L"Shaders/FullScreenTriangle.hlsl",
+				g_VSEntryPoint,
+				{});
 		}
 
 		// Load PS
 		{
-			PS::ToneMap = ShaderCompiler.CompileShader(Shader::Type::Pixel, ExecutableFolderPath / L"Shaders/PostProcess/ToneMap.hlsl", g_PSEntryPoint, {});
+			PS::ToneMap = ShaderCompiler.CompileShader(
+				Shader::Type::Pixel,
+				ExecutableFolderPath / L"Shaders/PostProcess/ToneMap.hlsl",
+				g_PSEntryPoint,
+				{});
 		}
 
 		// Load CS
 		{
 			// Not used, need to add them back
-			//CS::InstanceGeneration			= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/InstanceGeneration.hlsl",		g_CSEntryPoint, {});
+			// CS::InstanceGeneration			= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath
+			// / L"Shaders/InstanceGeneration.hlsl",		g_CSEntryPoint, {});
 
-			//CS::PostProcess_BloomMask						= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/PostProcess/BloomMask.hlsl",						g_CSEntryPoint, {});
-			//CS::PostProcess_BloomDownsample					= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/PostProcess/BloomDownsample.hlsl",				g_CSEntryPoint, {});
-			//CS::PostProcess_BloomBlur						= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/PostProcess/BloomBlur.hlsl",						g_CSEntryPoint, {});
-			//CS::PostProcess_BloomUpsampleBlurAccumulation	= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/PostProcess/BloomUpsampleBlurAccumulation.hlsl",	g_CSEntryPoint, {});
-			//CS::PostProcess_BloomComposition				= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath / L"Shaders/PostProcess/BloomComposition.hlsl",				g_CSEntryPoint, {});
+			// CS::PostProcess_BloomMask						= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/PostProcess/BloomMask.hlsl",						g_CSEntryPoint, {});
+			// CS::PostProcess_BloomDownsample					= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/PostProcess/BloomDownsample.hlsl",				g_CSEntryPoint, {});
+			// CS::PostProcess_BloomBlur						= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/PostProcess/BloomBlur.hlsl",						g_CSEntryPoint, {});
+			// CS::PostProcess_BloomUpsampleBlurAccumulation	= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/PostProcess/BloomUpsampleBlurAccumulation.hlsl",	g_CSEntryPoint, {});
+			// CS::PostProcess_BloomComposition				= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/PostProcess/BloomComposition.hlsl",				g_CSEntryPoint, {});
 		}
 	}
 };
@@ -78,6 +92,6 @@ struct Libraries
 		const auto& ExecutableFolderPath = Application::ExecutableDirectory;
 
 		PathTrace = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/PathTrace.hlsl");
-		Picking = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/Picking.hlsl");
+		Picking	  = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/Picking.hlsl");
 	}
 };

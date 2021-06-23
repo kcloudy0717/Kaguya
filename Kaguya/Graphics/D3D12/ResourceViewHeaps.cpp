@@ -2,7 +2,9 @@
 #include "ResourceViewHeaps.h"
 
 template<size_t Size>
-inline Descriptor AllocateDescriptor(DescriptorHeap& DescriptorHeap, concurrent_pool<void, Size>& DescriptorHeapIndexPool)
+inline Descriptor AllocateDescriptor(
+	DescriptorHeap&				 DescriptorHeap,
+	concurrent_pool<void, Size>& DescriptorHeapIndexPool)
 {
 	auto index = static_cast<UINT>(DescriptorHeapIndexPool.allocate());
 	return DescriptorHeap.At(index);
@@ -18,32 +20,18 @@ inline void ReleaseDescriptor(Descriptor& Descriptor, concurrent_pool<void, Size
 	}
 }
 
-ResourceViewHeaps::ResourceViewHeaps(
-	_In_ ID3D12Device* pDevice)
+ResourceViewHeaps::ResourceViewHeaps(_In_ ID3D12Device* pDevice)
 {
-	m_ResourceDescriptorHeap = DescriptorHeap(
-		pDevice,
-		NumResourceDescriptors,
-		true,
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	m_ResourceDescriptorHeap =
+		DescriptorHeap(pDevice, NumResourceDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	m_SamplerDescriptorHeap = DescriptorHeap(
-		pDevice,
-		NumSamplerDescriptors,
-		true,
-		D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	m_SamplerDescriptorHeap = DescriptorHeap(pDevice, NumSamplerDescriptors, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	m_RenderTargetDescriptorHeap = DescriptorHeap(
-		pDevice,
-		NumRenderTargetDescriptors,
-		false,
-		D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_RenderTargetDescriptorHeap =
+		DescriptorHeap(pDevice, NumRenderTargetDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	m_DepthStencilDescriptorHeap = DescriptorHeap(
-		pDevice,
-		NumDepthStencilDescriptors,
-		false,
-		D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	m_DepthStencilDescriptorHeap =
+		DescriptorHeap(pDevice, NumDepthStencilDescriptors, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 #if _DEBUG
 	m_ResourceDescriptorHeap->SetName(L"Resource Descriptor Heap");
@@ -73,26 +61,22 @@ Descriptor ResourceViewHeaps::AllocateDepthStencilView()
 	return AllocateDescriptor(m_DepthStencilDescriptorHeap, m_DepthStencilDescriptorIndexPool);
 }
 
-void ResourceViewHeaps::ReleaseResourceView(
-	_In_ Descriptor& Descriptor)
+void ResourceViewHeaps::ReleaseResourceView(_In_ Descriptor& Descriptor)
 {
 	ReleaseDescriptor(Descriptor, m_ResourceDescriptorIndexPool);
 }
 
-void ResourceViewHeaps::ReleaseSampler(
-	_In_ Descriptor& Descriptor)
+void ResourceViewHeaps::ReleaseSampler(_In_ Descriptor& Descriptor)
 {
 	ReleaseDescriptor(Descriptor, m_SamplerDescriptorIndexPool);
 }
 
-void ResourceViewHeaps::ReleaseRenderTargetView(
-	_In_ Descriptor& Descriptor)
+void ResourceViewHeaps::ReleaseRenderTargetView(_In_ Descriptor& Descriptor)
 {
 	ReleaseDescriptor(Descriptor, m_RenderTargetDescriptorIndexPool);
 }
 
-void ResourceViewHeaps::ReleaseDepthStencilView(
-	_In_ Descriptor& Descriptor)
+void ResourceViewHeaps::ReleaseDepthStencilView(_In_ Descriptor& Descriptor)
 {
 	ReleaseDescriptor(Descriptor, m_DepthStencilDescriptorIndexPool);
 }

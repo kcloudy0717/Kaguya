@@ -51,11 +51,13 @@ void HierarchyWindow::RenderGui()
 		});
 
 	// Right-click on blank space
-	if (ImGui::BeginPopupContextWindow("Hierarchy Popup Context Window", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+	if (ImGui::BeginPopupContextWindow(
+			"Hierarchy Popup Context Window",
+			ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity entity = m_pScene->CreateEntity("GameObject");
+			Entity entity	 = m_pScene->CreateEntity("GameObject");
 			m_SelectedEntity = entity;
 		}
 
@@ -67,7 +69,9 @@ void HierarchyWindow::RenderGui()
 
 		if (ImGui::MenuItem("Save"))
 		{
-			SaveDialog("yaml", "",
+			SaveDialog(
+				"yaml",
+				"",
 				[&](auto Path)
 				{
 					if (!Path.has_extension())
@@ -81,7 +85,9 @@ void HierarchyWindow::RenderGui()
 
 		if (ImGui::MenuItem("Load"))
 		{
-			OpenDialog("yaml", "",
+			OpenDialog(
+				"yaml",
+				"",
 				[&](auto Path)
 				{
 					SceneParser::Load(Path, m_pScene);

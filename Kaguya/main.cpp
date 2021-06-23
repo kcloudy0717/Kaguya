@@ -16,7 +16,7 @@
 
 #define SHOW_IMGUI_DEMO_WINDOW 1
 
-#define RENDER_AT_1920x1080 0
+#define RENDER_AT_1920x1080	   0
 
 class Editor
 {
@@ -35,17 +35,14 @@ public:
 		Renderer.OnInitialize();
 	}
 
-	~Editor()
-	{
-		Renderer.OnDestroy();
-	}
+	~Editor() { Renderer.OnDestroy(); }
 
 	void Render()
 	{
-		Stopwatch& Time = Application::Time;
+		Stopwatch&	  Time		   = Application::Time;
 		InputHandler& InputHandler = Application::GetInputHandler();
-		Mouse& Mouse = Application::GetMouse();
-		Keyboard& Keyboard = Application::GetKeyboard();
+		Mouse&		  Mouse		   = Application::GetMouse();
+		Keyboard&	  Keyboard	   = Application::GetKeyboard();
 
 		Time.Signal();
 		float dt = Time.DeltaTime();
@@ -86,9 +83,10 @@ public:
 #endif
 
 		// Update selected entity
-		// If LMB is pressed and we are not handling raw input and if we are not hovering over any imgui stuff then we update the
-		// instance id for editor
-		if (Mouse.IsLeftPressed() && !InputHandler.RawInputEnabled && m_ViewportWindow.IsHovered && !ImGuizmo::IsUsing())
+		// If LMB is pressed and we are not handling raw input and if we are not hovering over any imgui stuff then we
+		// update the instance id for editor
+		if (Mouse.IsLeftPressed() && !InputHandler.RawInputEnabled && m_ViewportWindow.IsHovered &&
+			!ImGuizmo::IsUsing())
 		{
 			m_HierarchyWindow.SetSelectedEntity(Renderer.GetSelectedEntity());
 		}
@@ -102,20 +100,17 @@ public:
 		Renderer.OnRender(Time, Scene);
 	}
 
-	void Resize(uint32_t Width, uint32_t Height)
-	{
-		Renderer.OnResize(Width, Height);
-	}
+	void Resize(uint32_t Width, uint32_t Height) { Renderer.OnResize(Width, Height); }
 
 private:
-	HierarchyWindow	m_HierarchyWindow;
-	ViewportWindow m_ViewportWindow;
-	InspectorWindow m_InspectorWindow;
+	HierarchyWindow	   m_HierarchyWindow;
+	ViewportWindow	   m_ViewportWindow;
+	InspectorWindow	   m_InspectorWindow;
 	RenderSystemWindow m_RenderSystemWindow;
-	AssetWindow m_AssetWindow;
-	ConsoleWindow m_ConsoleWindow;
+	AssetWindow		   m_AssetWindow;
+	ConsoleWindow	   m_ConsoleWindow;
 
-	Scene Scene;
+	Scene	 Scene;
 	Renderer Renderer;
 };
 
@@ -125,14 +120,11 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents();
 
-		ApplicationOptions options =
-		{
-			.Name = L"Kaguya",
-			.Width = 1280,
-			.Height = 720,
-			.Maximize = true,
-			.Icon = Application::ExecutableDirectory / "Assets/Kaguya.ico"
-		};
+		ApplicationOptions options = { .Name	 = L"Kaguya",
+									   .Width	 = 1280,
+									   .Height	 = 720,
+									   .Maximize = true,
+									   .Icon	 = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
 		Application::Initialize(options);
 
 		RenderDevice::Initialize();

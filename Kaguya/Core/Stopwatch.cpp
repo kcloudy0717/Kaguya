@@ -16,9 +16,9 @@ double Stopwatch::DeltaTime() const
 double Stopwatch::TotalTime() const
 {
 	// If we are stopped, do not count the time that has passed since we stopped.
-	// Moreover, if we previously already had a pause, the distance 
+	// Moreover, if we previously already had a pause, the distance
 	// stopTime - totalTime includes paused time, which we do not want to count.
-	// To correct this, we can subtract the paused time from stopTime:  
+	// To correct this, we can subtract the paused time from stopTime:
 	//                     |<--paused time-->|
 	// ----*---------------*-----------------*------------*------------*------> time
 	//  totalTime       stopTime        startTime     stopTime    currentTime
@@ -27,9 +27,9 @@ double Stopwatch::TotalTime() const
 		return ((m_StopTime.QuadPart - m_PausedTime.QuadPart) - m_TotalTime.QuadPart) * m_Period;
 	}
 	// The distance currentTime - totalTime includes paused time,
-	// which we do not want to count.  
-	// To correct this, we can subtract the paused time from currentTime:  
-	// (currentTime - pausedTime) - totalTime 
+	// which we do not want to count.
+	// To correct this, we can subtract the paused time from currentTime:
+	// (currentTime - pausedTime) - totalTime
 	//                     |<--paused time-->|
 	// ----*---------------*-----------------*------------*------> time
 	//  totalTime       stopTime        startTime     currentTime
@@ -49,14 +49,14 @@ void Stopwatch::Resume()
 	// Accumulate the time elapsed between stop and start pairs.
 	//                     |<-------d------->|
 	// ----*---------------*-----------------*------------> time
-	//  totalTime       stopTime        startTime     
+	//  totalTime       stopTime        startTime
 	if (m_Paused)
 	{
 		m_PausedTime.QuadPart += (m_CurrentTime.QuadPart - m_StopTime.QuadPart);
 
-		m_PreviousTime = m_CurrentTime;
+		m_PreviousTime		= m_CurrentTime;
 		m_StopTime.QuadPart = 0;
-		m_Paused = false;
+		m_Paused			= false;
 	}
 }
 
@@ -66,7 +66,7 @@ void Stopwatch::Pause()
 	{
 		::QueryPerformanceCounter(&m_CurrentTime);
 		m_StopTime = m_CurrentTime;
-		m_Paused = true;
+		m_Paused   = true;
 	}
 }
 
@@ -84,7 +84,7 @@ void Stopwatch::Signal()
 	// Prepare for next frame.
 	m_PreviousTime = m_CurrentTime;
 
-	// Force nonnegative.  The DXSDK's CDXUTTimer mentions that if the 
+	// Force nonnegative.  The DXSDK's CDXUTTimer mentions that if the
 	// processor goes into a power save mode or we get shuffled to another
 	// processor, then deltaTime can be negative.
 	if (m_DeltaTime < 0.0)
@@ -96,9 +96,9 @@ void Stopwatch::Signal()
 void Stopwatch::Restart()
 {
 	::QueryPerformanceCounter(&m_CurrentTime);
-	m_TotalTime = m_CurrentTime;
-	m_PreviousTime = m_CurrentTime;
+	m_TotalTime			= m_CurrentTime;
+	m_PreviousTime		= m_CurrentTime;
 	m_StopTime.QuadPart = 0;
-	m_Paused = false;
+	m_Paused			= false;
 	Resume();
 }

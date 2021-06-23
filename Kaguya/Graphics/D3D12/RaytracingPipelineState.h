@@ -3,17 +3,14 @@
 
 struct DXILLibrary
 {
-	DXILLibrary(
-		_In_ const D3D12_SHADER_BYTECODE& Library,
-		_In_ const std::vector<std::wstring>& Symbols)
+	DXILLibrary(_In_ const D3D12_SHADER_BYTECODE& Library, _In_ const std::vector<std::wstring>& Symbols)
 		: Library(Library)
 		, Symbols(Symbols)
 	{
-
 	}
 
-	D3D12_SHADER_BYTECODE		Library;
-	std::vector<std::wstring>	Symbols;
+	D3D12_SHADER_BYTECODE	  Library;
+	std::vector<std::wstring> Symbols;
 };
 
 struct HitGroup
@@ -28,7 +25,6 @@ struct HitGroup
 		, ClosestHitSymbol(pClosestHitSymbol ? pClosestHitSymbol : L"")
 		, IntersectionSymbol(pIntersectionSymbol ? pIntersectionSymbol : L"")
 	{
-
 	}
 
 	std::wstring HitGroupName;
@@ -39,17 +35,14 @@ struct HitGroup
 
 struct RootSignatureAssociation
 {
-	RootSignatureAssociation(
-		_In_ ID3D12RootSignature* pRootSignature,
-		_In_ const std::vector<std::wstring>& Symbols)
+	RootSignatureAssociation(_In_ ID3D12RootSignature* pRootSignature, _In_ const std::vector<std::wstring>& Symbols)
 		: pRootSignature(pRootSignature)
 		, Symbols(Symbols)
 	{
-
 	}
 
-	ID3D12RootSignature* pRootSignature;
-	std::vector<std::wstring>	Symbols;
+	ID3D12RootSignature*	  pRootSignature;
+	std::vector<std::wstring> Symbols;
 };
 
 class RaytracingPipelineStateBuilder
@@ -59,9 +52,7 @@ public:
 
 	D3D12_STATE_OBJECT_DESC Build();
 
-	void AddLibrary(
-		_In_ const D3D12_SHADER_BYTECODE& Library,
-		_In_ const std::vector<std::wstring>& Symbols);
+	void AddLibrary(_In_ const D3D12_SHADER_BYTECODE& Library, _In_ const std::vector<std::wstring>& Symbols);
 
 	void AddHitGroup(
 		_In_opt_ LPCWSTR pHitGroupName,
@@ -73,15 +64,11 @@ public:
 		_In_ ID3D12RootSignature* pRootSignature,
 		_In_ const std::vector<std::wstring>& Symbols);
 
-	void SetGlobalRootSignature(
-		_In_ ID3D12RootSignature* pGlobalRootSignature);
+	void SetGlobalRootSignature(_In_ ID3D12RootSignature* pGlobalRootSignature);
 
-	void SetRaytracingShaderConfig(
-		_In_ UINT MaxPayloadSizeInBytes,
-		_In_ UINT MaxAttributeSizeInBytes);
+	void SetRaytracingShaderConfig(_In_ UINT MaxPayloadSizeInBytes, _In_ UINT MaxAttributeSizeInBytes);
 
-	void SetRaytracingPipelineConfig(
-		_In_ UINT MaxTraceRecursionDepth);
+	void SetRaytracingPipelineConfig(_In_ UINT MaxTraceRecursionDepth);
 
 private:
 	std::vector<std::wstring> BuildShaderExportList();
@@ -89,21 +76,19 @@ private:
 private:
 	CD3DX12_STATE_OBJECT_DESC m_Desc;
 
-	std::vector<DXILLibrary> m_Libraries;
-	std::vector<HitGroup> m_HitGroups;
+	std::vector<DXILLibrary>			  m_Libraries;
+	std::vector<HitGroup>				  m_HitGroups;
 	std::vector<RootSignatureAssociation> m_RootSignatureAssociations;
-	ID3D12RootSignature* m_pGlobalRootSignature;
-	D3D12_RAYTRACING_SHADER_CONFIG m_ShaderConfig;
-	D3D12_RAYTRACING_PIPELINE_CONFIG m_PipelineConfig;
+	ID3D12RootSignature*				  m_pGlobalRootSignature;
+	D3D12_RAYTRACING_SHADER_CONFIG		  m_ShaderConfig;
+	D3D12_RAYTRACING_PIPELINE_CONFIG	  m_PipelineConfig;
 };
 
 class RaytracingPipelineState
 {
 public:
 	RaytracingPipelineState() noexcept = default;
-	RaytracingPipelineState(
-		_In_ ID3D12Device5* pDevice,
-		_In_ RaytracingPipelineStateBuilder& Builder);
+	RaytracingPipelineState(_In_ ID3D12Device5* pDevice, _In_ RaytracingPipelineStateBuilder& Builder);
 
 	RaytracingPipelineState(RaytracingPipelineState&&) noexcept = default;
 	RaytracingPipelineState& operator=(RaytracingPipelineState&&) noexcept = default;
@@ -111,10 +96,9 @@ public:
 	RaytracingPipelineState(const RaytracingPipelineState&) = delete;
 	RaytracingPipelineState& operator=(const RaytracingPipelineState&) = delete;
 
-	ShaderIdentifier GetShaderIdentifier(
-		_In_ LPCWSTR pExportName);
+	ShaderIdentifier GetShaderIdentifier(_In_ LPCWSTR pExportName);
 
-	operator ID3D12StateObject* () const { return m_StateObject.Get(); }
+					   operator ID3D12StateObject*() const { return m_StateObject.Get(); }
 	ID3D12StateObject* operator->() const { return m_StateObject.Get(); }
 
 private:

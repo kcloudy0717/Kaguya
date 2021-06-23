@@ -19,11 +19,11 @@ D3D12_ROOT_SIGNATURE_DESC1 RootSignatureBuilder::Build() noexcept
 	}
 
 	D3D12_ROOT_SIGNATURE_DESC1 desc = {};
-	desc.NumParameters = static_cast<UINT>(m_Parameters.size());
-	desc.pParameters = m_Parameters.data();
-	desc.NumStaticSamplers = static_cast<UINT>(m_StaticSamplers.size());
-	desc.pStaticSamplers = m_StaticSamplers.data();
-	desc.Flags = m_Flags;
+	desc.NumParameters				= static_cast<UINT>(m_Parameters.size());
+	desc.pParameters				= m_Parameters.data();
+	desc.NumStaticSamplers			= static_cast<UINT>(m_StaticSamplers.size());
+	desc.pStaticSamplers			= m_StaticSamplers.data();
+	desc.Flags						= m_Flags;
 	return desc;
 }
 
@@ -93,14 +93,9 @@ void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
 	m_Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 }
 
-RootSignature::RootSignature(
-	_In_ ID3D12Device* pDevice,
-	_In_ RootSignatureBuilder& Builder)
+RootSignature::RootSignature(_In_ ID3D12Device* pDevice, _In_ RootSignatureBuilder& Builder)
 {
-	m_Desc = {
-		.Version = D3D_ROOT_SIGNATURE_VERSION_1_1,
-		.Desc_1_1 = Builder.Build()
-	};
+	m_Desc = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = Builder.Build() };
 
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSignatureBlob;

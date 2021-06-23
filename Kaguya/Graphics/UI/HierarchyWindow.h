@@ -8,7 +8,7 @@ class HierarchyWindow : public UIWindow
 public:
 	void SetContext(Scene* pScene)
 	{
-		m_pScene = pScene;
+		m_pScene		 = pScene;
 		m_SelectedEntity = {};
 	}
 
@@ -17,7 +17,8 @@ public:
 	Entity GetSelectedEntity() const { return m_SelectedEntity; }
 
 	void SetSelectedEntity(Entity Entity) { m_SelectedEntity = Entity; }
+
 private:
-	Scene* m_pScene = nullptr;
+	Scene* m_pScene			= nullptr;
 	Entity m_SelectedEntity = {};
 };

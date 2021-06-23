@@ -25,10 +25,9 @@ public:
 
 		Message() = default;
 		Message(EType Type, SData Data)
-			: Type(Type),
-			Data(Data)
+			: Type(Type)
+			, Data(Data)
 		{
-
 		}
 
 		EType Type;
@@ -41,9 +40,13 @@ public:
 	void SetIcon(HANDLE Image);
 	void SetCursor(HCURSOR Cursor);
 
-	void Create(LPCWSTR WindowName,
-		int Width = CW_USEDEFAULT, int Height = CW_USEDEFAULT,
-		int X = CW_USEDEFAULT, int Y = CW_USEDEFAULT, bool Maximize = false);
+	void Create(
+		LPCWSTR WindowName,
+		int		Width	 = CW_USEDEFAULT,
+		int		Height	 = CW_USEDEFAULT,
+		int		X		 = CW_USEDEFAULT,
+		int		Y		 = CW_USEDEFAULT,
+		bool	Maximize = false);
 
 	void EnableCursor();
 	void DisableCursor();
@@ -62,7 +65,7 @@ public:
 	void SetResizeFunc(ResizeFunc ResizeFunc);
 
 private:
-	LRESULT DispatchEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT					DispatchEvent(UINT uMsg, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	void ConfineCursor();
@@ -84,16 +87,16 @@ public:
 
 private:
 	std::wstring m_WindowName;
-	unsigned int m_WindowWidth = 0;
-	unsigned int m_WindowHeight = 0;
-	bool m_CursorEnabled = true;
+	unsigned int m_WindowWidth	 = 0;
+	unsigned int m_WindowHeight	 = 0;
+	bool		 m_CursorEnabled = true;
 
-	wil::unique_hicon m_Icon;
+	wil::unique_hicon	m_Icon;
 	wil::unique_hcursor m_Cursor;
-	wil::unique_hwnd m_WindowHandle;
+	wil::unique_hwnd	m_WindowHandle;
 
 	ImGuiContextManager m_ImGuiContextManager;
 
 	std::function<void()> m_RenderFunc;
-	ResizeFunc m_ResizeFunc;
+	ResizeFunc			  m_ResizeFunc;
 };

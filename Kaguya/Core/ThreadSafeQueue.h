@@ -59,7 +59,7 @@ public:
 	}
 
 private:
-	std::queue<T> m_Queue;
+	std::queue<T>			m_Queue;
 	mutable CriticalSection m_CriticalSection;
-	ConditionVariable m_ConditionVariable;
+	ConditionVariable		m_ConditionVariable;
 };

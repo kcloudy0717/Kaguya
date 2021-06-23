@@ -9,10 +9,10 @@
 
 struct ApplicationOptions
 {
-	std::wstring_view Name;
-	int Width = CW_USEDEFAULT, Height = CW_USEDEFAULT;
+	std::wstring_view  Name;
+	int				   Width = CW_USEDEFAULT, Height = CW_USEDEFAULT;
 	std::optional<int> x, y;
-	bool Maximize = false;
+	bool			   Maximize = false;
 
 	std::filesystem::path Icon;
 };
@@ -22,45 +22,47 @@ class Application
 public:
 	static void InitializeComponents();
 
-	static void Initialize(
-		const ApplicationOptions& Options);
+	static void Initialize(const ApplicationOptions& Options);
 
 	static int Run();
 
-	static int Width() { return Window.GetWindowWidth(); }
-	static int Height() { return Window.GetWindowHeight(); }
+	static int	 Width() { return Window.GetWindowWidth(); }
+	static int	 Height() { return Window.GetWindowHeight(); }
 	static float AspectRatio() { return (float)Width() / (float)Height(); }
 
 	static InputHandler& GetInputHandler() { return m_InputHandler; }
-	static Mouse& GetMouse() { return m_InputHandler.Mouse; }
-	static Keyboard& GetKeyboard() { return m_InputHandler.Keyboard; }
+	static Mouse&		 GetMouse() { return m_InputHandler.Mouse; }
+	static Keyboard&	 GetKeyboard() { return m_InputHandler.Keyboard; }
 
 private:
 	static DWORD WINAPI RenderThreadProc(_In_ PVOID pParameter);
-	static bool HandleRenderMessage(const Window::Message& Message);
+	static bool			HandleRenderMessage(const Window::Message& Message);
 
 public:
 	inline static std::filesystem::path ExecutableDirectory;
-	inline static Stopwatch Time;
-	inline static Window Window;
+	inline static Stopwatch				Time;
+	inline static Window				Window;
 
 private:
 	inline static wil::unique_handle m_RenderThread;
-	inline static std::atomic<bool> m_ExitRenderThread = false;
-	inline static InputHandler m_InputHandler;
+	inline static std::atomic<bool>	 m_ExitRenderThread = false;
+	inline static InputHandler		 m_InputHandler;
 };
 
 template<class T>
 concept IsDialogFunction = requires(T F, std::filesystem::path Path)
 {
-	{ F(Path) } -> std::convertible_to<void>;
+	{
+		F(Path)
+		} -> std::convertible_to<void>;
 };
 
 template<IsDialogFunction DialogFunction>
 inline void OpenDialog(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
 {
-	nfdchar_t* outPath = nullptr;
-	nfdresult_t result = NFD_OpenDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &outPath);
+	nfdchar_t*	outPath = nullptr;
+	nfdresult_t result =
+		NFD_OpenDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &outPath);
 
 	if (result == NFD_OKAY)
 	{
@@ -82,7 +84,8 @@ template<IsDialogFunction DialogFunction>
 inline void OpenDialogMultiple(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
 {
 	nfdpathset_t pathSet;
-	nfdresult_t result = NFD_OpenDialogMultiple(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &pathSet);
+	nfdresult_t	 result =
+		NFD_OpenDialogMultiple(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &pathSet);
 	if (result == NFD_OKAY)
 	{
 		size_t i;
@@ -106,8 +109,9 @@ inline void OpenDialogMultiple(std::string_view FilterList, std::string_view Def
 template<IsDialogFunction DialogFunction>
 inline void SaveDialog(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
 {
-	nfdchar_t* savePath = nullptr;
-	nfdresult_t result = NFD_SaveDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &savePath);
+	nfdchar_t*	savePath = nullptr;
+	nfdresult_t result =
+		NFD_SaveDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &savePath);
 	if (result == NFD_OKAY)
 	{
 		Function(std::filesystem::path(savePath));

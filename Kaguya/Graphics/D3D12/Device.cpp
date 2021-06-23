@@ -4,8 +4,11 @@
 using Microsoft::WRL::ComPtr;
 
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
-extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = 4; }
-extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
+extern "C"
+{
+	_declspec(dllexport) extern const UINT D3D12SDKVersion = 4;
+	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
+}
 
 void Device::ReportLiveObjects()
 {
@@ -16,15 +19,13 @@ void Device::ReportLiveObjects()
 	}
 }
 
-Device::Device(
-	_In_ IDXGIAdapter4* pAdapter,
-	_In_ const DeviceOptions& Options,
-	_In_ const DeviceFeatures& Features)
+Device::Device(_In_ IDXGIAdapter4* pAdapter, _In_ const DeviceOptions& Options, _In_ const DeviceFeatures& Features)
 {
 	// Enable the D3D12 debug layer
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
 	{
-		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the device.
+		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the
+		// device.
 		ComPtr<ID3D12Debug5> pDebug5;
 		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(pDebug5.ReleaseAndGetAddressOf()))))
 		{
@@ -37,10 +38,7 @@ Device::Device(
 		}
 	}
 
-	ThrowIfFailed(::D3D12CreateDevice(
-		pAdapter,
-		Options.FeatureLevel,
-		IID_PPV_ARGS(m_Device.ReleaseAndGetAddressOf())));
+	ThrowIfFailed(::D3D12CreateDevice(pAdapter, Options.FeatureLevel, IID_PPV_ARGS(m_Device.ReleaseAndGetAddressOf())));
 
 	ComPtr<ID3D12InfoQueue> pInfoQueue;
 	if (SUCCEEDED(m_Device.As(&pInfoQueue)))
@@ -78,10 +76,7 @@ Device::Device(
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
 	if (Features.DynamicResources)
 	{
-		D3D12_FEATURE_DATA_SHADER_MODEL sm =
-		{
-			.HighestShaderModel = D3D_SHADER_MODEL_6_6
-		};
+		D3D12_FEATURE_DATA_SHADER_MODEL sm = { .HighestShaderModel = D3D_SHADER_MODEL_6_6 };
 		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
 		{
 			if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)
@@ -103,5 +98,4 @@ Device::Device(
 
 Device::~Device()
 {
-
 }

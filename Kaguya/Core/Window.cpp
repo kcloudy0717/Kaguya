@@ -22,30 +22,33 @@ void Window::SetCursor(HCURSOR Cursor)
 	m_Cursor.reset(Cursor);
 }
 
-void Window::Create(LPCWSTR WindowName,
-	int Width /*= CW_USEDEFAULT*/, int Height /*= CW_USEDEFAULT*/,
-	int X /*= CW_USEDEFAULT*/, int Y /*= CW_USEDEFAULT*/,
-	bool Maximize /*= false*/)
+void Window::Create(
+	LPCWSTR WindowName,
+	int		Width /*= CW_USEDEFAULT*/,
+	int		Height /*= CW_USEDEFAULT*/,
+	int		X /*= CW_USEDEFAULT*/,
+	int		Y /*= CW_USEDEFAULT*/,
+	bool	Maximize /*= false*/)
 {
-	m_WindowName = WindowName;
-	m_WindowWidth = Width;
-	m_WindowHeight = Height;
+	m_WindowName	= WindowName;
+	m_WindowWidth	= Width;
+	m_WindowHeight	= Height;
 	m_CursorEnabled = true;
 
 	// Register window class
-	WNDCLASSEXW wndClassExW = {};
-	wndClassExW.cbSize = sizeof(WNDCLASSEX);
-	wndClassExW.style = CS_HREDRAW | CS_VREDRAW;
-	wndClassExW.lpfnWndProc = Window::WindowProcedure;
-	wndClassExW.cbClsExtra = 0;
-	wndClassExW.cbWndExtra = 0;
-	wndClassExW.hInstance = GetModuleHandle(nullptr);
-	wndClassExW.hIcon = m_Icon.get();
-	wndClassExW.hCursor = m_Cursor.get();
+	WNDCLASSEXW wndClassExW	  = {};
+	wndClassExW.cbSize		  = sizeof(WNDCLASSEX);
+	wndClassExW.style		  = CS_HREDRAW | CS_VREDRAW;
+	wndClassExW.lpfnWndProc	  = Window::WindowProcedure;
+	wndClassExW.cbClsExtra	  = 0;
+	wndClassExW.cbWndExtra	  = 0;
+	wndClassExW.hInstance	  = GetModuleHandle(nullptr);
+	wndClassExW.hIcon		  = m_Icon.get();
+	wndClassExW.hCursor		  = m_Cursor.get();
 	wndClassExW.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-	wndClassExW.lpszMenuName = nullptr;
+	wndClassExW.lpszMenuName  = nullptr;
 	wndClassExW.lpszClassName = WindowName;
-	wndClassExW.hIconSm = m_Icon.get();
+	wndClassExW.hIconSm		  = m_Icon.get();
 	if (!RegisterClassExW(&wndClassExW))
 	{
 		LOG_ERROR("RegisterClassExW Error: {}", ::GetLastError());
@@ -54,8 +57,18 @@ void Window::Create(LPCWSTR WindowName,
 	// Create window
 	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
 	dwStyle |= Maximize ? WS_MAXIMIZE : 0;
-	m_WindowHandle = wil::unique_hwnd(::CreateWindowW(WindowName, WindowName,
-		dwStyle, X, Y, Width, Height, nullptr, nullptr, GetModuleHandle(nullptr), nullptr));
+	m_WindowHandle = wil::unique_hwnd(::CreateWindowW(
+		WindowName,
+		WindowName,
+		dwStyle,
+		X,
+		Y,
+		Width,
+		Height,
+		nullptr,
+		nullptr,
+		GetModuleHandle(nullptr),
+		nullptr));
 	if (m_WindowHandle)
 	{
 		// Initialize ImGui for win32
@@ -142,13 +155,13 @@ LRESULT Window::DispatchEvent(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 		RECT rect = {};
 		::GetClientRect(m_WindowHandle.get(), &rect);
-		m_WindowWidth = rect.right - rect.left;
+		m_WindowWidth  = rect.right - rect.left;
 		m_WindowHeight = rect.bottom - rect.top;
 
 		Window::Message windowMessage = {};
-		windowMessage.Type = Message::EType::Resize;
-		windowMessage.Data.Width = m_WindowWidth;
-		windowMessage.Data.Height = m_WindowHeight;
+		windowMessage.Type			  = Message::EType::Resize;
+		windowMessage.Data.Width	  = m_WindowWidth;
+		windowMessage.Data.Height	  = m_WindowHeight;
 		MessageQueue.push(windowMessage);
 	}
 	break;
@@ -219,12 +232,14 @@ void Window::FreeCursor()
 
 void Window::ShowCursor()
 {
-	while (::ShowCursor(TRUE) < 0);
+	while (::ShowCursor(TRUE) < 0)
+		;
 }
 
 void Window::HideCursor()
 {
-	while (::ShowCursor(FALSE) >= 0);
+	while (::ShowCursor(FALSE) >= 0)
+		;
 }
 
 Window::ImGuiContextManager::ImGuiContextManager()

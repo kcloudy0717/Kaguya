@@ -1,9 +1,7 @@
 #include "pch.h"
 #include "ResourceStateTracker.h"
 
-void ResourceStateTracker::AddResourceState(
-	_In_ ID3D12Resource* pResource,
-	_In_ D3D12_RESOURCE_STATES ResourceStates)
+void ResourceStateTracker::AddResourceState(_In_ ID3D12Resource* pResource, _In_ D3D12_RESOURCE_STATES ResourceStates)
 {
 	if (pResource)
 	{
@@ -11,13 +9,11 @@ void ResourceStateTracker::AddResourceState(
 	}
 }
 
-bool ResourceStateTracker::RemoveResourceState(
-	_In_ ID3D12Resource* pResource)
+bool ResourceStateTracker::RemoveResourceState(_In_ ID3D12Resource* pResource)
 {
 	if (pResource)
 	{
-		if (auto iter = m_ResourceStates.find(pResource);
-			iter != m_ResourceStates.end())
+		if (auto iter = m_ResourceStates.find(pResource); iter != m_ResourceStates.end())
 		{
 			m_ResourceStates.erase(iter);
 			return true;
@@ -28,8 +24,8 @@ bool ResourceStateTracker::RemoveResourceState(
 }
 
 void ResourceStateTracker::SetResourceState(
-	_In_ ID3D12Resource* pResource,
-	_In_ UINT Subresource,
+	_In_ ID3D12Resource*	   pResource,
+	_In_ UINT				   Subresource,
 	_In_ D3D12_RESOURCE_STATES ResourceStates)
 {
 	if (pResource)
@@ -38,8 +34,7 @@ void ResourceStateTracker::SetResourceState(
 	}
 }
 
-void ResourceStateTracker::UpdateResourceStates(
-	_In_ const ResourceStateTracker& ResourceStateTracker)
+void ResourceStateTracker::UpdateResourceStates(_In_ const ResourceStateTracker& ResourceStateTracker)
 {
 	for (const auto& resourceState : ResourceStateTracker.m_ResourceStates)
 	{
@@ -64,7 +59,7 @@ UINT ResourceStateTracker::FlushPendingResourceBarriers(
 		assert(pendingBarrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION);
 
 		D3D12_RESOURCE_TRANSITION_BARRIER pendingTransition = pendingBarrier.Transition;
-		auto resourceState = GlobalResourceStateTracker.Find(pendingTransition.pResource);
+		auto							  resourceState = GlobalResourceStateTracker.Find(pendingTransition.pResource);
 		if (resourceState.has_value())
 		{
 			// If all subresources are being transitioned, and there are multiple
@@ -111,8 +106,7 @@ UINT ResourceStateTracker::FlushPendingResourceBarriers(
 	return numBarriers;
 }
 
-UINT ResourceStateTracker::FlushResourceBarriers(
-	_In_ ID3D12GraphicsCommandList* pCommandList)
+UINT ResourceStateTracker::FlushResourceBarriers(_In_ ID3D12GraphicsCommandList* pCommandList)
 {
 	UINT numBarriers = m_ResourceBarriers.size();
 	if (numBarriers > 0)
@@ -123,8 +117,7 @@ UINT ResourceStateTracker::FlushResourceBarriers(
 	return numBarriers;
 }
 
-void ResourceStateTracker::ResourceBarrier(
-	_In_ const D3D12_RESOURCE_BARRIER& Barrier)
+void ResourceStateTracker::ResourceBarrier(_In_ const D3D12_RESOURCE_BARRIER& Barrier)
 {
 	switch (Barrier.Type)
 	{
@@ -133,8 +126,7 @@ void ResourceStateTracker::ResourceBarrier(
 		// First check if there is already a known "final" state for the given resource.
 		// If there is, the resource has been used on the command list before and
 		// already has a known state within the command list execution.
-		if (auto iter = m_ResourceStates.find(Barrier.Transition.pResource);
-			iter != m_ResourceStates.end())
+		if (auto iter = m_ResourceStates.find(Barrier.Transition.pResource); iter != m_ResourceStates.end())
 		{
 			auto& resourceState = iter->second;
 			// If the known final state of the resource is different...
@@ -165,7 +157,7 @@ void ResourceStateTracker::ResourceBarrier(
 				}
 			}
 		}
-		else // In this case, the resource is being used on the command list for the first time. 
+		else // In this case, the resource is being used on the command list for the first time.
 		{
 			// Add a pending barrier. The pending barriers will be resolved
 			// before the command list is executed on the command queue.
@@ -173,7 +165,9 @@ void ResourceStateTracker::ResourceBarrier(
 		}
 
 		// Push the final known state (possibly replacing the previously known state for the subresource).
-		m_ResourceStates[Barrier.Transition.pResource].SetSubresourceState(Barrier.Transition.Subresource, Barrier.Transition.StateAfter);
+		m_ResourceStates[Barrier.Transition.pResource].SetSubresourceState(
+			Barrier.Transition.Subresource,
+			Barrier.Transition.StateAfter);
 	}
 	break;
 
@@ -186,11 +180,9 @@ void ResourceStateTracker::ResourceBarrier(
 	}
 }
 
-std::optional<CResourceState> ResourceStateTracker::Find(
-	_In_ ID3D12Resource* pResource) const
+std::optional<CResourceState> ResourceStateTracker::Find(_In_ ID3D12Resource* pResource) const
 {
-	if (auto iter = m_ResourceStates.find(pResource);
-		iter != m_ResourceStates.end())
+	if (auto iter = m_ResourceStates.find(pResource); iter != m_ResourceStates.end())
 	{
 		return iter->second;
 	}

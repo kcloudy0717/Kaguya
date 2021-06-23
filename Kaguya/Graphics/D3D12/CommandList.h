@@ -14,9 +14,7 @@ class CommandList
 {
 public:
 	CommandList() noexcept = default;
-	explicit CommandList(
-		_In_ ID3D12Device4* pDevice,
-		_In_ D3D12_COMMAND_LIST_TYPE Type);
+	explicit CommandList(_In_ ID3D12Device4* pDevice, _In_ D3D12_COMMAND_LIST_TYPE Type);
 
 	CommandList(CommandList&&) noexcept = default;
 	CommandList& operator=(CommandList&&) noexcept = default;
@@ -24,34 +22,26 @@ public:
 	CommandList(const CommandList&) = delete;
 	CommandList& operator=(const CommandList&) = delete;
 
-	operator ID3D12GraphicsCommandList6* () const { return m_pCommandList.Get(); }
+								operator ID3D12GraphicsCommandList6*() const { return m_pCommandList.Get(); }
 	ID3D12GraphicsCommandList6* operator->() const { return m_pCommandList.Get(); }
 
 	auto GetCommandList() { return m_pCommandList.Get(); }
 	auto GetPendingCommandList() { return m_pPendingCommandList.Get(); }
 
-	bool Close(
-		_In_ ResourceStateTracker* pGlobalResourceStateTracker);
+	bool Close(_In_ ResourceStateTracker* pGlobalResourceStateTracker);
 
-	void Reset(
-		_In_ UINT64 FenceValue,
-		_In_ UINT64 CompletedValue,
-		_In_ CommandQueue* pCommandQueue);
+	void Reset(_In_ UINT64 FenceValue, _In_ UINT64 CompletedValue, _In_ CommandQueue* pCommandQueue);
 
-	void SetDescriptorHeaps(
-		_In_ const ResourceViewHeaps& ResourceViewHeaps);
+	void SetDescriptorHeaps(_In_ const ResourceViewHeaps& ResourceViewHeaps);
 
 	void TransitionBarrier(
-		_In_ ID3D12Resource* pResource,
+		_In_ ID3D12Resource*	   pResource,
 		_In_ D3D12_RESOURCE_STATES TransitionState,
-		_In_ UINT Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		_In_ UINT				   Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
-	void AliasingBarrier(
-		_In_ ID3D12Resource* pBeforeResource,
-		_In_ ID3D12Resource* pAfterResource);
+	void AliasingBarrier(_In_ ID3D12Resource* pBeforeResource, _In_ ID3D12Resource* pAfterResource);
 
-	void UAVBarrier(
-		_In_ ID3D12Resource* pResource);
+	void UAVBarrier(_In_ ID3D12Resource* pResource);
 
 	void FlushResourceBarriers();
 
@@ -69,14 +59,10 @@ public:
 		_In_ UINT BaseVertexLocation,
 		_In_ UINT StartInstanceLocation);
 
-	void Dispatch(
-		_In_ UINT ThreadGroupCountX,
-		_In_ UINT ThreadGroupCountY,
-		_In_ UINT ThreadGroupCountZ);
+	void Dispatch(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ);
 
 	template<UINT ThreadSizeX>
-	void Dispatch1D(
-		_In_ UINT ThreadGroupCountX)
+	void Dispatch1D(_In_ UINT ThreadGroupCountX)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 
@@ -84,9 +70,7 @@ public:
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY>
-	void Dispatch2D(
-		_In_ UINT ThreadGroupCountX,
-		_In_ UINT ThreadGroupCountY)
+	void Dispatch2D(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
@@ -95,10 +79,7 @@ public:
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY, UINT ThreadSizeZ>
-	void Dispatch3D(
-		_In_ UINT ThreadGroupCountX,
-		_In_ UINT ThreadGroupCountY,
-		_In_ UINT ThreadGroupCountZ)
+	void Dispatch3D(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
@@ -107,16 +88,12 @@ public:
 		Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 	}
 
-	void DispatchRays(
-		_In_ const D3D12_DISPATCH_RAYS_DESC* pDesc);
+	void DispatchRays(_In_ const D3D12_DISPATCH_RAYS_DESC* pDesc);
 
-	void DispatchMesh(
-		_In_  UINT ThreadGroupCountX,
-		_In_  UINT ThreadGroupCountY,
-		_In_  UINT ThreadGroupCountZ);
+	void DispatchMesh(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ);
 
 private:
-	ID3D12CommandAllocator* m_pAllocator = nullptr;
+	ID3D12CommandAllocator* m_pAllocator		= nullptr;
 	ID3D12CommandAllocator* m_pPendingAllocator = nullptr;
 
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> m_pCommandList;

@@ -5,24 +5,24 @@
 
 namespace Asset
 {
-	struct Image;
+struct Image;
 
-	struct ImageMetadata
-	{
-		std::filesystem::path Path;
-		bool sRGB;
-	};
+struct ImageMetadata
+{
+	std::filesystem::path Path;
+	bool				  sRGB;
+};
 
-	struct Image
-	{
-		ImageMetadata Metadata;
+struct Image
+{
+	ImageMetadata Metadata;
 
-		Vector2i Resolution;
+	Vector2i Resolution;
 
-		std::string Name;
-		DirectX::ScratchImage Image;
+	std::string			  Name;
+	DirectX::ScratchImage Image;
 
-		std::shared_ptr<Resource> Resource;
-		Descriptor SRV;
-	};
-}
+	std::shared_ptr<Resource> Resource;
+	Descriptor				  SRV;
+};
+} // namespace Asset

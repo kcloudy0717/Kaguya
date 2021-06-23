@@ -10,7 +10,7 @@ public:
 
 	enum
 	{
-		BufferSize = 16,
+		BufferSize	 = 16,
 		NumKeyStates = 256
 	};
 
@@ -28,30 +28,23 @@ public:
 			: Type(Type)
 			, Code(Code)
 		{
-
 		}
 
-		bool IsPressed() const
-		{
-			return Type == EType::Press;
-		}
+		bool IsPressed() const { return Type == EType::Press; }
 
-		bool IsReleased()
-		{
-			return Type == EType::Release;
-		}
+		bool IsReleased() { return Type == EType::Release; }
 
-		EType Type = EType::Invalid;
+		EType		  Type = EType::Invalid;
 		unsigned char Code = {};
 	};
 
 	bool IsPressed(unsigned char KeyCode) const;
 
 	std::optional<Keyboard::Event> ReadKey();
-	bool KeyBufferIsEmpty() const;
+	bool						   KeyBufferIsEmpty() const;
 
 	unsigned char ReadChar();
-	bool CharBufferIsEmpty() const;
+	bool		  CharBufferIsEmpty() const;
 
 private:
 	void ResetKeyState();
@@ -73,7 +66,7 @@ public:
 	bool AutoRepeat = false;
 
 private:
-	std::bitset<NumKeyStates> m_KeyStates;
+	std::bitset<NumKeyStates>		 m_KeyStates;
 	ThreadSafeQueue<Keyboard::Event> m_KeyBuffer;
-	ThreadSafeQueue<unsigned char> m_CharBuffer;
+	ThreadSafeQueue<unsigned char>	 m_CharBuffer;
 };

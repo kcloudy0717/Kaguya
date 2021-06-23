@@ -7,7 +7,6 @@ RaytracingPipelineStateBuilder::RaytracingPipelineStateBuilder() noexcept
 	, m_ShaderConfig()
 	, m_PipelineConfig()
 {
-
 }
 
 D3D12_STATE_OBJECT_DESC RaytracingPipelineStateBuilder::Build()
@@ -36,10 +35,12 @@ D3D12_STATE_OBJECT_DESC RaytracingPipelineStateBuilder::Build()
 		LPCWSTR pAnyHitSymbolImport = hitGroup.AnyHitSymbol.empty() ? nullptr : hitGroup.AnyHitSymbol.data();
 		pHitgroupSubobject->SetAnyHitShaderImport(pAnyHitSymbolImport);
 
-		LPCWSTR pClosestHitShaderImport = hitGroup.ClosestHitSymbol.empty() ? nullptr : hitGroup.ClosestHitSymbol.data();
+		LPCWSTR pClosestHitShaderImport =
+			hitGroup.ClosestHitSymbol.empty() ? nullptr : hitGroup.ClosestHitSymbol.data();
 		pHitgroupSubobject->SetClosestHitShaderImport(pClosestHitShaderImport);
 
-		LPCWSTR pIntersectionShaderImport = hitGroup.IntersectionSymbol.empty() ? nullptr : hitGroup.IntersectionSymbol.data();
+		LPCWSTR pIntersectionShaderImport =
+			hitGroup.IntersectionSymbol.empty() ? nullptr : hitGroup.IntersectionSymbol.data();
 		pHitgroupSubobject->SetIntersectionShaderImport(pIntersectionShaderImport);
 	}
 
@@ -117,7 +118,7 @@ void RaytracingPipelineStateBuilder::AddHitGroup(
 
 	// 3 different shaders can be invoked to obtain an intersection: an
 	// intersection shader is called when hitting the bounding box of non-triangular geometry.
-	// An any-hit shader is called on potential intersections. 
+	// An any-hit shader is called on potential intersections.
 	// This shader can, for example, perform alpha-testing and
 	// discard some intersections. Finally, the closest-hit program is invoked on
 	// the intersection point closest to the ray origin. Those 3 shaders are bound
@@ -137,8 +138,7 @@ void RaytracingPipelineStateBuilder::AddRootSignatureAssociation(
 	m_RootSignatureAssociations.emplace_back(RootSignatureAssociation(pRootSignature, Symbols));
 }
 
-void RaytracingPipelineStateBuilder::SetGlobalRootSignature(
-	_In_ ID3D12RootSignature* pGlobalRootSignature)
+void RaytracingPipelineStateBuilder::SetGlobalRootSignature(_In_ ID3D12RootSignature* pGlobalRootSignature)
 {
 	m_pGlobalRootSignature = pGlobalRootSignature;
 }
@@ -147,12 +147,11 @@ void RaytracingPipelineStateBuilder::SetRaytracingShaderConfig(
 	_In_ UINT MaxPayloadSizeInBytes,
 	_In_ UINT MaxAttributeSizeInBytes)
 {
-	m_ShaderConfig.MaxPayloadSizeInBytes = MaxPayloadSizeInBytes;
+	m_ShaderConfig.MaxPayloadSizeInBytes   = MaxPayloadSizeInBytes;
 	m_ShaderConfig.MaxAttributeSizeInBytes = MaxAttributeSizeInBytes;
 }
 
-void RaytracingPipelineStateBuilder::SetRaytracingPipelineConfig(
-	_In_ UINT MaxTraceRecursionDepth)
+void RaytracingPipelineStateBuilder::SetRaytracingPipelineConfig(_In_ UINT MaxTraceRecursionDepth)
 {
 	m_PipelineConfig.MaxTraceRecursionDepth = MaxTraceRecursionDepth;
 }
@@ -187,20 +186,17 @@ std::vector<std::wstring> RaytracingPipelineStateBuilder::BuildShaderExportList(
 
 		for (const auto& hitGroup : m_HitGroups)
 		{
-			if (!hitGroup.AnyHitSymbol.empty() &&
-				exports.find(hitGroup.AnyHitSymbol) == exports.end())
+			if (!hitGroup.AnyHitSymbol.empty() && exports.find(hitGroup.AnyHitSymbol) == exports.end())
 			{
 				throw std::logic_error("Any hit symbol not found in the imported DXIL libraries");
 			}
 
-			if (!hitGroup.ClosestHitSymbol.empty() &&
-				exports.find(hitGroup.ClosestHitSymbol) == exports.end())
+			if (!hitGroup.ClosestHitSymbol.empty() && exports.find(hitGroup.ClosestHitSymbol) == exports.end())
 			{
 				throw std::logic_error("Closest hit symbol not found in the imported DXIL libraries");
 			}
 
-			if (!hitGroup.IntersectionSymbol.empty() &&
-				exports.find(hitGroup.IntersectionSymbol) == exports.end())
+			if (!hitGroup.IntersectionSymbol.empty() && exports.find(hitGroup.IntersectionSymbol) == exports.end())
 			{
 				throw std::logic_error("Intersection symbol not found in the imported DXIL libraries");
 			}
@@ -216,7 +212,8 @@ std::vector<std::wstring> RaytracingPipelineStateBuilder::BuildShaderExportList(
 			{
 				if (!symbol.empty() && all_exports.find(symbol) == all_exports.end())
 				{
-					throw std::logic_error("Root association symbol not found in the imported DXIL libraries and hit group names");
+					throw std::logic_error(
+						"Root association symbol not found in the imported DXIL libraries and hit group names");
 				}
 			}
 		}
@@ -266,11 +263,10 @@ RaytracingPipelineState::RaytracingPipelineState(
 	ThrowIfFailed(m_StateObject.As(&m_StateObjectProperties));
 }
 
-ShaderIdentifier RaytracingPipelineState::GetShaderIdentifier(
-	_In_ LPCWSTR pExportName)
+ShaderIdentifier RaytracingPipelineState::GetShaderIdentifier(_In_ LPCWSTR pExportName)
 {
-	ShaderIdentifier shaderIdentifier = {};
-	void* pShaderIdentifier = m_StateObjectProperties->GetShaderIdentifier(pExportName);
+	ShaderIdentifier shaderIdentifier  = {};
+	void*			 pShaderIdentifier = m_StateObjectProperties->GetShaderIdentifier(pExportName);
 	if (!pShaderIdentifier)
 	{
 		throw std::invalid_argument("Invalid pExportName");

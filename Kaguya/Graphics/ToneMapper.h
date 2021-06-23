@@ -10,18 +10,13 @@ public:
 	};
 
 	ToneMapper() noexcept = default;
-	ToneMapper(
-		_In_ RenderDevice& RenderDevice);
+	ToneMapper(_In_ RenderDevice& RenderDevice);
 
-	void SetResolution(
-		_In_ UINT Width,
-		_In_ UINT Height);
+	void SetResolution(_In_ UINT Width, _In_ UINT Height);
 
-	void Apply(
-		_In_ Descriptor ShaderResourceView,
-		_In_ CommandList& CommandList);
+	void Apply(_In_ Descriptor ShaderResourceView, _In_ CommandList& CommandList);
 
-	Descriptor GetSRV() const { return m_SRV; }
+	Descriptor		GetSRV() const { return m_SRV; }
 	ID3D12Resource* GetRenderTarget() const { return m_RenderTarget->pResource.Get(); }
 
 private:
@@ -29,8 +24,8 @@ private:
 
 	RootSignature m_RS;
 	PipelineState m_PSO;
-	Descriptor m_RTV;
-	Descriptor m_SRV;
+	Descriptor	  m_RTV;
+	Descriptor	  m_SRV;
 
 	std::shared_ptr<Resource> m_RenderTarget;
 };

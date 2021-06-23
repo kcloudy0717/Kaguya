@@ -4,35 +4,30 @@
 
 using Microsoft::WRL::ComPtr;
 
-SwapChain::SwapChain(
-	HWND hWnd,
-	IDXGIFactory5* pFactory5,
-	ID3D12Device* pDevice,
-	ID3D12CommandQueue* pCommandQueue)
+SwapChain::SwapChain(HWND hWnd, IDXGIFactory5* pFactory5, ID3D12Device* pDevice, ID3D12CommandQueue* pCommandQueue)
 	: m_pDevice(pDevice)
 {
 	// Check tearing support
 	BOOL allowTearing = FALSE;
-	if (FAILED(pFactory5->CheckFeatureSupport(
-		DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-		&allowTearing, sizeof(allowTearing))))
+	if (FAILED(pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing))))
 	{
 		allowTearing = FALSE;
 	}
 	m_TearingSupport = allowTearing == TRUE;
 
 	DXGI_SWAP_CHAIN_DESC1 desc = {};
-	desc.Width = 0;
-	desc.Height = 0;
-	desc.Format = Format;
-	desc.Stereo = FALSE;
-	desc.SampleDesc = DefaultSampleDesc();
-	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	desc.BufferCount = BackBufferCount;
-	desc.Scaling = DXGI_SCALING_NONE;
-	desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-	desc.Flags = m_TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;;
+	desc.Width				   = 0;
+	desc.Height				   = 0;
+	desc.Format				   = Format;
+	desc.Stereo				   = FALSE;
+	desc.SampleDesc			   = DefaultSampleDesc();
+	desc.BufferUsage		   = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	desc.BufferCount		   = BackBufferCount;
+	desc.Scaling			   = DXGI_SCALING_NONE;
+	desc.SwapEffect			   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	desc.AlphaMode			   = DXGI_ALPHA_MODE_UNSPECIFIED;
+	desc.Flags = m_TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	;
 
 	ComPtr<IDXGISwapChain1> pSwapChain1;
 	ThrowIfFailed(pFactory5->CreateSwapChainForHwnd(
@@ -46,11 +41,7 @@ SwapChain::SwapChain(
 	pSwapChain1.As(&m_SwapChain);
 
 	// Create descriptor heap
-	m_RTVHeaps = DescriptorHeap(
-		pDevice,
-		BackBufferCount,
-		false,
-		D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	m_RTVHeaps = DescriptorHeap(pDevice, BackBufferCount, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// Initialize RTVs
 	for (UINT i = 0; i < BackBufferCount; i++)
@@ -71,14 +62,12 @@ ID3D12Resource* SwapChain::GetBackBuffer(UINT Index) const
 
 std::pair<ID3D12Resource*, Descriptor> SwapChain::GetCurrentBackBufferResource() const
 {
-	UINT backBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-	ID3D12Resource* pBackBuffer = GetBackBuffer(backBufferIndex);
+	UINT			backBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+	ID3D12Resource* pBackBuffer		= GetBackBuffer(backBufferIndex);
 	return { pBackBuffer, m_RenderTargetViews[backBufferIndex] };
 }
 
-void SwapChain::Resize(
-	UINT Width,
-	UINT Height)
+void SwapChain::Resize(UINT Width, UINT Height)
 {
 	// Resize backbuffer
 	// Note: Cannot use ResizeBuffers1 when debugging in Nsight Graphics, it will crash
@@ -89,12 +78,11 @@ void SwapChain::Resize(
 	CreateRenderTargetViews();
 }
 
-void SwapChain::Present(
-	bool VSync)
+void SwapChain::Present(bool VSync)
 {
 	const UINT syncInterval = VSync ? 1u : 0u;
 	const UINT presentFlags = (m_TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-	HRESULT hr = m_SwapChain->Present(syncInterval, presentFlags);
+	HRESULT	   hr			= m_SwapChain->Present(syncInterval, presentFlags);
 	if (hr == DXGI_ERROR_DEVICE_REMOVED)
 	{
 		// TODO: Handle device removal
@@ -109,10 +97,10 @@ void SwapChain::CreateRenderTargetViews()
 		ThrowIfFailed(m_SwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
 
 		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = Format;
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-		rtvDesc.Texture2D.MipSlice = 0;
-		rtvDesc.Texture2D.PlaneSlice = 0;
+		rtvDesc.Format						  = Format;
+		rtvDesc.ViewDimension				  = D3D12_RTV_DIMENSION_TEXTURE2D;
+		rtvDesc.Texture2D.MipSlice			  = 0;
+		rtvDesc.Texture2D.PlaneSlice		  = 0;
 
 		m_pDevice->CreateRenderTargetView(pBackBuffer.Get(), &rtvDesc, m_RenderTargetViews[i].CpuHandle);
 	}

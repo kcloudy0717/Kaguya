@@ -18,7 +18,7 @@ struct Scene
 	};
 
 	static constexpr UINT64 MAX_MATERIAL_SUPPORTED = 1000;
-	static constexpr UINT64 MAX_LIGHT_SUPPORTED = 100;
+	static constexpr UINT64 MAX_LIGHT_SUPPORTED	   = 100;
 	static constexpr UINT64 MAX_INSTANCE_SUPPORTED = 1000;
 
 	Scene() noexcept;
@@ -28,54 +28,45 @@ struct Scene
 	void Update(float dt);
 
 	Entity CreateEntity(const std::string& Name);
-	void DestroyEntity(Entity Entity);
+	void   DestroyEntity(Entity Entity);
 
 	template<typename T>
 	void OnComponentAdded(Entity Entity, T& Component);
 
-	UINT SceneState = SCENE_STATE_RENDER;
+	UINT		   SceneState = SCENE_STATE_RENDER;
 	entt::registry Registry;
 
-	Camera Camera, PreviousCamera;
+	Camera							  Camera, PreviousCamera;
 	std::unique_ptr<CameraController> CameraController;
 };
 
 inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
 {
-	return
-	{
-		.BSDFType = Material.BSDFType,
-		.baseColor = Material.baseColor,
-		.metallic = Material.metallic,
-		.subsurface = Material.subsurface,
-		.specular = Material.specular,
-		.roughness = Material.roughness,
-		.specularTint = Material.specularTint,
-		.anisotropic = Material.anisotropic,
-		.sheen = Material.sheen,
-		.sheenTint = Material.sheenTint,
-		.clearcoat = Material.clearcoat,
-		.clearcoatGloss = Material.clearcoatGloss,
+	return { .BSDFType		 = Material.BSDFType,
+			 .baseColor		 = Material.baseColor,
+			 .metallic		 = Material.metallic,
+			 .subsurface	 = Material.subsurface,
+			 .specular		 = Material.specular,
+			 .roughness		 = Material.roughness,
+			 .specularTint	 = Material.specularTint,
+			 .anisotropic	 = Material.anisotropic,
+			 .sheen			 = Material.sheen,
+			 .sheenTint		 = Material.sheenTint,
+			 .clearcoat		 = Material.clearcoat,
+			 .clearcoatGloss = Material.clearcoatGloss,
 
-		.T = Material.T,
-		.etaA = Material.etaA,
-		.etaB = Material.etaB,
+			 .T	   = Material.T,
+			 .etaA = Material.etaA,
+			 .etaB = Material.etaB,
 
-		.TextureIndices =
-		{
-			Material.TextureIndices[0],
-			Material.TextureIndices[1],
-			Material.TextureIndices[2],
-			Material.TextureIndices[3]
-		},
-		.TextureChannel =
-		{
-			Material.TextureChannel[0],
-			Material.TextureChannel[1],
-			Material.TextureChannel[2],
-			Material.TextureChannel[3]
-		}
-	};
+			 .TextureIndices = { Material.TextureIndices[0],
+								 Material.TextureIndices[1],
+								 Material.TextureIndices[2],
+								 Material.TextureIndices[3] },
+			 .TextureChannel = { Material.TextureChannel[0],
+								 Material.TextureChannel[1],
+								 Material.TextureChannel[2],
+								 Material.TextureChannel[3] } };
 }
 
 inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Light)
@@ -84,8 +75,9 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 
 	XMMATRIX M = Transform.Matrix();
 
-	DirectX::XMFLOAT4 Orientation; XMStoreFloat4(&Orientation, DirectX::XMVector3Normalize(Transform.Forward()));
-	float halfWidth = Light.Width * 0.5f;
+	DirectX::XMFLOAT4 Orientation;
+	XMStoreFloat4(&Orientation, DirectX::XMVector3Normalize(Transform.Forward()));
+	float halfWidth	 = Light.Width * 0.5f;
 	float halfHeight = Light.Height * 0.5f;
 	// Get local space point
 	XMVECTOR p0 = XMVectorSet(+halfWidth, -halfHeight, 0, 1);
@@ -139,28 +131,25 @@ inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
 	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix));
 	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix));
 
-	return
-	{
-		.NearZ = Camera.NearZ,
-		.FarZ = Camera.FarZ,
-		._padding0 = 0.0f,
-		._padding1 = 0.0f,
+	return { .NearZ		= Camera.NearZ,
+			 .FarZ		= Camera.FarZ,
+			 ._padding0 = 0.0f,
+			 ._padding1 = 0.0f,
 
-		.FocalLength = Camera.FocalLength,
-		.RelativeAperture = Camera.RelativeAperture,
-		.ShutterTime = Camera.ShutterTime,
-		.SensorSensitivity = Camera.SensorSensitivity,
+			 .FocalLength		= Camera.FocalLength,
+			 .RelativeAperture	= Camera.RelativeAperture,
+			 .ShutterTime		= Camera.ShutterTime,
+			 .SensorSensitivity = Camera.SensorSensitivity,
 
-		.Position = Position,
-		.U = U,
-		.V = V,
-		.W = W,
+			 .Position = Position,
+			 .U		   = U,
+			 .V		   = V,
+			 .W		   = W,
 
-		.View = View,
-		.Projection = Projection,
-		.ViewProjection = ViewProjection,
-		.InvView = InvView,
-		.InvProjection = InvProjection,
-		.InvViewProjection = InvViewProjection
-	};
+			 .View				= View,
+			 .Projection		= Projection,
+			 .ViewProjection	= ViewProjection,
+			 .InvView			= InvView,
+			 .InvProjection		= InvProjection,
+			 .InvViewProjection = InvViewProjection };
 }

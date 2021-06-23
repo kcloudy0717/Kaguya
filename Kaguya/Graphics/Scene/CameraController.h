@@ -7,7 +7,6 @@ public:
 	CameraController(Camera& Camera)
 		: m_TargetCamera(Camera)
 	{
-
 	}
 
 	virtual void Update(float dt) = 0;
@@ -24,7 +23,6 @@ public:
 	void Update(float dt) override;
 
 public:
-
 private:
 	float m_MoveSpeed;
 	float m_StrafeSpeed;

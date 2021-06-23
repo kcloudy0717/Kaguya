@@ -8,7 +8,7 @@
 Scene::Scene() noexcept
 {
 	Camera.Transform.Position = { 0.0f, 5.0f, -10.0f };
-	PreviousCamera = Camera;
+	PreviousCamera			  = Camera;
 
 	CameraController = std::make_unique<FPSCamera>(Camera);
 }
@@ -26,29 +26,31 @@ void Scene::Update(float dt)
 	CameraController->Update(dt);
 
 	// Update all mesh filters
-	Registry.view<MeshFilter>().each([](auto&& MeshFilter)
-	{
-		MeshFilter.Mesh = AssetManager::Instance().GetMeshCache().Load(MeshFilter.Key);
-	});
+	Registry.view<MeshFilter>().each(
+		[](auto&& MeshFilter)
+		{
+			MeshFilter.Mesh = AssetManager::Instance().GetMeshCache().Load(MeshFilter.Key);
+		});
 
 	// Update all mesh renderers
-	Registry.view<MeshFilter, MeshRenderer>().each([](auto&& MeshFilter, auto&& MeshRenderer)
-	{
-		// I have to manually update the mesh filters here because I keep on getting
-		// access violation when I add new mesh filter to entt, need to investigate
-		MeshRenderer.pMeshFilter = &MeshFilter;
-
-		for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
+	Registry.view<MeshFilter, MeshRenderer>().each(
+		[](auto&& MeshFilter, auto&& MeshRenderer)
 		{
-			auto Texture = AssetManager::Instance().GetImageCache().Load(MeshRenderer.Material.TextureKeys[i]);
+			// I have to manually update the mesh filters here because I keep on getting
+			// access violation when I add new mesh filter to entt, need to investigate
+			MeshRenderer.pMeshFilter = &MeshFilter;
 
-			if (Texture)
+			for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
 			{
-				MeshRenderer.Material.Textures[i] = Texture;
-				MeshRenderer.Material.TextureIndices[i] = Texture->SRV.Index;
+				auto Texture = AssetManager::Instance().GetImageCache().Load(MeshRenderer.Material.TextureKeys[i]);
+
+				if (Texture)
+				{
+					MeshRenderer.Material.Textures[i]		= Texture;
+					MeshRenderer.Material.TextureIndices[i] = Texture->SRV.Index;
+				}
 			}
-		}
-	});
+		});
 
 	if (PreviousCamera != Camera)
 	{
@@ -58,9 +60,9 @@ void Scene::Update(float dt)
 
 Entity Scene::CreateEntity(const std::string& Name)
 {
-	Entity entity = { Registry.create(), this };
-	auto& tagComponent = entity.AddComponent<Tag>();
-	tagComponent.Name = Name;
+	Entity entity		= { Registry.create(), this };
+	auto&  tagComponent = entity.AddComponent<Tag>();
+	tagComponent.Name	= Name;
 
 	entity.AddComponent<Transform>();
 
@@ -75,19 +77,16 @@ void Scene::DestroyEntity(Entity Entity)
 template<typename T>
 void Scene::OnComponentAdded(Entity Entity, T& Component)
 {
-
 }
 
 template<>
 void Scene::OnComponentAdded<Tag>(Entity Entity, Tag& Component)
 {
-
 }
 
 template<>
 void Scene::OnComponentAdded<Transform>(Entity Entity, Transform& Component)
 {
-
 }
 
 template<>
@@ -97,7 +96,7 @@ void Scene::OnComponentAdded<MeshFilter>(Entity Entity, MeshFilter& Component)
 	// and connect them
 	if (Entity.HasComponent<MeshRenderer>())
 	{
-		auto& meshRendererComponent = Entity.GetComponent<MeshRenderer>();
+		auto& meshRendererComponent		  = Entity.GetComponent<MeshRenderer>();
 		meshRendererComponent.pMeshFilter = &Component;
 
 		meshRendererComponent.IsEdited = true;
@@ -112,7 +111,7 @@ void Scene::OnComponentAdded<MeshRenderer>(Entity Entity, MeshRenderer& Componen
 	if (Entity.HasComponent<MeshFilter>())
 	{
 		auto& meshFilterComponent = Entity.GetComponent<MeshFilter>();
-		Component.pMeshFilter = &meshFilterComponent;
+		Component.pMeshFilter	  = &meshFilterComponent;
 
 		Component.IsEdited = true;
 	}
@@ -121,5 +120,4 @@ void Scene::OnComponentAdded<MeshRenderer>(Entity Entity, MeshRenderer& Componen
 template<>
 void Scene::OnComponentAdded<Light>(Entity Entity, Light& Component)
 {
-
 }

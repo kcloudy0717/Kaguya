@@ -11,11 +11,11 @@
 
 namespace Version
 {
-	constexpr int Major = 1;
-	constexpr int Minor = 0;
-	constexpr int Revision = 0;
-	const std::string String = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
-}
+constexpr int	  Major	   = 1;
+constexpr int	  Minor	   = 0;
+constexpr int	  Revision = 0;
+const std::string String   = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
+} // namespace Version
 
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, const DirectX::XMFLOAT2& Float2)
 {
@@ -76,7 +76,10 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshFilter& MeshFilter)
 	Emitter << YAML::Key << "Mesh Filter";
 	Emitter << YAML::BeginMap;
 	{
-		std::string relativePath = MeshFilter.Mesh ? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string() : "NULL";
+		std::string relativePath =
+			MeshFilter.Mesh
+				? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string()
+				: "NULL";
 
 		Emitter << YAML::Key << "Name" << relativePath;
 	}
@@ -117,7 +120,10 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshRenderer& MeshRender
 			{
 				const auto& texture = material.Textures[i];
 
-				std::string relativePath = texture ? std::filesystem::relative(texture->Metadata.Path, Application::ExecutableDirectory).string() : "NULL";
+				std::string relativePath =
+					texture
+						? std::filesystem::relative(texture->Metadata.Path, Application::ExecutableDirectory).string()
+						: "NULL";
 
 				Emitter << YAML::Key << textureTypes[i] << relativePath;
 			}
@@ -145,87 +151,84 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const Light& Light)
 
 namespace YAML
 {
-	template<>
-	struct convert<DirectX::XMFLOAT2>
+template<>
+struct convert<DirectX::XMFLOAT2>
+{
+	static auto encode(const DirectX::XMFLOAT2& Float2)
 	{
-		static auto encode(const DirectX::XMFLOAT2& Float2)
-		{
-			Node node;
-			node.push_back(Float2.x);
-			node.push_back(Float2.y);
-			return node;
-		}
+		Node node;
+		node.push_back(Float2.x);
+		node.push_back(Float2.y);
+		return node;
+	}
 
-		static bool decode(const Node& Node, DirectX::XMFLOAT2& Float2)
-		{
-			if (!Node.IsSequence() ||
-				Node.size() != 2)
-			{
-				return false;
-			}
-
-			Float2.x = Node[0].as<float>();
-			Float2.y = Node[1].as<float>();
-			return true;
-		}
-	};
-
-	template<>
-	struct convert<DirectX::XMFLOAT3>
+	static bool decode(const Node& Node, DirectX::XMFLOAT2& Float2)
 	{
-		static auto encode(const DirectX::XMFLOAT3& Float3)
+		if (!Node.IsSequence() || Node.size() != 2)
 		{
-			Node node;
-			node.push_back(Float3.x);
-			node.push_back(Float3.y);
-			node.push_back(Float3.z);
-			return node;
+			return false;
 		}
 
-		static bool decode(const Node& Node, DirectX::XMFLOAT3& Float3)
-		{
-			if (!Node.IsSequence() ||
-				Node.size() != 3)
-			{
-				return false;
-			}
+		Float2.x = Node[0].as<float>();
+		Float2.y = Node[1].as<float>();
+		return true;
+	}
+};
 
-			Float3.x = Node[0].as<float>();
-			Float3.y = Node[1].as<float>();
-			Float3.z = Node[2].as<float>();
-			return true;
-		}
-	};
-
-	template<>
-	struct convert<DirectX::XMFLOAT4>
+template<>
+struct convert<DirectX::XMFLOAT3>
+{
+	static auto encode(const DirectX::XMFLOAT3& Float3)
 	{
-		static auto encode(const DirectX::XMFLOAT4& Float4)
+		Node node;
+		node.push_back(Float3.x);
+		node.push_back(Float3.y);
+		node.push_back(Float3.z);
+		return node;
+	}
+
+	static bool decode(const Node& Node, DirectX::XMFLOAT3& Float3)
+	{
+		if (!Node.IsSequence() || Node.size() != 3)
 		{
-			Node node;
-			node.push_back(Float4.x);
-			node.push_back(Float4.y);
-			node.push_back(Float4.z);
-			node.push_back(Float4.w);
-			return node;
+			return false;
 		}
 
-		static bool decode(const Node& Node, DirectX::XMFLOAT4& Float4)
-		{
-			if (!Node.IsSequence() ||
-				Node.size() != 4)
-			{
-				return false;
-			}
+		Float3.x = Node[0].as<float>();
+		Float3.y = Node[1].as<float>();
+		Float3.z = Node[2].as<float>();
+		return true;
+	}
+};
 
-			Float4.x = Node[0].as<float>();
-			Float4.y = Node[1].as<float>();
-			Float4.z = Node[2].as<float>();
-			Float4.w = Node[3].as<float>();
-			return true;
+template<>
+struct convert<DirectX::XMFLOAT4>
+{
+	static auto encode(const DirectX::XMFLOAT4& Float4)
+	{
+		Node node;
+		node.push_back(Float4.x);
+		node.push_back(Float4.y);
+		node.push_back(Float4.z);
+		node.push_back(Float4.w);
+		return node;
+	}
+
+	static bool decode(const Node& Node, DirectX::XMFLOAT4& Float4)
+	{
+		if (!Node.IsSequence() || Node.size() != 4)
+		{
+			return false;
 		}
-	};
-}
+
+		Float4.x = Node[0].as<float>();
+		Float4.y = Node[1].as<float>();
+		Float4.z = Node[2].as<float>();
+		Float4.w = Node[3].as<float>();
+		return true;
+	}
+};
+} // namespace YAML
 
 static void SerializeCamera(YAML::Emitter& Emitter, const Camera& Camera)
 {
@@ -262,7 +265,11 @@ static void SerializeImages(YAML::Emitter& Emitter)
 		{
 			Emitter << YAML::BeginMap;
 			{
-				Emitter << YAML::Key << "Image" << std::filesystem::relative(SortedImage.second->Metadata.Path, Application::ExecutableDirectory).string();
+				Emitter << YAML::Key << "Image"
+						<< std::filesystem::relative(
+							   SortedImage.second->Metadata.Path,
+							   Application::ExecutableDirectory)
+							   .string();
 				Emitter << YAML::Key << "Metadata";
 				Emitter << YAML::BeginMap;
 				{
@@ -293,7 +300,11 @@ static void SerializeMeshes(YAML::Emitter& Emitter)
 		{
 			Emitter << YAML::BeginMap;
 			{
-				Emitter << YAML::Key << "Mesh" << YAML::Value << std::filesystem::relative(SortedMeshe.second->Metadata.Path, Application::ExecutableDirectory).string();
+				Emitter << YAML::Key << "Mesh" << YAML::Value
+						<< std::filesystem::relative(
+							   SortedMeshe.second->Metadata.Path,
+							   Application::ExecutableDirectory)
+							   .string();
 				Emitter << YAML::Key << "Metadata";
 				Emitter << YAML::BeginMap;
 				{
@@ -347,7 +358,8 @@ void SceneParser::Save(const std::filesystem::path& Path, Scene* pScene)
 
 		emitter << YAML::Key << "WorldBegin" << YAML::Value << YAML::BeginSeq;
 		{
-			pScene->Registry.each([&](auto Handle)
+			pScene->Registry.each(
+				[&](auto Handle)
 				{
 					Entity entity(Handle, pScene);
 					if (!entity)
@@ -372,21 +384,21 @@ static void DeserializeCamera(const YAML::Node& Node, Scene* pScene)
 
 	Camera camera = {};
 
-	camera.Transform.Position = transform["Position"].as<DirectX::XMFLOAT3>();
-	camera.Transform.Scale = transform["Scale"].as<DirectX::XMFLOAT3>();
+	camera.Transform.Position	 = transform["Position"].as<DirectX::XMFLOAT3>();
+	camera.Transform.Scale		 = transform["Scale"].as<DirectX::XMFLOAT3>();
 	camera.Transform.Orientation = transform["Orientation"].as<DirectX::XMFLOAT4>();
 
-	camera.FoVY = Node["Field of View"].as<float>();
+	camera.FoVY		   = Node["Field of View"].as<float>();
 	camera.AspectRatio = 1.0f;
-	camera.NearZ = Node["Clipping Planes"].as<DirectX::XMFLOAT2>().x;
-	camera.FarZ = Node["Clipping Planes"].as<DirectX::XMFLOAT2>().y;
+	camera.NearZ	   = Node["Clipping Planes"].as<DirectX::XMFLOAT2>().x;
+	camera.FarZ		   = Node["Clipping Planes"].as<DirectX::XMFLOAT2>().y;
 
-	camera.FocalLength = Node["Focal Length"].as<float>();
-	camera.RelativeAperture = Node["Relative Aperture"].as<float>();
-	camera.ShutterTime = Node["Shutter Time"].as<float>();
+	camera.FocalLength		 = Node["Focal Length"].as<float>();
+	camera.RelativeAperture	 = Node["Relative Aperture"].as<float>();
+	camera.ShutterTime		 = Node["Shutter Time"].as<float>();
 	camera.SensorSensitivity = Node["Sensor Sensitivity"].as<float>();
 
-	pScene->Camera = camera;
+	pScene->Camera		   = camera;
 	pScene->PreviousCamera = camera;
 }
 
@@ -394,8 +406,8 @@ static void DeserializeImage(const YAML::Node& Node)
 {
 	auto& AssetManager = AssetManager::Instance();
 
-	auto path = Node["Image"].as<std::string>();
-	path = (Application::ExecutableDirectory / path).string();
+	auto path	  = Node["Image"].as<std::string>();
+	path		  = (Application::ExecutableDirectory / path).string();
 	auto metadata = Node["Metadata"];
 
 	bool sRGB = metadata["sRGB"].as<bool>();
@@ -407,8 +419,8 @@ static void DeserializeMesh(const YAML::Node& Node)
 {
 	auto& AssetManager = AssetManager::Instance();
 
-	auto path = Node["Mesh"].as<std::string>();
-	path = (Application::ExecutableDirectory / path).string();
+	auto path	  = Node["Mesh"].as<std::string>();
+	path		  = (Application::ExecutableDirectory / path).string();
 	auto metadata = Node["Metadata"];
 
 	bool keepGeometryInRAM = metadata["KeepGeometryInRAM"].as<bool>();
@@ -436,15 +448,19 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 	Entity entity = pScene->CreateEntity(name);
 
 	// TODO: Come up with some template meta programming for serialize/deserialize
-	DeserializeComponent<Transform>(Node["Transform"], &entity,
+	DeserializeComponent<Transform>(
+		Node["Transform"],
+		&entity,
 		[](auto& Node, auto& Transform)
 		{
-			Transform.Position = Node["Position"].as<DirectX::XMFLOAT3>();
-			Transform.Scale = Node["Scale"].as<DirectX::XMFLOAT3>();
+			Transform.Position	  = Node["Position"].as<DirectX::XMFLOAT3>();
+			Transform.Scale		  = Node["Scale"].as<DirectX::XMFLOAT3>();
 			Transform.Orientation = Node["Orientation"].as<DirectX::XMFLOAT4>();
 		});
 
-	DeserializeComponent<MeshFilter>(Node["Mesh Filter"], &entity,
+	DeserializeComponent<MeshFilter>(
+		Node["Mesh Filter"],
+		&entity,
 		[](auto& Node, auto& MeshFilter)
 		{
 			auto path = Node["Name"].as<std::string>();
@@ -456,25 +472,27 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 			}
 		});
 
-	DeserializeComponent<MeshRenderer>(Node["Mesh Renderer"], &entity,
+	DeserializeComponent<MeshRenderer>(
+		Node["Mesh Renderer"],
+		&entity,
 		[](auto& Node, MeshRenderer& MeshRenderer)
 		{
-			auto& material = Node["Material"];
+			auto& material				   = Node["Material"];
 			MeshRenderer.Material.BSDFType = material["BSDFType"].as<int>();
 
-			MeshRenderer.Material.baseColor = material["baseColor"].as<DirectX::XMFLOAT3>();
-			MeshRenderer.Material.metallic = material["metallic"].as<float>();
-			MeshRenderer.Material.subsurface = material["subsurface"].as<float>();
-			MeshRenderer.Material.specular = material["specular"].as<float>();
-			MeshRenderer.Material.roughness = material["roughness"].as<float>();
-			MeshRenderer.Material.specularTint = material["specularTint"].as<float>();
-			MeshRenderer.Material.anisotropic = material["anisotropic"].as<float>();
-			MeshRenderer.Material.sheen = material["sheen"].as<float>();
-			MeshRenderer.Material.sheenTint = material["sheenTint"].as<float>();
-			MeshRenderer.Material.clearcoat = material["clearcoat"].as<float>();
+			MeshRenderer.Material.baseColor		 = material["baseColor"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.metallic		 = material["metallic"].as<float>();
+			MeshRenderer.Material.subsurface	 = material["subsurface"].as<float>();
+			MeshRenderer.Material.specular		 = material["specular"].as<float>();
+			MeshRenderer.Material.roughness		 = material["roughness"].as<float>();
+			MeshRenderer.Material.specularTint	 = material["specularTint"].as<float>();
+			MeshRenderer.Material.anisotropic	 = material["anisotropic"].as<float>();
+			MeshRenderer.Material.sheen			 = material["sheen"].as<float>();
+			MeshRenderer.Material.sheenTint		 = material["sheenTint"].as<float>();
+			MeshRenderer.Material.clearcoat		 = material["clearcoat"].as<float>();
 			MeshRenderer.Material.clearcoatGloss = material["clearcoatGloss"].as<float>();
 
-			MeshRenderer.Material.T = material["T"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.T	   = material["T"].as<DirectX::XMFLOAT3>();
 			MeshRenderer.Material.etaA = material["etaA"].as<float>();
 			MeshRenderer.Material.etaB = material["etaB"].as<float>();
 
@@ -491,12 +509,14 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 			}
 		});
 
-	DeserializeComponent<Light>(Node["Light"], &entity,
+	DeserializeComponent<Light>(
+		Node["Light"],
+		&entity,
 		[](auto& Node, auto& Light)
 		{
-			Light.Type = static_cast<Light::EType>(Node["Type"].as<int>());
-			Light.I = Node["I"].as<DirectX::XMFLOAT3>();
-			Light.Width = Node["Width"].as<float>();
+			Light.Type	 = static_cast<Light::EType>(Node["Type"].as<int>());
+			Light.I		 = Node["I"].as<DirectX::XMFLOAT3>();
+			Light.Width	 = Node["Width"].as<float>();
 			Light.Height = Node["Height"].as<float>();
 		});
 }
@@ -515,7 +535,7 @@ void SceneParser::Load(const std::filesystem::path& Path, Scene* pScene)
 	AssetManager.GetImageCache().DestroyAll();
 	AssetManager.GetMeshCache().DestroyAll();
 
-	std::ifstream fin(Path);
+	std::ifstream	  fin(Path);
 	std::stringstream ss;
 	ss << fin.rdbuf();
 

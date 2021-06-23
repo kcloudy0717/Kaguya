@@ -13,8 +13,13 @@ inline std::string hresult_to_string(HRESULT hr)
 class hresult_exception : public std::runtime_error
 {
 public:
-	hresult_exception(HRESULT hr) : std::runtime_error(hresult_to_string(hr)), m_hr(hr) {}
+	hresult_exception(HRESULT hr)
+		: std::runtime_error(hresult_to_string(hr))
+		, m_hr(hr)
+	{
+	}
 	HRESULT Error() const { return m_hr; }
+
 private:
 	const HRESULT m_hr;
 };

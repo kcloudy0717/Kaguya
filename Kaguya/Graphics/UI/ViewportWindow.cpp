@@ -24,13 +24,13 @@ void ViewportWindow::RenderGui()
 		ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, w, h);
 
 		auto viewportOffset = ImGui::GetCursorPos(); // includes tab bar
-		auto viewportPos = ImGui::GetWindowPos();
-		auto viewportSize = ImGui::GetContentRegionAvail();
-		auto windowSize = ImGui::GetWindowSize();
+		auto viewportPos	= ImGui::GetWindowPos();
+		auto viewportSize	= ImGui::GetContentRegionAvail();
+		auto windowSize		= ImGui::GetWindowSize();
 
-		Rect.left = viewportPos.x + viewportOffset.x;
-		Rect.top = viewportPos.y + viewportOffset.y;
-		Rect.right = Rect.left + windowSize.x;
+		Rect.left	= viewportPos.x + viewportOffset.x;
+		Rect.top	= viewportPos.y + viewportOffset.y;
+		Rect.right	= Rect.left + windowSize.x;
 		Rect.bottom = Rect.top + windowSize.y;
 
 		Resolution = Vector2i(viewportSize.x, viewportSize.y);
