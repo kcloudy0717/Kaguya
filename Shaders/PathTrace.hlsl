@@ -239,9 +239,8 @@ void RayGeneration()
 	L.g = isnan(L.g) ? 0.0f : L.g;
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
-	//RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_RenderPassData.RenderTarget];
-	//RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[1];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_RenderPassData.RenderTarget];
+	RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_RenderPassData.RenderTarget];
+	//RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_RenderPassData.RenderTarget];
 	
 	// Progressive accumulation
 	if (g_RenderPassData.NumAccumulatedSamples > 0)
