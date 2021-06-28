@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "AsyncLoader.h"
 
-#include <DDSTextureLoader.h>
-#include <WICTextureLoader.h>
-
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -16,58 +13,58 @@ static constexpr uint32_t s_ImporterFlags =
 	aiProcess_ConvertToLeftHanded | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 	aiProcess_GenNormals | aiProcess_GenUVCoords | aiProcess_OptimizeMeshes | aiProcess_ValidateDataStructure;
 
-AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const TMetadata& Metadata)
+AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMetadata& Metadata)
 {
 	const auto start = std::chrono::high_resolution_clock::now();
 
-	const auto& path	  = Metadata.Path;
-	const auto	extension = path.extension().string();
+	const auto& Path	  = Metadata.Path;
+	const auto	Extension = Path.extension().string();
 
-	TexMetadata	 texMetadata  = {};
-	ScratchImage scratchImage = {};
-	if (extension == ".dds")
+	TexMetadata	 TexMetadata = {};
+	ScratchImage OutImage	 = {};
+	if (Extension == ".dds")
 	{
-		ThrowIfFailed(LoadFromDDSFile(path.c_str(), DDS_FLAGS::DDS_FLAGS_FORCE_RGB, &texMetadata, scratchImage));
+		ThrowIfFailed(LoadFromDDSFile(Path.c_str(), DDS_FLAGS::DDS_FLAGS_FORCE_RGB, &TexMetadata, OutImage));
 	}
-	else if (extension == ".tga")
+	else if (Extension == ".tga")
 	{
-		ScratchImage baseImage;
-		ThrowIfFailed(LoadFromTGAFile(path.c_str(), &texMetadata, baseImage));
-		ThrowIfFailed(GenerateMipMaps(*baseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, scratchImage, false));
+		ScratchImage BaseImage;
+		ThrowIfFailed(LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage));
+		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
 	}
-	else if (extension == ".hdr")
+	else if (Extension == ".hdr")
 	{
-		ScratchImage baseImage;
-		ThrowIfFailed(LoadFromHDRFile(path.c_str(), &texMetadata, baseImage));
-		ThrowIfFailed(GenerateMipMaps(*baseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, scratchImage, false));
+		ScratchImage BaseImage;
+		ThrowIfFailed(LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage));
+		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
 	}
 	else
 	{
-		ScratchImage baseImage;
-		ThrowIfFailed(LoadFromWICFile(path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &texMetadata, baseImage));
-		ThrowIfFailed(GenerateMipMaps(*baseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, scratchImage, false));
+		ScratchImage BaseImage;
+		ThrowIfFailed(LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage));
+		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
 	}
 
-	auto assetImage		   = std::make_shared<Asset::Image>();
-	assetImage->Metadata   = Metadata;
-	assetImage->Resolution = Vector2i(texMetadata.width, texMetadata.height);
-	assetImage->Name	   = path.filename().string();
-	assetImage->Image	   = std::move(scratchImage);
+	auto Image		  = std::make_shared<Asset::Image>();
+	Image->Metadata	  = Metadata;
+	Image->Resolution = Vector2i(TexMetadata.width, TexMetadata.height);
+	Image->Name		  = Path.filename().string();
+	Image->Image	  = std::move(OutImage);
 
 	const auto stop		= std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-	LOG_INFO("{} loaded in {}(ms)", path.string(), duration.count());
+	LOG_INFO("{} loaded in {}(ms)", Path.string(), duration.count());
 
-	return assetImage;
+	return Image;
 }
 
-AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const TMetadata& Metadata)
+AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetadata& Metadata)
 {
 	const auto start = std::chrono::high_resolution_clock::now();
 
-	const auto path = Metadata.Path.string();
+	const auto Path = Metadata.Path.string();
 
-	const aiScene* paiScene = s_Importer.ReadFile(path.data(), s_ImporterFlags);
+	const aiScene* paiScene = s_Importer.ReadFile(Path.data(), s_ImporterFlags);
 
 	if (!paiScene || !paiScene->HasMeshes())
 	{
@@ -75,13 +72,13 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const TMetadata& Metada
 		return {};
 	}
 
-	auto assetMesh		= std::make_shared<Asset::Mesh>();
-	assetMesh->Metadata = Metadata;
-	assetMesh->Name		= Metadata.Path.filename().string();
-	assetMesh->Submeshes.reserve(paiScene->mNumMeshes);
+	auto Mesh	   = std::make_shared<Asset::Mesh>();
+	Mesh->Metadata = Metadata;
+	Mesh->Name	   = Metadata.Path.filename().string();
+	Mesh->Submeshes.reserve(paiScene->mNumMeshes);
 
-	uint32_t numVertices = 0;
-	uint32_t numIndices	 = 0;
+	uint32_t NumVertices = 0;
+	uint32_t NumIndices	 = 0;
 	for (size_t m = 0; m < paiScene->mNumMeshes; ++m)
 	{
 		const aiMesh* paiMesh = paiScene->mMeshes[m];
@@ -123,28 +120,28 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const TMetadata& Metada
 		}
 
 		// Parse submesh indices
-		Asset::Submesh& assetSubmesh	= assetMesh->Submeshes.emplace_back();
-		assetSubmesh.IndexCount			= indices.size();
-		assetSubmesh.StartIndexLocation = numIndices;
-		assetSubmesh.VertexCount		= vertices.size();
-		assetSubmesh.BaseVertexLocation = numVertices;
+		Asset::Submesh& Submesh	   = Mesh->Submeshes.emplace_back();
+		Submesh.IndexCount		   = indices.size();
+		Submesh.StartIndexLocation = NumIndices;
+		Submesh.VertexCount		   = vertices.size();
+		Submesh.BaseVertexLocation = NumVertices;
 
-		assetMesh->Vertices.insert(
-			assetMesh->Vertices.end(),
+		Mesh->Vertices.insert(
+			Mesh->Vertices.end(),
 			std::make_move_iterator(vertices.begin()),
 			std::make_move_iterator(vertices.end()));
-		assetMesh->Indices.insert(
-			assetMesh->Indices.end(),
+		Mesh->Indices.insert(
+			Mesh->Indices.end(),
 			std::make_move_iterator(indices.begin()),
 			std::make_move_iterator(indices.end()));
 
-		numIndices += indices.size();
-		numVertices += vertices.size();
+		NumIndices += indices.size();
+		NumVertices += vertices.size();
 	}
 
 	const auto stop		= std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 	LOG_INFO("{} loaded in {}(ms)", Metadata.Path.string(), duration.count());
 
-	return assetMesh;
+	return Mesh;
 }

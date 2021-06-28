@@ -45,7 +45,7 @@ void AssetWindow::RenderGui()
 						"",
 						[&](auto Path)
 						{
-							AssetManager::Instance().AsyncLoadImage(Path, sRGB);
+							AssetManager::AsyncLoadImage(Path, sRGB);
 						});
 
 					ImGui::CloseCurrentPopup();
@@ -83,7 +83,7 @@ void AssetWindow::RenderGui()
 						"",
 						[&](auto Path)
 						{
-							AssetManager::Instance().AsyncLoadMesh(Path, KeepGeometryInRAM);
+							AssetManager::AsyncLoadMesh(Path, KeepGeometryInRAM);
 						});
 
 					ImGui::CloseCurrentPopup();
@@ -113,8 +113,7 @@ void AssetWindow::RenderGui()
 	ImGui::Text("Images");
 	if (ImGui::BeginTable("ImageCache", 4, flags))
 	{
-		auto&			ImageCache = AssetManager::Instance().m_ImageCache;
-		ScopedWriteLock SWL(ImageCache.m_RWLock);
+		auto& ImageCache = AssetManager::GetImageCache();
 
 		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
@@ -131,7 +130,7 @@ void AssetWindow::RenderGui()
 		ImGuiListClipper clipper;
 		clipper.Begin(ImageCache.size());
 
-		auto iter = ImageCache.m_Cache.begin();
+		auto iter = ImageCache.Cache.begin();
 		while (clipper.Step())
 		{
 			for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++, iter++)
@@ -167,8 +166,7 @@ void AssetWindow::RenderGui()
 		ImGui::EndTable();
 	}
 
-	auto&			MeshCache = AssetManager::Instance().m_MeshCache;
-	ScopedWriteLock SWL(MeshCache.m_RWLock);
+	auto& MeshCache = AssetManager::GetMeshCache();
 
 	if (addAllMeshToHierarchy)
 	{
@@ -201,7 +199,7 @@ void AssetWindow::RenderGui()
 		ImGuiListClipper clipper;
 		clipper.Begin(MeshCache.size());
 
-		auto iter = MeshCache.m_Cache.begin();
+		auto iter = MeshCache.Cache.begin();
 		while (clipper.Step())
 		{
 			for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++, iter++)

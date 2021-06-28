@@ -32,9 +32,10 @@ struct Mesh
 
 	std::vector<Submesh> Submeshes;
 
-	std::shared_ptr<Resource>		 VertexResource;
-	std::shared_ptr<Resource>		 IndexResource;
-	std::shared_ptr<Resource>		 AccelerationStructure;
+	Buffer							 VertexResource;
+	Buffer							 IndexResource;
+	ASBuffer						 AccelerationStructure;
 	BottomLevelAccelerationStructure BLAS;
+	bool							 BLASValid = false;
 };
 } // namespace Asset

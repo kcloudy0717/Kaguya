@@ -1,5 +1,4 @@
 #pragma once
-#include <Core/Synchronization/RWLock.h>
 #include "RenderDevice.h"
 
 #include "Asset/AsyncLoader.h"
@@ -7,41 +6,33 @@
 class AssetManager
 {
 public:
-	static void			 Initialize();
-	static void			 Shutdown();
-	static AssetManager& Instance();
+	static void Initialize();
 
-	auto& GetImageCache() { return m_ImageCache; }
+	static void Shutdown();
 
-	auto& GetMeshCache() { return m_MeshCache; }
+	static AssetCache<Asset::Image>& GetImageCache() { return ImageCache; }
 
-	void AsyncLoadImage(const std::filesystem::path& Path, bool sRGB);
-	void AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeometryInRAM);
+	static AssetCache<Asset::Mesh>& GetMeshCache() { return MeshCache; }
 
-private:
-	AssetManager();
-	~AssetManager();
+	static void AsyncLoadImage(const std::filesystem::path& Path, bool sRGB);
 
-	AssetManager(const AssetManager&) = delete;
-	AssetManager& operator=(const AssetManager&) = delete;
-
-	static DWORD WINAPI ResourceUploadThreadProc(_In_ PVOID pParameter);
+	static void AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeometryInRAM);
 
 private:
-	AsyncImageLoader m_AsyncImageLoader;
-	AsyncMeshLoader	 m_AsyncMeshLoader;
+	inline static AsyncImageLoader AsyncImageLoader;
+	inline static AsyncMeshLoader  AsyncMeshLoader;
 
-	AssetCache<Asset::Image> m_ImageCache;
-	AssetCache<Asset::Mesh>	 m_MeshCache;
+	inline static AssetCache<Asset::Image> ImageCache;
+	inline static AssetCache<Asset::Mesh>  MeshCache;
 
 	// Upload stuff to the GPU
-	CriticalSection								   m_UploadCriticalSection;
-	ConditionVariable							   m_UploadConditionVariable;
-	ThreadSafeQueue<std::shared_ptr<Asset::Image>> m_ImageUploadQueue;
-	ThreadSafeQueue<std::shared_ptr<Asset::Mesh>>  m_MeshUploadQueue;
+	inline static std::mutex								m_Mutex;
+	inline static std::condition_variable					m_ConditionVariable;
+	inline static std::queue<std::shared_ptr<Asset::Image>> m_ImageUploadQueue;
+	inline static std::queue<std::shared_ptr<Asset::Mesh>>	m_MeshUploadQueue;
 
-	wil::unique_handle m_Thread;
-	std::atomic<bool>  m_ShutdownThread = false;
+	inline static wil::unique_handle Thread;
+	inline static std::atomic<bool>	 Quit = false;
 
 	friend class AssetWindow;
 };

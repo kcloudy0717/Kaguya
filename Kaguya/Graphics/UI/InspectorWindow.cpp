@@ -436,7 +436,7 @@ void InspectorWindow::RenderGui()
 			{
 				bool isEdited = false;
 
-				auto handle = AssetManager::Instance().GetMeshCache().Load(Component.Key);
+				auto handle = AssetManager::GetMeshCache().Load(Component.Key);
 
 				ImGui::Text("Mesh: ");
 				ImGui::SameLine();
@@ -455,7 +455,7 @@ void InspectorWindow::RenderGui()
 					{
 						IM_ASSERT(payload->DataSize == sizeof(UINT64));
 						Component.Key  = (*(UINT64*)payload->Data);
-						Component.Mesh = AssetManager::Instance().GetMeshCache().Load(Component.Key);
+						Component.Mesh = AssetManager::GetMeshCache().Load(Component.Key);
 
 						isEdited = true;
 					}
@@ -516,14 +516,14 @@ void InspectorWindow::RenderGui()
 
 					auto ImageBox = [&](TextureTypes TextureType, UINT64& Key, std::string_view Name)
 					{
-						auto handle = AssetManager::Instance().GetImageCache().Load(Key);
+						auto handle = AssetManager::GetImageCache().Load(Key);
 
 						ImGui::Text(Name.data());
 						ImGui::SameLine();
 						if (handle)
 						{
 							ImGui::Button(handle->Name.data());
-							Material.TextureIndices[TextureType] = handle->SRV.Index;
+							Material.TextureIndices[TextureType] = handle->Texture.SRV.GetIndex();
 						}
 						else
 						{

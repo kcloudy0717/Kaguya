@@ -10,82 +10,91 @@
  * All inherited loader must implement a method called AsyncLoad,
  * it takes in the TMetadata and returns a TResourcePtr
  */
-template<typename T, typename Metadata, typename Loader>
+template<typename T, typename TMetadata, typename TDerived>
 class AsyncLoader
 {
 public:
-	using TResource	   = T;
-	using TResourcePtr = std::shared_ptr<TResource>;
-	using TMetadata	   = Metadata;
-	using TDelegate	   = std::function<void(TResourcePtr)>;
+	using TResourcePtr = std::shared_ptr<T>;
 
-	AsyncLoader() { m_Thread.reset(::CreateThread(nullptr, 0, &AsyncThreadProc, this, 0, nullptr)); }
+	// The delegate is called when AsyncLoad succeeds
+	using TDelegate = std::function<void(TResourcePtr)>;
+
+	AsyncLoader()
+	{
+		struct threadwrapper
+		{
+			static unsigned int WINAPI thunk(LPVOID lpParameter)
+			{
+				auto pAsyncLoader = static_cast<AsyncLoader<T, TMetadata, TDerived>*>(lpParameter);
+
+				while (true)
+				{
+					// Sleep until the condition variable becomes notified
+					std::unique_lock _(pAsyncLoader->m_CriticalSection);
+					pAsyncLoader->m_ConditionVariable.wait(_);
+
+					if (pAsyncLoader->Quit)
+					{
+						break;
+					}
+
+					// Start loading stuff async :D
+					while (!pAsyncLoader->m_MetadataQueue.empty())
+					{
+						auto Metadata = pAsyncLoader->m_MetadataQueue.front();
+						pAsyncLoader->m_MetadataQueue.pop();
+
+						auto pResource = static_cast<TDerived*>(pAsyncLoader)->AsyncLoad(Metadata);
+						if (pResource)
+						{
+							pAsyncLoader->Delegate(pResource);
+						}
+					}
+				}
+
+				return EXIT_SUCCESS;
+			}
+		};
+
+		Thread.reset(reinterpret_cast<HANDLE>(
+			_beginthreadex(nullptr, 0, threadwrapper::thunk, reinterpret_cast<LPVOID>(this), 0, nullptr)));
+	}
 
 	~AsyncLoader()
 	{
-		m_Shutdown = true;
-		m_ConditionVariable.WakeAll();
+		Quit = true;
+		m_ConditionVariable.notify_all();
 
-		::WaitForSingleObject(m_Thread.get(), INFINITE);
+		::WaitForSingleObject(Thread.get(), INFINITE);
 	}
 
-	void SetCallback(TDelegate Delegate) { this->m_Delegate = Delegate; }
+	void SetDelegate(TDelegate Delegate) { this->Delegate = Delegate; }
 
-	void RequestAsyncLoad(UINT NumMetadata, Metadata* pMetadata)
+	void RequestAsyncLoad(UINT NumMetadata, TMetadata* pMetadata)
 	{
+		assert(Delegate != nullptr);
 		std::scoped_lock _(m_CriticalSection);
 		for (UINT i = 0; i < NumMetadata; i++)
 		{
 			m_MetadataQueue.push(pMetadata[i]);
 		}
-		m_ConditionVariable.Wake();
+		m_ConditionVariable.notify_one();
 	}
 
 private:
-	static DWORD WINAPI AsyncThreadProc(_In_ PVOID pParameter)
-	{
-		auto pAsyncLoader = static_cast<AsyncLoader<T, Metadata, Loader>*>(pParameter);
+	std::mutex				m_CriticalSection;
+	std::condition_variable m_ConditionVariable;
+	std::queue<TMetadata>	m_MetadataQueue;
+	TDelegate				Delegate = nullptr;
 
-		while (true)
-		{
-			// Sleep until the condition variable becomes notified
-			std::scoped_lock _(pAsyncLoader->m_CriticalSection);
-			pAsyncLoader->m_ConditionVariable.Wait(pAsyncLoader->m_CriticalSection, INFINITE);
-
-			if (pAsyncLoader->m_Shutdown)
-			{
-				break;
-			}
-
-			// Start loading stuff async :D
-			TMetadata metadata = {};
-			while (pAsyncLoader->m_MetadataQueue.pop(metadata, 0))
-			{
-				auto pResource = static_cast<Loader*>(pAsyncLoader)->AsyncLoad(metadata);
-				if (pResource && pAsyncLoader->m_Delegate)
-				{
-					pAsyncLoader->m_Delegate(pResource);
-				}
-			}
-		}
-
-		return EXIT_SUCCESS;
-	}
-
-private:
-	CriticalSection			  m_CriticalSection;
-	ConditionVariable		  m_ConditionVariable;
-	ThreadSafeQueue<Metadata> m_MetadataQueue;
-	TDelegate				  m_Delegate = nullptr;
-
-	wil::unique_handle m_Thread;
-	std::atomic<bool>  m_Shutdown = false;
+	wil::unique_handle Thread;
+	std::atomic<bool>  Quit = false;
 };
 
 class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>
 {
 private:
-	TResourcePtr AsyncLoad(const TMetadata& Metadata);
+	TResourcePtr AsyncLoad(const Asset::ImageMetadata& Metadata);
 
 	friend class AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>;
 };
@@ -93,7 +102,7 @@ private:
 class AsyncMeshLoader : public AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>
 {
 private:
-	TResourcePtr AsyncLoad(const TMetadata& Metadata);
+	TResourcePtr AsyncLoad(const Asset::MeshMetadata& Metadata);
 
 	friend class AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>;
 };

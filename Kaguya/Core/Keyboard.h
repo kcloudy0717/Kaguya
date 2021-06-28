@@ -1,7 +1,7 @@
 #pragma once
 #include <bitset>
 #include <optional>
-#include "ThreadSafeQueue.h"
+#include <queue>
 
 class Keyboard
 {
@@ -53,12 +53,11 @@ private:
 	void OnChar(unsigned char Char);
 
 	template<class T>
-	void TrimBuffer(ThreadSafeQueue<T>& QueueBuffer)
+	void TrimBuffer(std::queue<T>& QueueBuffer)
 	{
 		while (QueueBuffer.size() > BufferSize)
 		{
-			T item;
-			QueueBuffer.pop(item, 0);
+			QueueBuffer.pop();
 		}
 	}
 
@@ -66,7 +65,7 @@ public:
 	bool AutoRepeat = false;
 
 private:
-	std::bitset<NumKeyStates>		 m_KeyStates;
-	ThreadSafeQueue<Keyboard::Event> m_KeyBuffer;
-	ThreadSafeQueue<unsigned char>	 m_CharBuffer;
+	std::bitset<NumKeyStates>	m_KeyStates;
+	std::queue<Keyboard::Event> m_KeyBuffer;
+	std::queue<unsigned char>	m_CharBuffer;
 };

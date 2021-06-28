@@ -28,20 +28,28 @@ bool Mouse::IsInWindow() const
 
 std::optional<Mouse::Event> Mouse::Read()
 {
-	if (Mouse::Event e; m_MouseBuffer.pop(e, 0))
+	if (m_MouseBuffer.empty())
 	{
-		return e;
+		return {};
 	}
-	return {};
+
+	Mouse::Event e = m_MouseBuffer.front();
+	m_MouseBuffer.pop();
+
+	return e;
 }
 
 std::optional<Mouse::RawInput> Mouse::ReadRawInput()
 {
-	if (Mouse::RawInput e; m_RawDeltaBuffer.pop(e, 0))
+	if (m_RawDeltaBuffer.empty())
 	{
-		return e;
+		return {};
 	}
-	return {};
+
+	Mouse::RawInput e = m_RawDeltaBuffer.front();
+	m_RawDeltaBuffer.pop();
+
+	return e;
 }
 
 void Mouse::OnMove(int x, int y)

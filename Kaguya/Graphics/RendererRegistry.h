@@ -47,7 +47,7 @@ struct Shaders
 		// Load VS
 		{
 			VS::FullScreenTriangle = ShaderCompiler.CompileShader(
-				Shader::Type::Vertex,
+				Shader::EType::Vertex,
 				ExecutableFolderPath / L"Shaders/FullScreenTriangle.hlsl",
 				g_VSEntryPoint,
 				{});
@@ -56,7 +56,7 @@ struct Shaders
 		// Load PS
 		{
 			PS::ToneMap = ShaderCompiler.CompileShader(
-				Shader::Type::Pixel,
+				Shader::EType::Pixel,
 				ExecutableFolderPath / L"Shaders/PostProcess/ToneMap.hlsl",
 				g_PSEntryPoint,
 				{});
@@ -65,8 +65,8 @@ struct Shaders
 		// Load CS
 		{
 			// Not used, need to add them back
-			// CS::InstanceGeneration			= ShaderCompiler.CompileShader(Shader::Type::Compute, ExecutableFolderPath
-			// / L"Shaders/InstanceGeneration.hlsl",		g_CSEntryPoint, {});
+			// CS::InstanceGeneration			= ShaderCompiler.CompileShader(Shader::Type::Compute,
+			// ExecutableFolderPath / L"Shaders/InstanceGeneration.hlsl",		g_CSEntryPoint, {});
 
 			// CS::PostProcess_BloomMask						= ShaderCompiler.CompileShader(Shader::Type::Compute,
 			// ExecutableFolderPath / L"Shaders/PostProcess/BloomMask.hlsl",						g_CSEntryPoint, {});

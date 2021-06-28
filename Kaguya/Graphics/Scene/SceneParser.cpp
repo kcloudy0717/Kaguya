@@ -250,7 +250,7 @@ static void SerializeCamera(YAML::Emitter& Emitter, const Camera& Camera)
 
 static void SerializeImages(YAML::Emitter& Emitter)
 {
-	auto& ImageCache = AssetManager::Instance().GetImageCache();
+	auto& ImageCache = AssetManager::GetImageCache();
 
 	Emitter << YAML::Key << "Images" << YAML::Value << YAML::BeginSeq;
 	{
@@ -285,7 +285,7 @@ static void SerializeImages(YAML::Emitter& Emitter)
 
 static void SerializeMeshes(YAML::Emitter& Emitter)
 {
-	auto& MeshCache = AssetManager::Instance().GetMeshCache();
+	auto& MeshCache = AssetManager::GetMeshCache();
 
 	Emitter << YAML::Key << "Meshes" << YAML::Value << YAML::BeginSeq;
 	{
@@ -404,28 +404,24 @@ static void DeserializeCamera(const YAML::Node& Node, Scene* pScene)
 
 static void DeserializeImage(const YAML::Node& Node)
 {
-	auto& AssetManager = AssetManager::Instance();
+	auto Path	  = Node["Image"].as<std::string>();
+	Path		  = (Application::ExecutableDirectory / Path).string();
+	auto Metadata = Node["Metadata"];
 
-	auto path	  = Node["Image"].as<std::string>();
-	path		  = (Application::ExecutableDirectory / path).string();
-	auto metadata = Node["Metadata"];
+	bool sRGB = Metadata["sRGB"].as<bool>();
 
-	bool sRGB = metadata["sRGB"].as<bool>();
-
-	AssetManager.AsyncLoadImage(path, sRGB);
+	AssetManager::AsyncLoadImage(Path, sRGB);
 }
 
 static void DeserializeMesh(const YAML::Node& Node)
 {
-	auto& AssetManager = AssetManager::Instance();
+	auto Path	  = Node["Mesh"].as<std::string>();
+	Path		  = (Application::ExecutableDirectory / Path).string();
+	auto Metadata = Node["Metadata"];
 
-	auto path	  = Node["Mesh"].as<std::string>();
-	path		  = (Application::ExecutableDirectory / path).string();
-	auto metadata = Node["Metadata"];
+	bool keepGeometryInRAM = Metadata["KeepGeometryInRAM"].as<bool>();
 
-	bool keepGeometryInRAM = metadata["KeepGeometryInRAM"].as<bool>();
-
-	AssetManager.AsyncLoadMesh(path, keepGeometryInRAM);
+	AssetManager::AsyncLoadMesh(Path, keepGeometryInRAM);
 }
 
 template<is_component T, typename DeserializeFunction>
@@ -525,15 +521,8 @@ void SceneParser::Load(const std::filesystem::path& Path, Scene* pScene)
 {
 	pScene->Clear();
 
-	auto& AssetManager = AssetManager::Instance();
-	AssetManager.GetImageCache().Each_ThreadSafe(
-		[](AssetHandle<Asset::Image> Handle)
-		{
-			RenderDevice::Instance().GetResourceViewHeaps().ReleaseResourceView(Handle->SRV);
-		});
-
-	AssetManager.GetImageCache().DestroyAll();
-	AssetManager.GetMeshCache().DestroyAll();
+	AssetManager::GetImageCache().DestroyAll();
+	AssetManager::GetMeshCache().DestroyAll();
 
 	std::ifstream	  fin(Path);
 	std::stringstream ss;

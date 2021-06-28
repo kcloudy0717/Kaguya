@@ -1,13 +1,11 @@
 #include "pch.h"
 #include "Renderer.h"
-#include "Core/Window.h"
 #include "Core/Stopwatch.h"
 
 #include "RenderDevice.h"
 #include "Scene/Entity.h"
 
-#include <wincodec.h>	// GUID for different file formats, needed for ScreenGrab
-#include <ScreenGrab.h> // DirectX::SaveWICTextureToFile
+#include <wincodec.h> // GUID for different file formats, needed for ScreenGrab
 
 #include "RendererRegistry.h"
 
@@ -15,7 +13,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 Renderer::Renderer()
-	: RenderSystem(Application::Window.GetWindowWidth(), Application::Window.GetWindowHeight())
+	: RenderSystem(Application::Width(), Application::Height())
 	, m_ViewportMouseX(0)
 	, m_ViewportMouseY(0)
 	, m_ViewportWidth(0)
@@ -37,8 +35,15 @@ void Renderer::SetViewportMousePosition(float MouseX, float MouseY)
 
 void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	if (Width == 0 || Height == 0)
+	if (!RenderDevice::IsValid())
+	{
 		return;
+	}
+
+	if (Width == 0 || Height == 0)
+	{
+		return;
+	}
 
 	m_ViewportWidth	 = Width;
 	m_ViewportHeight = Height;
@@ -52,17 +57,11 @@ void Renderer::Initialize()
 	auto& RenderDevice = RenderDevice::Instance();
 
 	ShaderCompiler shaderCompiler;
+	shaderCompiler.SetShaderModel(D3D_SHADER_MODEL_6_6);
 	shaderCompiler.SetIncludeDirectory(Application::ExecutableDirectory / L"Shaders");
 
 	Shaders::Compile(shaderCompiler);
 	Libraries::Compile(shaderCompiler);
-
-	m_GraphicsFence		 = Fence(RenderDevice.GetDevice());
-	m_ComputeFence		 = Fence(RenderDevice.GetDevice());
-	m_GraphicsFenceValue = m_ComputeFenceValue = 1;
-
-	m_GraphicsCommandList = CommandList(RenderDevice.GetDevice(), D3D12_COMMAND_LIST_TYPE_DIRECT);
-	m_ComputeCommandList  = CommandList(RenderDevice.GetDevice(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
 
 	m_RaytracingAccelerationStructure = RaytracingAccelerationStructure(PathIntegrator::NumHitGroups);
 
@@ -70,24 +69,21 @@ void Renderer::Initialize()
 	m_Picking.Create();
 	m_ToneMapper = ToneMapper(RenderDevice::Instance());
 
-	D3D12MA::ALLOCATION_DESC allocationDesc = {};
-	allocationDesc.HeapType					= D3D12_HEAP_TYPE_UPLOAD;
-
-	m_Materials = RenderDevice.CreateBuffer(
-		&allocationDesc,
+	m_Materials = Buffer(
+		RenderDevice.GetDevice(),
 		sizeof(HLSL::Material) * Scene::MAX_MATERIAL_SUPPORTED,
-		D3D12_RESOURCE_FLAG_NONE,
-		0,
-		D3D12_RESOURCE_STATE_GENERIC_READ);
-	ThrowIfFailed(m_Materials->pResource->Map(0, nullptr, reinterpret_cast<void**>(&m_pMaterials)));
+		sizeof(HLSL::Material),
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_RESOURCE_FLAG_NONE);
+	ThrowIfFailed(m_Materials.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&m_pMaterials)));
 
-	m_Lights = RenderDevice.CreateBuffer(
-		&allocationDesc,
+	m_Lights = Buffer(
+		RenderDevice.GetDevice(),
 		sizeof(HLSL::Light) * Scene::MAX_LIGHT_SUPPORTED,
-		D3D12_RESOURCE_FLAG_NONE,
-		0,
-		D3D12_RESOURCE_STATE_GENERIC_READ);
-	ThrowIfFailed(m_Lights->pResource->Map(0, nullptr, reinterpret_cast<void**>(&m_pLights)));
+		sizeof(HLSL::Light),
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_RESOURCE_FLAG_NONE);
+	ThrowIfFailed(m_Lights.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&m_pLights)));
 }
 
 void Renderer::Render(Scene& Scene)
@@ -97,12 +93,12 @@ void Renderer::Render(Scene& Scene)
 	UINT numMaterials = 0, numLights = 0;
 
 	m_RaytracingAccelerationStructure.clear();
-	Scene.Registry.view<MeshFilter, MeshRenderer>().each(
-		[&](auto&& MeshFilter, auto&& MeshRenderer)
+	Scene.Registry.view<Transform, MeshFilter, MeshRenderer>().each(
+		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
 		{
 			if (MeshFilter.Mesh)
 			{
-				m_RaytracingAccelerationStructure.AddInstance(&MeshRenderer);
+				m_RaytracingAccelerationStructure.AddInstance(Transform, &MeshRenderer);
 				m_pMaterials[numMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
 			}
 		});
@@ -112,21 +108,72 @@ void Renderer::Render(Scene& Scene)
 			m_pLights[numLights++] = GetHLSLLightDesc(Transform, Light);
 		});
 
+	CommandSyncPoint CopySyncPoint;
 	if (!m_RaytracingAccelerationStructure.empty())
 	{
-		m_ComputeCommandList.Reset(
-			m_ComputeFenceValue,
-			m_ComputeFence->GetCompletedValue(),
-			&RenderDevice.GetComputeQueue());
+		CommandContext& Copy = RenderDevice.GetDevice()->GetCopyContext1();
+		Copy.OpenCommandList();
 
-		m_RaytracingAccelerationStructure.Build(m_ComputeCommandList);
+		// Update shader table
+		m_PathIntegrator.UpdateShaderTable(m_RaytracingAccelerationStructure, Copy);
+		m_Picking.UpdateShaderTable(m_RaytracingAccelerationStructure, Copy);
 
-		CommandList* pCommandContexts[] = { &m_ComputeCommandList };
-		RenderDevice.ExecuteAsyncComputeContexts(1, pCommandContexts);
+		Copy.CloseCommandList();
 
-		RenderDevice.GetComputeQueue()->Signal(m_ComputeFence, m_ComputeFenceValue);
-		RenderDevice.GetGraphicsQueue()->Wait(m_ComputeFence, m_ComputeFenceValue);
-		m_ComputeFenceValue++;
+		CopySyncPoint = Copy.Execute(false);
+	}
+
+	std::vector<Buffer> TrackedScratchBuffers;
+
+	CommandSyncPoint ASBuildSyncPoint;
+	if (!m_RaytracingAccelerationStructure.empty())
+	{
+		CommandContext& AsyncCompute = RenderDevice.GetDevice()->GetAsyncComputeCommandContext();
+		AsyncCompute.OpenCommandList();
+
+		for (auto [i, meshRenderer] : enumerate(m_RaytracingAccelerationStructure.MeshRenderers))
+		{
+			MeshFilter*						  meshFilter = meshRenderer->pMeshFilter;
+			BottomLevelAccelerationStructure& BLAS		 = meshFilter->Mesh->BLAS;
+
+			if (meshFilter->Mesh->BLASValid)
+			{
+				continue;
+			}
+
+			meshFilter->Mesh->BLASValid = true;
+
+			ID3D12Resource* vertexBuffer = meshFilter->Mesh->VertexResource.GetResource();
+			ID3D12Resource* indexBuffer	 = meshFilter->Mesh->IndexResource.GetResource();
+
+			UINT64 scratchSize, resultSize;
+			BLAS.ComputeMemoryRequirements(RenderDevice.GetDevice()->GetDevice5(), &scratchSize, &resultSize);
+
+			// TODO: add a memory allocation scheme here, RTAS alignment is only 256, we can suballocate from a buffer
+			// dedicated to build AS
+			Buffer scratch = Buffer(
+				RenderDevice.GetDevice(),
+				scratchSize,
+				0,
+				D3D12_HEAP_TYPE_DEFAULT,
+				D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+			meshFilter->Mesh->AccelerationStructure = ASBuffer(RenderDevice.GetDevice(), resultSize);
+
+			BLAS.Generate(
+				AsyncCompute.CommandListHandle.GetGraphicsCommandList6(),
+				scratch,
+				meshFilter->Mesh->AccelerationStructure);
+
+			TrackedScratchBuffers.push_back(std::move(scratch));
+		}
+
+		AsyncCompute.UAVBarrier(nullptr);
+
+		m_RaytracingAccelerationStructure.Build(AsyncCompute);
+
+		AsyncCompute.CloseCommandList();
+
+		ASBuildSyncPoint = AsyncCompute.Execute(false);
 	}
 
 	if (Scene.SceneState & Scene::SCENE_STATE_UPDATED)
@@ -135,10 +182,11 @@ void Renderer::Render(Scene& Scene)
 	}
 
 	// Begin recording graphics command
-	m_GraphicsCommandList.Reset(
-		m_GraphicsFenceValue,
-		m_GraphicsFence->GetCompletedValue(),
-		&RenderDevice.GetGraphicsQueue());
+
+	CommandContext& Context = RenderDevice.GetDevice()->GetCommandContext();
+	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
+	Context.GetCommandQueue()->WaitForSyncPoint(ASBuildSyncPoint);
+	Context.OpenCommandList();
 
 	struct GlobalConstants
 	{
@@ -162,87 +210,84 @@ void Renderer::Render(Scene& Scene)
 	g_GlobalConstants.TotalFrameCount = static_cast<unsigned int>(Statistics::TotalFrameCount);
 	g_GlobalConstants.NumLights		  = numLights;
 
-	GraphicsResource sceneConstantBuffer = RenderDevice.GraphicsMemory()->AllocateConstant(g_GlobalConstants);
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(GlobalConstants));
+	std::memcpy(Allocation.CPUVirtualAddress, &g_GlobalConstants, sizeof(GlobalConstants));
 
-	RenderDevice.BindResourceViewHeaps(m_GraphicsCommandList);
+	Context.BindResourceViewHeaps();
 
 	if (!m_RaytracingAccelerationStructure.empty())
 	{
-		// Update shader table
-		m_PathIntegrator.UpdateShaderTable(m_RaytracingAccelerationStructure, m_GraphicsCommandList);
-
 		// Enqueue ray tracing commands
 		m_PathIntegrator.Render(
-			sceneConstantBuffer.GpuAddress(),
+			Allocation.GPUVirtualAddress,
 			m_RaytracingAccelerationStructure,
-			m_Materials->pResource->GetGPUVirtualAddress(),
-			m_Lights->pResource->GetGPUVirtualAddress(),
-			m_GraphicsCommandList);
+			m_Materials.GetGPUVirtualAddress(),
+			m_Lights.GetGPUVirtualAddress(),
+			Context);
 
-		m_Picking.UpdateShaderTable(m_RaytracingAccelerationStructure, m_GraphicsCommandList);
-		m_Picking.ShootPickingRay(
-			sceneConstantBuffer.GpuAddress(),
-			m_RaytracingAccelerationStructure,
-			m_GraphicsCommandList);
+		m_Picking.ShootPickingRay(Allocation.GPUVirtualAddress, m_RaytracingAccelerationStructure, Context);
 
-		m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), m_GraphicsCommandList);
+		m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
 	}
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 
-	m_GraphicsCommandList.TransitionBarrier(pRenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	auto ResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		pRenderTarget,
+		D3D12_RESOURCE_STATE_PRESENT,
+		D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Context->ResourceBarrier(1, &ResourceBarrier);
 	{
 		m_Viewport	  = CD3DX12_VIEWPORT(0.0f, 0.0f, float(m_Width), float(m_Height));
 		m_ScissorRect = CD3DX12_RECT(0, 0, m_Width, m_Height);
 
-		m_GraphicsCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_GraphicsCommandList->RSSetViewports(1, &m_Viewport);
-		m_GraphicsCommandList->RSSetScissorRects(1, &m_ScissorRect);
-		m_GraphicsCommandList->OMSetRenderTargets(1, &RenderTargetView.CpuHandle, TRUE, nullptr);
+		Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		Context->RSSetViewports(1, &m_Viewport);
+		Context->RSSetScissorRects(1, &m_ScissorRect);
+		Context->OMSetRenderTargets(1, &RenderTargetView, TRUE, nullptr);
 		FLOAT white[] = { 1, 1, 1, 1 };
-		m_GraphicsCommandList->ClearRenderTargetView(RenderTargetView.CpuHandle, white, 0, nullptr);
+		Context->ClearRenderTargetView(RenderTargetView, white, 0, nullptr);
 
 		// ImGui Render
 		{
-			PIXScopedEvent(m_GraphicsCommandList.GetCommandList(), 0, L"ImGui Render");
+			PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"ImGui Render");
 
 			ImGui::Render();
-			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), m_GraphicsCommandList);
+			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.CommandListHandle.GetGraphicsCommandList());
 		}
 	}
-	m_GraphicsCommandList.TransitionBarrier(pRenderTarget, D3D12_RESOURCE_STATE_PRESENT);
+	ResourceBarrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		pRenderTarget,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		D3D12_RESOURCE_STATE_PRESENT);
+	Context->ResourceBarrier(1, &ResourceBarrier);
 
-	CommandList* pCommandLists[] = { &m_GraphicsCommandList };
-	RenderDevice.ExecuteGraphicsContexts(1, pCommandLists);
+	CommandSyncPoint MainSyncPoint = Context.Execute(false);
+
 	RenderDevice.Present(Settings::VSync);
 
-	UINT64 value = ++m_GraphicsFenceValue;
-	ThrowIfFailed(RenderDevice::Instance().GetGraphicsQueue()->Signal(m_GraphicsFence, value));
-	m_GraphicsFence->SetEventOnCompletion(value, nullptr);
+	MainSyncPoint.WaitForCompletion();
 }
 
 void Renderer::Resize(uint32_t Width, uint32_t Height)
 {
-	UINT64 value = ++m_GraphicsFenceValue;
-	ThrowIfFailed(RenderDevice::Instance().GetGraphicsQueue()->Signal(m_GraphicsFence, value));
-	m_GraphicsFence->SetEventOnCompletion(value, nullptr);
-	RenderDevice::Instance().Resize(Width, Height);
+	if (RenderDevice::IsValid())
+	{
+		RenderDevice::Instance().GetDevice()->GetGraphicsQueue()->Flush();
+		RenderDevice::Instance().Resize(Width, Height);
+	}
 }
 
 void Renderer::Destroy()
 {
-	UINT64 value = ++m_GraphicsFenceValue;
-	ThrowIfFailed(RenderDevice::Instance().GetGraphicsQueue()->Signal(m_GraphicsFence, value));
-	m_GraphicsFence->SetEventOnCompletion(value, nullptr);
-
-	value = ++m_ComputeFenceValue;
-	ThrowIfFailed(RenderDevice::Instance().GetComputeQueue()->Signal(m_ComputeFence, value));
-	m_ComputeFence->SetEventOnCompletion(value, nullptr);
+	RenderDevice::Instance().GetDevice()->GetGraphicsQueue()->Flush();
+	RenderDevice::Instance().GetDevice()->GetCopyQueue1()->Flush();
+	RenderDevice::Instance().GetDevice()->GetCopyQueue2()->Flush();
 }
 
 void Renderer::RequestCapture()
 {
-	auto SaveD3D12ResourceToDisk = [&](const std::filesystem::path& Path,
+	/*auto SaveD3D12ResourceToDisk = [&](const std::filesystem::path& Path,
 									   ID3D12Resource*				pResource,
 									   D3D12_RESOURCE_STATES		Before,
 									   D3D12_RESOURCE_STATES		After)
@@ -278,5 +323,5 @@ void Renderer::RequestCapture()
 		Application::ExecutableDirectory / L"swapchain.png",
 		pRenderTarget,
 		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_PRESENT);
+		D3D12_RESOURCE_STATE_PRESENT);*/
 }

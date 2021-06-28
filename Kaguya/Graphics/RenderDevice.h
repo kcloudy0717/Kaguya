@@ -1,18 +1,19 @@
 #pragma once
-#include <GraphicsMemory.h>
-
 #include "D3D12/ShaderCompiler.h"
-#include "d3d12/SwapChain.h"
+
 #include "D3D12/Device.h"
 #include "D3D12/CommandQueue.h"
-#include "D3D12/ResourceViewHeaps.h"
-#include "D3D12/Fence.h"
-#include "D3D12/ResourceStateTracker.h"
-#include "D3D12/CommandList.h"
-#include "D3D12/AccelerationStructure.h"
-#include "D3D12/RootSignature.h"
-#include "d3d12/PipelineState.h"
+#include "D3D12/InputLayout.h"
+#include "D3D12/PipelineState.h"
 #include "D3D12/RaytracingPipelineState.h"
+#include "D3D12/Profiler.h"
+#include "D3D12/Resource.h"
+#include "D3D12/ResourceUploader.h"
+#include "D3D12/ResourceViewHeaps.h"
+#include "D3D12/RootSignature.h"
+#include "D3D12/ShaderCompiler.h"
+#include "D3D12/SwapChain.h"
+#include "D3D12/AccelerationStructure.h"
 #include "D3D12/RaytracingShaderTable.h"
 
 struct RootParameters
@@ -29,14 +30,6 @@ struct RootParameters
 	};
 };
 
-struct Resource
-{
-	~Resource();
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
-	D3D12MA::Allocation*				   pAllocation = nullptr;
-};
-
 class RenderDevice
 {
 public:
@@ -47,79 +40,50 @@ public:
 	static void			 Shutdown();
 	static RenderDevice& Instance();
 
+	static bool IsValid();
+
 	void Present(bool VSync);
 
 	void Resize(UINT Width, UINT Height);
 
-	void BindResourceViewHeaps(CommandList& CommandList);
-
-	void BindGraphicsDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
+	void BindGraphicsDescriptorTable(const RootSignature& RootSignature, CommandContext& Context)
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
-		const auto rootParameterOffset =
-			RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto resourceDescriptorFromStart = m_ResourceViewHeaps.ResourceDescriptorHeap().GetDescriptorFromStart();
-		auto samplerDescriptorFromStart	 = m_ResourceViewHeaps.SamplerDescriptorHeap().GetDescriptorFromStart();
+		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
+			m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
+			m_Device->GetResourceViewHeaps().GetSamplerDescriptorHeap().hGPU(0);
 
-		CommandList->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + rootParameterOffset,
-			resourceDescriptorFromStart.GpuHandle);
-		CommandList->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + rootParameterOffset,
-			resourceDescriptorFromStart.GpuHandle);
-		CommandList->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + rootParameterOffset,
-			samplerDescriptorFromStart.GpuHandle);
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+			SamplerDescriptor);
 	}
 
-	void BindComputeDescriptorTable(const RootSignature& RootSignature, CommandList& CommandList)
+	void BindComputeDescriptorTable(const RootSignature& RootSignature, CommandContext& Context)
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
-		const auto rootParameterOffset =
-			RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto resourceDescriptorFromStart = m_ResourceViewHeaps.ResourceDescriptorHeap().GetDescriptorFromStart();
-		auto samplerDescriptorFromStart	 = m_ResourceViewHeaps.SamplerDescriptorHeap().GetDescriptorFromStart();
+		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
+			m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
+			m_Device->GetResourceViewHeaps().GetSamplerDescriptorHeap().hGPU(0);
 
-		CommandList->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + rootParameterOffset,
-			resourceDescriptorFromStart.GpuHandle);
-		CommandList->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + rootParameterOffset,
-			resourceDescriptorFromStart.GpuHandle);
-		CommandList->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + rootParameterOffset,
-			samplerDescriptorFromStart.GpuHandle);
-	}
-
-	void ExecuteGraphicsContexts(UINT NumCommandLists, CommandList* ppCommandLists[])
-	{
-		ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_DIRECT, NumCommandLists, ppCommandLists);
-	}
-	void ExecuteAsyncComputeContexts(UINT NumCommandLists, CommandList* ppCommandLists[])
-	{
-		ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_COMPUTE, NumCommandLists, ppCommandLists);
-	}
-	void ExecuteCopyContexts(UINT NumCommandLists, CommandList* ppCommandLists[])
-	{
-		ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE_COPY, NumCommandLists, ppCommandLists);
-	}
-
-	// Resource creation
-	[[nodiscard]] std::shared_ptr<Resource> CreateResource(
-		const D3D12MA::ALLOCATION_DESC* pAllocDesc,
-		const D3D12_RESOURCE_DESC*		pResourceDesc,
-		D3D12_RESOURCE_STATES			InitialResourceState,
-		const D3D12_CLEAR_VALUE*		pOptimizedClearValue);
-
-	[[nodiscard]] std::shared_ptr<Resource> CreateBuffer(
-		const D3D12MA::ALLOCATION_DESC* pAllocDesc,
-		UINT64							Width,
-		D3D12_RESOURCE_FLAGS			Flags				 = D3D12_RESOURCE_FLAG_NONE,
-		UINT64							Alignment			 = 0,
-		D3D12_RESOURCE_STATES			InitialResourceState = D3D12_RESOURCE_STATE_COMMON)
-	{
-		auto Desc = CD3DX12_RESOURCE_DESC::Buffer(Width, Flags, Alignment);
-		return CreateResource(pAllocDesc, &Desc, InitialResourceState, nullptr);
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+			SamplerDescriptor);
 	}
 
 	[[nodiscard]] RootSignature CreateRootSignature(
@@ -129,68 +93,18 @@ public:
 	template<typename PipelineStateStream>
 	[[nodiscard]] PipelineState CreatePipelineState(PipelineStateStream& Stream)
 	{
-		return PipelineState(m_Device, Stream);
+		return PipelineState(m_Device->GetDevice5(), Stream);
 	}
 
 	[[nodiscard]] RaytracingPipelineState CreateRaytracingPipelineState(
 		std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
 
-	// Thread-Safe
-	// Buffer variation
-	void CreateShaderResourceView(
-		ID3D12Resource*	  pResource,
-		const Descriptor& DestDescriptor,
-		UINT			  NumElements,
-		UINT			  Stride,
-		bool			  IsRawBuffer = false);
-
-	template<typename T>
-	void CreateShaderResourceView(ID3D12Resource* pResource, const Descriptor& DestDescriptor, UINT NumElements)
-	{
-		return CreateShaderResourceView(pResource, DestDescriptor, NumElements, sizeof(T));
-	}
-
-	// Texture variation
-	void CreateShaderResourceView(
-		ID3D12Resource*		pResource,
-		const Descriptor&	DestDescriptor,
-		std::optional<UINT> MostDetailedMip = {},
-		std::optional<UINT> MipLevels		= {});
-
-	void CreateUnorderedAccessView(
-		ID3D12Resource*		pResource,
-		const Descriptor&	DestDescriptor,
-		std::optional<UINT> ArraySlice = {},
-		std::optional<UINT> MipSlice   = {});
-
-	void CreateRenderTargetView(
-		ID3D12Resource*		pResource,
-		const Descriptor&	DestDescriptor,
-		std::optional<UINT> ArraySlice = {},
-		std::optional<UINT> MipSlice   = {},
-		std::optional<UINT> ArraySize  = {},
-		bool				sRGB	   = false);
-
-	void CreateDepthStencilView(
-		ID3D12Resource*		pResource,
-		const Descriptor&	DestDescriptor,
-		std::optional<UINT> ArraySlice = {},
-		std::optional<UINT> MipSlice   = {},
-		std::optional<UINT> ArraySize  = {});
-
-	const auto&					 GetAdapterDesc() const { return m_AdapterDesc; }
+	const auto&					 GetAdapterDesc() const { return AdapterDesc; }
 	DXGI_QUERY_VIDEO_MEMORY_INFO QueryLocalVideoMemoryInfo() const;
 
 	auto GetCurrentBackBufferResource() const { return m_SwapChain.GetCurrentBackBufferResource(); }
 
-	Device&					 GetDevice() noexcept { return m_Device; }
-	DirectX::GraphicsMemory* GraphicsMemory() const noexcept { return m_GraphicsMemory.get(); }
-
-	ResourceViewHeaps& GetResourceViewHeaps() noexcept { return m_ResourceViewHeaps; }
-
-	CommandQueue& GetGraphicsQueue() noexcept { return m_GraphicsQueue; }
-	CommandQueue& GetComputeQueue() noexcept { return m_ComputeQueue; }
-	CommandQueue& GetCopyQueue() noexcept { return m_CopyQueue; }
+	Device* GetDevice() noexcept { return m_Device.get(); }
 
 private:
 	RenderDevice();
@@ -201,31 +115,17 @@ private:
 
 	void InitializeDXGIObjects();
 
-	CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE CommandListType);
-	void		  AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
-
-	void ExecuteCommandListsInternal(D3D12_COMMAND_LIST_TYPE Type, UINT NumCommandLists, CommandList* ppCommandLists[]);
+	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
 private:
-	Microsoft::WRL::ComPtr<IDXGIFactory6> m_Factory;
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> m_Adapter;
-	DXGI_ADAPTER_DESC3					  m_AdapterDesc;
+	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
+	Microsoft::WRL::ComPtr<IDXGIAdapter4> Adapter4;
+	DXGI_ADAPTER_DESC3					  AdapterDesc;
 
-	Device m_Device;
+	std::unique_ptr<Device> m_Device;
 
-	std::unique_ptr<DirectX::GraphicsMemory> m_GraphicsMemory;
-	D3D12MA::Allocator*						 m_Allocator = nullptr;
+	SwapChain m_SwapChain;
 
-	CommandQueue m_GraphicsQueue;
-	CommandQueue m_ComputeQueue;
-	CommandQueue m_CopyQueue;
-
-	ResourceViewHeaps m_ResourceViewHeaps;
-	SwapChain		  m_SwapChain;
-
-	Descriptor m_ImGuiDescriptor;
-
-	// Global resource state tracker
-	ResourceStateTracker m_GlobalResourceStateTracker;
-	CriticalSection		 m_GlobalResourceStateCriticalSection;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_ImGuiFontCpuDescriptor;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_ImGuiFontGpuDescriptor;
 };

@@ -1,7 +1,14 @@
 #include "pch.h"
 #include "Device.h"
+#include <Core/Console.h>
 
 using Microsoft::WRL::ComPtr;
+
+AutoConsoleVariable<bool> CVar_DRED(
+	"D3D12.DRED",
+	"Enable Device Removed Extended Data\n"
+	"DRED delivers automatic breadcrumbs as well as GPU page fault reporting\n",
+	true);
 
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
@@ -12,48 +19,113 @@ extern "C"
 
 void Device::ReportLiveObjects()
 {
-	ComPtr<IDXGIDebug> pDXGIDebug;
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDXGIDebug))))
+#ifdef _DEBUG
+	ComPtr<IDXGIDebug> DXGIDebug;
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&DXGIDebug))))
 	{
-		pDXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+		DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
 	}
+#endif
 }
 
-Device::Device(_In_ IDXGIAdapter4* pAdapter, _In_ const DeviceOptions& Options, _In_ const DeviceFeatures& Features)
+Device::Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options)
+	: GraphicsQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT)
+	, AsyncComputeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
+	, CopyQueue1(this, D3D12_COMMAND_LIST_TYPE_COPY)
+	, CopyQueue2(this, D3D12_COMMAND_LIST_TYPE_COPY)
+	, pResourceViewHeaps(nullptr)
 {
 	// Enable the D3D12 debug layer
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
 	{
 		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the
 		// device.
-		ComPtr<ID3D12Debug5> pDebug5;
-		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(pDebug5.ReleaseAndGetAddressOf()))))
+		ComPtr<ID3D12Debug> Debug;
+		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(Debug.ReleaseAndGetAddressOf()))))
 		{
 			if (Options.EnableDebugLayer)
 			{
-				pDebug5->EnableDebugLayer();
+				Debug->EnableDebugLayer();
 			}
-			pDebug5->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
-			pDebug5->SetEnableAutoName(Options.EnableAutoDebugName);
+		}
+
+		ComPtr<ID3D12Debug3> Debug3;
+		if (SUCCEEDED(Debug.As(&Debug3)))
+		{
+			Debug3->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
+		}
+
+		ComPtr<ID3D12Debug5> Debug5;
+		if (SUCCEEDED(Debug.As(&Debug5)))
+		{
+			Debug5->SetEnableAutoName(Options.EnableAutoDebugName);
 		}
 	}
 
-	ThrowIfFailed(::D3D12CreateDevice(pAdapter, Options.FeatureLevel, IID_PPV_ARGS(m_Device.ReleaseAndGetAddressOf())));
-
-	ComPtr<ID3D12InfoQueue> pInfoQueue;
-	if (SUCCEEDED(m_Device.As(&pInfoQueue)))
+	if (CVar_DRED.Get())
 	{
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, Options.BreakOnCorruption);
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, Options.BreakOnError);
-		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
+		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&DREDSettings)));
+
+		// Turn on auto-breadcrumbs and page fault reporting.
+		DREDSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		DREDSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 	}
 
+	ThrowIfFailed(::D3D12CreateDevice(pAdapter, Options.FeatureLevel, IID_PPV_ARGS(pDevice.ReleaseAndGetAddressOf())));
+
+	pDevice.As(&pDevice5);
+
+	ComPtr<ID3D12InfoQueue> InfoQueue;
+	if (SUCCEEDED(pDevice.As(&InfoQueue)))
+	{
+		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, Options.BreakOnCorruption);
+		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, Options.BreakOnError);
+		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, Options.BreakOnWarning);
+	}
+
+	DeviceRemovedWaitHandle = INVALID_HANDLE_VALUE;
+	if (CVar_DRED.Get())
+	{
+		// DRED
+		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
+		HRESULT hr =
+			pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(DeviceRemovedFence.ReleaseAndGetAddressOf()));
+
+		DeviceRemovedEvent.create();
+		// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior to
+		// what happened.
+		hr = DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get());
+
+		RegisterWaitForSingleObject(
+			&DeviceRemovedWaitHandle,
+			DeviceRemovedEvent.get(),
+			OnDeviceRemoved,
+			pDevice.Get(),
+			INFINITE,
+			0);
+	}
+}
+
+Device::~Device()
+{
+	if (CVar_DRED.Get())
+	{
+		// Need to gracefully exit the event
+		DeviceRemovedFence->Signal(UINT64_MAX);
+		BOOL b = UnregisterWaitEx(DeviceRemovedWaitHandle, INVALID_HANDLE_VALUE);
+		assert(b);
+	}
+}
+
+void Device::Initialize(const DeviceFeatures& Features)
+{
 	if (Features.WaveOperation)
 	{
-		D3D12_FEATURE_DATA_D3D12_OPTIONS1 o1 = {};
-		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &o1, sizeof(o1))))
+		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS1> Options1 = {};
+		if (SUCCEEDED(pDevice->CheckFeatureSupport(Options1.Feature, &Options1.FeatureSupportData, sizeof(Options1))))
 		{
-			if (!o1.WaveOps)
+			if (!Options1->WaveOps)
 			{
 				throw std::runtime_error("Wave operation not supported on device");
 			}
@@ -62,10 +134,10 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, _In_ const DeviceOptions& Options, 
 
 	if (Features.Raytracing)
 	{
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 o5 = {};
-		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &o5, sizeof(o5))))
+		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS5> Options5 = {};
+		if (SUCCEEDED(pDevice->CheckFeatureSupport(Options5.Feature, &Options5.FeatureSupportData, sizeof(Options5))))
 		{
-			if (o5.RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
+			if (Options5->RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
 			{
 				throw std::runtime_error("Raytracing not supported on device");
 			}
@@ -76,26 +148,160 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, _In_ const DeviceOptions& Options, 
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
 	if (Features.DynamicResources)
 	{
-		D3D12_FEATURE_DATA_SHADER_MODEL sm = { .HighestShaderModel = D3D_SHADER_MODEL_6_6 };
-		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))))
+		D3D12Feature<D3D12_FEATURE_SHADER_MODEL> ShaderModel;
+		ShaderModel.FeatureSupportData.HighestShaderModel = D3D_SHADER_MODEL_6_6;
+		if (SUCCEEDED(pDevice->CheckFeatureSupport(
+				ShaderModel.Feature,
+				&ShaderModel.FeatureSupportData,
+				sizeof(ShaderModel))))
 		{
-			if (sm.HighestShaderModel < D3D_SHADER_MODEL_6_6)
+			if (ShaderModel->HighestShaderModel < D3D_SHADER_MODEL_6_6)
 			{
 				throw std::runtime_error("Dynamic resources not supported on device");
 			}
 		}
 
-		D3D12_FEATURE_DATA_D3D12_OPTIONS o0 = {};
-		if (SUCCEEDED(m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &o0, sizeof(o0))))
+		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS> Options;
+		if (SUCCEEDED(pDevice->CheckFeatureSupport(Options.Feature, &Options.FeatureSupportData, sizeof(Options))))
 		{
-			if (o0.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_3)
+			if (Options->ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_3)
 			{
 				throw std::runtime_error("Dynamic resources not supported on device");
 			}
 		}
 	}
+
+	GraphicsQueue.Initialize();
+	AsyncComputeQueue.Initialize();
+	CopyQueue1.Initialize();
+	CopyQueue2.Initialize();
+
+	pResourceViewHeaps = std::make_unique<ResourceViewHeaps>(GetDevice());
+
+	// TODO: Implement a task-graph for rendering work
+	const unsigned int NumThreads = 4;
+	AvailableCommandContexts.reserve(NumThreads);
+	for (unsigned int i = 0; i < NumThreads; ++i)
+	{
+		AvailableCommandContexts.push_back(
+			std::make_unique<CommandContext>(this, ECommandQueueType::Direct, D3D12_COMMAND_LIST_TYPE_DIRECT));
+	}
+	AvailableAsyncCommandContexts.reserve(NumThreads);
+	for (unsigned int i = 0; i < NumThreads; ++i)
+	{
+		AvailableAsyncCommandContexts.push_back(
+			std::make_unique<CommandContext>(this, ECommandQueueType::AsyncCompute, D3D12_COMMAND_LIST_TYPE_COMPUTE));
+	}
+
+	CopyContext1 = std::make_unique<CommandContext>(this, ECommandQueueType::Copy1, D3D12_COMMAND_LIST_TYPE_COPY);
+	CopyContext2 = std::make_unique<CommandContext>(this, ECommandQueueType::Copy2, D3D12_COMMAND_LIST_TYPE_COPY);
 }
 
-Device::~Device()
+ID3D12Device* Device::GetDevice() const
 {
+	return pDevice.Get();
+}
+
+ID3D12Device5* Device::GetDevice5() const
+{
+	return pDevice5.Get();
+}
+
+CommandQueue* Device::GetCommandQueue(ECommandQueueType Type)
+{
+	switch (Type)
+	{
+	case ECommandQueueType::Direct:
+		return &GraphicsQueue;
+	case ECommandQueueType::AsyncCompute:
+		return &AsyncComputeQueue;
+	case ECommandQueueType::Copy1:
+		return &CopyQueue1;
+	case ECommandQueueType::Copy2:
+		return &CopyQueue2;
+	default:
+		assert(false && "Should not get here");
+		return nullptr;
+	}
+}
+
+ResourceViewHeaps& Device::GetResourceViewHeaps()
+{
+	assert(pResourceViewHeaps != nullptr);
+	return *pResourceViewHeaps;
+}
+
+D3D12_RESOURCE_ALLOCATION_INFO Device::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc)
+{
+	UINT64 Hash = CityHash64((const char*)&ResourceDesc, sizeof(D3D12_RESOURCE_DESC));
+
+	{
+		ScopedReadLock _(ResourceAllocationInfoTableLock);
+		if (auto iter = ResourceAllocationInfoTable.find(Hash); iter != ResourceAllocationInfoTable.end())
+		{
+			return iter->second;
+		}
+	}
+
+	ScopedWriteLock _(ResourceAllocationInfoTableLock);
+
+	D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(0, 1, &ResourceDesc);
+	ResourceAllocationInfoTable.insert(std::make_pair(Hash, ResourceAllocationInfo));
+
+	return ResourceAllocationInfo;
+}
+
+bool Device::ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
+{
+	// 4KB alignment is only available for read only textures
+	if (!(ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET ||
+		  ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ||
+		  ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) &&
+		ResourceDesc.SampleDesc.Count == 1)
+	{
+		// Since we are using small resources we can take advantage of 4KB
+		// resource alignments. As long as the most detailed mip can fit in an
+		// allocation less than 64KB, 4KB alignments can be used.
+		//
+		// When dealing with MSAA textures the rules are similar, but the minimum
+		// alignment is 64KB for a texture whose most detailed mip can fit in an
+		// allocation less than 4MB.
+		ResourceDesc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+
+		D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(ResourceDesc);
+		if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		{
+			// If the alignment requested is not granted, then let D3D tell us
+			// the alignment that needs to be used for these resources.
+			ResourceDesc.Alignment = 0;
+			return false;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+void Device::RemoveDevice()
+{
+	pDevice5->RemoveDevice();
+}
+
+void Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
+{
+	ID3D12Device* D3D12Device	= static_cast<ID3D12Device*>(Context);
+	HRESULT		  RemovedReason = D3D12Device->GetDeviceRemovedReason();
+	if (FAILED(RemovedReason))
+	{
+		ComPtr<ID3D12DeviceRemovedExtendedData> Dred;
+		ThrowIfFailed(D3D12Device->QueryInterface(IID_PPV_ARGS(&Dred)));
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
+		D3D12_DRED_PAGE_FAULT_OUTPUT	   DredPageFaultOutput		 = {};
+		ThrowIfFailed(Dred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
+		ThrowIfFailed(Dred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
+
+		// TODO: Log breadcrumbs and page fault
+		// Haven't experienced TDR yet, so when I do, fill this out
+	}
 }

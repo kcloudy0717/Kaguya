@@ -2,10 +2,19 @@
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
+struct ShaderIdentifier
+{
+	ShaderIdentifier() noexcept = default;
+
+	ShaderIdentifier(void* Data) { std::memcpy(this->Data, Data, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); }
+
+	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
+};
+
 class Shader
 {
 public:
-	enum class Type
+	enum class EType
 	{
 		Unknown,
 		Vertex,
@@ -19,30 +28,25 @@ public:
 	};
 
 	Shader() noexcept = default;
-	Shader(Type Type, IDxcBlob* DxcBlob, IDxcBlob* PdbBlob, std::wstring&& PdbName) noexcept
-		: m_DxcBlob(DxcBlob)
-		, m_PdbBlob(PdbBlob)
-		, m_PdbName(std::move(PdbName))
+	Shader(EType Type, IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring&& PDBName) noexcept
+		: Type(Type)
+		, Blob(Blob)
+		, PDBBlob(PDBBlob)
+		, PDBName(std::move(PDBName))
 	{
 	}
 
 	operator D3D12_SHADER_BYTECODE() const
 	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = m_DxcBlob->GetBufferPointer(),
-									  .BytecodeLength  = m_DxcBlob->GetBufferSize() };
-	}
-
-	D3D12_SHADER_BYTECODE GetPdb() const
-	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = m_DxcBlob->GetBufferPointer(),
-									  .BytecodeLength  = m_DxcBlob->GetBufferSize() };
+		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Blob->GetBufferPointer(),
+									  .BytecodeLength  = Blob->GetBufferSize() };
 	}
 
 private:
-	Type							 m_Type;
-	Microsoft::WRL::ComPtr<IDxcBlob> m_DxcBlob;
-	Microsoft::WRL::ComPtr<IDxcBlob> m_PdbBlob;
-	std::wstring					 m_PdbName;
+	EType							 Type;
+	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
+	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob;
+	std::wstring					 PDBName;
 };
 
 /*
@@ -55,23 +59,23 @@ class Library
 {
 public:
 	Library() noexcept = default;
-	Library(IDxcBlob* DxcBlob, IDxcBlob* PdbBlob, std::wstring&& PdbName) noexcept
-		: m_DxcBlob(DxcBlob)
-		, m_PdbBlob(PdbBlob)
-		, m_PdbName(std::move(PdbName))
+	Library(IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring&& PDBName) noexcept
+		: Blob(Blob)
+		, PDBBlob(PDBBlob)
+		, PDBName(std::move(PDBName))
 	{
 	}
 
 	operator D3D12_SHADER_BYTECODE() const
 	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = m_DxcBlob->GetBufferPointer(),
-									  .BytecodeLength  = m_DxcBlob->GetBufferSize() };
+		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Blob->GetBufferPointer(),
+									  .BytecodeLength  = Blob->GetBufferSize() };
 	}
 
 private:
-	Microsoft::WRL::ComPtr<IDxcBlob> m_DxcBlob;
-	Microsoft::WRL::ComPtr<IDxcBlob> m_PdbBlob;
-	std::wstring					 m_PdbName;
+	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
+	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob;
+	std::wstring					 PDBName;
 };
 
 class ShaderCompiler
@@ -81,34 +85,34 @@ public:
 
 	void SetShaderModel(D3D_SHADER_MODEL ShaderModel);
 
-	void SetIncludeDirectory(const std::filesystem::path& pPath);
+	void SetIncludeDirectory(const std::filesystem::path& Path);
 
 	Shader CompileShader(
-		Shader::Type				  Type,
+		Shader::EType				  Type,
 		const std::filesystem::path&  Path,
-		LPCWSTR						  pEntryPoint,
+		std::wstring_view			  EntryPoint,
 		const std::vector<DxcDefine>& ShaderDefines) const;
 
 	Library CompileLibrary(const std::filesystem::path& Path) const;
 
 private:
-	std::wstring ShaderProfileString(Shader::Type Type, D3D_SHADER_MODEL ShaderModel) const;
+	std::wstring ShaderProfileString(Shader::EType Type, D3D_SHADER_MODEL ShaderModel) const;
 
 	std::wstring LibraryProfileString(D3D_SHADER_MODEL ShaderModel) const;
 
 	void Compile(
 		const std::filesystem::path&  Path,
-		LPCWSTR						  pEntryPoint,
-		LPCWSTR						  pProfile,
+		std::wstring_view			  EntryPoint,
+		std::wstring_view			  Profile,
 		const std::vector<DxcDefine>& ShaderDefines,
-		_Outptr_result_maybenull_ IDxcBlob** ppDxcBlob,
-		_Outptr_result_maybenull_ IDxcBlob** ppPdbBlob,
-		std::wstring&						 PdbName) const;
+		_Outptr_result_maybenull_ IDxcBlob** ppBlob,
+		_Outptr_result_maybenull_ IDxcBlob** ppPDBBlob,
+		std::wstring&						 PDBName) const;
 
 private:
-	Microsoft::WRL::ComPtr<IDxcCompiler3>	   m_DxcCompiler;
-	Microsoft::WRL::ComPtr<IDxcUtils>		   m_DxcUtils;
-	Microsoft::WRL::ComPtr<IDxcIncludeHandler> m_DxcIncludeHandler;
-	D3D_SHADER_MODEL						   m_ShaderModel;
-	std::wstring							   m_IncludeDirectory;
+	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
+	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
+	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
+	D3D_SHADER_MODEL						   ShaderModel;
+	std::wstring							   IncludeDirectory;
 };

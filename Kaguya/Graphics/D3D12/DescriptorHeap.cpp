@@ -7,39 +7,49 @@ DescriptorHeap::DescriptorHeap(
 	_In_ UINT						NumDescriptors,
 	_In_ bool						ShaderVisible,
 	_In_ D3D12_DESCRIPTOR_HEAP_TYPE Type)
+	: IndexPool(NumDescriptors)
 {
 	// If you recorded a CPU descriptor handle into the command list (render target or depth stencil) then that
 	// descriptor can be reused immediately after the Set call, if you recorded a GPU descriptor handle into the command
 	// list (everything else) then that descriptor cannot be reused until gpu is done referencing them
-	D3D12_DESCRIPTOR_HEAP_DESC desc = { .Type			= Type,
-										.NumDescriptors = NumDescriptors,
-										.Flags			= ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
-																		: D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-										.NodeMask		= 0 };
+	Desc = { .Type			 = Type,
+			 .NumDescriptors = NumDescriptors,
+			 .Flags	   = ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+			 .NodeMask = 0 };
 
-	ThrowIfFailed(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_DescriptorHeap)));
-	m_DescriptorIncrementSize = pDevice->GetDescriptorHandleIncrementSize(Type);
+	ThrowIfFailed(pDevice->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
+	DescriptorStride = pDevice->GetDescriptorHandleIncrementSize(Type);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE startCpuHandle = m_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	D3D12_GPU_DESCRIPTOR_HANDLE startGpuHandle =
-		ShaderVisible ? m_DescriptorHeap->GetGPUDescriptorHandleForHeapStart() : D3D12_GPU_DESCRIPTOR_HANDLE{};
-	m_StartDescriptor = { startCpuHandle, startGpuHandle, 0 };
+	hCPUStart = pDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	hGPUStart = ShaderVisible ? pDescriptorHeap->GetGPUDescriptorHandleForHeapStart() : D3D12_GPU_DESCRIPTOR_HANDLE();
 }
 
-Descriptor DescriptorHeap::At(_In_ UINT Index) const noexcept
+void DescriptorHeap::Allocate(D3D12_CPU_DESCRIPTOR_HANDLE& hCPU, D3D12_GPU_DESCRIPTOR_HANDLE& hGPU, UINT& Index)
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(
-		cpuHandle,
-		m_StartDescriptor.CpuHandle,
-		Index,
-		m_DescriptorIncrementSize);
-	CD3DX12_GPU_DESCRIPTOR_HANDLE::InitOffsetted(
-		gpuHandle,
-		m_StartDescriptor.GpuHandle,
-		Index,
-		m_DescriptorIncrementSize);
+	std::scoped_lock _(Mutex);
 
-	return { cpuHandle, gpuHandle, Index };
+	Index = static_cast<UINT>(IndexPool.Allocate());
+	hCPU  = this->hCPU(Index);
+	hGPU  = this->hGPU(Index);
+}
+
+void DescriptorHeap::Release(UINT Index)
+{
+	std::scoped_lock _(Mutex);
+
+	IndexPool.Release(static_cast<size_t>(Index));
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::hCPU(UINT Index) const noexcept
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE hCPU = {};
+	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(hCPU, hCPUStart, Index, DescriptorStride);
+	return hCPU;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::hGPU(UINT Index) const noexcept
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE hGPU = {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE::InitOffsetted(hGPU, hGPUStart, Index, DescriptorStride);
+	return hGPU;
 }

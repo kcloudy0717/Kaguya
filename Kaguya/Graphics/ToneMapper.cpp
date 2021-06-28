@@ -3,11 +3,8 @@
 
 #include "RendererRegistry.h"
 
-ToneMapper::ToneMapper(_In_ RenderDevice& RenderDevice)
+ToneMapper::ToneMapper(RenderDevice& RenderDevice)
 {
-	m_RTV = RenderDevice.GetResourceViewHeaps().AllocateRenderTargetView();
-	m_SRV = RenderDevice.GetResourceViewHeaps().AllocateResourceView();
-
 	m_RS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
@@ -46,7 +43,7 @@ ToneMapper::ToneMapper(_In_ RenderDevice& RenderDevice)
 	m_PSO = RenderDevice.CreatePipelineState(stream);
 }
 
-void ToneMapper::SetResolution(_In_ UINT Width, _In_ UINT Height)
+void ToneMapper::SetResolution(UINT Width, UINT Height)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
@@ -58,50 +55,38 @@ void ToneMapper::SetResolution(_In_ UINT Width, _In_ UINT Height)
 	m_Width	 = Width;
 	m_Height = Height;
 
-	D3D12MA::ALLOCATION_DESC allocationDesc = {};
-	allocationDesc.Flags					= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-	allocationDesc.HeapType					= D3D12_HEAP_TYPE_DEFAULT;
+	FLOAT Color[]	 = { 1, 1, 1, 1 };
+	auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
 
-	auto resourceDesc	   = CD3DX12_RESOURCE_DESC::Tex2D(SwapChain::Format, Width, Height);
-	resourceDesc.MipLevels = 1;
-	resourceDesc.Flags	   = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-	FLOAT white[]	 = { 1, 1, 1, 1 };
-	auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, white);
-
-	m_RenderTarget =
-		RenderDevice.CreateResource(&allocationDesc, &resourceDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &ClearValue);
-
-	RenderDevice.CreateRenderTargetView(m_RenderTarget->pResource.Get(), m_RTV, {}, {}, {}, true);
-	RenderDevice.CreateShaderResourceView(m_RenderTarget->pResource.Get(), m_SRV);
+	m_RenderTarget = RenderTarget(RenderDevice.GetDevice(), Width, Height, SwapChain::Format, Color);
 }
 
-void ToneMapper::Apply(_In_ Descriptor ShaderResourceView, _In_ CommandList& CommandList)
+void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandContext& Context)
 {
-	PIXScopedEvent(CommandList.GetCommandList(), 0, L"Tonemapping");
+	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"Tonemapping");
 
-	CommandList->SetPipelineState(m_PSO);
-	CommandList->SetGraphicsRootSignature(m_RS);
+	Context->SetPipelineState(m_PSO);
+	Context->SetGraphicsRootSignature(m_RS);
 
-	auto viewport	 = CD3DX12_VIEWPORT(0.0f, 0.0f, m_Width, m_Height);
-	auto scissorRect = CD3DX12_RECT(0, 0, m_Width, m_Height);
+	D3D12_VIEWPORT Viewport	   = CD3DX12_VIEWPORT(0.0f, 0.0f, m_Width, m_Height);
+	D3D12_RECT	   ScissorRect = CD3DX12_RECT(0, 0, m_Width, m_Height);
 
-	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CommandList->RSSetViewports(1, &viewport);
-	CommandList->RSSetScissorRects(1, &scissorRect);
-	CommandList->OMSetRenderTargets(1, &m_RTV.CpuHandle, TRUE, nullptr);
+	Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	Context->RSSetViewports(1, &Viewport);
+	Context->RSSetScissorRects(1, &ScissorRect);
+	Context->OMSetRenderTargets(1, &m_RenderTarget.RTV.GetCPUHandle(), TRUE, nullptr);
 
 	FLOAT white[] = { 1, 1, 1, 1 };
-	CommandList->ClearRenderTargetView(m_RTV.CpuHandle, white, 0, nullptr);
+	Context->ClearRenderTargetView(m_RenderTarget.RTV.GetCPUHandle(), white, 0, nullptr);
 
 	struct Settings
 	{
 		unsigned int InputIndex;
 	} settings			= {};
-	settings.InputIndex = ShaderResourceView.Index;
+	settings.InputIndex = ShaderResourceView.GetIndex();
 
-	CommandList->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
+	Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
 	// RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
 
-	CommandList->DrawInstanced(3, 1, 0, 0);
+	Context->DrawInstanced(3, 1, 0, 0);
 }

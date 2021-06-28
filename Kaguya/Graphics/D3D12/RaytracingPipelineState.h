@@ -16,14 +16,14 @@ struct DXILLibrary
 struct HitGroup
 {
 	HitGroup(
-		_In_opt_ LPCWSTR pHitGroupName,
-		_In_opt_ LPCWSTR pAnyHitSymbol,
-		_In_opt_ LPCWSTR pClosestHitSymbol,
-		_In_opt_ LPCWSTR pIntersectionSymbol)
-		: HitGroupName(pHitGroupName ? pHitGroupName : L"")
-		, AnyHitSymbol(pAnyHitSymbol ? pAnyHitSymbol : L"")
-		, ClosestHitSymbol(pClosestHitSymbol ? pClosestHitSymbol : L"")
-		, IntersectionSymbol(pIntersectionSymbol ? pIntersectionSymbol : L"")
+		std::optional<std::wstring_view> pHitGroupName,
+		std::optional<std::wstring_view> pAnyHitSymbol,
+		std::optional<std::wstring_view> pClosestHitSymbol,
+		std::optional<std::wstring_view> pIntersectionSymbol)
+		: HitGroupName(pHitGroupName ? *pHitGroupName : L"")
+		, AnyHitSymbol(pAnyHitSymbol ? *pAnyHitSymbol : L"")
+		, ClosestHitSymbol(pClosestHitSymbol ? *pClosestHitSymbol : L"")
+		, IntersectionSymbol(pIntersectionSymbol ? *pIntersectionSymbol : L"")
 	{
 	}
 
@@ -52,56 +52,47 @@ public:
 
 	D3D12_STATE_OBJECT_DESC Build();
 
-	void AddLibrary(_In_ const D3D12_SHADER_BYTECODE& Library, _In_ const std::vector<std::wstring>& Symbols);
+	void AddLibrary(const D3D12_SHADER_BYTECODE& Library, const std::vector<std::wstring>& Symbols);
 
 	void AddHitGroup(
-		_In_opt_ LPCWSTR pHitGroupName,
-		_In_opt_ LPCWSTR pAnyHitSymbol,
-		_In_opt_ LPCWSTR pClosestHitSymbol,
-		_In_opt_ LPCWSTR pIntersectionSymbol);
+		std::optional<std::wstring_view> pHitGroupName,
+		std::optional<std::wstring_view> pAnyHitSymbol,
+		std::optional<std::wstring_view> pClosestHitSymbol,
+		std::optional<std::wstring_view> pIntersectionSymbol);
 
-	void AddRootSignatureAssociation(
-		_In_ ID3D12RootSignature* pRootSignature,
-		_In_ const std::vector<std::wstring>& Symbols);
+	void AddRootSignatureAssociation(ID3D12RootSignature* pRootSignature, const std::vector<std::wstring>& Symbols);
 
-	void SetGlobalRootSignature(_In_ ID3D12RootSignature* pGlobalRootSignature);
+	void SetGlobalRootSignature(ID3D12RootSignature* pGlobalRootSignature);
 
-	void SetRaytracingShaderConfig(_In_ UINT MaxPayloadSizeInBytes, _In_ UINT MaxAttributeSizeInBytes);
+	void SetRaytracingShaderConfig(UINT MaxPayloadSizeInBytes, UINT MaxAttributeSizeInBytes);
 
-	void SetRaytracingPipelineConfig(_In_ UINT MaxTraceRecursionDepth);
+	void SetRaytracingPipelineConfig(UINT MaxTraceRecursionDepth);
 
 private:
 	std::vector<std::wstring> BuildShaderExportList();
 
 private:
-	CD3DX12_STATE_OBJECT_DESC m_Desc;
+	CD3DX12_STATE_OBJECT_DESC Desc;
 
-	std::vector<DXILLibrary>			  m_Libraries;
-	std::vector<HitGroup>				  m_HitGroups;
-	std::vector<RootSignatureAssociation> m_RootSignatureAssociations;
-	ID3D12RootSignature*				  m_pGlobalRootSignature;
-	D3D12_RAYTRACING_SHADER_CONFIG		  m_ShaderConfig;
-	D3D12_RAYTRACING_PIPELINE_CONFIG	  m_PipelineConfig;
+	std::vector<DXILLibrary>			  Libraries;
+	std::vector<HitGroup>				  HitGroups;
+	std::vector<RootSignatureAssociation> RootSignatureAssociations;
+	ID3D12RootSignature*				  GlobalRootSignature;
+	D3D12_RAYTRACING_SHADER_CONFIG		  ShaderConfig;
+	D3D12_RAYTRACING_PIPELINE_CONFIG	  PipelineConfig;
 };
 
 class RaytracingPipelineState
 {
 public:
 	RaytracingPipelineState() noexcept = default;
-	RaytracingPipelineState(_In_ ID3D12Device5* pDevice, _In_ RaytracingPipelineStateBuilder& Builder);
+	RaytracingPipelineState(ID3D12Device5* pDevice, RaytracingPipelineStateBuilder& Builder);
 
-	RaytracingPipelineState(RaytracingPipelineState&&) noexcept = default;
-	RaytracingPipelineState& operator=(RaytracingPipelineState&&) noexcept = default;
+	void* GetShaderIdentifier(std::wstring_view pExportName);
 
-	RaytracingPipelineState(const RaytracingPipelineState&) = delete;
-	RaytracingPipelineState& operator=(const RaytracingPipelineState&) = delete;
-
-	ShaderIdentifier GetShaderIdentifier(_In_ LPCWSTR pExportName);
-
-					   operator ID3D12StateObject*() const { return m_StateObject.Get(); }
-	ID3D12StateObject* operator->() const { return m_StateObject.Get(); }
+	operator ID3D12StateObject*() const { return StateObject.Get(); }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12StateObject>			m_StateObject;
-	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> m_StateObjectProperties;
+	Microsoft::WRL::ComPtr<ID3D12StateObject>			StateObject;
+	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> StateObjectProperties;
 };

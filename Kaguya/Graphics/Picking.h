@@ -7,11 +7,12 @@ class Picking
 public:
 	void Create();
 
-	void UpdateShaderTable(const RaytracingAccelerationStructure& Scene, CommandList& CommandList);
+	void UpdateShaderTable(const RaytracingAccelerationStructure& Scene, CommandContext& Context);
+
 	void ShootPickingRay(
 		D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
 		const RaytracingAccelerationStructure& Scene,
-		CommandList&						   CommandList);
+		CommandContext&						   Context);
 
 	std::optional<Entity> GetSelectedEntity();
 
@@ -19,12 +20,12 @@ private:
 	RootSignature			m_GlobalRS;
 	RaytracingPipelineState m_RTPSO;
 
-	std::shared_ptr<Resource> m_RayGenerationSBT;
-	std::shared_ptr<Resource> m_MissSBT;
-	std::shared_ptr<Resource> m_HitGroupSBT;
+	Buffer m_RayGenerationSBT;
+	Buffer m_MissSBT;
+	Buffer m_HitGroupSBT;
 
-	std::shared_ptr<Resource> m_Result;
-	std::shared_ptr<Resource> m_Readback;
+	Buffer m_Result;
+	Buffer m_Readback;
 
 	RaytracingShaderTable<void> m_RayGenerationShaderTable;
 	RaytracingShaderTable<void> m_MissShaderTable;

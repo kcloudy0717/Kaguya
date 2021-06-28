@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include <Core/Synchronization/RWLock.h>
+#include <Core/RWLock.h>
 #include <Core/Utility.h>
 
 template<typename T>
@@ -55,43 +55,43 @@ public:
 
 	AssetCache& operator=(AssetCache&&) = default;
 
-	auto size() const { return m_Cache.size(); }
+	auto size() const { return Cache.size(); }
 
 	void DestroyAll()
 	{
-		ScopedWriteLock _(m_RWLock);
+		ScopedWriteLock _(RWLock);
 
-		m_Cache.clear();
+		Cache.clear();
 	}
 
 	template<typename... Args>
 	void Create(UINT64 Key, Args&&... args)
 	{
-		ScopedWriteLock _(m_RWLock);
+		ScopedWriteLock _(RWLock);
 
-		if (m_Cache.find(Key) == m_Cache.end())
+		if (Cache.find(Key) == Cache.end())
 		{
-			m_Cache[Key] = std::make_shared<T>(std::forward<Args>(args)...);
+			Cache[Key] = std::make_shared<T>(std::forward<Args>(args)...);
 		}
 	}
 
 	void Discard(UINT64 Key)
 	{
-		ScopedWriteLock _(m_RWLock);
+		ScopedWriteLock _(RWLock);
 
-		if (auto it = m_Cache.find(Key); it != m_Cache.end())
+		if (auto it = Cache.find(Key); it != Cache.end())
 		{
-			m_Cache.erase(it);
+			Cache.erase(it);
 		}
 	}
 
 	template<typename... Args>
 	Handle Load(UINT64 Key, Args&&... args) const
 	{
-		ScopedReadLock _(m_RWLock);
+		ScopedReadLock _(RWLock);
 
 		Handle Handle = {};
-		if (auto it = m_Cache.find(Key); it != m_Cache.end())
+		if (auto it = Cache.find(Key); it != Cache.end())
 		{
 			Handle = it->second;
 		}
@@ -101,16 +101,16 @@ public:
 
 	bool Exist(UINT64 Key) const
 	{
-		ScopedReadLock _(m_RWLock);
+		ScopedReadLock _(RWLock);
 
-		return m_Cache.find(Key) != m_Cache.end();
+		return Cache.find(Key) != Cache.end();
 	}
 
 	template<typename Functor>
 	void Each(Functor F) const
 	{
-		auto begin = m_Cache.begin();
-		auto end   = m_Cache.end();
+		auto begin = Cache.begin();
+		auto end   = Cache.end();
 		while (begin != end)
 		{
 			auto current = begin++;
@@ -134,9 +134,9 @@ public:
 	template<typename Functor>
 	void Each_ThreadSafe(Functor F) const
 	{
-		ScopedWriteLock _(m_RWLock);
-		auto			begin = m_Cache.begin();
-		auto			end	  = m_Cache.end();
+		ScopedWriteLock _(RWLock);
+		auto			begin = Cache.begin();
+		auto			end	  = Cache.end();
 		while (begin != end)
 		{
 			auto current = begin++;
@@ -157,8 +157,8 @@ public:
 	}
 
 private:
-	std::unordered_map<UINT64, std::shared_ptr<T>> m_Cache;
-	mutable RWLock								   m_RWLock;
+	std::unordered_map<UINT64, std::shared_ptr<T>> Cache;
+	mutable RWLock								   RWLock;
 
 	friend class AssetWindow;
 	friend class SceneParser;

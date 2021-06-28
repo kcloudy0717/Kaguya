@@ -4,12 +4,13 @@
 /*
 	The maximum size of a root signature is 64 DWORDs.
 
-	This maximum size is chosen to prevent abuse of the root signature as a way of storing bulk data.
-	Each entry in the root signature has a cost towards this 64 DWORD limit:
-	- Descriptor tables cost 1 DWORD each.
-	- Root constants cost 1 DWORD each, since they are 32-bit values.
-	- Root descriptors (64-bit GPU virtual addresses) cost 2 DWORDs each.
-	- Static samplers do not have any cost in the size of the root signature.
+	This maximum size is chosen to prevent abuse of the root signature as a way of storing bulk data. Each entry in the
+	root signature has a cost towards this 64 DWORD limit:
+
+	Descriptor tables cost 1 DWORD each.
+	Root constants cost 1 DWORD each, since they are 32-bit values.
+	Root descriptors (64-bit GPU virtual addresses) cost 2 DWORDs each.
+	Static samplers do not have any cost in the size of the root signature.
 
 	Use a small a root signature as necessary, though balance this with the flexibility of a larger root signature.
 	Arrange parameters in a large root signature so that the parameters most likely to change often, or if low access
@@ -28,92 +29,146 @@ public:
 	DescriptorTable() noexcept = default;
 
 	template<UINT BaseShaderRegister, UINT RegisterSpace>
-	void AddDescriptorRange(
-		_In_ D3D12_DESCRIPTOR_RANGE_TYPE  Type,
-		_In_ UINT						  NumDescriptors,
-		_In_ D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-		_In_ UINT						  OffsetInDescriptorsFromTableStart)
+	void AddSRVRange(
+		UINT						 NumDescriptors,
+		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
+		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
 	{
-		CD3DX12_DESCRIPTOR_RANGE1 range = {};
-		range.Init(Type, NumDescriptors, BaseShaderRegister, RegisterSpace, Flags, OffsetInDescriptorsFromTableStart);
-
-		m_DescriptorRanges.emplace_back(range);
+		AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			NumDescriptors,
+			Flags,
+			OffsetInDescriptorsFromTableStart);
 	}
 
-	auto GetDescriptorRanges() const noexcept { return m_DescriptorRanges; }
-	UINT size() const noexcept { return static_cast<UINT>(m_DescriptorRanges.size()); }
+	template<UINT BaseShaderRegister, UINT RegisterSpace>
+	void AddUAVRange(
+
+		UINT						 NumDescriptors,
+		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
+		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
+			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+			NumDescriptors,
+			Flags,
+			OffsetInDescriptorsFromTableStart);
+	}
+
+	template<UINT BaseShaderRegister, UINT RegisterSpace>
+	void AddCBVRange(
+
+		UINT						 NumDescriptors,
+		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
+		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
+			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+			NumDescriptors,
+			Flags,
+			OffsetInDescriptorsFromTableStart);
+	}
+
+	template<UINT BaseShaderRegister, UINT RegisterSpace>
+	void AddSamplerRange(
+		UINT						 NumDescriptors,
+		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
+		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
+	{
+		AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
+			D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+			NumDescriptors,
+			Flags,
+			OffsetInDescriptorsFromTableStart);
+	}
+
+	template<UINT BaseShaderRegister, UINT RegisterSpace>
+	void AddDescriptorRange(
+		D3D12_DESCRIPTOR_RANGE_TYPE	 Type,
+		UINT						 NumDescriptors,
+		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
+		UINT						 OffsetInDescriptorsFromTableStart)
+	{
+		CD3DX12_DESCRIPTOR_RANGE1& Range = DescriptorRanges.emplace_back();
+		Range.Init(Type, NumDescriptors, BaseShaderRegister, RegisterSpace, Flags, OffsetInDescriptorsFromTableStart);
+	}
+
+	operator D3D12_ROOT_DESCRIPTOR_TABLE1() const
+	{
+		return D3D12_ROOT_DESCRIPTOR_TABLE1{ .NumDescriptorRanges = static_cast<UINT>(DescriptorRanges.size()),
+											 .pDescriptorRanges	  = DescriptorRanges.data() };
+	}
+
+	const auto& GetDescriptorRanges() const noexcept { return DescriptorRanges; }
+	UINT		size() const noexcept { return static_cast<UINT>(DescriptorRanges.size()); }
 
 private:
-	std::vector<D3D12_DESCRIPTOR_RANGE1> m_DescriptorRanges;
+	std::vector<CD3DX12_DESCRIPTOR_RANGE1> DescriptorRanges;
 };
 
 class RootSignatureBuilder
 {
 public:
-	RootSignatureBuilder() noexcept;
-
 	D3D12_ROOT_SIGNATURE_DESC1 Build() noexcept;
 
-	void AddDescriptorTable(_In_ const DescriptorTable& DescriptorTable)
+	void AddDescriptorTable(const DescriptorTable& DescriptorTable)
 	{
-		CD3DX12_ROOT_PARAMETER1 parameter = {};
-		parameter.InitAsDescriptorTable(DescriptorTable.size(), DescriptorTable.GetDescriptorRanges().data());
+		CD3DX12_ROOT_PARAMETER1& Parameter = Parameters.emplace_back();
+		Parameter.InitAsDescriptorTable(DescriptorTable.size(), DescriptorTable.GetDescriptorRanges().data());
 
-		// Add the root parameter to the set of parameters,
-		m_Parameters.push_back(parameter);
 		// The descriptor table descriptor ranges require a pointer to the descriptor ranges. Since new
 		// ranges can be dynamically added in the vector, we separately store the index of the range set.
 		// The actual address will be solved when generating the actual root signature
-		m_DescriptorRangeIndices.push_back(static_cast<UINT>(m_DescriptorRanges.size()));
-		m_DescriptorRanges.push_back(DescriptorTable.GetDescriptorRanges());
+		DescriptorTableIndices.push_back(static_cast<UINT>(DescriptorTables.size()));
+		DescriptorTables.push_back(DescriptorTable);
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
-	void Add32BitConstants(_In_ UINT Num32BitValues)
+	void Add32BitConstants(UINT Num32BitValues)
 	{
-		CD3DX12_ROOT_PARAMETER1 parameter = {};
-		parameter.InitAsConstants(Num32BitValues, ShaderRegister, RegisterSpace);
+		CD3DX12_ROOT_PARAMETER1 Parameter = {};
+		Parameter.InitAsConstants(Num32BitValues, ShaderRegister, RegisterSpace);
 
-		AddParameter(parameter);
+		AddParameter(Parameter);
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
-	void AddConstantBufferView(_In_ D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	void AddConstantBufferView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
-		CD3DX12_ROOT_PARAMETER1 parameter = {};
-		parameter.InitAsConstantBufferView(ShaderRegister, RegisterSpace, Flags);
+		CD3DX12_ROOT_PARAMETER1 Parameter = {};
+		Parameter.InitAsConstantBufferView(ShaderRegister, RegisterSpace, Flags);
 
-		AddParameter(parameter);
+		AddParameter(Parameter);
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
-	void AddShaderResourceView(_In_ D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	void AddShaderResourceView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
-		CD3DX12_ROOT_PARAMETER1 parameter = {};
-		parameter.InitAsShaderResourceView(ShaderRegister, RegisterSpace, Flags);
+		CD3DX12_ROOT_PARAMETER1 Parameter = {};
+		Parameter.InitAsShaderResourceView(ShaderRegister, RegisterSpace, Flags);
 
-		AddParameter(parameter);
+		AddParameter(Parameter);
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
-	void AddUnorderedAccessView(_In_ D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+	void AddUnorderedAccessView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 	{
-		CD3DX12_ROOT_PARAMETER1 parameter = {};
-		parameter.InitAsUnorderedAccessView(ShaderRegister, RegisterSpace, Flags);
+		CD3DX12_ROOT_PARAMETER1 Parameter = {};
+		Parameter.InitAsUnorderedAccessView(ShaderRegister, RegisterSpace, Flags);
 
-		AddParameter(parameter);
+		AddParameter(Parameter);
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
 	void AddStaticSampler(
-		_In_ D3D12_FILTER				Filter,
-		_In_ D3D12_TEXTURE_ADDRESS_MODE AddressUVW,
-		_In_ UINT						MaxAnisotropy,
-		_In_ D3D12_COMPARISON_FUNC		ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		_In_ D3D12_STATIC_BORDER_COLOR	BorderColor	   = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE)
+		D3D12_FILTER			   Filter,
+		D3D12_TEXTURE_ADDRESS_MODE AddressUVW,
+		UINT					   MaxAnisotropy,
+		D3D12_COMPARISON_FUNC	   ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR  BorderColor	  = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE)
 	{
-		CD3DX12_STATIC_SAMPLER_DESC desc = {};
-		desc.Init(
+		CD3DX12_STATIC_SAMPLER_DESC& Desc = StaticSamplers.emplace_back();
+		Desc.Init(
 			ShaderRegister,
 			Filter,
 			AddressUVW,
@@ -123,8 +178,7 @@ public:
 			MaxAnisotropy,
 			ComparisonFunc,
 			BorderColor);
-		desc.RegisterSpace = RegisterSpace;
-		m_StaticSamplers.push_back(desc);
+		Desc.RegisterSpace = RegisterSpace;
 	}
 
 	void AllowInputLayout() noexcept;
@@ -142,42 +196,33 @@ public:
 	void AllowSampleDescriptorHeapIndexing() noexcept;
 
 private:
-	void AddParameter(_In_ D3D12_ROOT_PARAMETER1 Parameter)
+	void AddParameter(D3D12_ROOT_PARAMETER1 Parameter)
 	{
-		// Add the root parameter to the set of parameters,
-		m_Parameters.emplace_back(Parameter);
-		// and indicate that there will be no range
-		// location to indicate since this parameter is not part of the heap
-		m_DescriptorRangeIndices.emplace_back(~0);
+		Parameters.emplace_back(Parameter);
+		DescriptorTableIndices.emplace_back(0xDEADBEEF);
 	}
 
 private:
-	std::vector<D3D12_ROOT_PARAMETER1>	   m_Parameters;
-	std::vector<D3D12_STATIC_SAMPLER_DESC> m_StaticSamplers;
-	D3D12_ROOT_SIGNATURE_FLAGS			   m_Flags;
+	std::vector<CD3DX12_ROOT_PARAMETER1>	 Parameters;
+	std::vector<CD3DX12_STATIC_SAMPLER_DESC> StaticSamplers;
+	D3D12_ROOT_SIGNATURE_FLAGS				 Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
 
-	std::vector<UINT>								  m_DescriptorRangeIndices;
-	std::vector<std::vector<D3D12_DESCRIPTOR_RANGE1>> m_DescriptorRanges;
+	std::vector<UINT>			 DescriptorTableIndices;
+	std::vector<DescriptorTable> DescriptorTables;
 };
 
 class RootSignature
 {
 public:
 	RootSignature() noexcept = default;
+
 	RootSignature(_In_ ID3D12Device* pDevice, _In_ RootSignatureBuilder& Builder);
 
-	RootSignature(RootSignature&&) noexcept = default;
-	RootSignature& operator=(RootSignature&&) noexcept = default;
+	operator ID3D12RootSignature*() const { return pRootSignature.Get(); }
 
-	RootSignature(const RootSignature&) = delete;
-	RootSignature& operator=(const RootSignature&) = delete;
-
-						 operator ID3D12RootSignature*() const { return m_RootSignature.Get(); }
-	ID3D12RootSignature* operator->() const { return m_RootSignature.Get(); }
-
-	D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return m_Desc.Desc_1_1; }
+	D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return Desc.Desc_1_1; }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_RootSignature;
-	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			m_Desc = {};
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> pRootSignature;
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
 };

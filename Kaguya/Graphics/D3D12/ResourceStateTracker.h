@@ -2,88 +2,104 @@
 #include <d3d12.h>
 #include <unordered_map>
 #include <optional>
+#include "Resource.h"
 
 // https://www.youtube.com/watch?v=nmB2XMasz2o, Resource state tracking
-
-// Custom resource states
-#define D3D12_RESOURCE_STATE_UNKNOWN (static_cast<D3D12_RESOURCE_STATES>(-1))
-
-class CResourceState
+struct PendingResourceBarrier
 {
-public:
-	auto begin() noexcept { return m_SubresourceState.begin(); }
-	auto end() noexcept { return m_SubresourceState.end(); }
+	Resource*			  Resource;
+	D3D12_RESOURCE_STATES State;
+	UINT				  Subresource;
+};
 
-	// Returns true if all subresources have the same state
-	bool AreAllSubresourcesSame() const noexcept
+struct ResourceBarrierBatch
+{
+	enum
 	{
-		// Since we clear all subresource state if SetSubresourceState is set
-		// to D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, we only need to check if the
-		// data structure is empty;
-		return m_SubresourceState.empty();
+		BatchCount = 64
+	};
+
+	ResourceBarrierBatch()
+	{
+		std::memset(ResourceBarriers, NULL, sizeof(ResourceBarriers));
+		NumResourceBarriers = 0;
 	}
 
-	D3D12_RESOURCE_STATES GetSubresourceState(_In_ UINT Subresource) const noexcept
-	{
-		if (const auto iter = m_SubresourceState.find(Subresource); iter != m_SubresourceState.end())
-		{
-			return iter->second;
-		}
+	void Reset() { NumResourceBarriers = 0; }
 
-		return m_State;
+	UINT Flush(_In_ ID3D12GraphicsCommandList* GraphicsCommandList)
+	{
+		if (NumResourceBarriers > 0)
+		{
+			GraphicsCommandList->ResourceBarrier(NumResourceBarriers, ResourceBarriers);
+			Reset();
+		}
+		return NumResourceBarriers;
 	}
 
-	void SetSubresourceState(_In_ UINT Subresource, _In_ D3D12_RESOURCE_STATES State) noexcept
+	void Add(const D3D12_RESOURCE_BARRIER& ResourceBarrier)
 	{
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
-		{
-			m_State = State;
-			m_SubresourceState.clear();
-		}
-		else
-		{
-			m_SubresourceState[Subresource] = State;
-		}
+		assert(NumResourceBarriers < BatchCount);
+		ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
 	}
 
-private:
-	D3D12_RESOURCE_STATES							m_State;
-	std::unordered_map<UINT, D3D12_RESOURCE_STATES> m_SubresourceState;
+	void AddTransition(
+		Resource*			  Resource,
+		D3D12_RESOURCE_STATES StateBefore,
+		D3D12_RESOURCE_STATES StateAfter,
+		UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
+	}
+
+	void AddAliasing(Resource* BeforeResource, Resource* AfterResource)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::Aliasing(BeforeResource->GetResource(), AfterResource->GetResource()));
+	}
+
+	void AddUAV(Resource* Resource)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::UAV(Resource ? Resource->GetResource() : nullptr));
+	}
+
+	D3D12_RESOURCE_BARRIER ResourceBarriers[BatchCount];
+	UINT				   NumResourceBarriers;
 };
 
 class ResourceStateTracker
 {
 public:
-	void AddResourceState(_In_ ID3D12Resource* pResource, _In_ D3D12_RESOURCE_STATES ResourceStates);
+	std::vector<PendingResourceBarrier>& GetPendingResourceBarriers();
 
-	bool RemoveResourceState(_In_ ID3D12Resource* pResource);
-
-	void SetResourceState(
-		_In_ ID3D12Resource*	   pResource,
-		_In_ UINT				   Subresource,
-		_In_ D3D12_RESOURCE_STATES ResourceStates);
-
-	void UpdateResourceStates(_In_ const ResourceStateTracker& ResourceStateTracker);
+	CResourceState& GetResourceState(Resource* Resource)
+	{
+		CResourceState& ResourceState = m_ResourceStates[Resource];
+		ConditionalInitialize(ResourceState);
+		return ResourceState;
+	}
 
 	void Reset();
 
-	UINT FlushPendingResourceBarriers(
-		_In_ const ResourceStateTracker& GlobalResourceStateTracker,
-		_In_ ID3D12GraphicsCommandList* pCommandList);
-
-	UINT FlushResourceBarriers(_In_ ID3D12GraphicsCommandList* pCommandList);
-
-	void ResourceBarrier(_In_ const D3D12_RESOURCE_BARRIER& Barrier);
-
-	std::optional<CResourceState> Find(_In_ ID3D12Resource* pResource) const;
+	void Add(const PendingResourceBarrier& PendingResourceBarrier)
+	{
+		m_PendingResourceBarriers.push_back(PendingResourceBarrier);
+	}
 
 private:
-	std::unordered_map<ID3D12Resource*, CResourceState> m_ResourceStates;
+	void ConditionalInitialize(CResourceState& ResourceState)
+	{
+		// If ResourceState was just created, its state is uninitialized
+		if (ResourceState.IsResourceStateUninitialized())
+		{
+			ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_UNKNOWN);
+		}
+	}
+
+private:
+	std::unordered_map<Resource*, CResourceState> m_ResourceStates;
 
 	// Pending resource transitions are committed to a separate commandlist before this commandlist
 	// is executed on the command queue. This guarantees that resources will
 	// be in the expected state at the beginning of a command list.
-	std::vector<D3D12_RESOURCE_BARRIER> m_PendingResourceBarriers;
-	// Resource barriers that need to be committed to the command list.
-	std::vector<D3D12_RESOURCE_BARRIER> m_ResourceBarriers;
+	std::vector<PendingResourceBarrier> m_PendingResourceBarriers;
 };

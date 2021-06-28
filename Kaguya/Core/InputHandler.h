@@ -8,7 +8,7 @@ public:
 	InputHandler() noexcept = default;
 	InputHandler(_In_ HWND hWnd);
 
-	void Handle(_In_ const MSG* pMsg);
+	void Process(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
 
 	void EnableCursor();
 	void DisableCursor();

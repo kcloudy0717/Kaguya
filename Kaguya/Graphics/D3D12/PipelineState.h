@@ -16,15 +16,8 @@ public:
 	{
 	}
 
-	PipelineState(PipelineState&&) noexcept = default;
-	PipelineState& operator=(PipelineState&&) noexcept = default;
-
-	PipelineState(const PipelineState&) = delete;
-	PipelineState& operator=(const PipelineState&) = delete;
-
-						 operator ID3D12PipelineState*() const { return m_PipelineState.Get(); }
-	ID3D12PipelineState* operator->() const { return m_PipelineState.Get(); }
+	operator ID3D12PipelineState*() const { return pPipelineState.Get(); }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_PipelineState;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> pPipelineState;
 };

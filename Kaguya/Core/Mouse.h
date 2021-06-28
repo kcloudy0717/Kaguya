@@ -1,7 +1,7 @@
 #pragma once
 #include <bitset>
 #include <optional>
-#include "ThreadSafeQueue.h"
+#include <queue>
 
 class Mouse
 {
@@ -94,12 +94,11 @@ private:
 	void OnRawInput(int x, int y);
 
 	template<class T>
-	void TrimBuffer(ThreadSafeQueue<T>& QueueBuffer)
+	void TrimBuffer(std::queue<T>& QueueBuffer)
 	{
 		while (QueueBuffer.size() > BufferSize)
 		{
-			T item;
-			QueueBuffer.pop(item, 0);
+			QueueBuffer.pop();
 		}
 	}
 
@@ -110,9 +109,9 @@ public:
 	int yRaw = 0;
 
 private:
-	std::bitset<NumButtons>		  m_ButtonStates;
-	bool						  m_IsInWindow		= false;
-	int							  m_WheelDeltaCarry = 0;
-	ThreadSafeQueue<Mouse::Event> m_MouseBuffer;
-	ThreadSafeQueue<RawInput>	  m_RawDeltaBuffer;
+	std::bitset<NumButtons>	 m_ButtonStates;
+	bool					 m_IsInWindow	   = false;
+	int						 m_WheelDeltaCarry = 0;
+	std::queue<Mouse::Event> m_MouseBuffer;
+	std::queue<RawInput>	 m_RawDeltaBuffer;
 };

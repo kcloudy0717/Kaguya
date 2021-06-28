@@ -19,8 +19,8 @@ public:
 
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
-	Descriptor GetViewportDescriptor() { return m_ToneMapper.GetSRV(); }
-	Entity	   GetSelectedEntity() { return m_Picking.GetSelectedEntity().value_or(Entity()); }
+	const ShaderResourceView& GetViewportDescriptor() { return m_ToneMapper.GetSRV(); }
+	Entity					  GetSelectedEntity() { return m_Picking.GetSelectedEntity().value_or(Entity()); }
 
 protected:
 	void Initialize() override;
@@ -39,21 +39,13 @@ private:
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT	   m_ScissorRect;
 
-	Fence  m_GraphicsFence;
-	Fence  m_ComputeFence;
-	UINT64 m_GraphicsFenceValue;
-	UINT64 m_ComputeFenceValue;
-
-	CommandList m_GraphicsCommandList;
-	CommandList m_ComputeCommandList;
-
 	RaytracingAccelerationStructure m_RaytracingAccelerationStructure;
 	PathIntegrator					m_PathIntegrator;
 	Picking							m_Picking;
 	ToneMapper						m_ToneMapper;
 
-	std::shared_ptr<Resource> m_Materials;
-	HLSL::Material*			  m_pMaterials = nullptr;
-	std::shared_ptr<Resource> m_Lights;
-	HLSL::Light*			  m_pLights = nullptr;
+	Buffer			m_Materials;
+	HLSL::Material* m_pMaterials = nullptr;
+	Buffer			m_Lights;
+	HLSL::Light*	m_pLights = nullptr;
 };

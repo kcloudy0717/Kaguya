@@ -60,33 +60,52 @@
 #include "d3d12.h"
 #include "d3d12sdklayers.h"
 #include "d3d12shader.h"
+#include <DXProgrammableCapture.h>
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
 #include <DirectXMath.h>
 
 // ext
+#include <city.h>
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
 #include <ImGuizmo.h>
 #include <entt.hpp>
 #include <wil/resource.h>
-#include <D3D12MemAlloc.h>
-#include <GraphicsMemory.h>
 #include <DirectXTex.h>
 #include <nfd.h>
 
+#include <Core/CoreDefines.h>
+#include <Core/Console.h>
 #include <Core/Application.h>
-#include <Core/Pool.h>
 #include <Core/Utility.h>
 #include <Core/Log.h>
 #include <Core/Math.h>
-#include <Core/Exception.h>
-#include <Core/Synchronization/RWLock.h>
-#include <Core/Synchronization/CriticalSection.h>
-#include <Core/Synchronization/ConditionVariable.h>
-#include <Graphics/D3D12/PIXCapture.h>
+#include <Core/CriticalSection.h>
+#include <Core/RWLock.h>
+
+inline std::string hresult_to_string(HRESULT hr)
+{
+	char s_str[64] = {};
+	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
+	return std::string(s_str);
+}
+
+class hresult_exception : public std::runtime_error
+{
+public:
+	hresult_exception(HRESULT hr)
+		: std::runtime_error(hresult_to_string(hr))
+		, m_hr(hr)
+	{
+	}
+	HRESULT Error() const { return m_hr; }
+
+private:
+	const HRESULT m_hr;
+};
 
 inline void ThrowIfFailed(HRESULT hr)
 {
@@ -140,5 +159,3 @@ inline static void ErrorExit(LPCTSTR lpszFunction)
 	LocalFree(lpDisplayBuf);
 	ExitProcess(dw);
 }
-
-using ShaderIdentifier = std::array<BYTE, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;

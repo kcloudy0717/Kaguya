@@ -12,34 +12,30 @@ public:
 	RaytracingAccelerationStructure() noexcept = default;
 	RaytracingAccelerationStructure(UINT NumHitGroups);
 
-	operator auto() const { return m_TLASResult->pResource->GetGPUVirtualAddress(); }
+	operator auto() const { return TLASResult.GetGPUVirtualAddress(); }
 
-	auto size() const { return m_TopLevelAccelerationStructure.size(); }
+	auto size() const { return TopLevelAccelerationStructure.size(); }
 
-	bool empty() const { return m_TopLevelAccelerationStructure.empty(); }
+	bool empty() const { return TopLevelAccelerationStructure.empty(); }
 
 	void clear()
 	{
-		m_TopLevelAccelerationStructure.clear();
-		m_MeshRenderers.clear();
-		m_InstanceContributionToHitGroupIndex = 0;
+		TopLevelAccelerationStructure.clear();
+		MeshRenderers.clear();
+		InstanceContributionToHitGroupIndex = 0;
 	}
 
-	void AddInstance(MeshRenderer* pMeshRenderer);
+	void AddInstance(const Transform& Transform, MeshRenderer* pMeshRenderer);
 
-	void Build(CommandList& CommandList);
+	void Build(CommandContext& Context);
 
-private:
-	UINT m_NumHitGroups = 0;
+	UINT NumHitGroups = 0;
 
-	TopLevelAccelerationStructure m_TopLevelAccelerationStructure;
-	std::vector<MeshRenderer*>	  m_MeshRenderers;
-	UINT						  m_InstanceContributionToHitGroupIndex = 0;
+	TopLevelAccelerationStructure TopLevelAccelerationStructure;
+	std::vector<MeshRenderer*>	  MeshRenderers;
+	UINT						  InstanceContributionToHitGroupIndex = 0;
 
-	std::shared_ptr<Resource>		m_TLASScratch, m_TLASResult;
-	std::shared_ptr<Resource>		m_InstanceDescs;
-	D3D12_RAYTRACING_INSTANCE_DESC* m_pInstanceDescs = nullptr;
-
-	friend class PathIntegrator;
-	friend class Picking;
+	Buffer							TLASScratch, TLASResult;
+	Buffer							InstanceDescs;
+	D3D12_RAYTRACING_INSTANCE_DESC* pInstanceDescs = nullptr;
 };

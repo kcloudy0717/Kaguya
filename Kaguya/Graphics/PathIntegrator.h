@@ -25,38 +25,36 @@ public:
 	static constexpr UINT NumHitGroups = 1;
 
 	PathIntegrator() noexcept = default;
-	PathIntegrator(_In_ RenderDevice& RenderDevice);
+	PathIntegrator(RenderDevice& RenderDevice);
 
-	void SetResolution(_In_ UINT Width, _In_ UINT Height);
+	void SetResolution(UINT Width, UINT Height);
 
 	void Reset();
 
 	void UpdateShaderTable(
-		_In_ const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		_In_ CommandList& CommandList);
+		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
+		CommandContext&						   Context);
 
 	void Render(
-		_In_ D3D12_GPU_VIRTUAL_ADDRESS SystemConstants,
-		_In_ const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		_In_ D3D12_GPU_VIRTUAL_ADDRESS				Materials,
-		_In_ D3D12_GPU_VIRTUAL_ADDRESS				Lights,
-		_In_ CommandList& CommandList);
+		D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
+		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
+		D3D12_GPU_VIRTUAL_ADDRESS			   Materials,
+		D3D12_GPU_VIRTUAL_ADDRESS			   Lights,
+		CommandContext&						   Context);
 
-	Descriptor		GetSRV() const { return m_SRV; }
-	ID3D12Resource* GetRenderTarget() const { return m_RenderTarget->pResource.Get(); }
+	const ShaderResourceView& GetSRV() const { return m_RenderTarget.SRV; }
+	ID3D12Resource*			  GetRenderTarget() const { return m_RenderTarget.GetResource(); }
 
 private:
 	UINT m_Width = 0, m_Height = 0;
 
 	RootSignature			m_GlobalRS, m_LocalHitGroupRS;
 	RaytracingPipelineState m_RTPSO;
-	Descriptor				m_UAV;
-	Descriptor				m_SRV;
 
-	std::shared_ptr<Resource> m_RenderTarget;
-	std::shared_ptr<Resource> m_RayGenerationSBT;
-	std::shared_ptr<Resource> m_MissSBT;
-	std::shared_ptr<Resource> m_HitGroupSBT;
+	Texture m_RenderTarget;
+	Buffer	m_RayGenerationSBT;
+	Buffer	m_MissSBT;
+	Buffer	m_HitGroupSBT;
 
 	// Pad local root arguments explicitly
 	struct RootArgument

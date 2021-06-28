@@ -1,10 +1,7 @@
 #include "pch.h"
 #include "Picking.h"
 
-#include <ResourceUploadBatch.h>
 #include "RendererRegistry.h"
-
-using namespace DirectX;
 
 namespace
 {
@@ -38,7 +35,7 @@ void Picking::Create()
 		{
 			Builder.AddLibrary(Libraries::Picking, { g_RayGeneration, g_Miss, g_ClosestHit });
 
-			Builder.AddHitGroup(g_HitGroupExport, nullptr, g_ClosestHit, nullptr);
+			Builder.AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {});
 
 			Builder.SetGlobalRootSignature(m_GlobalRS);
 
@@ -50,13 +47,9 @@ void Picking::Create()
 	g_MissSID		   = m_RTPSO.GetShaderIdentifier(L"Miss");
 	g_DefaultSID	   = m_RTPSO.GetShaderIdentifier(L"Default");
 
-	ResourceUploadBatch uploader(RenderDevice.GetDevice());
+	ResourceUploader uploader(RenderDevice.GetDevice());
 
-	uploader.Begin(D3D12_COMMAND_LIST_TYPE_COPY);
-
-	D3D12MA::ALLOCATION_DESC allocationDesc = {};
-	allocationDesc.Flags					= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-	allocationDesc.HeapType					= D3D12_HEAP_TYPE_DEFAULT;
+	uploader.Begin();
 
 	// Ray Generation Shader Table
 	{
@@ -64,70 +57,80 @@ void Picking::Create()
 
 		UINT64 sbtSize = m_RayGenerationShaderTable.GetSizeInBytes();
 
-		SharedGraphicsResource rayGenSBTUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
-		m_RayGenerationSBT					   = RenderDevice.CreateBuffer(&allocationDesc, sbtSize);
+		m_RayGenerationSBT = Buffer(
+			RenderDevice.GetDevice(),
+			sbtSize,
+			m_RayGenerationShaderTable.StrideInBytes,
+			D3D12_HEAP_TYPE_DEFAULT,
+			D3D12_RESOURCE_FLAG_NONE);
+		std::unique_ptr<BYTE[]> data = std::make_unique<BYTE[]>(sbtSize);
 
-		m_RayGenerationShaderTable.AssociateResource(m_RayGenerationSBT->pResource.Get());
-		m_RayGenerationShaderTable.Generate(static_cast<BYTE*>(rayGenSBTUpload.Memory()));
+		m_RayGenerationShaderTable.Generate(data.get());
 
-		uploader.Upload(m_RayGenerationShaderTable.Resource(), rayGenSBTUpload);
+		D3D12_SUBRESOURCE_DATA subresource = {};
+		subresource.pData				   = data.get();
+		subresource.RowPitch			   = sbtSize;
+		subresource.SlicePitch			   = 0;
+
+		uploader.Upload(subresource, m_RayGenerationSBT.GetResource());
+
+		m_RayGenerationShaderTable.AssociateResource(m_RayGenerationSBT.GetResource());
 	}
 
 	// Miss Shader Table
 	{
-		RaytracingShaderTable<void>::Record Record = {};
-		Record.ShaderIdentifier					   = g_MissSID;
-
-		m_MissShaderTable.AddShaderRecord(Record);
+		m_MissShaderTable.AddShaderRecord(g_MissSID);
 
 		UINT64 sbtSize = m_MissShaderTable.GetSizeInBytes();
 
-		SharedGraphicsResource missSBTUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
-		m_MissSBT							 = RenderDevice.CreateBuffer(&allocationDesc, sbtSize);
+		m_MissSBT = Buffer(
+			RenderDevice.GetDevice(),
+			sbtSize,
+			m_MissShaderTable.StrideInBytes,
+			D3D12_HEAP_TYPE_DEFAULT,
+			D3D12_RESOURCE_FLAG_NONE);
+		std::unique_ptr<BYTE[]> data = std::make_unique<BYTE[]>(sbtSize);
 
-		m_MissShaderTable.AssociateResource(m_MissSBT->pResource.Get());
-		m_MissShaderTable.Generate(static_cast<BYTE*>(missSBTUpload.Memory()));
+		m_MissShaderTable.Generate(data.get());
 
-		uploader.Upload(m_MissSBT->pResource.Get(), missSBTUpload);
+		D3D12_SUBRESOURCE_DATA subresource = {};
+		subresource.pData				   = data.get();
+		subresource.RowPitch			   = sbtSize;
+		subresource.SlicePitch			   = 0;
+
+		uploader.Upload(subresource, m_MissSBT.GetResource());
+
+		m_MissShaderTable.AssociateResource(m_MissSBT.GetResource());
 	}
 
-	auto finish = uploader.End(RenderDevice.GetCopyQueue());
-	finish.wait();
+	uploader.End(true);
 
-	m_HitGroupSBT =
-		RenderDevice.CreateBuffer(&allocationDesc, m_HitGroupShaderTable.StrideInBytes * Scene::MAX_INSTANCE_SUPPORTED);
-
-	allocationDesc			= {};
-	allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-	m_Result = RenderDevice.CreateBuffer(
-		&allocationDesc,
-		sizeof(int),
-		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
-		0,
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-
-	m_Readback =
-		RenderDevice
-			.CreateBuffer(&allocationDesc, sizeof(int), D3D12_RESOURCE_FLAG_NONE, 0, D3D12_RESOURCE_STATE_COPY_DEST);
+	m_HitGroupSBT = Buffer(
+		RenderDevice.GetDevice(),
+		m_HitGroupShaderTable.StrideInBytes * Scene::MAX_INSTANCE_SUPPORTED,
+		m_HitGroupShaderTable.StrideInBytes,
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_RESOURCE_FLAG_NONE);
 
 	m_HitGroupShaderTable.reserve(Scene::MAX_INSTANCE_SUPPORTED);
-	m_HitGroupShaderTable.AssociateResource(m_HitGroupSBT->pResource.Get());
+	m_HitGroupShaderTable.AssociateResource(m_HitGroupSBT.GetResource());
+
+	m_Result =
+		Buffer(RenderDevice.GetDevice(), sizeof(int), sizeof(int), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+
+	m_Readback =
+		Buffer(RenderDevice.GetDevice(), sizeof(int), sizeof(int), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_FLAG_NONE);
 
 	m_Entities.reserve(Scene::MAX_INSTANCE_SUPPORTED);
 }
 
 void Picking::UpdateShaderTable(
 	const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-	CommandList&						   CommandList)
+	CommandContext&						   Context)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	m_HitGroupShaderTable.clear();
 	m_Entities.clear();
-	for (auto [i, meshRenderer] : enumerate(RaytracingAccelerationStructure.m_MeshRenderers))
+	for (auto [i, meshRenderer] : enumerate(RaytracingAccelerationStructure.MeshRenderers))
 	{
 		m_HitGroupShaderTable.AddShaderRecord(g_DefaultSID);
 
@@ -137,53 +140,44 @@ void Picking::UpdateShaderTable(
 
 	UINT64 sbtSize = m_HitGroupShaderTable.GetSizeInBytes();
 
-	GraphicsResource hitGroupUpload = RenderDevice.GraphicsMemory()->Allocate(sbtSize);
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sbtSize);
 
-	m_HitGroupShaderTable.Generate(static_cast<BYTE*>(hitGroupUpload.Memory()));
+	m_HitGroupShaderTable.Generate(static_cast<BYTE*>(Allocation.CPUVirtualAddress));
 
-	CommandList.TransitionBarrier(m_HitGroupSBT->pResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-	CommandList->CopyBufferRegion(
-		m_HitGroupSBT->pResource.Get(),
-		0,
-		hitGroupUpload.Resource(),
-		hitGroupUpload.ResourceOffset(),
-		hitGroupUpload.Size());
-	CommandList.TransitionBarrier(m_HitGroupSBT->pResource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	Context->CopyBufferRegion(m_HitGroupSBT.GetResource(), 0, Allocation.pResource, Allocation.Offset, Allocation.Size);
 }
 
 void Picking::ShootPickingRay(
 	D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
 	const RaytracingAccelerationStructure& Scene,
-	CommandList&						   CommandList)
+	CommandContext&						   Context)
 {
-	CommandList->SetPipelineState1(m_RTPSO);
-	CommandList->SetComputeRootSignature(m_GlobalRS);
-	CommandList->SetComputeRootConstantBufferView(0, SystemConstants);
-	CommandList->SetComputeRootShaderResourceView(1, Scene);
-	CommandList->SetComputeRootUnorderedAccessView(2, m_Result->pResource->GetGPUVirtualAddress());
+	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(m_RTPSO);
+	Context->SetComputeRootSignature(m_GlobalRS);
+	Context->SetComputeRootConstantBufferView(0, SystemConstants);
+	Context->SetComputeRootShaderResourceView(1, Scene);
+	Context->SetComputeRootUnorderedAccessView(2, m_Result.GetGPUVirtualAddress());
 
-	D3D12_DISPATCH_RAYS_DESC desc = { .RayGenerationShaderRecord = m_RayGenerationShaderTable,
+	D3D12_DISPATCH_RAYS_DESC Desc = { .RayGenerationShaderRecord = m_RayGenerationShaderTable,
 									  .MissShaderTable			 = m_MissShaderTable,
 									  .HitGroupTable			 = m_HitGroupShaderTable,
 									  .Width					 = 1,
 									  .Height					 = 1,
 									  .Depth					 = 1 };
 
-	CommandList.DispatchRays(&desc);
+	Context.DispatchRays(&Desc);
 
-	CommandList.TransitionBarrier(m_Result->pResource.Get(), D3D12_RESOURCE_STATE_COPY_SOURCE);
-	CommandList->CopyBufferRegion(m_Readback->pResource.Get(), 0, m_Result->pResource.Get(), 0, sizeof(int));
-	CommandList.TransitionBarrier(m_Result->pResource.Get(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	Context->CopyBufferRegion(m_Readback.GetResource(), 0, m_Result.GetResource(), 0, sizeof(int));
 }
 
 std::optional<Entity> Picking::GetSelectedEntity()
 {
 	INT	 instanceID	 = -1;
 	INT* pHostMemory = nullptr;
-	if (SUCCEEDED(m_Readback->pResource->Map(0, nullptr, reinterpret_cast<void**>(&pHostMemory))))
+	if (SUCCEEDED(m_Readback.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pHostMemory))))
 	{
 		instanceID = pHostMemory[0];
-		m_Readback->pResource->Unmap(0, nullptr);
+		m_Readback.GetResource()->Unmap(0, nullptr);
 	}
 
 	if (instanceID != -1 && instanceID < m_Entities.size())

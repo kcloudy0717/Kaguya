@@ -4,16 +4,16 @@
 #include <string_view>
 
 #include "Stopwatch.h"
-#include "Window.h"
 #include "InputHandler.h"
 
 struct ApplicationOptions
 {
-	std::wstring_view  Name;
-	int				   Width = CW_USEDEFAULT, Height = CW_USEDEFAULT;
-	std::optional<int> x, y;
-	bool			   Maximize = false;
-
+	std::wstring_view	  Name;
+	int					  Width	 = CW_USEDEFAULT;
+	int					  Height = CW_USEDEFAULT;
+	std::optional<int>	  x;
+	std::optional<int>	  y;
+	bool				  Maximize = false;
 	std::filesystem::path Icon;
 };
 
@@ -22,31 +22,43 @@ class Application
 public:
 	static void InitializeComponents();
 
-	static void Initialize(const ApplicationOptions& Options);
+	static int Run(Application& Application, const ApplicationOptions& Options);
 
-	static int Run();
-
-	static int	 Width() { return Window.GetWindowWidth(); }
-	static int	 Height() { return Window.GetWindowHeight(); }
+	static int	 Width() { return WindowWidth; }
+	static int	 Height() { return WindowHeight; }
 	static float AspectRatio() { return (float)Width() / (float)Height(); }
+	static HWND	 GetWindowHandle() { return hWnd.get(); }
 
-	static InputHandler& GetInputHandler() { return m_InputHandler; }
-	static Mouse&		 GetMouse() { return m_InputHandler.Mouse; }
-	static Keyboard&	 GetKeyboard() { return m_InputHandler.Keyboard; }
+	static InputHandler& GetInputHandler() { return InputHandler; }
+	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
+	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
+
+	virtual void Initialize()					 = 0;
+	virtual void Update(float DeltaTime)		 = 0;
+	virtual void Shutdown()						 = 0;
+	virtual void Resize(UINT Width, UINT Height) = 0;
 
 private:
-	static DWORD WINAPI RenderThreadProc(_In_ PVOID pParameter);
-	static bool			HandleRenderMessage(const Window::Message& Message);
+	static bool ProcessMessages();
+
+	static LRESULT CALLBACK WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
 
 public:
+	// Components
 	inline static std::filesystem::path ExecutableDirectory;
 	inline static Stopwatch				Time;
-	inline static Window				Window;
 
-private:
-	inline static wil::unique_handle m_RenderThread;
-	inline static std::atomic<bool>	 m_ExitRenderThread = false;
-	inline static InputHandler		 m_InputHandler;
+protected:
+	inline static int				  WindowWidth, WindowHeight;
+	inline static wil::unique_hicon	  hIcon;
+	inline static wil::unique_hcursor hCursor;
+	inline static wil::unique_hwnd	  hWnd;
+	inline static InputHandler		  InputHandler;
+	inline static Stopwatch			  Stopwatch;
+
+	inline static bool Minimized = false; // is the application minimized?
+	inline static bool Maximized = false; // is the application maximized?
+	inline static bool Resizing	 = false; // are the resize bars being dragged?
 };
 
 template<class T>

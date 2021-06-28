@@ -18,11 +18,18 @@
 
 #define RENDER_AT_1920x1080	   0
 
-class Editor
+class Editor : public Application
 {
 public:
-	Editor()
+	Editor() {}
+
+	~Editor() {}
+
+	void Initialize() override
 	{
+		RenderDevice::Initialize();
+		AssetManager::Initialize();
+
 		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 
 		ImGui::LoadIniSettingsFromDisk(iniFile.data());
@@ -35,17 +42,10 @@ public:
 		Renderer.OnInitialize();
 	}
 
-	~Editor() { Renderer.OnDestroy(); }
-
-	void Render()
+	void Update(float DeltaTime) override
 	{
-		Stopwatch&	  Time		   = Application::Time;
-		InputHandler& InputHandler = Application::GetInputHandler();
-		Mouse&		  Mouse		   = Application::GetMouse();
-		Keyboard&	  Keyboard	   = Application::GetKeyboard();
-
-		Time.Signal();
-		float dt = Time.DeltaTime();
+		Mouse&	  Mouse	   = Application::GetMouse();
+		Keyboard& Keyboard = Application::GetKeyboard();
 
 		Scene.SceneState = Scene::SCENE_STATE_RENDER;
 
@@ -62,7 +62,7 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		m_ViewportWindow.SetContext((void*)Renderer.GetViewportDescriptor().GpuHandle.ptr);
+		m_ViewportWindow.SetContext((void*)Renderer.GetViewportDescriptor().GetGPUHandle().ptr);
 
 		m_HierarchyWindow.RenderGui();
 		m_ViewportWindow.RenderGui();
@@ -91,7 +91,7 @@ public:
 			m_HierarchyWindow.SetSelectedEntity(Renderer.GetSelectedEntity());
 		}
 
-		Scene.Update(dt);
+		Scene.Update(DeltaTime);
 
 		// Render
 		Renderer.SetViewportMousePosition(vpx, vpy);
@@ -100,7 +100,14 @@ public:
 		Renderer.OnRender(Time, Scene);
 	}
 
-	void Resize(uint32_t Width, uint32_t Height) { Renderer.OnResize(Width, Height); }
+	void Shutdown() override
+	{
+		Renderer.OnDestroy();
+		AssetManager::Shutdown();
+		RenderDevice::Shutdown();
+	}
+
+	void Resize(UINT Width, UINT Height) override { Renderer.OnResize(Width, Height); }
 
 private:
 	HierarchyWindow	   m_HierarchyWindow;
@@ -120,36 +127,14 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents();
 
-		ApplicationOptions options = { .Name	 = L"Kaguya",
-									   .Width	 = 1280,
-									   .Height	 = 720,
-									   .Maximize = true,
-									   .Icon	 = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
-		Application::Initialize(options);
+		ApplicationOptions AppOptions = { .Name		= L"Kaguya",
+										  .Width	= 1280,
+										  .Height	= 720,
+										  .Maximize = true,
+										  .Icon		= Application::ExecutableDirectory / "Assets/Kaguya.ico" };
 
-		RenderDevice::Initialize();
-		AssetManager::Initialize();
-
-		std::unique_ptr<Editor> editor = std::make_unique<Editor>();
-
-		Application::Window.SetRenderFunc(
-			[&]()
-			{
-				editor->Render();
-			});
-
-		Application::Window.SetResizeFunc(
-			[&](UINT Width, UINT Height)
-			{
-				editor->Resize(Width, Height);
-			});
-
-		Application::Time.Restart();
-		Application::Run();
-
-		editor.reset();
-		AssetManager::Shutdown();
-		RenderDevice::Shutdown();
+		Editor App;
+		Application::Run(App, AppOptions);
 	}
 	catch (std::exception& e)
 	{

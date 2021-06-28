@@ -6,17 +6,10 @@
 InputHandler::InputHandler(_In_ HWND hWnd)
 {
 	// Register RAWINPUTDEVICE for handling input
-	RAWINPUTDEVICE rid[2] = {};
-
-	rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
-	rid[0].usUsage	   = HID_USAGE_GENERIC_MOUSE;
-	rid[0].dwFlags	   = RIDEV_INPUTSINK;
-	rid[0].hwndTarget  = hWnd;
-
-	rid[1].usUsagePage = HID_USAGE_PAGE_GENERIC;
-	rid[1].usUsage	   = HID_USAGE_GENERIC_KEYBOARD;
-	rid[1].dwFlags	   = RIDEV_INPUTSINK;
-	rid[1].hwndTarget  = hWnd;
+	RAWINPUTDEVICE rid[2] = {
+		RAWINPUTDEVICE{ HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_INPUTSINK, hWnd },
+		RAWINPUTDEVICE{ HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_INPUTSINK, hWnd }
+	};
 
 	if (!::RegisterRawInputDevices(rid, 2, sizeof(rid[0])))
 	{
@@ -26,15 +19,15 @@ InputHandler::InputHandler(_In_ HWND hWnd)
 	this->hWnd = hWnd;
 }
 
-void InputHandler::Handle(_In_ const MSG* pMsg)
+void InputHandler::Process(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
 	if (RawInputEnabled)
 	{
-		HandleRawInput(pMsg->message, pMsg->wParam, pMsg->lParam);
+		HandleRawInput(uMsg, wParam, lParam);
 	}
 	else
 	{
-		HandleStandardInput(pMsg->message, pMsg->wParam, pMsg->lParam);
+		HandleStandardInput(uMsg, wParam, lParam);
 	}
 }
 
@@ -68,13 +61,15 @@ void InputHandler::FreeCursor()
 void InputHandler::ShowCursor()
 {
 	while (::ShowCursor(TRUE) < 0)
-		;
+	{
+	}
 }
 
 void InputHandler::HideCursor()
 {
 	while (::ShowCursor(FALSE) >= 0)
-		;
+	{
+	}
 }
 
 void InputHandler::HandleRawInput(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
@@ -140,12 +135,12 @@ void InputHandler::HandleRawInput(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARA
 
 			if (keyboard.Message == WM_KEYDOWN || keyboard.Message == WM_SYSKEYDOWN)
 			{
-				Keyboard.OnKeyDown(keyboard.VKey);
+				Keyboard.OnKeyDown(static_cast<unsigned char>(keyboard.VKey));
 			}
 
 			if (keyboard.Message == WM_KEYUP || keyboard.Message == WM_SYSKEYUP)
 			{
-				Keyboard.OnKeyUp(keyboard.VKey);
+				Keyboard.OnKeyUp(static_cast<unsigned char>(keyboard.VKey));
 			}
 		}
 		break;

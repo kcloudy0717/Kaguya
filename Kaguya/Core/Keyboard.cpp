@@ -8,12 +8,15 @@ bool Keyboard::IsPressed(unsigned char KeyCode) const
 
 std::optional<Keyboard::Event> Keyboard::ReadKey()
 {
-	if (Keyboard::Event e; m_KeyBuffer.pop(e, 0))
+	if (m_KeyBuffer.empty())
 	{
-		return e;
+		return {};
 	}
 
-	return {};
+	Keyboard::Event e = m_KeyBuffer.front();
+	m_KeyBuffer.pop();
+
+	return e;
 }
 
 bool Keyboard::KeyBufferIsEmpty() const
@@ -23,11 +26,15 @@ bool Keyboard::KeyBufferIsEmpty() const
 
 unsigned char Keyboard::ReadChar()
 {
-	if (unsigned char e; m_CharBuffer.pop(e, 0))
+	if (m_CharBuffer.empty())
 	{
-		return e;
+		return {};
 	}
-	return NULL;
+
+	unsigned char e = m_CharBuffer.front();
+	m_CharBuffer.pop();
+
+	return e;
 }
 
 bool Keyboard::CharBufferIsEmpty() const

@@ -22,7 +22,6 @@ struct Image
 	std::string			  Name;
 	DirectX::ScratchImage Image;
 
-	std::shared_ptr<Resource> Resource;
-	Descriptor				  SRV;
+	Texture Texture;
 };
 } // namespace Asset

@@ -29,7 +29,7 @@ void Scene::Update(float dt)
 	Registry.view<MeshFilter>().each(
 		[](auto&& MeshFilter)
 		{
-			MeshFilter.Mesh = AssetManager::Instance().GetMeshCache().Load(MeshFilter.Key);
+			MeshFilter.Mesh = AssetManager::GetMeshCache().Load(MeshFilter.Key);
 		});
 
 	// Update all mesh renderers
@@ -42,12 +42,12 @@ void Scene::Update(float dt)
 
 			for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
 			{
-				auto Texture = AssetManager::Instance().GetImageCache().Load(MeshRenderer.Material.TextureKeys[i]);
+				auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.TextureKeys[i]);
 
 				if (Texture)
 				{
 					MeshRenderer.Material.Textures[i]		= Texture;
-					MeshRenderer.Material.TextureIndices[i] = Texture->SRV.Index;
+					MeshRenderer.Material.TextureIndices[i] = Texture->Texture.SRV.GetIndex();
 				}
 			}
 		});
