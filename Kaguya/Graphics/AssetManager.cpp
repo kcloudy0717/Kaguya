@@ -92,6 +92,8 @@ void AssetManager::Initialize()
 						}
 
 						assetImage->Texture = Texture(RenderDevice.GetDevice(), resourceDesc, {});
+						assetImage->SRV		= ShaderResourceView(RenderDevice.GetDevice());
+						assetImage->Texture.CreateShaderResourceView(assetImage->SRV);
 
 						std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());
 						const auto							pImages = Image.GetImages();

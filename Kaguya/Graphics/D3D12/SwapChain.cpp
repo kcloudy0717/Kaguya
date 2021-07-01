@@ -85,12 +85,21 @@ void SwapChain::Resize(UINT Width, UINT Height)
 
 void SwapChain::Present(bool VSync)
 {
-	const UINT SyncInterval = VSync ? 1u : 0u;
-	const UINT PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-	HRESULT	   hr			= SwapChain4->Present(SyncInterval, PresentFlags);
-	if (hr == DXGI_ERROR_DEVICE_REMOVED)
+	try
 	{
-		// TODO: Handle device removal
+		const UINT SyncInterval = VSync ? 1u : 0u;
+		const UINT PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+		HRESULT	   hr			= SwapChain4->Present(SyncInterval, PresentFlags);
+		if (hr == DXGI_ERROR_DEVICE_REMOVED)
+		{
+			// TODO: Handle device removal
+			throw hr;
+		}
+	}
+	catch (HRESULT hr)
+	{
+		HRESULT errorCode = hr;
+		throw hresult_exception(hr);
 	}
 }
 
@@ -102,7 +111,7 @@ void SwapChain::CreateRenderTargetViews()
 		ThrowIfFailed(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
 
 		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
-		ViewDesc.Format						   = Format_sRGB;
+		ViewDesc.Format						   = Format;
 		ViewDesc.ViewDimension				   = D3D12_RTV_DIMENSION_TEXTURE2D;
 		ViewDesc.Texture2D.MipSlice			   = 0;
 		ViewDesc.Texture2D.PlaneSlice		   = 0;

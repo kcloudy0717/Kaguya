@@ -2,7 +2,6 @@
 #include "Resource.h"
 #include "Device.h"
 #include "d3dx12.h"
-#include "D3D12Utility.h"
 
 struct ResourceStateDeterminer
 {
@@ -73,14 +72,14 @@ bool Resource::ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const
 	// When this access occurs the promotion acts like an implicit resource barrier. For subsequent accesses, resource
 	// barriers will be required to change the resource state if necessary. Note that promotion from one promoted read
 	// state into multiple read state is valid, but this is not the case for write states.
-	if (m_Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+	if (Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 	{
 		return true;
 	}
 	else
 	{
 		// Simultaneous-Access Textures
-		if (m_Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
+		if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
 		{
 			// *Depth-stencil resources must be non-simultaneous-access textures and thus can never be implicitly
 			// promoted.
@@ -127,13 +126,13 @@ bool Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIS
 	}
 
 	// 2. Buffer resources on any queue type
-	if (m_Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+	if (Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 	{
 		return true;
 	}
 
 	// 3. Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set
-	if (m_Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
+	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
 	{
 		return true;
 	}
@@ -151,11 +150,8 @@ bool Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIS
 }
 
 Texture::Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<D3D12_CLEAR_VALUE> ClearValue)
-	: Texture(Device)
+	: Resource(Device, Desc, ClearValue, 0)
 {
-	m_Desc		 = Desc;
-	m_ClearValue = ClearValue;
-
 	const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 
 	const D3D12_RESOURCE_STATES InitialResourceState =
@@ -168,119 +164,210 @@ Texture::Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<
 		&Desc,
 		InitialResourceState,
 		OptimizedClearValue,
-		IID_PPV_ARGS(m_Resource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
 
-	UINT8 PlaneCount  = D3D12GetFormatPlaneCount(Device->GetDevice(), Desc.Format);
-	m_NumSubresources = Desc.MipLevels * Desc.DepthOrArraySize * PlaneCount;
-	m_ResourceState	  = CResourceState(m_NumSubresources);
-	m_ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
+	UINT8 PlaneCount = D3D12GetFormatPlaneCount(Device->GetDevice(), Desc.Format);
+	NumSubresources	 = Desc.MipLevels * Desc.DepthOrArraySize * PlaneCount;
+	ResourceState	 = CResourceState(NumSubresources);
+	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
+}
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-	SRVDesc.Format							= GetValidSRVFormat(Desc.Format);
-	SRVDesc.Shader4ComponentMapping			= D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-	switch (Desc.Dimension)
-	{
-	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-		if (Desc.DepthOrArraySize > 1)
-		{
-			SRVDesc.ViewDimension					   = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			SRVDesc.Texture2DArray.MostDetailedMip	   = 0;
-			SRVDesc.Texture2DArray.MipLevels		   = Desc.MipLevels;
-			SRVDesc.Texture2DArray.ArraySize		   = Desc.DepthOrArraySize;
-			SRVDesc.Texture2DArray.PlaneSlice		   = 0;
-			SRVDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
-		}
-		else
-		{
-			SRVDesc.ViewDimension				  = D3D12_SRV_DIMENSION_TEXTURE2D;
-			SRVDesc.Texture2D.MostDetailedMip	  = 0;
-			SRVDesc.Texture2D.MipLevels			  = Desc.MipLevels;
-			SRVDesc.Texture2D.PlaneSlice		  = 0;
-			SRVDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-		}
-		break;
-
-	default:
-		break;
-	}
-
+void Texture::CreateShaderResourceView(
+	ShaderResourceView& ShaderResourceView,
+	std::optional<UINT> OptMostDetailedMip /*= {}*/,
+	std::optional<UINT> OptMipLevels /*= {}*/)
+{
 	if (!(Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
 	{
-		SRV = ShaderResourceView(Device, SRVDesc, m_Resource.Get());
-	}
+		const UINT MostDetailedMip = OptMostDetailedMip.value_or(0);
+		const UINT MipLevels	   = OptMipLevels.value_or(Desc.MipLevels);
 
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+		SRVDesc.Format							= GetValidSRVFormat(Desc.Format);
+		// SRVDesc.Format							= sRGB ? DirectX::MakeSRGB(SRVDesc.Format) : SRVDesc.Format;
+		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+		switch (Desc.Dimension)
+		{
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			if (Desc.DepthOrArraySize > 1)
+			{
+				SRVDesc.ViewDimension					   = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+				SRVDesc.Texture2DArray.MostDetailedMip	   = MostDetailedMip;
+				SRVDesc.Texture2DArray.MipLevels		   = MipLevels;
+				SRVDesc.Texture2DArray.ArraySize		   = Desc.DepthOrArraySize;
+				SRVDesc.Texture2DArray.PlaneSlice		   = 0;
+				SRVDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
+			}
+			else
+			{
+				SRVDesc.ViewDimension				  = D3D12_SRV_DIMENSION_TEXTURE2D;
+				SRVDesc.Texture2D.MostDetailedMip	  = MostDetailedMip;
+				SRVDesc.Texture2D.MipLevels			  = MipLevels;
+				SRVDesc.Texture2D.PlaneSlice		  = 0;
+				SRVDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		ShaderResourceView.Descriptor.CreateView(SRVDesc, pResource.Get());
+	}
+}
+
+void Texture::CreateUnorderedAccessView(
+	UnorderedAccessView& UnorderedAccessView,
+	std::optional<UINT>	 OptArraySlice /*= {}*/,
+	std::optional<UINT>	 OptMipSlice /*= {}*/)
+{
 	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
-		UAV = UnorderedAccessView(Device, m_Resource.Get());
+		const UINT ArraySlice = OptArraySlice.value_or(0);
+		const UINT MipSlice	  = OptMipSlice.value_or(0);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+		UAVDesc.Format							 = Desc.Format;
+
+		switch (Desc.Dimension)
+		{
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			if (Desc.DepthOrArraySize > 1)
+			{
+				UAVDesc.ViewDimension				   = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+				UAVDesc.Texture2DArray.MipSlice		   = MipSlice;
+				UAVDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+				UAVDesc.Texture2DArray.ArraySize	   = Desc.DepthOrArraySize;
+				UAVDesc.Texture2DArray.PlaneSlice	   = 0;
+			}
+			else
+			{
+				UAVDesc.ViewDimension		 = D3D12_UAV_DIMENSION_TEXTURE2D;
+				UAVDesc.Texture2D.MipSlice	 = MipSlice;
+				UAVDesc.Texture2D.PlaneSlice = 0;
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		UnorderedAccessView.Descriptor.CreateView(UAVDesc, pResource.Get(), nullptr);
 	}
 }
 
-RenderTarget::RenderTarget(Device* Device, UINT Width, UINT Height, DXGI_FORMAT Format, const FLOAT Color[4])
-	: Texture(
-		  Device,
-		  CD3DX12_RESOURCE_DESC::Tex2D(Format, Width, Height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET),
-		  CD3DX12_CLEAR_VALUE(Format, Color))
+void Texture::CreateRenderTargetView(
+	RenderTargetView&	RenderTargetView,
+	std::optional<UINT> OptArraySlice /*= {}*/,
+	std::optional<UINT> OptMipSlice /*= {}*/,
+	std::optional<UINT> OptArraySize /*= {}*/,
+	bool				sRGB /*= false*/)
 {
-	RTV = RenderTargetView(Device, m_Resource.Get());
-}
-
-DepthStencil::DepthStencil(Device* Device, UINT Width, UINT Height, DXGI_FORMAT Format, FLOAT Depth, UINT8 Stencil)
-	: Texture(
-		  Device,
-		  CD3DX12_RESOURCE_DESC::Tex2D(Format, Width, Height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-		  CD3DX12_CLEAR_VALUE(Format, Depth, Stencil))
-{
-	D3D12_DEPTH_STENCIL_VIEW_DESC DSVDesc = {};
-	DSVDesc.Format						  = GetValidDepthStencilViewFormat(Format);
-	DSVDesc.Flags						  = D3D12_DSV_FLAG_NONE;
-
-	switch (m_Desc.Dimension)
+	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
 	{
-	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-		if (m_Desc.DepthOrArraySize > 1)
-		{
-			DSVDesc.ViewDimension				   = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-			DSVDesc.Texture2DArray.MipSlice		   = 0;
-			DSVDesc.Texture2DArray.FirstArraySlice = 0;
-			DSVDesc.Texture2DArray.ArraySize	   = m_Desc.DepthOrArraySize;
-		}
-		else
-		{
-			DSVDesc.ViewDimension	   = D3D12_DSV_DIMENSION_TEXTURE2D;
-			DSVDesc.Texture2D.MipSlice = 0;
-		}
-		break;
+		const UINT ArraySlice = OptArraySlice.value_or(0);
+		const UINT MipSlice	  = OptMipSlice.value_or(0);
+		const UINT ArraySize  = OptArraySize.value_or(Desc.DepthOrArraySize);
 
-	case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
-		throw std::invalid_argument("Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
+		D3D12_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+		RTVDesc.Format						  = sRGB ? DirectX::MakeSRGB(Desc.Format) : Desc.Format;
 
-	default:
-		break;
+		// TODO: Add 1D/3D support
+		switch (Desc.Dimension)
+		{
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			if (Desc.DepthOrArraySize > 1)
+			{
+				RTVDesc.ViewDimension				   = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+				RTVDesc.Texture2DArray.MipSlice		   = MipSlice;
+				RTVDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+				RTVDesc.Texture2DArray.ArraySize	   = ArraySize;
+				RTVDesc.Texture2DArray.PlaneSlice	   = 0;
+			}
+			else
+			{
+				RTVDesc.ViewDimension		 = D3D12_RTV_DIMENSION_TEXTURE2D;
+				RTVDesc.Texture2D.MipSlice	 = MipSlice;
+				RTVDesc.Texture2D.PlaneSlice = 0;
+			}
+			break;
+
+		default:
+			break;
+		}
+
+		RenderTargetView.Descriptor.CreateView(RTVDesc, pResource.Get());
 	}
+}
 
-	DSV = DepthStencilView(Device, DSVDesc, m_Resource.Get());
+void Texture::CreateDepthStencilView(
+	DepthStencilView&	DepthStencilView,
+	std::optional<UINT> OptArraySlice /*= {}*/,
+	std::optional<UINT> OptMipSlice /*= {}*/,
+	std::optional<UINT> OptArraySize /*= {}*/)
+{
+	assert(DepthStencilView.Descriptor.IsValid());
+
+	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+	{
+		const UINT ArraySlice = OptArraySlice.value_or(0);
+		const UINT MipSlice	  = OptMipSlice.value_or(0);
+		const UINT ArraySize  = OptArraySize.value_or(Desc.DepthOrArraySize);
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC DSVDesc = {};
+		DSVDesc.Format						  = GetValidDepthStencilViewFormat(Desc.Format);
+		DSVDesc.Flags						  = D3D12_DSV_FLAG_NONE;
+
+		switch (Desc.Dimension)
+		{
+		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+			if (Desc.DepthOrArraySize > 1)
+			{
+				DSVDesc.ViewDimension				   = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+				DSVDesc.Texture2DArray.MipSlice		   = MipSlice;
+				DSVDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+				DSVDesc.Texture2DArray.ArraySize	   = ArraySize;
+			}
+			else
+			{
+				DSVDesc.ViewDimension	   = D3D12_DSV_DIMENSION_TEXTURE2D;
+				DSVDesc.Texture2D.MipSlice = MipSlice;
+			}
+			break;
+
+		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+			throw std::invalid_argument(
+				"Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
+
+		default:
+			break;
+		}
+
+		DepthStencilView.Descriptor.CreateView(DSVDesc, pResource.Get());
+	}
 }
 
 ASBuffer::ASBuffer(Device* Device, UINT64 SizeInBytes)
-	: Resource(Device)
+	: Resource(
+		  Device,
+		  CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		  std::nullopt,
+		  1)
 {
-	m_Desc = CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
 	const D3D12_HEAP_PROPERTIES HeapProperties		 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	const D3D12_RESOURCE_STATES InitialResourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
 	Device->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
-		&m_Desc,
+		&Desc,
 		InitialResourceState,
 		nullptr,
-		IID_PPV_ARGS(m_Resource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
 
-	m_NumSubresources = 1;
-	m_ResourceState	  = CResourceState(m_NumSubresources);
-	m_ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
+	ResourceState = CResourceState(NumSubresources);
+	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
 }
 
 Buffer::Buffer(
@@ -289,31 +376,27 @@ Buffer::Buffer(
 	UINT				 Stride,
 	D3D12_HEAP_TYPE		 HeapType,
 	D3D12_RESOURCE_FLAGS ResourceFlags)
-	: Buffer(Device)
+	: Resource(Device, CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, ResourceFlags), std::nullopt, 1)
+	, Stride(Stride)
 {
-	m_Desc	 = CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, ResourceFlags);
-	m_Stride = Stride;
-
 	const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
 
-	const D3D12_RESOURCE_STATES InitialResourceState =
-		ResourceStateDeterminer(m_Desc, HeapType).GetOptimalInitialState();
+	const D3D12_RESOURCE_STATES InitialResourceState = ResourceStateDeterminer(Desc, HeapType).GetOptimalInitialState();
 
 	Device->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
-		&m_Desc,
+		&Desc,
 		InitialResourceState,
 		nullptr,
-		IID_PPV_ARGS(m_Resource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
 
-	m_NumSubresources = 1;
-	m_ResourceState	  = CResourceState(m_NumSubresources);
-	m_ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
+	ResourceState = CResourceState(NumSubresources);
+	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
 
 	if (HeapType == D3D12_HEAP_TYPE_UPLOAD)
 	{
-		ThrowIfFailed(m_Resource->Map(0, nullptr, reinterpret_cast<void**>(&m_CPUVirtualAddress)));
+		ThrowIfFailed(pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress)));
 
 		// We do not need to unmap until we are done with the resource.  However, we must not write to
 		// the resource while it is in use by the GPU (so we must use synchronization techniques).
@@ -322,9 +405,9 @@ Buffer::Buffer(
 
 Buffer::~Buffer()
 {
-	if (m_Resource && m_CPUVirtualAddress)
+	if (pResource && CPUVirtualAddress)
 	{
-		m_Resource->Unmap(0, nullptr);
-		m_CPUVirtualAddress = nullptr;
+		pResource->Unmap(0, nullptr);
+		CPUVirtualAddress = nullptr;
 	}
 }

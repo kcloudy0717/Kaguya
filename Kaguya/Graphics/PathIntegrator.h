@@ -25,6 +25,7 @@ public:
 	static constexpr UINT NumHitGroups = 1;
 
 	PathIntegrator() noexcept = default;
+
 	PathIntegrator(RenderDevice& RenderDevice);
 
 	void SetResolution(UINT Width, UINT Height);
@@ -42,7 +43,7 @@ public:
 		D3D12_GPU_VIRTUAL_ADDRESS			   Lights,
 		CommandContext&						   Context);
 
-	const ShaderResourceView& GetSRV() const { return m_RenderTarget.SRV; }
+	const ShaderResourceView& GetSRV() const { return SRV; }
 	ID3D12Resource*			  GetRenderTarget() const { return m_RenderTarget.GetResource(); }
 
 private:
@@ -55,6 +56,9 @@ private:
 	Buffer	m_RayGenerationSBT;
 	Buffer	m_MissSBT;
 	Buffer	m_HitGroupSBT;
+
+	UnorderedAccessView UAV;
+	ShaderResourceView SRV;
 
 	// Pad local root arguments explicitly
 	struct RootArgument

@@ -78,9 +78,17 @@ public:
 		return GPUHandle.ptr != NULL;
 	}
 
-	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept { return CPUHandle; }
-	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept { return GPUHandle; }
-	UINT							   GetIndex() const noexcept
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept
+	{
+		assert(IsValid());
+		return CPUHandle;
+	}
+	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept
+	{
+		assert(IsReferencedByShader());
+		return GPUHandle;
+	}
+	UINT GetIndex() const noexcept
 	{
 		assert(IsValid());
 		return Index;
@@ -136,11 +144,14 @@ public:
 	{
 	}
 
+	View(View&&) noexcept = default;
+	View& operator=(View&&) noexcept = default;
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept { return Descriptor.GetCPUHandle(); }
 	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept { return Descriptor.GetGPUHandle(); }
 	UINT							   GetIndex() const noexcept { return Descriptor.GetIndex(); }
 
-protected:
+public:
 	ViewDesc			 Desc = {};
 	Descriptor<ViewDesc> Descriptor;
 };
@@ -149,6 +160,11 @@ class ShaderResourceView : public View<D3D12_SHADER_RESOURCE_VIEW_DESC>
 {
 public:
 	ShaderResourceView() noexcept = default;
+
+	ShaderResourceView(Device* Device)
+		: View(Device)
+	{
+	}
 
 	ShaderResourceView(Device* Device, ID3D12Resource* Resource);
 
@@ -162,6 +178,11 @@ class UnorderedAccessView : public View<D3D12_UNORDERED_ACCESS_VIEW_DESC>
 {
 public:
 	UnorderedAccessView() noexcept = default;
+
+	UnorderedAccessView(Device* Device)
+		: View(Device)
+	{
+	}
 
 	UnorderedAccessView(Device* Device, ID3D12Resource* Resource, ID3D12Resource* CounterResource = nullptr);
 
@@ -180,6 +201,11 @@ class RenderTargetView : public View<D3D12_RENDER_TARGET_VIEW_DESC>
 public:
 	RenderTargetView() noexcept = default;
 
+	RenderTargetView(Device* Device)
+		: View(Device)
+	{
+	}
+
 	RenderTargetView(Device* Device, ID3D12Resource* Resource);
 
 	RenderTargetView(Device* Device, const D3D12_RENDER_TARGET_VIEW_DESC& Desc, ID3D12Resource* Resource);
@@ -192,6 +218,11 @@ class DepthStencilView : public View<D3D12_DEPTH_STENCIL_VIEW_DESC>
 {
 public:
 	DepthStencilView() noexcept = default;
+
+	DepthStencilView(Device* Device)
+		: View(Device)
+	{
+	}
 
 	DepthStencilView(Device* Device, ID3D12Resource* Resource);
 

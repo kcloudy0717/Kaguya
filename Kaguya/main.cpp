@@ -27,8 +27,11 @@ public:
 
 	void Initialize() override
 	{
+		atexit(Device::ReportLiveObjects);
 		RenderDevice::Initialize();
 		AssetManager::Initialize();
+
+		pRenderer = std::make_unique<Renderer>();
 
 		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 
@@ -36,10 +39,10 @@ public:
 
 		m_HierarchyWindow.SetContext(&Scene);
 		m_InspectorWindow.SetContext(&Scene, {});
-		m_RenderSystemWindow.SetContext(&Renderer);
+		m_RenderSystemWindow.SetContext(pRenderer.get());
 		m_AssetWindow.SetContext(&Scene);
 
-		Renderer.OnInitialize();
+		pRenderer->OnInitialize();
 	}
 
 	void Update(float DeltaTime) override
@@ -61,8 +64,6 @@ public:
 #endif
 
 		ImGuizmo::AllowAxisFlip(false);
-
-		m_ViewportWindow.SetContext((void*)Renderer.GetViewportDescriptor().GetGPUHandle().ptr);
 
 		m_HierarchyWindow.RenderGui();
 		m_ViewportWindow.RenderGui();
@@ -88,26 +89,35 @@ public:
 		if (Mouse.IsLeftPressed() && !InputHandler.RawInputEnabled && m_ViewportWindow.IsHovered &&
 			!ImGuizmo::IsUsing())
 		{
-			m_HierarchyWindow.SetSelectedEntity(Renderer.GetSelectedEntity());
+			m_HierarchyWindow.SetSelectedEntity(pRenderer->GetSelectedEntity());
 		}
 
 		Scene.Update(DeltaTime);
 
 		// Render
-		Renderer.SetViewportMousePosition(vpx, vpy);
-		Renderer.SetViewportResolution(viewportWidth, viewportHeight);
+		pRenderer->SetViewportMousePosition(vpx, vpy);
+		pRenderer->SetViewportResolution(viewportWidth, viewportHeight);
 
-		Renderer.OnRender(Time, Scene);
+		m_ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
+
+		pRenderer->OnRender(Time, Scene);
 	}
 
 	void Shutdown() override
 	{
-		Renderer.OnDestroy();
+		pRenderer->OnDestroy();
+		pRenderer.reset();
 		AssetManager::Shutdown();
 		RenderDevice::Shutdown();
 	}
 
-	void Resize(UINT Width, UINT Height) override { Renderer.OnResize(Width, Height); }
+	void Resize(UINT Width, UINT Height) override
+	{
+		if (pRenderer)
+		{
+			pRenderer->OnResize(Width, Height);
+		}
+	}
 
 private:
 	HierarchyWindow	   m_HierarchyWindow;
@@ -117,8 +127,8 @@ private:
 	AssetWindow		   m_AssetWindow;
 	ConsoleWindow	   m_ConsoleWindow;
 
-	Scene	 Scene;
-	Renderer Renderer;
+	Scene					  Scene;
+	std::unique_ptr<Renderer> pRenderer;
 };
 
 int main(int argc, char* argv[])

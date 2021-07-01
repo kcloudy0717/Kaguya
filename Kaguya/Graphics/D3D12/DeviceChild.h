@@ -5,7 +5,12 @@ class Device;
 class DeviceChild
 {
 public:
-	DeviceChild(Device* Parent = nullptr) noexcept
+	DeviceChild() noexcept
+		: Parent(nullptr)
+	{
+	}
+
+	DeviceChild(Device* Parent) noexcept
 		: Parent(Parent)
 	{
 	}

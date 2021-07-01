@@ -173,7 +173,7 @@ void Renderer::Render(Scene& Scene)
 
 		AsyncCompute.CloseCommandList();
 
-		ASBuildSyncPoint = AsyncCompute.Execute(false);
+		ASBuildSyncPoint = AsyncCompute.Execute(true);
 	}
 
 	if (Scene.SceneState & Scene::SCENE_STATE_UPDATED)
@@ -226,9 +226,9 @@ void Renderer::Render(Scene& Scene)
 			Context);
 
 		m_Picking.ShootPickingRay(Allocation.GPUVirtualAddress, m_RaytracingAccelerationStructure, Context);
-
-		m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
 	}
+
+	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 
@@ -262,6 +262,7 @@ void Renderer::Render(Scene& Scene)
 		D3D12_RESOURCE_STATE_PRESENT);
 	Context->ResourceBarrier(1, &ResourceBarrier);
 
+	Context.CloseCommandList();
 	CommandSyncPoint MainSyncPoint = Context.Execute(false);
 
 	RenderDevice.Present(Settings::VSync);

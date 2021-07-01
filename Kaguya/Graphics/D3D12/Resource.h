@@ -1,28 +1,11 @@
 #pragma once
-#include "d3dx12.h"
+#include "D3D12Utility.h"
 #include "DeviceChild.h"
 #include "Descriptor.h"
 
 // Custom resource states
 #define D3D12_RESOURCE_STATE_UNKNOWN	   (static_cast<D3D12_RESOURCE_STATES>(-1))
 #define D3D12_RESOURCE_STATE_UNINITIALIZED (static_cast<D3D12_RESOURCE_STATES>(-2))
-
-class Heap : public DeviceChild
-{
-public:
-	Heap() noexcept = default;
-	Heap(Device* Device)
-		: DeviceChild(Device)
-	{
-	}
-	Heap(Device* Device, const D3D12_HEAP_DESC& Desc);
-
-				operator ID3D12Heap*() const { return m_Heap.Get(); }
-	ID3D12Heap* GetResource() const { return m_Heap.Get(); }
-
-private:
-	Microsoft::WRL::ComPtr<ID3D12Heap> m_Heap;
-};
 
 // https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking
 class CResourceState
@@ -106,22 +89,27 @@ class Resource : public DeviceChild
 {
 public:
 	Resource() noexcept = default;
-	Resource(Device* Device)
+	Resource(
+		Device*							 Device,
+		D3D12_RESOURCE_DESC				 Desc,
+		std::optional<D3D12_CLEAR_VALUE> ClearValue,
+		UINT							 NumSubresources)
 		: DeviceChild(Device)
-		, m_Desc()
-		, m_NumSubresources(0)
+		, Desc(Desc)
+		, ClearValue(ClearValue)
+		, NumSubresources(NumSubresources)
 	{
 	}
 
 	Resource(Resource&&) noexcept = default;
 	Resource& operator=(Resource&&) noexcept = default;
 
-					operator ID3D12Resource*() const { return m_Resource.Get(); }
-	ID3D12Resource* GetResource() const { return m_Resource.Get(); }
+					operator ID3D12Resource*() const { return pResource.Get(); }
+	ID3D12Resource* GetResource() const { return pResource.Get(); }
 
-	const D3D12_RESOURCE_DESC& GetDesc() const { return m_Desc; }
+	const D3D12_RESOURCE_DESC& GetDesc() const { return Desc; }
 
-	CResourceState& GetResourceState() { return m_ResourceState; }
+	CResourceState& GetResourceState() { return ResourceState; }
 
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
 
@@ -138,11 +126,11 @@ public:
 	bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const;
 
 protected:
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_Resource;
-	D3D12_RESOURCE_DESC					   m_Desc;
-	std::optional<D3D12_CLEAR_VALUE>	   m_ClearValue;
-	UINT								   m_NumSubresources;
-	CResourceState						   m_ResourceState;
+	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
+	D3D12_RESOURCE_DESC					   Desc;
+	std::optional<D3D12_CLEAR_VALUE>	   ClearValue;
+	UINT								   NumSubresources;
+	CResourceState						   ResourceState;
 };
 
 class ASBuffer : public Resource
@@ -154,19 +142,13 @@ public:
 	ASBuffer(ASBuffer&&) noexcept = default;
 	ASBuffer& operator=(ASBuffer&&) noexcept = default;
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return m_Resource->GetGPUVirtualAddress(); }
+	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
 };
 
 class Buffer : public Resource
 {
 public:
 	Buffer() noexcept = default;
-	Buffer(Device* Device)
-		: Resource(Device)
-	{
-		m_Stride			= 0;
-		m_CPUVirtualAddress = nullptr;
-	}
 	Buffer(
 		Device*				 Device,
 		UINT64				 SizeInBytes,
@@ -178,29 +160,29 @@ public:
 	Buffer(Buffer&&) noexcept = default;
 	Buffer& operator=(Buffer&&) noexcept = default;
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return m_Resource->GetGPUVirtualAddress(); }
+	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress(int Index) const
 	{
-		return m_Resource->GetGPUVirtualAddress() + Index * m_Stride;
+		return pResource->GetGPUVirtualAddress() + Index * Stride;
 	}
 
-	UINT GetStride() const { return m_Stride; }
+	UINT GetStride() const { return Stride; }
 	template<typename T>
 	T* GetCPUVirtualAddress() const
 	{
-		assert(m_CPUVirtualAddress && "Invalid CPUVirtualAddress");
-		return reinterpret_cast<T*>(m_CPUVirtualAddress);
+		assert(CPUVirtualAddress && "Invalid CPUVirtualAddress");
+		return reinterpret_cast<T*>(CPUVirtualAddress);
 	}
 
 	template<typename T>
 	void CopyData(int Index, const T& Data)
 	{
-		memcpy(&m_CPUVirtualAddress[Index * m_Stride], &Data, sizeof(T));
+		memcpy(&CPUVirtualAddress[Index * Stride], &Data, sizeof(T));
 	}
 
 private:
-	UINT  m_Stride			  = 0;
-	BYTE* m_CPUVirtualAddress = nullptr;
+	UINT  Stride			= 0;
+	BYTE* CPUVirtualAddress = nullptr;
 };
 
 template<typename T>
@@ -212,7 +194,6 @@ public:
 		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_NONE)
 	{
 	}
-	~StructuredBuffer() {}
 
 	StructuredBuffer(StructuredBuffer&&) noexcept = default;
 	StructuredBuffer& operator=(StructuredBuffer&&) noexcept = default;
@@ -227,7 +208,6 @@ public:
 		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
 	}
-	~RWStructuredBuffer() {}
 
 	RWStructuredBuffer(RWStructuredBuffer&&) noexcept = default;
 	RWStructuredBuffer& operator=(RWStructuredBuffer&&) noexcept = default;
@@ -237,38 +217,33 @@ class Texture : public Resource
 {
 public:
 	Texture() noexcept = default;
-	Texture(Device* Device)
-		: Resource(Device)
-	{
-	}
 	Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<D3D12_CLEAR_VALUE> ClearValue);
 
 	Texture(Texture&&) noexcept = default;
 	Texture& operator=(Texture&&) noexcept = default;
 
-	ShaderResourceView	SRV;
-	UnorderedAccessView UAV;
-};
+	void CreateShaderResourceView(
+		ShaderResourceView& ShaderResourceView,
+		std::optional<UINT> OptMostDetailedMip = {},
+		std::optional<UINT> OptMipLevels	   = {});
 
-class RenderTarget : public Texture
-{
-public:
-	RenderTarget() noexcept = default;
-	RenderTarget(Device* Device, UINT Width, UINT Height, DXGI_FORMAT Format, const FLOAT Color[4]);
+	void CreateUnorderedAccessView(
+		UnorderedAccessView& UnorderedAccessView,
+		std::optional<UINT>	 OptArraySlice = {},
+		std::optional<UINT>	 OptMipSlice   = {});
 
-	RenderTargetView RTV;
-};
+	void CreateRenderTargetView(
+		RenderTargetView&	RenderTargetView,
+		std::optional<UINT> OptArraySlice = {},
+		std::optional<UINT> OptMipSlice	  = {},
+		std::optional<UINT> OptArraySize  = {},
+		bool				sRGB		  = false);
 
-class DepthStencil : public Texture
-{
-public:
-	DepthStencil() noexcept = default;
-	DepthStencil(Device* Device, UINT Width, UINT Height, DXGI_FORMAT Format, FLOAT Depth, UINT8 Stencil);
-
-	DepthStencil(DepthStencil&&) noexcept = default;
-	DepthStencil& operator=(DepthStencil&&) noexcept = default;
-
-	DepthStencilView DSV;
+	void CreateDepthStencilView(
+		DepthStencilView&	DepthStencilView,
+		std::optional<UINT> OptArraySlice = {},
+		std::optional<UINT> OptMipSlice	  = {},
+		std::optional<UINT> OptArraySize  = {});
 };
 
 class ReadbackBuffer

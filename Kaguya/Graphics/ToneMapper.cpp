@@ -4,6 +4,8 @@
 #include "RendererRegistry.h"
 
 ToneMapper::ToneMapper(RenderDevice& RenderDevice)
+	: RTV(RenderDevice.GetDevice())
+	, SRV(RenderDevice.GetDevice())
 {
 	m_RS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
@@ -58,12 +60,28 @@ void ToneMapper::SetResolution(UINT Width, UINT Height)
 	FLOAT Color[]	 = { 1, 1, 1, 1 };
 	auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
 
-	m_RenderTarget = RenderTarget(RenderDevice.GetDevice(), Width, Height, SwapChain::Format, Color);
+	auto TextureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		SwapChain::Format,
+		Width,
+		Height,
+		1,
+		1,
+		1,
+		0,
+		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+	RenderTarget = Texture(RenderDevice.GetDevice(), TextureDesc, ClearValue);
+	RenderTarget.GetResource()->SetName(L"Tonemap Output");
+
+	RenderTarget.CreateRenderTargetView(RTV, {}, {}, {}, true);
+	RenderTarget.CreateShaderResourceView(SRV);
 }
 
 void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandContext& Context)
 {
 	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"Tonemapping");
+
+	Context.TransitionBarrier(&RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	Context->SetPipelineState(m_PSO);
 	Context->SetGraphicsRootSignature(m_RS);
@@ -74,10 +92,10 @@ void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandCont
 	Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	Context->RSSetViewports(1, &Viewport);
 	Context->RSSetScissorRects(1, &ScissorRect);
-	Context->OMSetRenderTargets(1, &m_RenderTarget.RTV.GetCPUHandle(), TRUE, nullptr);
+	Context->OMSetRenderTargets(1, &RTV.GetCPUHandle(), TRUE, nullptr);
 
 	FLOAT white[] = { 1, 1, 1, 1 };
-	Context->ClearRenderTargetView(m_RenderTarget.RTV.GetCPUHandle(), white, 0, nullptr);
+	Context->ClearRenderTargetView(RTV.GetCPUHandle(), white, 0, nullptr);
 
 	struct Settings
 	{
@@ -88,5 +106,7 @@ void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandCont
 	Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
 	// RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
 
-	Context->DrawInstanced(3, 1, 0, 0);
+	Context.DrawInstanced(3, 1, 0, 0);
+
+	Context.TransitionBarrier(&RenderTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

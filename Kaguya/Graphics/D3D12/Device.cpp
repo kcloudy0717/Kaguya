@@ -176,6 +176,11 @@ void Device::Initialize(const DeviceFeatures& Features)
 	CopyQueue1.Initialize();
 	CopyQueue2.Initialize();
 
+	GraphicsQueue.GetCommandQueue()->SetName(L"3D");
+	AsyncComputeQueue.GetCommandQueue()->SetName(L"Async Compute");
+	CopyQueue1.GetCommandQueue()->SetName(L"Copy 1");
+	CopyQueue2.GetCommandQueue()->SetName(L"Copy 2");
+
 	pResourceViewHeaps = std::make_unique<ResourceViewHeaps>(GetDevice());
 
 	// TODO: Implement a task-graph for rendering work

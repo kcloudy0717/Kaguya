@@ -7,8 +7,7 @@
 #include "Resource.h"
 
 // clang-format off
-template<D3D12_FEATURE Feature>
-struct FeatureStructMap { using Type = void; };
+template<D3D12_FEATURE Feature> struct FeatureStructMap									{ using Type = void; };
 template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS>							{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS; };
 template<> struct FeatureStructMap<D3D12_FEATURE_ARCHITECTURE>							{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE; };
 template<> struct FeatureStructMap<D3D12_FEATURE_FEATURE_LEVELS>						{ using Type = D3D12_FEATURE_DATA_FEATURE_LEVELS; };

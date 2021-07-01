@@ -43,6 +43,8 @@ void PathIntegrator::Settings::RenderGui()
 }
 
 PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
+	: UAV(RenderDevice.GetDevice())
+	, SRV(RenderDevice.GetDevice())
 {
 	Settings::RestoreDefaults();
 
@@ -211,6 +213,10 @@ void PathIntegrator::SetResolution(_In_ UINT Width, _In_ UINT Height)
 	ResourceDesc.Flags	   = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	m_RenderTarget = Texture(RenderDevice.GetDevice(), ResourceDesc, {});
+	m_RenderTarget.GetResource()->SetName(L"PathIntegrator Output");
+
+	m_RenderTarget.CreateUnorderedAccessView(UAV);
+	m_RenderTarget.CreateShaderResourceView(SRV);
 
 	Reset();
 }
@@ -272,7 +278,7 @@ void PathIntegrator::Render(
 	g_RenderPassData.MaxDepth			   = Settings::MaxDepth;
 	g_RenderPassData.NumAccumulatedSamples = Settings::NumAccumulatedSamples++;
 
-	g_RenderPassData.RenderTarget = m_RenderTarget.UAV.GetIndex();
+	g_RenderPassData.RenderTarget = UAV.GetIndex();
 
 	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(RenderPassData));
 	std::memcpy(Allocation.CPUVirtualAddress, &g_RenderPassData, sizeof(RenderPassData));

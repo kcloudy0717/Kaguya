@@ -35,7 +35,10 @@ void ViewportWindow::RenderGui()
 
 		Resolution = Vector2i(viewportSize.x, viewportSize.y);
 
-		ImGui::Image((ImTextureID)m_pImage, viewportSize);
+		if (m_pImage)
+		{
+			ImGui::Image((ImTextureID)m_pImage, viewportSize);
+		}
 
 		if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
 		{

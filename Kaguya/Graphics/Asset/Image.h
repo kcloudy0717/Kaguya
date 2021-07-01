@@ -22,6 +22,7 @@ struct Image
 	std::string			  Name;
 	DirectX::ScratchImage Image;
 
-	Texture Texture;
+	Texture			   Texture;
+	ShaderResourceView SRV;
 };
 } // namespace Asset

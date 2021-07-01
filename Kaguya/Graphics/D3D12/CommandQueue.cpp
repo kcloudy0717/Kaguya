@@ -112,7 +112,10 @@ void CommandQueue::Wait(CommandQueue* CommandQueue)
 
 void CommandQueue::WaitForSyncPoint(const CommandSyncPoint& SyncPoint)
 {
-	pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value);
+	if (SyncPoint.IsValid())
+	{
+		pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value);
+	}
 }
 
 bool CommandQueue::ResolveResourceBarrierCommandList(

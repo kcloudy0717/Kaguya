@@ -47,7 +47,7 @@ void Scene::Update(float dt)
 				if (Texture)
 				{
 					MeshRenderer.Material.Textures[i]		= Texture;
-					MeshRenderer.Material.TextureIndices[i] = Texture->Texture.SRV.GetIndex();
+					MeshRenderer.Material.TextureIndices[i] = Texture->SRV.GetIndex();
 				}
 			}
 		});
