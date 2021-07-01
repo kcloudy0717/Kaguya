@@ -109,4 +109,5 @@ void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandCont
 	Context.DrawInstanced(3, 1, 0, 0);
 
 	Context.TransitionBarrier(&RenderTarget, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Context.FlushResourceBarriers();
 }

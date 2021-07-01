@@ -438,15 +438,15 @@ void DeserializeComponent(const YAML::Node& Node, Entity* pEntity, DeserializeFu
 static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 {
 	// Tag component have to exist
-	auto name = Node["Tag"]["Name"].as<std::string>();
+	auto Name = Node["Tag"]["Name"].as<std::string>();
 
 	// Create entity after getting our tag component
-	Entity entity = pScene->CreateEntity(name);
+	Entity Entity = pScene->CreateEntity(Name);
 
 	// TODO: Come up with some template meta programming for serialize/deserialize
 	DeserializeComponent<Transform>(
 		Node["Transform"],
-		&entity,
+		&Entity,
 		[](auto& Node, auto& Transform)
 		{
 			Transform.Position	  = Node["Position"].as<DirectX::XMFLOAT3>();
@@ -456,58 +456,58 @@ static void DeserializeEntity(const YAML::Node& Node, Scene* pScene)
 
 	DeserializeComponent<MeshFilter>(
 		Node["Mesh Filter"],
-		&entity,
+		&Entity,
 		[](auto& Node, auto& MeshFilter)
 		{
-			auto path = Node["Name"].as<std::string>();
-			if (path != "NULL")
+			auto String = Node["Name"].as<std::string>();
+			if (String != "NULL")
 			{
-				path = (Application::ExecutableDirectory / path).string();
+				String = (Application::ExecutableDirectory / String).string();
 
-				MeshFilter.Key = entt::hashed_string(path.data());
+				MeshFilter.Key = CityHash64(String.data(), String.size());
 			}
 		});
 
 	DeserializeComponent<MeshRenderer>(
 		Node["Mesh Renderer"],
-		&entity,
+		&Entity,
 		[](auto& Node, MeshRenderer& MeshRenderer)
 		{
-			auto& material				   = Node["Material"];
-			MeshRenderer.Material.BSDFType = material["BSDFType"].as<int>();
+			auto& Material				   = Node["Material"];
+			MeshRenderer.Material.BSDFType = Material["BSDFType"].as<int>();
 
-			MeshRenderer.Material.baseColor		 = material["baseColor"].as<DirectX::XMFLOAT3>();
-			MeshRenderer.Material.metallic		 = material["metallic"].as<float>();
-			MeshRenderer.Material.subsurface	 = material["subsurface"].as<float>();
-			MeshRenderer.Material.specular		 = material["specular"].as<float>();
-			MeshRenderer.Material.roughness		 = material["roughness"].as<float>();
-			MeshRenderer.Material.specularTint	 = material["specularTint"].as<float>();
-			MeshRenderer.Material.anisotropic	 = material["anisotropic"].as<float>();
-			MeshRenderer.Material.sheen			 = material["sheen"].as<float>();
-			MeshRenderer.Material.sheenTint		 = material["sheenTint"].as<float>();
-			MeshRenderer.Material.clearcoat		 = material["clearcoat"].as<float>();
-			MeshRenderer.Material.clearcoatGloss = material["clearcoatGloss"].as<float>();
+			MeshRenderer.Material.baseColor		 = Material["baseColor"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.metallic		 = Material["metallic"].as<float>();
+			MeshRenderer.Material.subsurface	 = Material["subsurface"].as<float>();
+			MeshRenderer.Material.specular		 = Material["specular"].as<float>();
+			MeshRenderer.Material.roughness		 = Material["roughness"].as<float>();
+			MeshRenderer.Material.specularTint	 = Material["specularTint"].as<float>();
+			MeshRenderer.Material.anisotropic	 = Material["anisotropic"].as<float>();
+			MeshRenderer.Material.sheen			 = Material["sheen"].as<float>();
+			MeshRenderer.Material.sheenTint		 = Material["sheenTint"].as<float>();
+			MeshRenderer.Material.clearcoat		 = Material["clearcoat"].as<float>();
+			MeshRenderer.Material.clearcoatGloss = Material["clearcoatGloss"].as<float>();
 
-			MeshRenderer.Material.T	   = material["T"].as<DirectX::XMFLOAT3>();
-			MeshRenderer.Material.etaA = material["etaA"].as<float>();
-			MeshRenderer.Material.etaB = material["etaB"].as<float>();
+			MeshRenderer.Material.T	   = Material["T"].as<DirectX::XMFLOAT3>();
+			MeshRenderer.Material.etaA = Material["etaA"].as<float>();
+			MeshRenderer.Material.etaB = Material["etaB"].as<float>();
 
-			const char* textureTypes[TextureTypes::NumTextureTypes] = { "Albedo", "Normal", "Roughness", "Metallic" };
+			const char* TextureTypes[TextureTypes::NumTextureTypes] = { "Albedo", "Normal", "Roughness", "Metallic" };
 			for (int i = 0; i < TextureTypes::NumTextureTypes; ++i)
 			{
-				auto path = material[textureTypes[i]].as<std::string>();
-				if (path != "NULL")
+				auto String = Material[TextureTypes[i]].as<std::string>();
+				if (String != "NULL")
 				{
-					path = (Application::ExecutableDirectory / path).string();
+					String = (Application::ExecutableDirectory / String).string();
 
-					MeshRenderer.Material.TextureKeys[i] = entt::hashed_string(path.data());
+					MeshRenderer.Material.TextureKeys[i] = CityHash64(String.data(), String.size());
 				}
 			}
 		});
 
 	DeserializeComponent<Light>(
 		Node["Light"],
-		&entity,
+		&Entity,
 		[](auto& Node, auto& Light)
 		{
 			Light.Type	 = static_cast<Light::EType>(Node["Type"].as<int>());

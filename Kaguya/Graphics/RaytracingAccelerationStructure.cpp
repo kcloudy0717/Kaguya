@@ -14,19 +14,19 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
+
+	pInstanceDescs = InstanceDescs.GetCPUVirtualAddress<D3D12_RAYTRACING_INSTANCE_DESC>();
 }
 
 void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, MeshRenderer* pMeshRenderer)
 {
-	const ASBuffer& AccelerationStructure = pMeshRenderer->pMeshFilter->Mesh->AccelerationStructure;
-
 	D3D12_RAYTRACING_INSTANCE_DESC dxrInstanceDesc = {};
 	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(dxrInstanceDesc.Transform), Transform.Matrix());
 	dxrInstanceDesc.InstanceID							= TopLevelAccelerationStructure.size();
 	dxrInstanceDesc.InstanceMask						= RAYTRACING_INSTANCEMASK_ALL;
 	dxrInstanceDesc.InstanceContributionToHitGroupIndex = InstanceContributionToHitGroupIndex;
 	dxrInstanceDesc.Flags								= D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-	dxrInstanceDesc.AccelerationStructure				= AccelerationStructure.GetGPUVirtualAddress();
+	dxrInstanceDesc.AccelerationStructure				= NULL; // Resolved later
 
 	TopLevelAccelerationStructure.AddInstance(dxrInstanceDesc);
 	MeshRenderers.push_back(pMeshRenderer);
@@ -39,6 +39,15 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	auto& RenderDevice = RenderDevice::Instance();
 
 	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"TLAS");
+
+	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
+	{
+		MeshRenderer* pMeshRenderer = MeshRenderers[i];
+
+		const ASBuffer& AccelerationStructure = pMeshRenderer->pMeshFilter->Mesh->AccelerationStructure;
+
+		Instance.AccelerationStructure = AccelerationStructure.GetGPUVirtualAddress();
+	}
 
 	UINT64 scratchSize, resultSize;
 	TopLevelAccelerationStructure.ComputeMemoryRequirements(

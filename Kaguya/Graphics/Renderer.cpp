@@ -168,6 +168,7 @@ void Renderer::Render(Scene& Scene)
 		}
 
 		AsyncCompute.UAVBarrier(nullptr);
+		AsyncCompute.FlushResourceBarriers();
 
 		m_RaytracingAccelerationStructure.Build(AsyncCompute);
 
