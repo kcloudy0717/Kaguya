@@ -25,7 +25,7 @@ public:
 
 	~Editor() {}
 
-	void Initialize() override
+	bool Initialize() override
 	{
 		atexit(Device::ReportLiveObjects);
 		RenderDevice::Initialize();
@@ -43,6 +43,8 @@ public:
 		m_AssetWindow.SetContext(&Scene);
 
 		pRenderer->OnInitialize();
+
+		return true;
 	}
 
 	void Update(float DeltaTime) override
@@ -100,13 +102,14 @@ public:
 
 		m_ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
 
-		pRenderer->OnRender(Time, Scene);
+		pRenderer->OnRender(Stopwatch, Scene);
 	}
 
 	void Shutdown() override
 	{
 		pRenderer->OnDestroy();
 		pRenderer.reset();
+		Scene.Clear();
 		AssetManager::Shutdown();
 		RenderDevice::Shutdown();
 	}

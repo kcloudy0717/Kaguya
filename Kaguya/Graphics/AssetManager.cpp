@@ -79,7 +79,8 @@ void AssetManager::Initialize()
 								format,
 								static_cast<UINT64>(Metadata.width),
 								static_cast<UINT>(Metadata.height),
-								static_cast<UINT16>(Metadata.arraySize));
+								static_cast<UINT16>(Metadata.arraySize),
+								Metadata.mipLevels);
 							break;
 
 						case TEX_DIMENSION::TEX_DIMENSION_TEXTURE3D:

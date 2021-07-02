@@ -273,11 +273,8 @@ void Renderer::Render(Scene& Scene)
 
 void Renderer::Resize(uint32_t Width, uint32_t Height)
 {
-	if (RenderDevice::IsValid())
-	{
-		RenderDevice::Instance().GetDevice()->GetGraphicsQueue()->Flush();
-		RenderDevice::Instance().Resize(Width, Height);
-	}
+	RenderDevice::Instance().GetDevice()->GetGraphicsQueue()->Flush();
+	RenderDevice::Instance().Resize(Width, Height);
 }
 
 void Renderer::Destroy()

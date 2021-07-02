@@ -143,7 +143,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	::ShowWindow(hWnd.get(), SW_SHOW);
 
-	Application.Initialize();
+	Initialized = Application.Initialize();
 
 	Stopwatch.Restart();
 	do
@@ -221,8 +221,10 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		{
 			Minimized = false;
 			Maximized = true;
-			if (App)
+			if (App && Initialized)
+			{
 				App->Resize(WindowWidth, WindowHeight);
+			}
 		}
 		else if (wParam == SIZE_RESTORED)
 		{
@@ -230,15 +232,19 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 			if (Minimized)
 			{
 				Minimized = false;
-				if (App)
+				if (App && Initialized)
+				{
 					App->Resize(WindowWidth, WindowHeight);
+				}
 			}
 			// Restoring from maximized state?
 			else if (Maximized)
 			{
 				Maximized = false;
-				if (App)
+				if (App && Initialized)
+				{
 					App->Resize(WindowWidth, WindowHeight);
+				}
 			}
 			else if (Resizing)
 			{
@@ -253,8 +259,10 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 			}
 			else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
 			{
-				if (App)
+				if (App && Initialized)
+				{
 					App->Resize(WindowWidth, WindowHeight);
+				}
 			}
 		}
 	}

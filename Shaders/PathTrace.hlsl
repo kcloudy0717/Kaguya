@@ -254,7 +254,7 @@ void RayGeneration()
 [shader("miss")]
 void Miss(inout RayPayload rayPayload : SV_RayPayload)
 {
-#define CLASSROOM_SCENE 0
+#define CLASSROOM_SCENE 1
 #define BEDROOM_SCENE 0
 #if CLASSROOM_SCENE || BEDROOM_SCENE
 	float t = 0.5f * (WorldRayDirection().y + 1.0f);

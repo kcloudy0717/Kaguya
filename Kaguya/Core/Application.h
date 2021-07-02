@@ -33,7 +33,7 @@ public:
 	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
 	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
 
-	virtual void Initialize()					 = 0;
+	virtual bool Initialize()					 = 0;
 	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Shutdown()						 = 0;
 	virtual void Resize(UINT Width, UINT Height) = 0;
@@ -46,7 +46,6 @@ private:
 public:
 	// Components
 	inline static std::filesystem::path ExecutableDirectory;
-	inline static Stopwatch				Time;
 
 protected:
 	inline static int				  WindowWidth, WindowHeight;
@@ -59,6 +58,9 @@ protected:
 	inline static bool Minimized = false; // is the application minimized?
 	inline static bool Maximized = false; // is the application maximized?
 	inline static bool Resizing	 = false; // are the resize bars being dragged?
+
+private:
+	inline static bool Initialized = false;
 };
 
 template<class T>
