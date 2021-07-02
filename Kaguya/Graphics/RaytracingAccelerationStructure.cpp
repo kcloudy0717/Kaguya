@@ -69,12 +69,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	if (!TLASResult || TLASResult.GetDesc().Width < resultSize)
 	{
 		// TLAS Result
-		TLASResult = Buffer(
-			RenderDevice.GetDevice(),
-			resultSize,
-			0,
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		TLASResult = ASBuffer(RenderDevice.GetDevice(), resultSize);
 	}
 
 	// Create the description for each instance

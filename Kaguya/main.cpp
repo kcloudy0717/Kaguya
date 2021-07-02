@@ -80,7 +80,7 @@ public:
 		// TODO: Fix: Picking will become buggy when RENDER_AT_1920x1080 is enabled
 		uint32_t viewportWidth = 1920, viewportHeight = 1080;
 #else
-		uint32_t viewportWidth = m_ViewportWindow.Resolution.x, viewportHeight = m_ViewportWindow.Resolution.y;
+		const uint32_t viewportWidth = m_ViewportWindow.Resolution.x, viewportHeight = m_ViewportWindow.Resolution.y;
 #endif
 
 		// Update selected entity

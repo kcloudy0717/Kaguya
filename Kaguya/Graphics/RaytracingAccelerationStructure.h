@@ -35,7 +35,8 @@ public:
 	std::vector<MeshRenderer*>	  MeshRenderers;
 	UINT						  InstanceContributionToHitGroupIndex = 0;
 
-	Buffer							TLASScratch, TLASResult;
+	Buffer							TLASScratch;
+	ASBuffer						TLASResult;
 	Buffer							InstanceDescs;
 	D3D12_RAYTRACING_INSTANCE_DESC* pInstanceDescs = nullptr;
 };
