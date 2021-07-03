@@ -2,15 +2,6 @@
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
-struct ShaderIdentifier
-{
-	ShaderIdentifier() noexcept = default;
-
-	ShaderIdentifier(void* Data) { std::memcpy(this->Data, Data, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); }
-
-	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
-};
-
 class Shader
 {
 public:

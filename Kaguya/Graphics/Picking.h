@@ -17,18 +17,16 @@ public:
 	std::optional<Entity> GetSelectedEntity();
 
 private:
-	RootSignature			m_GlobalRS;
-	RaytracingPipelineState m_RTPSO;
+	RootSignature			GlobalRS;
+	RaytracingPipelineState RTPSO;
 
-	Buffer m_RayGenerationSBT;
-	Buffer m_MissSBT;
-	Buffer m_HitGroupSBT;
+	Buffer Result;
+	Buffer Readback;
 
-	Buffer m_Result;
-	Buffer m_Readback;
+	RaytracingShaderBindingTable ShaderBindingTable;
+	RaytracingShaderTable<void>* RayGenerationShaderTable;
+	RaytracingShaderTable<void>* MissShaderTable;
+	RaytracingShaderTable<void>* HitGroupShaderTable;
 
-	RaytracingShaderTable<void> m_RayGenerationShaderTable;
-	RaytracingShaderTable<void> m_MissShaderTable;
-	RaytracingShaderTable<void> m_HitGroupShaderTable;
-	std::vector<Entity>			m_Entities;
+	std::vector<Entity> Entities;
 };

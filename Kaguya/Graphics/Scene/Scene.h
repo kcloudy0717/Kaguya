@@ -9,17 +9,18 @@
 
 struct Entity;
 
+enum ESceneState
+{
+	SceneState_Render,
+	SceneState_Update
+};
+DEFINE_ENUM_FLAG_OPERATORS(ESceneState);
+
 struct Scene
 {
-	enum State
-	{
-		SCENE_STATE_RENDER,
-		SCENE_STATE_UPDATED,
-	};
-
-	static constexpr UINT64 MAX_MATERIAL_SUPPORTED = 1000;
-	static constexpr UINT64 MAX_LIGHT_SUPPORTED	   = 100;
-	static constexpr UINT64 MAX_INSTANCE_SUPPORTED = 1000;
+	static constexpr UINT64 MaterialLimit = 1024;
+	static constexpr UINT64 LightLimit	  = 100;
+	static constexpr UINT64 InstanceLimit = 1024;
 
 	Scene() noexcept;
 
@@ -33,7 +34,7 @@ struct Scene
 	template<typename T>
 	void OnComponentAdded(Entity Entity, T& Component);
 
-	UINT		   SceneState = SCENE_STATE_RENDER;
+	ESceneState	   SceneState = SceneState_Render;
 	entt::registry Registry;
 
 	Camera							  Camera, PreviousCamera;
@@ -75,41 +76,32 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 
 	XMMATRIX M = Transform.Matrix();
 
-	DirectX::XMFLOAT4 Orientation;
+	XMFLOAT4 Orientation;
 	XMStoreFloat4(&Orientation, DirectX::XMVector3Normalize(Transform.Forward()));
-	float halfWidth	 = Light.Width * 0.5f;
-	float halfHeight = Light.Height * 0.5f;
+	float HalfWidth	 = Light.Width * 0.5f;
+	float HalfHeight = Light.Height * 0.5f;
 	// Get local space point
-	XMVECTOR p0 = XMVectorSet(+halfWidth, -halfHeight, 0, 1);
-	XMVECTOR p1 = XMVectorSet(+halfWidth, +halfHeight, 0, 1);
-	XMVECTOR p2 = XMVectorSet(-halfWidth, +halfHeight, 0, 1);
-	XMVECTOR p3 = XMVectorSet(-halfWidth, -halfHeight, 0, 1);
+	XMVECTOR P0 = XMVectorSet(+HalfWidth, -HalfHeight, 0, 1);
+	XMVECTOR P1 = XMVectorSet(+HalfWidth, +HalfHeight, 0, 1);
+	XMVECTOR P2 = XMVectorSet(-HalfWidth, +HalfHeight, 0, 1);
+	XMVECTOR P3 = XMVectorSet(-HalfWidth, -HalfHeight, 0, 1);
 
 	// Precompute the light points here so ray generation shader doesnt have to do it for every ray
 	// Move points to light's location
-	DirectX::XMFLOAT3 points[4] = {};
-	XMStoreFloat3(&points[0], XMVector3TransformCoord(p0, M));
-	XMStoreFloat3(&points[1], XMVector3TransformCoord(p1, M));
-	XMStoreFloat3(&points[2], XMVector3TransformCoord(p2, M));
-	XMStoreFloat3(&points[3], XMVector3TransformCoord(p3, M));
+	XMFLOAT3 Points[4] = {};
+	XMStoreFloat3(&Points[0], XMVector3TransformCoord(P0, M));
+	XMStoreFloat3(&Points[1], XMVector3TransformCoord(P1, M));
+	XMStoreFloat3(&Points[2], XMVector3TransformCoord(P2, M));
+	XMStoreFloat3(&Points[3], XMVector3TransformCoord(P3, M));
 
-	return
-	{
-		.Type = (uint)Light.Type,
-		.Position = Transform.Position,
-		.Orientation = Orientation,
-		.Width = Light.Width,
-		.Height = Light.Height,
-		.Points =
-		{
-			points[0],
-			points[1],
-			points[2],
-			points[3],
-		},
+	return { .Type		  = (uint)Light.Type,
+			 .Position	  = Transform.Position,
+			 .Orientation = Orientation,
+			 .Width		  = Light.Width,
+			 .Height	  = Light.Height,
+			 .Points	  = { Points[0], Points[1], Points[2], Points[3] },
 
-		.I = Light.I
-	};
+			 .I = Light.I };
 }
 
 inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)

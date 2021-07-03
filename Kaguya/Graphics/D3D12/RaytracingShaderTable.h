@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
-#include <Core/Math.h>
+#include <Core/CoreDefines.h>
+#include "Device.h"
 
 // 	========== Miss shader table indexing ==========
 // 	Simple pointer arithmetic
@@ -28,8 +29,10 @@
 template<typename T>
 struct RaytracingShaderRecord
 {
-	RaytracingShaderRecord() = default;
-	RaytracingShaderRecord(ShaderIdentifier ShaderIdentifier, T RootArguments)
+	static_assert(std::is_trivially_copyable_v<T>, "typename T must be trivially copyable");
+
+	RaytracingShaderRecord() noexcept = default;
+	RaytracingShaderRecord(const ShaderIdentifier& ShaderIdentifier, const T& RootArguments) noexcept
 		: ShaderIdentifier(ShaderIdentifier)
 		, RootArguments(RootArguments)
 	{
@@ -42,8 +45,8 @@ struct RaytracingShaderRecord
 template<>
 struct RaytracingShaderRecord<void>
 {
-	RaytracingShaderRecord() = default;
-	RaytracingShaderRecord(ShaderIdentifier ShaderIdentifier)
+	RaytracingShaderRecord() noexcept = default;
+	RaytracingShaderRecord(const ShaderIdentifier& ShaderIdentifier) noexcept
 		: ShaderIdentifier(ShaderIdentifier)
 	{
 	}
@@ -51,73 +54,107 @@ struct RaytracingShaderRecord<void>
 	ShaderIdentifier ShaderIdentifier;
 };
 
+class IRaytracingShaderTable
+{
+public:
+	virtual ~IRaytracingShaderTable() = default;
+
+	UINT GetNumShaderRecords() const { return NumShaderRecords; }
+
+	virtual UINT GetSizeInBytes() const	  = 0;
+	virtual UINT GetStrideInBytes() const = 0;
+
+	virtual void Write(BYTE* Dst) const = 0;
+
+protected:
+	UINT NumShaderRecords = 0;
+};
+
 template<typename T>
-class RaytracingShaderTable
+class RaytracingShaderTable : public IRaytracingShaderTable
 {
 public:
 	using Record = RaytracingShaderRecord<T>;
+	static constexpr UINT64 StrideInBytes =
+		AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 
-	enum
+	RaytracingShaderTable(size_t NumShaderRecords) { ShaderRecords.resize(NumShaderRecords); }
+
+	UINT GetSizeInBytes() const override
 	{
-		StrideInBytes = AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)
-	};
-
-	RaytracingShaderTable()
-		: m_Resource(nullptr)
-	{
-	}
-
-	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE() const
-	{
-		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE{ .StartAddress = m_Resource->GetGPUVirtualAddress(),
-												.SizeInBytes  = GetSizeInBytes() };
-	}
-
-	operator D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE() const
-	{
-		return D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{ .StartAddress  = m_Resource->GetGPUVirtualAddress(),
-														   .SizeInBytes	  = GetSizeInBytes(),
-														   .StrideInBytes = StrideInBytes };
-	}
-
-	auto Resource() const { return m_Resource; }
-
-	void clear() { m_ShaderRecords.clear(); }
-
-	void reserve(size_t NumShaderRecords) { m_ShaderRecords.reserve(NumShaderRecords); }
-
-	void resize(size_t NumShaderRecords) { m_ShaderRecords.resize(NumShaderRecords); }
-
-	Record& operator[](size_t Index) { return m_ShaderRecords[Index]; }
-
-	const Record& operator[](size_t Index) const { return m_ShaderRecords[Index]; }
-
-	void AssociateResource(ID3D12Resource* pResource) { m_Resource = pResource; }
-
-	void AddShaderRecord(const Record& Record) { m_ShaderRecords.push_back(Record); }
-
-	auto GetSizeInBytes() const
-	{
-		UINT64 SizeInBytes = static_cast<UINT64>(m_ShaderRecords.size()) * StrideInBytes;
+		UINT64 SizeInBytes = static_cast<UINT64>(ShaderRecords.size()) * GetStrideInBytes();
 		SizeInBytes		   = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 		return SizeInBytes;
 	}
 
-	void Generate(BYTE* pHostMemory)
-	{
-		if (pHostMemory)
-		{
-			for (const auto& Record : m_ShaderRecords)
-			{
-				// Copy record data
-				memcpy(pHostMemory, &Record, sizeof(Record));
+	UINT GetStrideInBytes() const override { return StrideInBytes; }
 
-				pHostMemory += StrideInBytes;
-			}
+	void Write(BYTE* Dst) const override
+	{
+		for (const auto& Record : ShaderRecords)
+		{
+			// Copy record data
+			memcpy(Dst, &Record, sizeof(Record));
+
+			Dst += StrideInBytes;
 		}
 	}
 
+	void Reset() { NumShaderRecords = 0; }
+
+	void AddShaderRecord(const Record& Record) { ShaderRecords[NumShaderRecords++] = Record; }
+
 private:
-	std::vector<Record> m_ShaderRecords;
-	ID3D12Resource*		m_Resource;
+	std::vector<Record> ShaderRecords;
+};
+
+// Collection of RaytracingShaderTables
+class RaytracingShaderBindingTable
+{
+public:
+	template<typename T>
+	RaytracingShaderTable<T>* AddRayGenerationShaderTable(UINT NumRayGenerationShaders)
+	{
+		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumRayGenerationShaders);
+		RayGenerationShaderTable		= std::unique_ptr<IRaytracingShaderTable>(Table);
+		return Table;
+	}
+
+	template<typename T>
+	RaytracingShaderTable<T>* AddMissShaderTable(UINT NumMissShaders)
+	{
+		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumMissShaders);
+		MissShaderTable					= std::unique_ptr<IRaytracingShaderTable>(Table);
+		return Table;
+	}
+
+	template<typename T>
+	RaytracingShaderTable<T>* AddHitGroupShaderTable(UINT NumHitGroups)
+	{
+		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumHitGroups);
+		HitGroupShaderTable				= std::unique_ptr<IRaytracingShaderTable>(Table);
+		return Table;
+	}
+
+	void Generate(Device* Device);
+
+	void Write();
+
+	void CopyToGPU(CommandContext& Context) const;
+
+	D3D12_DISPATCH_RAYS_DESC GetDispatchRaysDesc(UINT RayGenerationShaderIndex, UINT BaseMissShaderIndex) const;
+
+private:
+	std::unique_ptr<IRaytracingShaderTable> RayGenerationShaderTable;
+	std::unique_ptr<IRaytracingShaderTable> MissShaderTable;
+	std::unique_ptr<IRaytracingShaderTable> HitGroupShaderTable;
+
+	UINT64 RayGenerationShaderTableOffset = 0;
+	UINT64 MissShaderTableOffset		  = 0;
+	UINT64 HitGroupShaderTableOffset	  = 0;
+
+	UINT64 SizeInBytes = 0;
+
+	Buffer					SBTBuffer;
+	std::unique_ptr<BYTE[]> CPUData;
 };

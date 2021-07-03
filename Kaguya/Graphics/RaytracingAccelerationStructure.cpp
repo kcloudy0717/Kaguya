@@ -10,7 +10,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 
 	InstanceDescs = Buffer(
 		RenderDevice.GetDevice(),
-		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * Scene::MAX_INSTANCE_SUPPORTED,
+		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * Scene::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
@@ -20,15 +20,15 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 
 void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, MeshRenderer* pMeshRenderer)
 {
-	D3D12_RAYTRACING_INSTANCE_DESC dxrInstanceDesc = {};
-	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(dxrInstanceDesc.Transform), Transform.Matrix());
-	dxrInstanceDesc.InstanceID							= TopLevelAccelerationStructure.size();
-	dxrInstanceDesc.InstanceMask						= RAYTRACING_INSTANCEMASK_ALL;
-	dxrInstanceDesc.InstanceContributionToHitGroupIndex = InstanceContributionToHitGroupIndex;
-	dxrInstanceDesc.Flags								= D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-	dxrInstanceDesc.AccelerationStructure				= NULL; // Resolved later
+	D3D12_RAYTRACING_INSTANCE_DESC RaytracingInstanceDesc = {};
+	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(RaytracingInstanceDesc.Transform), Transform.Matrix());
+	RaytracingInstanceDesc.InstanceID						   = TopLevelAccelerationStructure.size();
+	RaytracingInstanceDesc.InstanceMask						   = RAYTRACING_INSTANCEMASK_ALL;
+	RaytracingInstanceDesc.InstanceContributionToHitGroupIndex = InstanceContributionToHitGroupIndex;
+	RaytracingInstanceDesc.Flags							   = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+	RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved later
 
-	TopLevelAccelerationStructure.AddInstance(dxrInstanceDesc);
+	TopLevelAccelerationStructure.AddInstance(RaytracingInstanceDesc);
 	MeshRenderers.push_back(pMeshRenderer);
 
 	InstanceContributionToHitGroupIndex += pMeshRenderer->pMeshFilter->Mesh->BLAS.size() * NumHitGroups;
@@ -49,33 +49,33 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 		Instance.AccelerationStructure = AccelerationStructure.GetGPUVirtualAddress();
 	}
 
-	UINT64 scratchSize, resultSize;
+	UINT64 ScratchSize, ResultSize;
 	TopLevelAccelerationStructure.ComputeMemoryRequirements(
 		RenderDevice.GetDevice()->GetDevice5(),
-		&scratchSize,
-		&resultSize);
+		&ScratchSize,
+		&ResultSize);
 
-	if (!TLASScratch || TLASScratch.GetDesc().Width < scratchSize)
+	if (!TLASScratch || TLASScratch.GetDesc().Width < ScratchSize)
 	{
 		// TLAS Scratch
 		TLASScratch = Buffer(
 			RenderDevice.GetDevice(),
-			scratchSize,
+			ScratchSize,
 			0,
 			D3D12_HEAP_TYPE_DEFAULT,
 			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
-	if (!TLASResult || TLASResult.GetDesc().Width < resultSize)
+	if (!TLASResult || TLASResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TLASResult = ASBuffer(RenderDevice.GetDevice(), resultSize);
+		TLASResult = ASBuffer(RenderDevice.GetDevice(), ResultSize);
 	}
 
 	// Create the description for each instance
-	for (auto [i, instance] : enumerate(TopLevelAccelerationStructure))
+	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
 	{
-		pInstanceDescs[i] = instance;
+		pInstanceDescs[i] = Instance;
 	}
 
 	TopLevelAccelerationStructure.Generate(

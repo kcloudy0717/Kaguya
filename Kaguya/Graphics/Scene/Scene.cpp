@@ -15,7 +15,7 @@ Scene::Scene() noexcept
 
 void Scene::Clear()
 {
-	SceneState = SCENE_STATE_UPDATED;
+	SceneState = SceneState_Update;
 	Registry.clear();
 }
 
@@ -54,19 +54,19 @@ void Scene::Update(float dt)
 
 	if (PreviousCamera != Camera)
 	{
-		SceneState |= SCENE_STATE_UPDATED;
+		SceneState |= SceneState_Update;
 	}
 }
 
 Entity Scene::CreateEntity(const std::string& Name)
 {
-	Entity entity		= { Registry.create(), this };
-	auto&  tagComponent = entity.AddComponent<Tag>();
-	tagComponent.Name	= Name;
+	Entity NewEntity	= { Registry.create(), this };
+	auto&  TagComponent = NewEntity.AddComponent<Tag>();
+	TagComponent.Name	= Name;
 
-	entity.AddComponent<Transform>();
+	NewEntity.AddComponent<Transform>();
 
-	return entity;
+	return NewEntity;
 }
 
 void Scene::DestroyEntity(Entity Entity)
@@ -96,10 +96,10 @@ void Scene::OnComponentAdded<MeshFilter>(Entity Entity, MeshFilter& Component)
 	// and connect them
 	if (Entity.HasComponent<MeshRenderer>())
 	{
-		auto& meshRendererComponent		  = Entity.GetComponent<MeshRenderer>();
-		meshRendererComponent.pMeshFilter = &Component;
+		MeshRenderer& MeshRendererComponent = Entity.GetComponent<MeshRenderer>();
+		MeshRendererComponent.pMeshFilter	= &Component;
 
-		meshRendererComponent.IsEdited = true;
+		MeshRendererComponent.IsEdited = true;
 	}
 }
 
@@ -110,8 +110,8 @@ void Scene::OnComponentAdded<MeshRenderer>(Entity Entity, MeshRenderer& Componen
 	// and connect them
 	if (Entity.HasComponent<MeshFilter>())
 	{
-		auto& meshFilterComponent = Entity.GetComponent<MeshFilter>();
-		Component.pMeshFilter	  = &meshFilterComponent;
+		MeshFilter& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
+		Component.pMeshFilter			= &MeshFilterComponent;
 
 		Component.IsEdited = true;
 	}

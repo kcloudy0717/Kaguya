@@ -34,18 +34,18 @@ protected:
 	void RequestCapture() override;
 
 private:
-	float		   m_ViewportMouseX, m_ViewportMouseY;
-	uint32_t	   m_ViewportWidth, m_ViewportHeight;
-	D3D12_VIEWPORT m_Viewport;
-	D3D12_RECT	   m_ScissorRect;
+	float		   ViewportMouseX, ViewportMouseY;
+	uint32_t	   ViewportWidth, ViewportHeight;
+	D3D12_VIEWPORT Viewport;
+	D3D12_RECT	   ScissorRect;
 
-	RaytracingAccelerationStructure m_RaytracingAccelerationStructure;
+	RaytracingAccelerationStructure AccelerationStructure;
 	PathIntegrator					m_PathIntegrator;
 	Picking							m_Picking;
 	ToneMapper						m_ToneMapper;
 
-	Buffer			m_Materials;
-	HLSL::Material* m_pMaterials = nullptr;
-	Buffer			m_Lights;
-	HLSL::Light*	m_pLights = nullptr;
+	Buffer			Materials;
+	HLSL::Material* pMaterials = nullptr;
+	Buffer			Lights;
+	HLSL::Light*	pLights = nullptr;
 };

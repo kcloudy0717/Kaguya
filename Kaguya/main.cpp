@@ -52,7 +52,7 @@ public:
 		Mouse&	  Mouse	   = Application::GetMouse();
 		Keyboard& Keyboard = Application::GetKeyboard();
 
-		Scene.SceneState = Scene::SCENE_STATE_RENDER;
+		Scene.SceneState = ESceneState::SceneState_Render;
 
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();

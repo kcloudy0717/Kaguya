@@ -38,7 +38,7 @@ RenderDevice::RenderDevice()
 
 	DeviceOptions  DeviceOptions  = { .FeatureLevel				= D3D_FEATURE_LEVEL_12_0,
 									  .EnableDebugLayer			= true,
-									  .EnableGpuBasedValidation = true,
+									  .EnableGpuBasedValidation = false,
 									  .BreakOnCorruption		= true,
 									  .BreakOnError				= true,
 									  .BreakOnWarning			= true,

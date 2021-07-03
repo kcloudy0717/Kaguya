@@ -1,6 +1,15 @@
 #pragma once
 #include "d3dx12.h"
 
+struct ShaderIdentifier
+{
+	ShaderIdentifier() noexcept = default;
+
+	ShaderIdentifier(void* Data) { std::memcpy(this->Data, Data, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); }
+
+	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
+};
+
 // Represents a Fence and Value pair, similar to that of a coroutine handle
 // you can query the status of a command execution point and wait for it
 class CommandSyncPoint

@@ -59,7 +59,8 @@ SurfaceInteraction GetSurfaceInteraction(in BuiltInTriangleIntersectionAttribute
 	int AlbedoTexture = material.TextureIndices[AlbedoIdx];
 	if (AlbedoTexture != -1)
 	{
-		Texture2D Texture = ResourceDescriptorHeap[AlbedoTexture];
+		//Texture2D Texture = ResourceDescriptorHeap[AlbedoTexture];
+		Texture2D Texture = g_Texture2DTable[AlbedoTexture];
 		material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
 	}
 	

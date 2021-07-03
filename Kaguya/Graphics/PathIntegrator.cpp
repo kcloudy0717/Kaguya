@@ -48,7 +48,7 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 {
 	Settings::RestoreDefaults();
 
-	m_GlobalRS = RenderDevice.CreateRootSignature(
+	GlobalRS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
@@ -87,7 +87,7 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 				16); // g_SamplerAnisotropicClamp	s5 | space0;
 		});
 
-	m_LocalHitGroupRS = RenderDevice::Instance().CreateRootSignature(
+	LocalHitGroupRS = RenderDevice::Instance().CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 1>(1); // RootConstants	b0 | space1
@@ -99,16 +99,16 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 		},
 		false);
 
-	m_RTPSO = RenderDevice.CreateRaytracingPipelineState(
+	RTPSO = RenderDevice.CreateRaytracingPipelineState(
 		[&](RaytracingPipelineStateBuilder& Builder)
 		{
 			Builder.AddLibrary(Libraries::PathTrace, { g_RayGeneration, g_Miss, g_ShadowMiss, g_ClosestHit });
 
 			Builder.AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {});
 
-			Builder.AddRootSignatureAssociation(m_LocalHitGroupRS, { g_HitGroupExport });
+			Builder.AddRootSignatureAssociation(LocalHitGroupRS, { g_HitGroupExport });
 
-			Builder.SetGlobalRootSignature(m_GlobalRS);
+			Builder.SetGlobalRootSignature(GlobalRS);
 
 			Builder.SetRaytracingShaderConfig(
 				12 * sizeof(float) + 2 * sizeof(unsigned int),
@@ -118,105 +118,44 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 			Builder.SetRaytracingPipelineConfig(2);
 		});
 
-	g_RayGenerationSID = m_RTPSO.GetShaderIdentifier(L"RayGeneration");
-	g_MissSID		   = m_RTPSO.GetShaderIdentifier(L"Miss");
-	g_ShadowMissSID	   = m_RTPSO.GetShaderIdentifier(L"ShadowMiss");
-	g_DefaultSID	   = m_RTPSO.GetShaderIdentifier(L"Default");
+	g_RayGenerationSID = RTPSO.GetShaderIdentifier(L"RayGeneration");
+	g_MissSID		   = RTPSO.GetShaderIdentifier(L"Miss");
+	g_ShadowMissSID	   = RTPSO.GetShaderIdentifier(L"ShadowMiss");
+	g_DefaultSID	   = RTPSO.GetShaderIdentifier(L"Default");
 
-	CommandContext& CopyContext2 = RenderDevice.GetDevice()->GetCopyContext2();
+	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
+	RayGenerationShaderTable->AddShaderRecord(g_RayGenerationSID);
 
-	ResourceUploader uploader(RenderDevice.GetDevice());
-	uploader.Begin();
+	MissShaderTable = ShaderBindingTable.AddMissShaderTable<void>(2);
+	MissShaderTable->AddShaderRecord(g_MissSID);
+	MissShaderTable->AddShaderRecord(g_ShadowMissSID);
 
-	// TODO: Merge shader table resources into one resource, right now there are
-	// memory wasted due to alignment
-	// Ray Generation Shader Table
-	{
-		m_RayGenerationShaderTable.AddShaderRecord(g_RayGenerationSID);
+	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(Scene::InstanceLimit);
 
-		UINT64 sbtSize = m_RayGenerationShaderTable.GetSizeInBytes();
-
-		m_RayGenerationSBT = Buffer(
-			RenderDevice.GetDevice(),
-			sbtSize,
-			m_RayGenerationShaderTable.StrideInBytes,
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_RESOURCE_FLAG_NONE);
-		std::unique_ptr<BYTE[]> data = std::make_unique<BYTE[]>(sbtSize);
-
-		m_RayGenerationShaderTable.Generate(data.get());
-
-		D3D12_SUBRESOURCE_DATA subresource = {};
-		subresource.pData				   = data.get();
-		subresource.RowPitch			   = sbtSize;
-		subresource.SlicePitch			   = 0;
-
-		uploader.Upload(subresource, m_RayGenerationSBT.GetResource());
-
-		m_RayGenerationShaderTable.AssociateResource(m_RayGenerationSBT.GetResource());
-	}
-
-	// Miss Shader Table
-	{
-		m_MissShaderTable.AddShaderRecord(g_MissSID);
-		m_MissShaderTable.AddShaderRecord(g_ShadowMissSID);
-
-		UINT64 sbtSize = m_MissShaderTable.GetSizeInBytes();
-
-		m_MissSBT = Buffer(
-			RenderDevice.GetDevice(),
-			sbtSize,
-			m_MissShaderTable.StrideInBytes,
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_RESOURCE_FLAG_NONE);
-		std::unique_ptr<BYTE[]> data = std::make_unique<BYTE[]>(sbtSize);
-
-		m_MissShaderTable.Generate(data.get());
-
-		D3D12_SUBRESOURCE_DATA subresource = {};
-		subresource.pData				   = data.get();
-		subresource.RowPitch			   = sbtSize;
-		subresource.SlicePitch			   = 0;
-
-		uploader.Upload(subresource, m_MissSBT.GetResource());
-
-		m_MissShaderTable.AssociateResource(m_MissSBT.GetResource());
-	}
-
-	uploader.End(true);
-
-	m_HitGroupSBT = Buffer(
-		RenderDevice.GetDevice(),
-		m_HitGroupShaderTable.StrideInBytes * Scene::MAX_INSTANCE_SUPPORTED,
-		m_HitGroupShaderTable.StrideInBytes,
-		D3D12_HEAP_TYPE_DEFAULT,
-		D3D12_RESOURCE_FLAG_NONE);
-
-	m_HitGroupShaderTable.reserve(Scene::MAX_INSTANCE_SUPPORTED);
-	m_HitGroupShaderTable.AssociateResource(m_HitGroupSBT.GetResource());
+	ShaderBindingTable.Generate(RenderDevice.GetDevice());
 }
 
-void PathIntegrator::SetResolution(_In_ UINT Width, _In_ UINT Height)
+void PathIntegrator::SetResolution(UINT Width, UINT Height)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
-	if ((m_Width == Width && m_Height == Height))
+	if ((this->Width == Width && this->Height == Height))
 	{
 		return;
 	}
 
-	m_Width	 = Width;
-	m_Height = Height;
+	this->Width	 = Width;
+	this->Height = Height;
 
 	auto ResourceDesc	   = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R32G32B32A32_FLOAT, Width, Height);
 	ResourceDesc.MipLevels = 1;
 	ResourceDesc.Flags	   = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	m_RenderTarget = Texture(RenderDevice.GetDevice(), ResourceDesc, {});
-	m_RenderTarget.GetResource()->SetName(L"PathIntegrator Output");
+	RenderTarget = Texture(RenderDevice.GetDevice(), ResourceDesc, {});
+	RenderTarget.GetResource()->SetName(L"PathIntegrator Output");
 
-	m_RenderTarget.CreateUnorderedAccessView(UAV);
-	m_RenderTarget.CreateShaderResourceView(SRV);
+	RenderTarget.CreateUnorderedAccessView(UAV);
+	RenderTarget.CreateShaderResourceView(SRV);
 
 	Reset();
 }
@@ -230,32 +169,26 @@ void PathIntegrator::UpdateShaderTable(
 	const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
 	CommandContext&						   Context)
 {
-	m_HitGroupShaderTable.clear();
-	for (auto [i, meshRenderer] : enumerate(RaytracingAccelerationStructure.MeshRenderers))
+	HitGroupShaderTable->Reset();
+	for (auto [i, MeshRenderer] : enumerate(RaytracingAccelerationStructure.MeshRenderers))
 	{
-		auto meshFilter = meshRenderer->pMeshFilter;
+		auto MeshFilter = MeshRenderer->pMeshFilter;
 
-		ID3D12Resource* vertexBuffer = meshFilter->Mesh->VertexResource.GetResource();
-		ID3D12Resource* indexBuffer	 = meshFilter->Mesh->IndexResource.GetResource();
+		ID3D12Resource* VertexBuffer = MeshFilter->Mesh->VertexResource.GetResource();
+		ID3D12Resource* IndexBuffer	 = MeshFilter->Mesh->IndexResource.GetResource();
 
-		RaytracingShaderTable<RootArgument>::Record shaderRecord = {};
-		shaderRecord.ShaderIdentifier							 = g_DefaultSID;
+		RaytracingShaderTable<RootArgument>::Record Record = {};
+		Record.ShaderIdentifier							   = g_DefaultSID;
+		Record.RootArguments							   = { .MaterialIndex = (UINT)i,
+								   .Padding		  = 0,
+								   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
+								   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
 
-		shaderRecord.RootArguments = { .MaterialIndex = (UINT)i,
-									   .Padding		  = 0,
-									   .VertexBuffer  = vertexBuffer->GetGPUVirtualAddress(),
-									   .IndexBuffer	  = indexBuffer->GetGPUVirtualAddress() };
-
-		m_HitGroupShaderTable.AddShaderRecord(shaderRecord);
+		HitGroupShaderTable->AddShaderRecord(Record);
 	}
 
-	UINT64 sbtSize = m_HitGroupShaderTable.GetSizeInBytes();
-
-	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sbtSize);
-
-	m_HitGroupShaderTable.Generate(static_cast<BYTE*>(Allocation.CPUVirtualAddress));
-
-	Context->CopyBufferRegion(m_HitGroupSBT.GetResource(), 0, Allocation.pResource, Allocation.Offset, Allocation.Size);
+	ShaderBindingTable.Write();
+	ShaderBindingTable.CopyToGPU(Context);
 }
 
 void PathIntegrator::Render(
@@ -277,29 +210,26 @@ void PathIntegrator::Render(
 
 	g_RenderPassData.MaxDepth			   = Settings::MaxDepth;
 	g_RenderPassData.NumAccumulatedSamples = Settings::NumAccumulatedSamples++;
-
-	g_RenderPassData.RenderTarget = UAV.GetIndex();
+	g_RenderPassData.RenderTarget		   = UAV.GetIndex();
 
 	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(RenderPassData));
 	std::memcpy(Allocation.CPUVirtualAddress, &g_RenderPassData, sizeof(RenderPassData));
 
-	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(m_RTPSO);
-	Context->SetComputeRootSignature(m_GlobalRS);
+	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RTPSO);
+	Context->SetComputeRootSignature(GlobalRS);
 	Context->SetComputeRootConstantBufferView(0, SystemConstants);
 	Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
 	Context->SetComputeRootShaderResourceView(2, RaytracingAccelerationStructure);
 	Context->SetComputeRootShaderResourceView(3, Materials);
 	Context->SetComputeRootShaderResourceView(4, Lights);
 
-	RenderDevice.BindComputeDescriptorTable(m_GlobalRS, Context);
+	RenderDevice.BindComputeDescriptorTable(GlobalRS, Context);
 
-	D3D12_DISPATCH_RAYS_DESC desc = { .RayGenerationShaderRecord = m_RayGenerationShaderTable,
-									  .MissShaderTable			 = m_MissShaderTable,
-									  .HitGroupTable			 = m_HitGroupShaderTable,
-									  .Width					 = m_Width,
-									  .Height					 = m_Height,
-									  .Depth					 = 1 };
+	D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDispatchRaysDesc(0, 0);
+	Desc.Width					  = Width;
+	Desc.Height					  = Height;
+	Desc.Depth					  = 1;
 
-	Context.DispatchRays(&desc);
+	Context.DispatchRays(&Desc);
 	Context.UAVBarrier(nullptr);
 }

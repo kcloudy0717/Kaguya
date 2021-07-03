@@ -67,14 +67,14 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, boo
 		{
 			Component.IsEdited = false;
 
-			Entity.pScene->SceneState |= Scene::SCENE_STATE_UPDATED;
+			Entity.pScene->SceneState |= ESceneState::SceneState_Update;
 		}
 
 		if (RemoveComponent)
 		{
 			Entity.RemoveComponent<T>();
 
-			Entity.pScene->SceneState |= Scene::SCENE_STATE_UPDATED;
+			Entity.pScene->SceneState |= ESceneState::SceneState_Update;
 		}
 	}
 }

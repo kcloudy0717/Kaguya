@@ -44,21 +44,18 @@ public:
 		CommandContext&						   Context);
 
 	const ShaderResourceView& GetSRV() const { return SRV; }
-	ID3D12Resource*			  GetRenderTarget() const { return m_RenderTarget.GetResource(); }
+	ID3D12Resource*			  GetRenderTarget() const { return RenderTarget.GetResource(); }
 
 private:
-	UINT m_Width = 0, m_Height = 0;
+	UINT Width = 0, Height = 0;
 
-	RootSignature			m_GlobalRS, m_LocalHitGroupRS;
-	RaytracingPipelineState m_RTPSO;
+	RootSignature			GlobalRS, LocalHitGroupRS;
+	RaytracingPipelineState RTPSO;
 
-	Texture m_RenderTarget;
-	Buffer	m_RayGenerationSBT;
-	Buffer	m_MissSBT;
-	Buffer	m_HitGroupSBT;
+	Texture RenderTarget;
 
 	UnorderedAccessView UAV;
-	ShaderResourceView SRV;
+	ShaderResourceView	SRV;
 
 	// Pad local root arguments explicitly
 	struct RootArgument
@@ -69,7 +66,8 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	RaytracingShaderTable<void>			m_RayGenerationShaderTable;
-	RaytracingShaderTable<void>			m_MissShaderTable;
-	RaytracingShaderTable<RootArgument> m_HitGroupShaderTable;
+	RaytracingShaderBindingTable		 ShaderBindingTable;
+	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
+	RaytracingShaderTable<void>*		 MissShaderTable;
+	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };
