@@ -61,8 +61,9 @@ public:
 
 	UINT GetNumShaderRecords() const { return NumShaderRecords; }
 
-	virtual UINT GetSizeInBytes() const	  = 0;
-	virtual UINT GetStrideInBytes() const = 0;
+	virtual UINT64 GetTotalSizeInBytes() const = 0;
+	virtual UINT64 GetSizeInBytes() const	   = 0;
+	virtual UINT64 GetStrideInBytes() const	   = 0;
 
 	virtual void Write(BYTE* Dst) const = 0;
 
@@ -80,14 +81,23 @@ public:
 
 	RaytracingShaderTable(size_t NumShaderRecords) { ShaderRecords.resize(NumShaderRecords); }
 
-	UINT GetSizeInBytes() const override
+	// Accounts for all shader records
+	UINT64 GetTotalSizeInBytes() const override
 	{
 		UINT64 SizeInBytes = static_cast<UINT64>(ShaderRecords.size()) * GetStrideInBytes();
 		SizeInBytes		   = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 		return SizeInBytes;
 	}
 
-	UINT GetStrideInBytes() const override { return StrideInBytes; }
+	// Accounts for filled shader records
+	UINT64 GetSizeInBytes() const override
+	{
+		UINT64 SizeInBytes = static_cast<UINT64>(NumShaderRecords) * GetStrideInBytes();
+		SizeInBytes		   = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+		return SizeInBytes;
+	}
+
+	UINT64 GetStrideInBytes() const override { return StrideInBytes; }
 
 	void Write(BYTE* Dst) const override
 	{
@@ -115,6 +125,7 @@ public:
 	template<typename T>
 	RaytracingShaderTable<T>* AddRayGenerationShaderTable(UINT NumRayGenerationShaders)
 	{
+		assert(RayGenerationShaderTable == nullptr);
 		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumRayGenerationShaders);
 		RayGenerationShaderTable		= std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;
@@ -123,6 +134,7 @@ public:
 	template<typename T>
 	RaytracingShaderTable<T>* AddMissShaderTable(UINT NumMissShaders)
 	{
+		assert(MissShaderTable == nullptr);
 		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumMissShaders);
 		MissShaderTable					= std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;
@@ -131,6 +143,7 @@ public:
 	template<typename T>
 	RaytracingShaderTable<T>* AddHitGroupShaderTable(UINT NumHitGroups)
 	{
+		assert(HitGroupShaderTable == nullptr);
 		RaytracingShaderTable<T>* Table = new RaytracingShaderTable<T>(NumHitGroups);
 		HitGroupShaderTable				= std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;

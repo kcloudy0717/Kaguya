@@ -50,15 +50,19 @@ void Picking::Create()
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(g_RayGenerationSID);
 
-	MissShaderTable = ShaderBindingTable.AddMissShaderTable<void>(2);
+	MissShaderTable = ShaderBindingTable.AddMissShaderTable<void>(1);
 	MissShaderTable->AddShaderRecord(g_MissSID);
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<void>(Scene::InstanceLimit);
 
 	ShaderBindingTable.Generate(RenderDevice.GetDevice());
 
-	Result =
-		Buffer(RenderDevice.GetDevice(), sizeof(int), sizeof(int), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	Result = Buffer(
+		RenderDevice.GetDevice(),
+		sizeof(int),
+		sizeof(int),
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	Readback =
 		Buffer(RenderDevice.GetDevice(), sizeof(int), sizeof(int), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_FLAG_NONE);
@@ -76,7 +80,7 @@ void Picking::UpdateShaderTable(
 	{
 		HitGroupShaderTable->AddShaderRecord(g_DefaultSID);
 
-		Entities.push_back(Entity(meshRenderer->Handle, meshRenderer->pScene));
+		Entities.emplace_back(meshRenderer->Handle, meshRenderer->pScene);
 	}
 
 	ShaderBindingTable.Write();

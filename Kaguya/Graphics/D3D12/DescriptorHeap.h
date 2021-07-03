@@ -1,16 +1,24 @@
 #pragma once
+#include "DeviceChild.h"
 
-class DescriptorHeap
+class DescriptorHeap : public DeviceChild
 {
 public:
-	DescriptorHeap(
-		_In_ ID3D12Device*				pDevice,
-		_In_ UINT						NumDescriptors,
-		_In_ bool						ShaderVisible,
-		_In_ D3D12_DESCRIPTOR_HEAP_TYPE Type);
+	DescriptorHeap() = default;
 
-						  operator ID3D12DescriptorHeap*() const { return pDescriptorHeap.Get(); }
-	ID3D12DescriptorHeap* operator->() const { return pDescriptorHeap.Get(); }
+	DescriptorHeap(Device* Parent)
+		: DeviceChild(Parent)
+	{
+	}
+
+	void SetName(LPCWSTR Name)
+	{
+		pDescriptorHeap->SetName(Name);
+	}
+
+	void Create(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type);
+
+	operator ID3D12DescriptorHeap*() const { return pDescriptorHeap.Get(); }
 
 	void Allocate(D3D12_CPU_DESCRIPTOR_HANDLE& hCPU, D3D12_GPU_DESCRIPTOR_HANDLE& hGPU, UINT& Index);
 
@@ -22,6 +30,7 @@ public:
 private:
 	struct IndexPool
 	{
+		IndexPool() = default;
 		IndexPool(size_t NumIndices)
 		{
 			Elements.resize(NumIndices);

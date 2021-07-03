@@ -10,6 +10,16 @@ AutoConsoleVariable<bool> CVar_DRED(
 	"DRED delivers automatic breadcrumbs as well as GPU page fault reporting\n",
 	true);
 
+static AutoConsoleVariable<int> CVar_GlobalResourceViewHeapSize(
+	"D3D12.GlobalResourceViewHeapSize",
+	"Global Resource View Heap Size",
+	4096);
+
+static AutoConsoleVariable<int> CVar_GlobalSamplerHeapSize(
+	"D3D12.GlobalSamplerHeapSize",
+	"Global Sampler Heap Size",
+	D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE);
+
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
@@ -33,7 +43,10 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options)
 	, AsyncComputeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
 	, CopyQueue1(this, D3D12_COMMAND_LIST_TYPE_COPY)
 	, CopyQueue2(this, D3D12_COMMAND_LIST_TYPE_COPY)
-	, pResourceViewHeaps(nullptr)
+	, ResourceDescriptorHeap(this)
+	, SamplerDescriptorHeap(this)
+	, RenderTargetDescriptorHeap(this)
+	, DepthStencilDescriptorHeap(this)
 {
 	// Enable the D3D12 debug layer
 	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
@@ -62,7 +75,7 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options)
 		}
 	}
 
-	if (CVar_DRED.Get())
+	if (CVar_DRED)
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
 		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&DREDSettings)));
@@ -85,7 +98,7 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options)
 	}
 
 	DeviceRemovedWaitHandle = INVALID_HANDLE_VALUE;
-	if (CVar_DRED.Get())
+	if (CVar_DRED)
 	{
 		// DRED
 		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
@@ -109,7 +122,7 @@ Device::Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options)
 
 Device::~Device()
 {
-	if (CVar_DRED.Get())
+	if (CVar_DRED)
 	{
 		// Need to gracefully exit the event
 		DeviceRemovedFence->Signal(UINT64_MAX);
@@ -176,15 +189,29 @@ void Device::Initialize(const DeviceFeatures& Features)
 	CopyQueue1.Initialize();
 	CopyQueue2.Initialize();
 
+#if _DEBUG
 	GraphicsQueue.GetCommandQueue()->SetName(L"3D");
 	AsyncComputeQueue.GetCommandQueue()->SetName(L"Async Compute");
 	CopyQueue1.GetCommandQueue()->SetName(L"Copy 1");
 	CopyQueue2.GetCommandQueue()->SetName(L"Copy 2");
+#endif
 
-	pResourceViewHeaps = std::make_unique<ResourceViewHeaps>(GetDevice());
+	ResourceDescriptorHeap.Create(CVar_GlobalResourceViewHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	SamplerDescriptorHeap.Create(CVar_GlobalSamplerHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+	RenderTargetDescriptorHeap.Create(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	DepthStencilDescriptorHeap.Create(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+#if _DEBUG
+	ResourceDescriptorHeap.SetName(L"Resource Descriptor Heap");
+	SamplerDescriptorHeap.SetName(L"Sampler Descriptor Heap");
+
+	RenderTargetDescriptorHeap.SetName(L"Render Target Descriptor Heap");
+	DepthStencilDescriptorHeap.SetName(L"Depth Stencil Descriptor Heap");
+#endif
 
 	// TODO: Implement a task-graph for rendering work
-	const unsigned int NumThreads = 4;
+	const unsigned int NumThreads = 1;
 	AvailableCommandContexts.reserve(NumThreads);
 	for (unsigned int i = 0; i < NumThreads; ++i)
 	{
@@ -230,12 +257,6 @@ CommandQueue* Device::GetCommandQueue(ECommandQueueType Type)
 	}
 }
 
-ResourceViewHeaps& Device::GetResourceViewHeaps()
-{
-	assert(pResourceViewHeaps != nullptr);
-	return *pResourceViewHeaps;
-}
-
 D3D12_RESOURCE_ALLOCATION_INFO Device::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc)
 {
 	UINT64 Hash = CityHash64((const char*)&ResourceDesc, sizeof(D3D12_RESOURCE_DESC));
@@ -258,6 +279,7 @@ D3D12_RESOURCE_ALLOCATION_INFO Device::GetResourceAllocationInfo(const D3D12_RES
 
 bool Device::ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
 {
+	// Refer to MSDN and samples
 	// 4KB alignment is only available for read only textures
 	if (!(ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET ||
 		  ResourceDesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ||
@@ -286,11 +308,6 @@ bool Device::ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
 	}
 
 	return false;
-}
-
-void Device::RemoveDevice()
-{
-	pDevice5->RemoveDevice();
 }
 
 void Device::OnDeviceRemoved(PVOID Context, BOOLEAN)

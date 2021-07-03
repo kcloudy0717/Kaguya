@@ -2,10 +2,10 @@
 #include "Console.h"
 
 template<typename T>
-class CConsoleVariable : public ConsoleVariable
+class ConsoleVariable : public IConsoleVariable
 {
 public:
-	CConsoleVariable()
+	ConsoleVariable()
 	{
 		Name		= "<unknown>";
 		Description = "<unknown>";
@@ -26,27 +26,27 @@ public:
 
 // bool
 template<>
-bool CConsoleVariable<bool>::GetBool() const
+bool ConsoleVariable<bool>::GetBool() const
 {
 	return Value;
 }
 template<>
-int CConsoleVariable<bool>::GetInt() const
+int ConsoleVariable<bool>::GetInt() const
 {
 	return Value ? 1 : 0;
 }
 template<>
-float CConsoleVariable<bool>::GetFloat() const
+float ConsoleVariable<bool>::GetFloat() const
 {
 	return Value ? 1.0f : 0.0f;
 }
 template<>
-std::string CConsoleVariable<bool>::GetString() const
+std::string ConsoleVariable<bool>::GetString() const
 {
 	return Value ? "true" : "false";
 }
 template<>
-void CConsoleVariable<bool>::Set(std::string_view Value)
+void ConsoleVariable<bool>::Set(std::string_view Value)
 {
 	std::string s = { Value.data(), Value.size() };
 	std::transform(s.begin(), s.end(), s.begin(), tolower);
@@ -56,61 +56,61 @@ void CConsoleVariable<bool>::Set(std::string_view Value)
 
 // int
 template<>
-bool CConsoleVariable<int>::GetBool() const
+bool ConsoleVariable<int>::GetBool() const
 {
 	return Value != 0;
 }
 template<>
-int CConsoleVariable<int>::GetInt() const
+int ConsoleVariable<int>::GetInt() const
 {
 	return Value;
 }
 template<>
-float CConsoleVariable<int>::GetFloat() const
+float ConsoleVariable<int>::GetFloat() const
 {
 	return float(Value);
 }
 template<>
-std::string CConsoleVariable<int>::GetString() const
+std::string ConsoleVariable<int>::GetString() const
 {
 	return std::to_string(Value);
 }
 template<>
-void CConsoleVariable<int>::Set(std::string_view Value)
+void ConsoleVariable<int>::Set(std::string_view Value)
 {
 	this->Value = std::stoi(std::string{ Value.begin(), Value.end() });
 }
 
 // float
 template<>
-bool CConsoleVariable<float>::GetBool() const
+bool ConsoleVariable<float>::GetBool() const
 {
 	return Value != 0.0f;
 }
 template<>
-int CConsoleVariable<float>::GetInt() const
+int ConsoleVariable<float>::GetInt() const
 {
 	return int(Value);
 }
 template<>
-float CConsoleVariable<float>::GetFloat() const
+float ConsoleVariable<float>::GetFloat() const
 {
 	return Value;
 }
 template<>
-std::string CConsoleVariable<float>::GetString() const
+std::string ConsoleVariable<float>::GetString() const
 {
 	return std::to_string(Value);
 }
 template<>
-void CConsoleVariable<float>::Set(std::string_view Value)
+void ConsoleVariable<float>::Set(std::string_view Value)
 {
 	this->Value = std::stof(std::string{ Value.begin(), Value.end() });
 }
 
 // string
 template<>
-bool CConsoleVariable<std::string>::GetBool() const
+bool ConsoleVariable<std::string>::GetBool() const
 {
 	std::string s = Value;
 	std::transform(s.begin(), s.end(), s.begin(), tolower);
@@ -120,44 +120,44 @@ bool CConsoleVariable<std::string>::GetBool() const
 	return b;
 }
 template<>
-int CConsoleVariable<std::string>::GetInt() const
+int ConsoleVariable<std::string>::GetInt() const
 {
 	return std::stoi(Value);
 }
 template<>
-float CConsoleVariable<std::string>::GetFloat() const
+float ConsoleVariable<std::string>::GetFloat() const
 {
 	return std::stof(Value);
 }
 template<>
-std::string CConsoleVariable<std::string>::GetString() const
+std::string ConsoleVariable<std::string>::GetString() const
 {
 	return Value;
 }
 template<>
-void CConsoleVariable<std::string>::Set(std::string_view Value)
+void ConsoleVariable<std::string>::Set(std::string_view Value)
 {
 	this->Value = std::string{ Value.begin(), Value.end() };
 }
 
 template<typename T>
-class CConsoleVariableRegistry
+class ConsoleVariableRegistry
 {
 public:
-	CConsoleVariableRegistry(size_t Size) { Registry.reserve(Size); }
+	ConsoleVariableRegistry(size_t Size) { Registry.reserve(Size); }
 
-	CConsoleVariable<T>* Add(std::string_view Name, std::string_view Description, const T& DefaultValue)
+	ConsoleVariable<T>* Add(std::string_view Name, std::string_view Description, const T& DefaultValue)
 	{
 		UINT64 Hash = CityHash64(Name.data(), Name.size());
 
-		CConsoleVariable<T>* CVar = &Registry[Hash];
-		CVar->Name				  = Name;
-		CVar->Description		  = Description;
-		CVar->Value				  = DefaultValue;
+		ConsoleVariable<T>* CVar = &Registry[Hash];
+		CVar->Name				 = Name;
+		CVar->Description		 = Description;
+		CVar->Value				 = DefaultValue;
 		return CVar;
 	}
 
-	CConsoleVariable<T>* Find(std::string_view Name)
+	ConsoleVariable<T>* Find(std::string_view Name)
 	{
 		UINT64 Hash = CityHash64(Name.data(), Name.size());
 		if (auto iter = Registry.find(Hash); iter != Registry.end())
@@ -168,10 +168,10 @@ public:
 	}
 
 private:
-	std::unordered_map<UINT64, CConsoleVariable<T>> Registry;
+	std::unordered_map<UINT64, ConsoleVariable<T>> Registry;
 };
 
-class CConsole : public Console
+class Console : public IConsole
 {
 public:
 	enum
@@ -182,7 +182,7 @@ public:
 		NumStrings = 64
 	};
 
-	CConsole()
+	Console()
 		: Bools(NumBools)
 		, Ints(NumInts)
 		, Floats(NumFloats)
@@ -190,25 +190,25 @@ public:
 	{
 	}
 
-	ConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const bool& DefaultValue)
+	IConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const bool& DefaultValue)
 		override
 	{
 		return Bools.Add(Name, Description, DefaultValue);
 	}
 
-	ConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const int& DefaultValue)
+	IConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const int& DefaultValue)
 		override
 	{
 		return Ints.Add(Name, Description, DefaultValue);
 	}
 
-	ConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const float& DefaultValue)
+	IConsoleVariable* RegisterVariable(std::string_view Name, std::string_view Description, const float& DefaultValue)
 		override
 	{
 		return Floats.Add(Name, Description, DefaultValue);
 	}
 
-	ConsoleVariable* RegisterVariable(
+	IConsoleVariable* RegisterVariable(
 		std::string_view   Name,
 		std::string_view   Description,
 		const std::string& DefaultValue) override
@@ -225,14 +225,14 @@ public:
 	AutoConsoleVariable<std::string> FindStringCVar(std::string_view Name) override { return Strings.Find(Name); }
 
 private:
-	CConsoleVariableRegistry<bool>		  Bools;
-	CConsoleVariableRegistry<int>		  Ints;
-	CConsoleVariableRegistry<float>		  Floats;
-	CConsoleVariableRegistry<std::string> Strings;
+	ConsoleVariableRegistry<bool>		 Bools;
+	ConsoleVariableRegistry<int>		 Ints;
+	ConsoleVariableRegistry<float>		 Floats;
+	ConsoleVariableRegistry<std::string> Strings;
 };
 
-Console& Console::Instance()
+IConsole& IConsole::Instance()
 {
-	static CConsole Singleton;
+	static Console Singleton;
 	return Singleton;
 }

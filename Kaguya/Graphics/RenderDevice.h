@@ -1,19 +1,18 @@
 #pragma once
 #include "D3D12/ShaderCompiler.h"
 
+#include "D3D12/D3D12Utility.h"
 #include "D3D12/Device.h"
 #include "D3D12/CommandQueue.h"
-#include "D3D12/InputLayout.h"
 #include "D3D12/PipelineState.h"
 #include "D3D12/RaytracingPipelineState.h"
 #include "D3D12/Profiler.h"
 #include "D3D12/Resource.h"
 #include "D3D12/ResourceUploader.h"
-#include "D3D12/ResourceViewHeaps.h"
 #include "D3D12/RootSignature.h"
 #include "D3D12/ShaderCompiler.h"
 #include "D3D12/SwapChain.h"
-#include "D3D12/AccelerationStructure.h"
+#include "D3D12/Raytracing.h"
 #include "D3D12/RaytracingShaderTable.h"
 
 struct RootParameters
@@ -50,10 +49,8 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
-			m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
-			m_Device->GetResourceViewHeaps().GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = m_Device->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = m_Device->GetSamplerDescriptorHeap().hGPU(0);
 
 		Context->SetGraphicsRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
@@ -70,10 +67,8 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
-			m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
-			m_Device->GetResourceViewHeaps().GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = m_Device->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = m_Device->GetSamplerDescriptorHeap().hGPU(0);
 
 		Context->SetComputeRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,

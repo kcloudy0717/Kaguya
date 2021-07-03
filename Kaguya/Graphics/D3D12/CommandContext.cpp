@@ -59,8 +59,8 @@ void CommandContext::FlushResourceBarriers()
 void CommandContext::BindResourceViewHeaps()
 {
 	ID3D12DescriptorHeap* DescriptorHeaps[2] = {
-		GetParentDevice()->GetResourceViewHeaps().GetResourceDescriptorHeap(),
-		GetParentDevice()->GetResourceViewHeaps().GetSamplerDescriptorHeap(),
+		GetParentDevice()->GetResourceDescriptorHeap(),
+		GetParentDevice()->GetSamplerDescriptorHeap(),
 	};
 
 	CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);

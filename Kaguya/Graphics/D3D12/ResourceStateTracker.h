@@ -1,7 +1,6 @@
 #pragma once
 #include <d3d12.h>
 #include <unordered_map>
-#include <optional>
 #include "Resource.h"
 
 // https://www.youtube.com/watch?v=nmB2XMasz2o, Resource state tracking
@@ -27,7 +26,7 @@ struct ResourceBarrierBatch
 
 	void Reset() { NumResourceBarriers = 0; }
 
-	UINT Flush(_In_ ID3D12GraphicsCommandList* GraphicsCommandList)
+	UINT Flush(ID3D12GraphicsCommandList* GraphicsCommandList)
 	{
 		if (NumResourceBarriers > 0)
 		{
@@ -71,18 +70,13 @@ class ResourceStateTracker
 public:
 	std::vector<PendingResourceBarrier>& GetPendingResourceBarriers();
 
-	CResourceState& GetResourceState(Resource* Resource)
-	{
-		CResourceState& ResourceState = m_ResourceStates[Resource];
-		ConditionalInitialize(ResourceState);
-		return ResourceState;
-	}
+	CResourceState& GetResourceState(Resource* Resource);
 
 	void Reset();
 
 	void Add(const PendingResourceBarrier& PendingResourceBarrier)
 	{
-		m_PendingResourceBarriers.push_back(PendingResourceBarrier);
+		PendingResourceBarriers.push_back(PendingResourceBarrier);
 	}
 
 private:
@@ -96,10 +90,10 @@ private:
 	}
 
 private:
-	std::unordered_map<Resource*, CResourceState> m_ResourceStates;
+	std::unordered_map<Resource*, CResourceState> ResourceStates;
 
 	// Pending resource transitions are committed to a separate commandlist before this commandlist
 	// is executed on the command queue. This guarantees that resources will
 	// be in the expected state at the beginning of a command list.
-	std::vector<PendingResourceBarrier> m_PendingResourceBarriers;
+	std::vector<PendingResourceBarrier> PendingResourceBarriers;
 };

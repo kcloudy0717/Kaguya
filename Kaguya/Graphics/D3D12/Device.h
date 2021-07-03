@@ -3,7 +3,7 @@
 
 #include "CommandQueue.h"
 #include "CommandContext.h"
-#include "ResourceViewHeaps.h"
+#include "DescriptorHeap.h"
 #include "Resource.h"
 
 // clang-format off
@@ -85,7 +85,18 @@ public:
 	CommandQueue* GetCopyQueue1() { return GetCommandQueue(ECommandQueueType::Copy1); }
 	CommandQueue* GetCopyQueue2() { return GetCommandQueue(ECommandQueueType::Copy2); }
 
-	ResourceViewHeaps& GetResourceViewHeaps();
+	// clang-format off
+	template <typename TViewDesc> DescriptorHeap& GetDescriptorHeap();
+	template<> DescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
+	template<> DescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
+	template<> DescriptorHeap& GetDescriptorHeap<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RenderTargetDescriptorHeap; }
+	template<> DescriptorHeap& GetDescriptorHeap<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return DepthStencilDescriptorHeap; }
+	// clang-format on
+
+	DescriptorHeap& GetResourceDescriptorHeap() noexcept { return ResourceDescriptorHeap; }
+	DescriptorHeap& GetSamplerDescriptorHeap() noexcept { return SamplerDescriptorHeap; }
+	DescriptorHeap& GetRenderTargetDescriptorHeap() noexcept { return RenderTargetDescriptorHeap; }
+	DescriptorHeap& GetDepthStencilDescriptorHeap() noexcept { return DepthStencilDescriptorHeap; }
 
 	CommandContext& GetCommandContext(UINT ThreadIndex = 0) { return *AvailableCommandContexts[ThreadIndex]; }
 	CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0)
@@ -99,14 +110,11 @@ public:
 
 	bool ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
 
-	void RemoveDevice();
-
 private:
 	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
-
+	Microsoft::WRL::ComPtr<ID3D12Device>  pDevice;
 	Microsoft::WRL::ComPtr<ID3D12Device5> pDevice5;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> DeviceRemovedFence;
@@ -118,7 +126,11 @@ private:
 	CommandQueue CopyQueue1;
 	CommandQueue CopyQueue2;
 
-	std::unique_ptr<ResourceViewHeaps> pResourceViewHeaps;
+	DescriptorHeap ResourceDescriptorHeap;
+	DescriptorHeap SamplerDescriptorHeap;
+
+	DescriptorHeap RenderTargetDescriptorHeap;
+	DescriptorHeap DepthStencilDescriptorHeap;
 
 	std::vector<std::unique_ptr<CommandContext>> AvailableCommandContexts;
 	std::vector<std::unique_ptr<CommandContext>> AvailableAsyncCommandContexts;
@@ -135,7 +147,7 @@ void Descriptor<ViewDesc>::Allocate()
 {
 	if (Parent)
 	{
-		DescriptorHeap& Heap = Parent->GetResourceViewHeaps().GetDescriptorHeap<ViewDesc>();
+		DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
 		Heap.Allocate(CPUHandle, GPUHandle, Index);
 	}
 }
@@ -145,9 +157,10 @@ void Descriptor<ViewDesc>::Release()
 {
 	if (Parent && IsValid())
 	{
-		DescriptorHeap& Heap = Parent->GetResourceViewHeaps().GetDescriptorHeap<ViewDesc>();
+		DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
 		Heap.Release(Index);
 		CPUHandle = { NULL };
 		GPUHandle = { NULL };
+		Index	  = UINT_MAX;
 	}
 }

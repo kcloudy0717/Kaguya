@@ -4,15 +4,15 @@
 void RaytracingShaderBindingTable::Generate(Device* Device)
 {
 	RayGenerationShaderTableOffset = SizeInBytes;
-	SizeInBytes += RayGenerationShaderTable->GetSizeInBytes();
+	SizeInBytes += RayGenerationShaderTable->GetTotalSizeInBytes();
 	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 
 	MissShaderTableOffset = SizeInBytes;
-	SizeInBytes += MissShaderTable->GetSizeInBytes();
+	SizeInBytes += MissShaderTable->GetTotalSizeInBytes();
 	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 
 	HitGroupShaderTableOffset = SizeInBytes;
-	SizeInBytes += HitGroupShaderTable->GetSizeInBytes();
+	SizeInBytes += HitGroupShaderTable->GetTotalSizeInBytes();
 	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 
 	SBTBuffer = Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
@@ -40,13 +40,9 @@ D3D12_DISPATCH_RAYS_DESC RaytracingShaderBindingTable::GetDispatchRaysDesc(
 	UINT RayGenerationShaderIndex,
 	UINT BaseMissShaderIndex) const
 {
-	const UINT64 NumHitGroupShaderRecords = HitGroupShaderTable->GetNumShaderRecords();
-
-	const UINT64 RayGenerationShaderTableSizeInBytes = RayGenerationShaderTable->GetStrideInBytes();
+	const UINT64 RayGenerationShaderTableSizeInBytes = RayGenerationShaderTable->GetSizeInBytes();
 	const UINT64 MissShaderTableSizeInBytes			 = MissShaderTable->GetSizeInBytes();
-	const UINT64 HitGroupShaderTableSizeInBytes		 = AlignUp<UINT64>(
-		 NumHitGroupShaderRecords * HitGroupShaderTable->GetStrideInBytes(),
-		 D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	const UINT64 HitGroupShaderTableSizeInBytes		 = HitGroupShaderTable->GetSizeInBytes();
 
 	const UINT64 RayGenerationShaderRecordStride = RayGenerationShaderTable->GetStrideInBytes();
 	const UINT64 MissShaderRecordStride			 = MissShaderTable->GetStrideInBytes();

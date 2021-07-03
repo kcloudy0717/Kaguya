@@ -5,7 +5,7 @@
 std::optional<Allocation> LinearAllocatorPage::Suballocate(UINT64 Size, UINT Alignment)
 {
 	UINT64 NewOffset = AlignUp(Offset, static_cast<UINT64>(Alignment));
-	if (NewOffset + Size > this->Size)
+	if (NewOffset + Size > this->PageSize)
 	{
 		return {};
 	}

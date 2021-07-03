@@ -3,11 +3,18 @@
 
 std::vector<PendingResourceBarrier>& ResourceStateTracker::GetPendingResourceBarriers()
 {
-	return m_PendingResourceBarriers;
+	return PendingResourceBarriers;
+}
+
+CResourceState& ResourceStateTracker::GetResourceState(Resource* Resource)
+{
+	CResourceState& ResourceState = ResourceStates[Resource];
+	ConditionalInitialize(ResourceState);
+	return ResourceState;
 }
 
 void ResourceStateTracker::Reset()
 {
-	m_ResourceStates.clear();
-	m_PendingResourceBarriers.clear();
+	ResourceStates.clear();
+	PendingResourceBarriers.clear();
 }

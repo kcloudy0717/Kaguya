@@ -6,17 +6,17 @@ struct Allocation
 	ID3D12Resource*			  pResource;
 	UINT64					  Offset;
 	UINT64					  Size;
-	UINT8*					  CPUVirtualAddress;
+	BYTE*					  CPUVirtualAddress;
 	D3D12_GPU_VIRTUAL_ADDRESS GPUVirtualAddress;
 };
 
 class LinearAllocatorPage
 {
 public:
-	LinearAllocatorPage(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, UINT64 Size)
+	LinearAllocatorPage(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, UINT64 PageSize)
 		: pResource(pResource)
 		, Offset(0)
-		, Size(Size)
+		, PageSize(PageSize)
 	{
 		pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress));
 		GPUVirtualAddress = pResource->GetGPUVirtualAddress();
@@ -31,8 +31,8 @@ public:
 private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
 	UINT64								   Offset;
-	UINT64								   Size;
-	UINT8*								   CPUVirtualAddress;
+	UINT64								   PageSize;
+	BYTE*								   CPUVirtualAddress;
 	D3D12_GPU_VIRTUAL_ADDRESS			   GPUVirtualAddress;
 };
 

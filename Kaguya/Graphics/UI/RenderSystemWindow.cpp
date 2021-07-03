@@ -24,10 +24,10 @@ void RenderSystemWindow::RenderGui()
 
 	ImGui::Text("");
 
-	if (ImGui::Button("Request Capture"))
-	{
-		m_pRenderSystem->OnRequestCapture();
-	}
+	// if (ImGui::Button("Request Capture"))
+	//{
+	//	RenderSystem->OnRequestCapture();
+	//}
 
 	if (ImGui::TreeNode("Settings"))
 	{

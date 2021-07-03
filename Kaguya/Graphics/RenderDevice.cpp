@@ -38,7 +38,7 @@ RenderDevice::RenderDevice()
 
 	DeviceOptions  DeviceOptions  = { .FeatureLevel				= D3D_FEATURE_LEVEL_12_0,
 									  .EnableDebugLayer			= true,
-									  .EnableGpuBasedValidation = false,
+									  .EnableGpuBasedValidation = true,
 									  .BreakOnCorruption		= true,
 									  .BreakOnError				= true,
 									  .BreakOnWarning			= true,
@@ -55,17 +55,14 @@ RenderDevice::RenderDevice()
 		m_Device->GetGraphicsQueue()->GetCommandQueue());
 
 	UINT TempIndex = 0;
-	m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap().Allocate(
-		m_ImGuiFontCpuDescriptor,
-		m_ImGuiFontGpuDescriptor,
-		TempIndex);
+	m_Device->GetResourceDescriptorHeap().Allocate(m_ImGuiFontCpuDescriptor, m_ImGuiFontGpuDescriptor, TempIndex);
 
 	// Initialize ImGui for d3d12
 	ImGui_ImplDX12_Init(
 		m_Device->GetDevice(),
 		1,
 		SwapChain::Format,
-		m_Device->GetResourceViewHeaps().GetResourceDescriptorHeap(),
+		m_Device->GetResourceDescriptorHeap(),
 		m_ImGuiFontCpuDescriptor,
 		m_ImGuiFontGpuDescriptor);
 }

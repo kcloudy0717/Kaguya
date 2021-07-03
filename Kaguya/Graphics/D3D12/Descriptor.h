@@ -70,13 +70,7 @@ public:
 		return *this;
 	}
 
-	bool IsValid() const noexcept { return CPUHandle.ptr != NULL; }
-
-	bool IsReferencedByShader() const noexcept
-	{
-		assert(IsValid());
-		return GPUHandle.ptr != NULL;
-	}
+	bool IsValid() const noexcept { return Index != UINT_MAX; }
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept
 	{
@@ -85,7 +79,7 @@ public:
 	}
 	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept
 	{
-		assert(IsReferencedByShader());
+		assert(IsValid());
 		return GPUHandle;
 	}
 	UINT GetIndex() const noexcept
@@ -119,7 +113,7 @@ public:
 protected:
 	D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle = { NULL };
 	D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle = { NULL };
-	UINT						Index	  = 0;
+	UINT						Index	  = UINT_MAX;
 
 private:
 	inline void Allocate();

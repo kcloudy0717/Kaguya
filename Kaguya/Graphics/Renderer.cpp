@@ -168,14 +168,17 @@ void Renderer::Render(Scene& Scene)
 			TrackedScratchBuffers.push_back(std::move(scratch));
 		}
 
-		AsyncCompute.UAVBarrier(nullptr);
-		AsyncCompute.FlushResourceBarriers();
+		if (!TrackedScratchBuffers.empty())
+		{
+			AsyncCompute.UAVBarrier(nullptr);
+			AsyncCompute.FlushResourceBarriers();
+		}
 
 		AccelerationStructure.Build(AsyncCompute);
 
 		AsyncCompute.CloseCommandList();
 
-		ASBuildSyncPoint = AsyncCompute.Execute(true);
+		ASBuildSyncPoint = AsyncCompute.Execute(false);
 	}
 
 	if (Scene.SceneState & ESceneState::SceneState_Update)
