@@ -16,36 +16,6 @@ constexpr inline float operator"" _Rad(long double Radians)
 	return DirectX::XMConvertToDegrees(static_cast<float>(Radians));
 }
 
-constexpr inline std::size_t operator"" _KiB(std::size_t X)
-{
-	return X * 1024;
-}
-
-constexpr inline std::size_t operator"" _MiB(std::size_t X)
-{
-	return X * 1024 * 1024;
-}
-
-constexpr inline std::size_t operator"" _GiB(std::size_t X)
-{
-	return X * 1024 * 1024 * 1024;
-}
-
-inline std::size_t ToKiB(std::size_t Byte)
-{
-	return Byte / 1024;
-}
-
-inline std::size_t ToMiB(std::size_t Byte)
-{
-	return Byte / 1024 / 1024;
-}
-
-inline std::size_t ToGiB(std::size_t Byte)
-{
-	return Byte / 1024 / 1024 / 1024;
-}
-
 template<typename T>
 struct Vector2
 {

@@ -1,9 +1,8 @@
 #pragma once
 #include <Core/CoreDefines.h>
-
 #include "DeviceChild.h"
 #include "CommandQueue.h"
-#include "LinearAllocator.h"
+#include "MemoryAllocator.h"
 
 class CommandContext : public DeviceChild
 {
@@ -45,23 +44,19 @@ public:
 	void BindResourceViewHeaps();
 
 	// These version of the API calls should be used as it needs to flush resource barriers before any work
-	void DrawInstanced(
-		_In_ UINT VertexCount,
-		_In_ UINT InstanceCount,
-		_In_ UINT StartVertexLocation,
-		_In_ UINT StartInstanceLocation);
+	void DrawInstanced(UINT VertexCount, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation);
 
 	void DrawIndexedInstanced(
-		_In_ UINT IndexCount,
-		_In_ UINT InstanceCount,
-		_In_ UINT StartIndexLocation,
-		_In_ UINT BaseVertexLocation,
-		_In_ UINT StartInstanceLocation);
+		UINT IndexCount,
+		UINT InstanceCount,
+		UINT StartIndexLocation,
+		UINT BaseVertexLocation,
+		UINT StartInstanceLocation);
 
-	void Dispatch(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ);
+	void Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 
 	template<UINT ThreadSizeX>
-	void Dispatch1D(_In_ UINT ThreadGroupCountX)
+	void Dispatch1D(UINT ThreadGroupCountX)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 
@@ -69,7 +64,7 @@ public:
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY>
-	void Dispatch2D(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY)
+	void Dispatch2D(UINT ThreadGroupCountX, UINT ThreadGroupCountY)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
@@ -78,7 +73,7 @@ public:
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY, UINT ThreadSizeZ>
-	void Dispatch3D(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ)
+	void Dispatch3D(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
@@ -87,9 +82,9 @@ public:
 		Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 	}
 
-	void DispatchRays(_In_ const D3D12_DISPATCH_RAYS_DESC* pDesc);
+	void DispatchRays(const D3D12_DISPATCH_RAYS_DESC* pDesc);
 
-	void DispatchMesh(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ);
+	void DispatchMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 
 	void ResetCounter(Resource* CounterResource, UINT64 CounterOffset, UINT Value = 0)
 	{

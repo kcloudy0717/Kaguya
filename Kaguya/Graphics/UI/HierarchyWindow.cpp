@@ -9,19 +9,19 @@ void HierarchyWindow::RenderGui()
 
 	UIWindow::Update();
 
-	m_pScene->Registry.each(
+	pScene->Registry.each(
 		[&](auto Handle)
 		{
-			Entity entity(Handle, m_pScene);
+			Entity entity(Handle, pScene);
 
 			auto& Name = entity.GetComponent<Tag>().Name;
 
-			ImGuiTreeNodeFlags flags = ((m_SelectedEntity == entity) ? ImGuiTreeNodeFlags_Selected : 0);
+			ImGuiTreeNodeFlags flags = ((SelectedEntity == entity) ? ImGuiTreeNodeFlags_Selected : 0);
 			flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
 			bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, Name.data());
 			if (ImGui::IsItemClicked())
 			{
-				m_SelectedEntity = entity;
+				SelectedEntity = entity;
 			}
 
 			bool Delete = false;
@@ -42,10 +42,10 @@ void HierarchyWindow::RenderGui()
 
 			if (Delete)
 			{
-				m_pScene->DestroyEntity(entity);
-				if (m_SelectedEntity == entity)
+				pScene->DestroyEntity(entity);
+				if (SelectedEntity == entity)
 				{
-					m_SelectedEntity = {};
+					SelectedEntity = {};
 				}
 			}
 		});
@@ -57,14 +57,14 @@ void HierarchyWindow::RenderGui()
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity entity	 = m_pScene->CreateEntity("GameObject");
-			m_SelectedEntity = entity;
+			Entity entity	 = pScene->CreateEntity("GameObject");
+			SelectedEntity = entity;
 		}
 
 		if (ImGui::MenuItem("Clear"))
 		{
-			m_pScene->Clear();
-			m_SelectedEntity = {};
+			pScene->Clear();
+			SelectedEntity = {};
 		}
 
 		if (ImGui::MenuItem("Save"))
@@ -79,7 +79,7 @@ void HierarchyWindow::RenderGui()
 						Path += ".yaml";
 					}
 
-					SceneParser::Save(Path, m_pScene);
+					SceneParser::Save(Path, pScene);
 				});
 		}
 
@@ -90,7 +90,7 @@ void HierarchyWindow::RenderGui()
 				"",
 				[&](auto Path)
 				{
-					SceneParser::Load(Path, m_pScene);
+					SceneParser::Load(Path, pScene);
 				});
 		}
 
@@ -101,6 +101,6 @@ void HierarchyWindow::RenderGui()
 	// Reset entity is nothing is clicked
 	if (ImGui::IsItemClicked())
 	{
-		m_SelectedEntity = {};
+		SelectedEntity = {};
 	}
 }

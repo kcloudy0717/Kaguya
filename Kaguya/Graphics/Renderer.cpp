@@ -284,6 +284,7 @@ void Renderer::Resize(uint32_t Width, uint32_t Height)
 void Renderer::Destroy()
 {
 	RenderDevice::Instance().GetDevice()->GetGraphicsQueue()->Flush();
+	RenderDevice::Instance().GetDevice()->GetAsyncComputeQueue()->Flush();
 	RenderDevice::Instance().GetDevice()->GetCopyQueue1()->Flush();
 	RenderDevice::Instance().GetDevice()->GetCopyQueue2()->Flush();
 }

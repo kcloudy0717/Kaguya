@@ -1,43 +1,43 @@
 #pragma once
 #include <Core/RWLock.h>
-
 #include "CommandQueue.h"
 #include "CommandContext.h"
 #include "DescriptorHeap.h"
 #include "Resource.h"
 
 // clang-format off
-template<D3D12_FEATURE Feature> struct FeatureStructMap									{ using Type = void; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS>							{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS; };
-template<> struct FeatureStructMap<D3D12_FEATURE_ARCHITECTURE>							{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE; };
-template<> struct FeatureStructMap<D3D12_FEATURE_FEATURE_LEVELS>						{ using Type = D3D12_FEATURE_DATA_FEATURE_LEVELS; };
-template<> struct FeatureStructMap<D3D12_FEATURE_FORMAT_SUPPORT>						{ using Type = D3D12_FEATURE_DATA_FORMAT_SUPPORT; };
-template<> struct FeatureStructMap<D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS>			{ using Type = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS; };
-template<> struct FeatureStructMap<D3D12_FEATURE_FORMAT_INFO>							{ using Type = D3D12_FEATURE_DATA_FORMAT_INFO; };
-template<> struct FeatureStructMap<D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT>			{ using Type = D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT; };
-template<> struct FeatureStructMap<D3D12_FEATURE_SHADER_MODEL>							{ using Type = D3D12_FEATURE_DATA_SHADER_MODEL; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS1>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS1; };
-template<> struct FeatureStructMap<D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT>	{ using Type = D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT; };
-template<> struct FeatureStructMap<D3D12_FEATURE_ROOT_SIGNATURE>						{ using Type = D3D12_FEATURE_DATA_ROOT_SIGNATURE; };
-template<> struct FeatureStructMap<D3D12_FEATURE_ARCHITECTURE1>							{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE1; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS2>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS2; };
-template<> struct FeatureStructMap<D3D12_FEATURE_SHADER_CACHE>							{ using Type = D3D12_FEATURE_DATA_SHADER_CACHE; };
-template<> struct FeatureStructMap<D3D12_FEATURE_COMMAND_QUEUE_PRIORITY>				{ using Type = D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS3>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS3; };
-template<> struct FeatureStructMap<D3D12_FEATURE_EXISTING_HEAPS>						{ using Type = D3D12_FEATURE_DATA_EXISTING_HEAPS; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS4>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS4; };
-template<> struct FeatureStructMap<D3D12_FEATURE_SERIALIZATION>							{ using Type = D3D12_FEATURE_DATA_SERIALIZATION; };
-template<> struct FeatureStructMap<D3D12_FEATURE_CROSS_NODE>							{ using Type = D3D12_FEATURE_DATA_CROSS_NODE; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS5>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS5; };
-template<> struct FeatureStructMap<D3D12_FEATURE_D3D12_OPTIONS6>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS6; };
-template<> struct FeatureStructMap<D3D12_FEATURE_QUERY_META_COMMAND>					{ using Type = D3D12_FEATURE_DATA_QUERY_META_COMMAND; };
+template<D3D12_FEATURE Feature> struct D3D12FeatureTraits								{ using Type = void; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_ARCHITECTURE>						{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_FEATURE_LEVELS>						{ using Type = D3D12_FEATURE_DATA_FEATURE_LEVELS; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_FORMAT_SUPPORT>						{ using Type = D3D12_FEATURE_DATA_FORMAT_SUPPORT; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS>			{ using Type = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_FORMAT_INFO>							{ using Type = D3D12_FEATURE_DATA_FORMAT_INFO; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT>			{ using Type = D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_SHADER_MODEL>						{ using Type = D3D12_FEATURE_DATA_SHADER_MODEL; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS1>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS1; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT>	{ using Type = D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_ROOT_SIGNATURE>						{ using Type = D3D12_FEATURE_DATA_ROOT_SIGNATURE; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_ARCHITECTURE1>						{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE1; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS2>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS2; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_SHADER_CACHE>						{ using Type = D3D12_FEATURE_DATA_SHADER_CACHE; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_COMMAND_QUEUE_PRIORITY>				{ using Type = D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS3>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS3; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_EXISTING_HEAPS>						{ using Type = D3D12_FEATURE_DATA_EXISTING_HEAPS; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS4>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS4; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_SERIALIZATION>						{ using Type = D3D12_FEATURE_DATA_SERIALIZATION; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_CROSS_NODE>							{ using Type = D3D12_FEATURE_DATA_CROSS_NODE; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS5>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS5; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS6>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS6; };
+template<> struct D3D12FeatureTraits<D3D12_FEATURE_QUERY_META_COMMAND>					{ using Type = D3D12_FEATURE_DATA_QUERY_META_COMMAND; };
 // clang-format on
 
 template<D3D12_FEATURE Feature>
 struct D3D12Feature
 {
 	static constexpr D3D12_FEATURE Feature = Feature;
-	using Type							   = FeatureStructMap<Feature>::Type;
+	using Type							   = D3D12FeatureTraits<Feature>::Type;
+
 	Type FeatureSupportData;
 
 	const Type* operator->() const { return &FeatureSupportData; }
@@ -86,7 +86,7 @@ public:
 	CommandQueue* GetCopyQueue2() { return GetCommandQueue(ECommandQueueType::Copy2); }
 
 	// clang-format off
-	template <typename TViewDesc> DescriptorHeap& GetDescriptorHeap();
+	template <typename ViewDesc> DescriptorHeap& GetDescriptorHeap() noexcept;
 	template<> DescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
 	template<> DescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
 	template<> DescriptorHeap& GetDescriptorHeap<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RenderTargetDescriptorHeap; }

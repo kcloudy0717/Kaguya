@@ -189,23 +189,19 @@ void Device::Initialize(const DeviceFeatures& Features)
 	CopyQueue1.Initialize();
 	CopyQueue2.Initialize();
 
+	ResourceDescriptorHeap.Initialize(CVar_GlobalResourceViewHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	SamplerDescriptorHeap.Initialize(CVar_GlobalSamplerHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+	RenderTargetDescriptorHeap.Initialize(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	DepthStencilDescriptorHeap.Initialize(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
 #if _DEBUG
 	GraphicsQueue.GetCommandQueue()->SetName(L"3D");
 	AsyncComputeQueue.GetCommandQueue()->SetName(L"Async Compute");
 	CopyQueue1.GetCommandQueue()->SetName(L"Copy 1");
 	CopyQueue2.GetCommandQueue()->SetName(L"Copy 2");
-#endif
 
-	ResourceDescriptorHeap.Create(CVar_GlobalResourceViewHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	SamplerDescriptorHeap.Create(CVar_GlobalSamplerHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-	RenderTargetDescriptorHeap.Create(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	DepthStencilDescriptorHeap.Create(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-
-#if _DEBUG
 	ResourceDescriptorHeap.SetName(L"Resource Descriptor Heap");
 	SamplerDescriptorHeap.SetName(L"Sampler Descriptor Heap");
-
 	RenderTargetDescriptorHeap.SetName(L"Render Target Descriptor Heap");
 	DepthStencilDescriptorHeap.SetName(L"Depth Stencil Descriptor Heap");
 #endif

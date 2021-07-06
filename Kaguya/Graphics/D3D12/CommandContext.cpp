@@ -67,21 +67,21 @@ void CommandContext::BindResourceViewHeaps()
 }
 
 void CommandContext::DrawInstanced(
-	_In_ UINT VertexCount,
-	_In_ UINT InstanceCount,
-	_In_ UINT StartVertexLocation,
-	_In_ UINT StartInstanceLocation)
+	UINT VertexCount,
+	UINT InstanceCount,
+	UINT StartVertexLocation,
+	UINT StartInstanceLocation)
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle->DrawInstanced(VertexCount, InstanceCount, StartVertexLocation, StartInstanceLocation);
 }
 
 void CommandContext::DrawIndexedInstanced(
-	_In_ UINT IndexCount,
-	_In_ UINT InstanceCount,
-	_In_ UINT StartIndexLocation,
-	_In_ UINT BaseVertexLocation,
-	_In_ UINT StartInstanceLocation)
+	UINT IndexCount,
+	UINT InstanceCount,
+	UINT StartIndexLocation,
+	UINT BaseVertexLocation,
+	UINT StartInstanceLocation)
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle->DrawIndexedInstanced(
@@ -92,19 +92,19 @@ void CommandContext::DrawIndexedInstanced(
 		StartInstanceLocation);
 }
 
-void CommandContext::Dispatch(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ)
+void CommandContext::Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 }
 
-void CommandContext::DispatchRays(_In_ const D3D12_DISPATCH_RAYS_DESC* pDesc)
+void CommandContext::DispatchRays(const D3D12_DISPATCH_RAYS_DESC* pDesc)
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle.GetGraphicsCommandList4()->DispatchRays(pDesc);
 }
 
-void CommandContext::DispatchMesh(_In_ UINT ThreadGroupCountX, _In_ UINT ThreadGroupCountY, _In_ UINT ThreadGroupCountZ)
+void CommandContext::DispatchMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle.GetGraphicsCommandList6()->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);

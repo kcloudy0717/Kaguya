@@ -16,7 +16,7 @@ public:
 		pDescriptorHeap->SetName(Name);
 	}
 
-	void Create(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type);
+	void Initialize(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type);
 
 	operator ID3D12DescriptorHeap*() const { return pDescriptorHeap.Get(); }
 

@@ -3,7 +3,7 @@
 #include "Device.h"
 #include "d3dx12.h"
 
-void DescriptorHeap::Create(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+void DescriptorHeap::Initialize(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type)
 {
 	// If you recorded a CPU descriptor handle into the command list (render target or depth stencil) then that
 	// descriptor can be reused immediately after the Set call, if you recorded a GPU descriptor handle into the command

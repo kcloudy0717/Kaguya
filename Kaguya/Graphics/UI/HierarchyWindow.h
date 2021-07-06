@@ -8,17 +8,17 @@ class HierarchyWindow : public UIWindow
 public:
 	void SetContext(Scene* pScene)
 	{
-		m_pScene		 = pScene;
-		m_SelectedEntity = {};
+		this->pScene   = pScene;
+		SelectedEntity = {};
 	}
 
 	void RenderGui();
 
-	Entity GetSelectedEntity() const { return m_SelectedEntity; }
+	Entity GetSelectedEntity() const { return SelectedEntity; }
 
-	void SetSelectedEntity(Entity Entity) { m_SelectedEntity = Entity; }
+	void SetSelectedEntity(Entity Entity) { SelectedEntity = Entity; }
 
 private:
-	Scene* m_pScene			= nullptr;
-	Entity m_SelectedEntity = {};
+	Scene* pScene		  = nullptr;
+	Entity SelectedEntity = {};
 };

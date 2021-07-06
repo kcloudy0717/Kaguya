@@ -2,12 +2,13 @@
 #include "DeviceChild.h"
 #include "CommandContext.h"
 #include "CommandQueue.h"
-#include "LinearAllocator.h"
+#include "MemoryAllocator.h"
 
 class ResourceUploader : public DeviceChild
 {
 public:
 	ResourceUploader(Device* Device);
+	~ResourceUploader();
 
 	void Begin();
 
@@ -19,6 +20,7 @@ public:
 	void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* pResource);
 
 private:
-	CommandContext&					 CopyContext;
-	std::unique_ptr<LinearAllocator> m_LinearAllocator;
+	CommandContext&										CopyContext;
+	CommandSyncPoint									SyncPoint;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> TrackedResources;
 };
