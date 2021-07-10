@@ -160,7 +160,7 @@ void ShaderCompiler::Compile(
 		Arguments,
 		ARRAYSIZE(Arguments),
 		ShaderDefines.data(),
-		ShaderDefines.size(),
+		static_cast<UINT32>(ShaderDefines.size()),
 		DxcCompilerArgs.ReleaseAndGetAddressOf()));
 
 	ComPtr<IDxcBlobEncoding> Source;

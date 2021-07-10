@@ -41,7 +41,7 @@ public:
 		return TrackingMode == ETrackingMode::PerResource;
 	}
 
-	D3D12_RESOURCE_STATES GetSubresourceState(_In_ UINT Subresource) const
+	D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const
 	{
 		if (TrackingMode == ETrackingMode::PerResource)
 		{
@@ -51,7 +51,7 @@ public:
 		return SubresourceState[Subresource];
 	}
 
-	void SetSubresourceState(_In_ UINT Subresource, _In_ D3D12_RESOURCE_STATES State)
+	void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State)
 	{
 		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
 		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceState.size() == 1)
