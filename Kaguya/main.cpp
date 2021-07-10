@@ -27,7 +27,7 @@ public:
 
 	bool Initialize() override
 	{
-		atexit(Device::ReportLiveObjects);
+		atexit(Adapter::ReportLiveObjects);
 		RenderDevice::Initialize();
 		AssetManager::Initialize();
 
@@ -84,15 +84,6 @@ public:
 #else
 		const uint32_t viewportWidth = m_ViewportWindow.Resolution.x, viewportHeight = m_ViewportWindow.Resolution.y;
 #endif
-
-		// Update selected entity
-		// If LMB is pressed and we are not handling raw input and if we are not hovering over any imgui stuff then we
-		// update the instance id for editor
-		if (Mouse.IsLeftPressed() && !InputHandler.RawInputEnabled && m_ViewportWindow.IsHovered &&
-			!ImGuizmo::IsUsing())
-		{
-			m_HierarchyWindow.SetSelectedEntity(pRenderer->GetSelectedEntity());
-		}
 
 		Scene.Update(DeltaTime);
 

@@ -13,7 +13,7 @@ void DescriptorHeap::Initialize(UINT NumDescriptors, bool ShaderVisible, D3D12_D
 			 .Flags	   = ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			 .NodeMask = 0 };
 
-	ThrowIfFailed(GetParentDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
+	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
 	DescriptorStride = GetParentDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
 	hCPUStart = pDescriptorHeap->GetCPUDescriptorHandleForHeapStart();

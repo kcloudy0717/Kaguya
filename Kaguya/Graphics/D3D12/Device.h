@@ -1,80 +1,20 @@
 #pragma once
 #include <Core/RWLock.h>
+#include "D3D12Common.h"
 #include "CommandQueue.h"
 #include "CommandContext.h"
 #include "DescriptorHeap.h"
 #include "Resource.h"
 
-// clang-format off
-template<D3D12_FEATURE Feature> struct D3D12FeatureTraits								{ using Type = void; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_ARCHITECTURE>						{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_FEATURE_LEVELS>						{ using Type = D3D12_FEATURE_DATA_FEATURE_LEVELS; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_FORMAT_SUPPORT>						{ using Type = D3D12_FEATURE_DATA_FORMAT_SUPPORT; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS>			{ using Type = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_FORMAT_INFO>							{ using Type = D3D12_FEATURE_DATA_FORMAT_INFO; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT>			{ using Type = D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_SHADER_MODEL>						{ using Type = D3D12_FEATURE_DATA_SHADER_MODEL; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS1>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS1; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_SUPPORT>	{ using Type = D3D12_FEATURE_DATA_PROTECTED_RESOURCE_SESSION_SUPPORT; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_ROOT_SIGNATURE>						{ using Type = D3D12_FEATURE_DATA_ROOT_SIGNATURE; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_ARCHITECTURE1>						{ using Type = D3D12_FEATURE_DATA_ARCHITECTURE1; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS2>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS2; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_SHADER_CACHE>						{ using Type = D3D12_FEATURE_DATA_SHADER_CACHE; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_COMMAND_QUEUE_PRIORITY>				{ using Type = D3D12_FEATURE_DATA_COMMAND_QUEUE_PRIORITY; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS3>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS3; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_EXISTING_HEAPS>						{ using Type = D3D12_FEATURE_DATA_EXISTING_HEAPS; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS4>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS4; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_SERIALIZATION>						{ using Type = D3D12_FEATURE_DATA_SERIALIZATION; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_CROSS_NODE>							{ using Type = D3D12_FEATURE_DATA_CROSS_NODE; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS5>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS5; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_D3D12_OPTIONS6>						{ using Type = D3D12_FEATURE_DATA_D3D12_OPTIONS6; };
-template<> struct D3D12FeatureTraits<D3D12_FEATURE_QUERY_META_COMMAND>					{ using Type = D3D12_FEATURE_DATA_QUERY_META_COMMAND; };
-// clang-format on
-
-template<D3D12_FEATURE Feature>
-struct D3D12Feature
-{
-	static constexpr D3D12_FEATURE Feature = Feature;
-	using Type							   = D3D12FeatureTraits<Feature>::Type;
-
-	Type FeatureSupportData;
-
-	const Type* operator->() const { return &FeatureSupportData; }
-};
-
-struct DeviceOptions
-{
-	D3D_FEATURE_LEVEL FeatureLevel;
-	bool			  EnableDebugLayer;
-	bool			  EnableGpuBasedValidation;
-	bool			  BreakOnCorruption;
-	bool			  BreakOnError;
-	bool			  BreakOnWarning;
-	bool			  EnableAutoDebugName;
-};
-
-// Can't use DeviceCapabilities, it conflicts with a macro
-// Specify whether or not you want to require the device to have these features
-struct DeviceFeatures
-{
-	bool WaveOperation;
-	bool Raytracing;
-	bool DynamicResources;
-};
-
 // I really want to do mGpu, gotta get myself another 2070 for mGpu
 // or get 2 30 series, I can't get one because they're always out of stock >:(
-class Device
+class Device : public AdapterChild
 {
 public:
-	static void ReportLiveObjects();
-
-	Device() noexcept = default;
-	Device(_In_ IDXGIAdapter4* pAdapter, const DeviceOptions& Options);
+	Device(Adapter* Adapter);
 	~Device();
 
-	void Initialize(const DeviceFeatures& Features);
+	void Initialize();
 
 	ID3D12Device*  GetDevice() const;
 	ID3D12Device5* GetDevice5() const;
@@ -111,16 +51,6 @@ public:
 	bool ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
 
 private:
-	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
-
-private:
-	Microsoft::WRL::ComPtr<ID3D12Device>  pDevice;
-	Microsoft::WRL::ComPtr<ID3D12Device5> pDevice5;
-
-	Microsoft::WRL::ComPtr<ID3D12Fence> DeviceRemovedFence;
-	HANDLE								DeviceRemovedWaitHandle;
-	wil::unique_event					DeviceRemovedEvent;
-
 	CommandQueue GraphicsQueue;
 	CommandQueue AsyncComputeQueue;
 	CommandQueue CopyQueue1;

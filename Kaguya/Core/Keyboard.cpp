@@ -3,66 +3,66 @@
 
 bool Keyboard::IsPressed(unsigned char KeyCode) const
 {
-	return m_KeyStates[KeyCode];
+	return KeyStates[KeyCode];
 }
 
 std::optional<Keyboard::Event> Keyboard::ReadKey()
 {
-	if (m_KeyBuffer.empty())
+	if (KeyBuffer.empty())
 	{
 		return {};
 	}
 
-	Keyboard::Event e = m_KeyBuffer.front();
-	m_KeyBuffer.pop();
+	Keyboard::Event e = KeyBuffer.front();
+	KeyBuffer.pop();
 
 	return e;
 }
 
 bool Keyboard::KeyBufferIsEmpty() const
 {
-	return m_KeyBuffer.empty();
+	return KeyBuffer.empty();
 }
 
 unsigned char Keyboard::ReadChar()
 {
-	if (m_CharBuffer.empty())
+	if (CharBuffer.empty())
 	{
 		return {};
 	}
 
-	unsigned char e = m_CharBuffer.front();
-	m_CharBuffer.pop();
+	unsigned char e = CharBuffer.front();
+	CharBuffer.pop();
 
 	return e;
 }
 
 bool Keyboard::CharBufferIsEmpty() const
 {
-	return m_CharBuffer.empty();
+	return CharBuffer.empty();
 }
 
 void Keyboard::ResetKeyState()
 {
-	m_KeyStates.reset();
+	KeyStates.reset();
 }
 
 void Keyboard::OnKeyDown(unsigned char KeyCode)
 {
-	m_KeyStates[KeyCode] = true;
-	m_KeyBuffer.push(Keyboard::Event(Keyboard::Event::EType::Press, KeyCode));
-	TrimBuffer(m_KeyBuffer);
+	KeyStates[KeyCode] = true;
+	KeyBuffer.push(Keyboard::Event(Keyboard::Event::EType::Press, KeyCode));
+	TrimBuffer(KeyBuffer);
 }
 
 void Keyboard::OnKeyUp(unsigned char KeyCode)
 {
-	m_KeyStates[KeyCode] = false;
-	m_KeyBuffer.push(Keyboard::Event(Keyboard::Event::EType::Release, KeyCode));
-	TrimBuffer(m_KeyBuffer);
+	KeyStates[KeyCode] = false;
+	KeyBuffer.push(Keyboard::Event(Keyboard::Event::EType::Release, KeyCode));
+	TrimBuffer(KeyBuffer);
 }
 
 void Keyboard::OnChar(unsigned char Char)
 {
-	m_CharBuffer.push(Char);
-	TrimBuffer(m_CharBuffer);
+	CharBuffer.push(Char);
+	TrimBuffer(CharBuffer);
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "d3dx12.h"
+#include "D3D12Common.h"
 
 struct DXILLibrary
 {

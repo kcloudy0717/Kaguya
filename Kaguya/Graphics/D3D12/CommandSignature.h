@@ -1,4 +1,5 @@
 #pragma once
+#include "D3D12Common.h"
 
 class CommandSignatureBuilder
 {

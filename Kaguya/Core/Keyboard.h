@@ -65,7 +65,7 @@ public:
 	bool AutoRepeat = false;
 
 private:
-	std::bitset<NumKeyStates>	m_KeyStates;
-	std::queue<Keyboard::Event> m_KeyBuffer;
-	std::queue<unsigned char>	m_CharBuffer;
+	std::bitset<NumKeyStates>	KeyStates;
+	std::queue<Keyboard::Event> KeyBuffer;
+	std::queue<unsigned char>	CharBuffer;
 };

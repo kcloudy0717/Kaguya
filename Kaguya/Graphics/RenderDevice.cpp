@@ -34,35 +34,32 @@ bool RenderDevice::IsValid()
 
 RenderDevice::RenderDevice()
 {
-	InitializeDXGIObjects();
-
-	DeviceOptions  DeviceOptions  = { .FeatureLevel				= D3D_FEATURE_LEVEL_12_0,
-									  .EnableDebugLayer			= true,
+	DeviceOptions  DeviceOptions  = { .EnableDebugLayer			= true,
 									  .EnableGpuBasedValidation = true,
-									  .BreakOnCorruption		= true,
-									  .BreakOnError				= true,
-									  .BreakOnWarning			= true,
 									  .EnableAutoDebugName		= true };
-	DeviceFeatures DeviceFeatures = { .WaveOperation = true };
+	DeviceFeatures DeviceFeatures = { .FeatureLevel = D3D_FEATURE_LEVEL_12_0, .WaveOperation = true };
 
-	m_Device = std::make_unique<Device>(Adapter4.Get(), DeviceOptions);
-	m_Device->Initialize(DeviceFeatures);
+	Adapter.Initialize(DeviceOptions);
+	Adapter.InitializeDevice(DeviceFeatures);
 
 	m_SwapChain = SwapChain(
 		Application::GetWindowHandle(),
-		Factory6.Get(),
-		m_Device->GetDevice(),
-		m_Device->GetGraphicsQueue()->GetCommandQueue());
+		Adapter.GetFactory6(),
+		Adapter.GetD3D12Device(),
+		Adapter.GetDevice()->GetGraphicsQueue()->GetCommandQueue());
 
 	UINT TempIndex = 0;
-	m_Device->GetResourceDescriptorHeap().Allocate(m_ImGuiFontCpuDescriptor, m_ImGuiFontGpuDescriptor, TempIndex);
+	Adapter.GetDevice()->GetResourceDescriptorHeap().Allocate(
+		m_ImGuiFontCpuDescriptor,
+		m_ImGuiFontGpuDescriptor,
+		TempIndex);
 
 	// Initialize ImGui for d3d12
 	ImGui_ImplDX12_Init(
-		m_Device->GetDevice(),
+		Adapter.GetD3D12Device(),
 		1,
 		SwapChain::Format,
-		m_Device->GetResourceDescriptorHeap(),
+		Adapter.GetDevice()->GetResourceDescriptorHeap(),
 		m_ImGuiFontCpuDescriptor,
 		m_ImGuiFontGpuDescriptor);
 }
@@ -70,16 +67,6 @@ RenderDevice::RenderDevice()
 RenderDevice::~RenderDevice()
 {
 	ImGui_ImplDX12_Shutdown();
-}
-
-DXGI_QUERY_VIDEO_MEMORY_INFO RenderDevice::QueryLocalVideoMemoryInfo() const
-{
-	DXGI_QUERY_VIDEO_MEMORY_INFO VideoMemoryInfo = {};
-	if (Adapter4)
-	{
-		Adapter4->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &VideoMemoryInfo);
-	}
-	return VideoMemoryInfo;
 }
 
 void RenderDevice::Present(bool VSync)
@@ -103,7 +90,7 @@ RootSignature RenderDevice::CreateRootSignature(
 		AddDescriptorTableRootParameterToBuilder(builder);
 	}
 
-	return RootSignature(m_Device->GetDevice(), builder);
+	return RootSignature(Adapter.GetD3D12Device(), builder);
 }
 
 RaytracingPipelineState RenderDevice::CreateRaytracingPipelineState(
@@ -112,7 +99,7 @@ RaytracingPipelineState RenderDevice::CreateRaytracingPipelineState(
 	RaytracingPipelineStateBuilder builder = {};
 	Configurator(builder);
 
-	return RaytracingPipelineState(m_Device->GetDevice5(), builder);
+	return RaytracingPipelineState(Adapter.GetD3D12Device5(), builder);
 }
 
 //
@@ -146,42 +133,6 @@ RaytracingPipelineState RenderDevice::CreateRaytracingPipelineState(
 //	m_Device->CreateShaderResourceView(pResource, &desc, DestDescriptor.CpuHandle);
 //}
 //
-
-void RenderDevice::InitializeDXGIObjects()
-{
-	constexpr bool DEBUG_MODE = _DEBUG;
-
-	constexpr UINT flags = DEBUG_MODE ? DXGI_CREATE_FACTORY_DEBUG : 0;
-	// Create DXGIFactory
-	ThrowIfFailed(::CreateDXGIFactory2(flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
-
-	// Enumerate hardware for an adapter that supports DX12
-	ComPtr<IDXGIAdapter4> pAdapter4;
-	UINT				  adapterID = 0;
-	while (Factory6->EnumAdapterByGpuPreference(
-			   adapterID,
-			   DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-			   IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
-	{
-		DXGI_ADAPTER_DESC3 desc = {};
-		ThrowIfFailed(pAdapter4->GetDesc3(&desc));
-
-		if ((desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-		{
-			// Skip SOFTWARE adapters
-			continue;
-		}
-
-		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)))
-		{
-			Adapter4	= pAdapter4;
-			AdapterDesc = desc;
-			break;
-		}
-
-		adapterID++;
-	}
-}
 
 void RenderDevice::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder)
 {

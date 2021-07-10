@@ -6,7 +6,7 @@ using Microsoft::WRL::ComPtr;
 
 ResourceUploader::ResourceUploader(Device* Device)
 	: DeviceChild(Device)
-	, CopyContext(Device->GetCopyContext2())
+	, CopyContext2(Device->GetCopyContext2())
 {
 }
 
@@ -25,13 +25,13 @@ void ResourceUploader::Begin()
 		TrackedResources.clear();
 	}
 
-	CopyContext.OpenCommandList();
+	CopyContext2.OpenCommandList();
 }
 
 CommandSyncPoint ResourceUploader::End(bool WaitForCompletion)
 {
-	CopyContext.CloseCommandList();
-	SyncPoint = CopyContext.Execute(WaitForCompletion);
+	CopyContext2.CloseCommandList();
+	SyncPoint = CopyContext2.Execute(WaitForCompletion);
 	return SyncPoint;
 }
 
@@ -42,7 +42,7 @@ void ResourceUploader::Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subreso
 	const D3D12_HEAP_PROPERTIES			   HeapProperties  = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	const D3D12_RESOURCE_DESC			   ResourceDesc	   = CD3DX12_RESOURCE_DESC::Buffer(UploadSize);
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	ThrowIfFailed(GetParentDevice()->GetDevice()->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -51,7 +51,7 @@ void ResourceUploader::Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subreso
 		IID_PPV_ARGS(UploadResource.ReleaseAndGetAddressOf())));
 
 	UpdateSubresources(
-		CopyContext.CommandListHandle.GetGraphicsCommandList6(),
+		CopyContext2.CommandListHandle.GetGraphicsCommandList6(),
 		pResource,
 		UploadResource.Get(),
 		0,
@@ -68,7 +68,7 @@ void ResourceUploader::Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12R
 	const D3D12_HEAP_PROPERTIES			   HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	const D3D12_RESOURCE_DESC			   ResourceDesc	  = CD3DX12_RESOURCE_DESC::Buffer(UploadSize);
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	ThrowIfFailed(GetParentDevice()->GetDevice()->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -77,7 +77,7 @@ void ResourceUploader::Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12R
 		IID_PPV_ARGS(UploadResource.ReleaseAndGetAddressOf())));
 
 	UpdateSubresources<1>(
-		CopyContext.CommandListHandle.GetGraphicsCommandList6(),
+		CopyContext2.CommandListHandle.GetGraphicsCommandList6(),
 		pResource,
 		UploadResource.Get(),
 		0,

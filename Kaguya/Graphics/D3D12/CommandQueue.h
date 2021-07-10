@@ -1,26 +1,13 @@
 #pragma once
 #include <Core/CriticalSection.h>
-
-#include "DeviceChild.h"
-#include "D3D12Utility.h"
+#include "D3D12Common.h"
 #include "CommandList.h"
-
-enum class ECommandQueueType
-{
-	Direct,
-	AsyncCompute,
-
-	Copy1, // High frequency copies from upload to default heap
-	Copy2, // Data initialization during resource creation
-
-	NumCommandQueues
-};
 
 struct CommandListBatch
 {
 	enum
 	{
-		BatchCount = 64
+		BatchLimit = 64
 	};
 
 	CommandListBatch()
@@ -35,7 +22,7 @@ struct CommandListBatch
 		NumCommandLists++;
 	}
 
-	ID3D12CommandList* CommandLists[BatchCount];
+	ID3D12CommandList* CommandLists[BatchLimit];
 	UINT			   NumCommandLists;
 };
 
@@ -59,7 +46,7 @@ private:
 class CommandQueue : public DeviceChild
 {
 public:
-	CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType);
+	CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType, ECommandQueueType CommandQueueType);
 
 	void Initialize(std::optional<UINT> NumCommandLists = {});
 
@@ -114,13 +101,14 @@ private:
 
 private:
 	const D3D12_COMMAND_LIST_TYPE CommandListType;
+	const ECommandQueueType		  CommandQueueType;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> pCommandQueue;
 	UINT64									   Frequency = 0;
 
 	// Command allocators used exclusively for resolving resource barriers
 	CommandAllocatorPool ResourceBarrierCommandAllocatorPool;
-	CommandAllocator*	 ResourceBarrierCommandAllocator;
+	CommandAllocator*	 ResourceBarrierCommandAllocator = nullptr;
 
 	std::queue<CommandListHandle> AvailableCommandListHandles;
 

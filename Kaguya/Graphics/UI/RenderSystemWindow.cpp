@@ -11,11 +11,11 @@ void RenderSystemWindow::RenderGui()
 
 	UIWindow::Update();
 
-	const auto& AdapterDesc			 = RenderDevice::Instance().GetAdapterDesc();
-	auto		localVideoMemoryInfo = RenderDevice::Instance().QueryLocalVideoMemoryInfo();
-	auto		usageInMiB			 = ToMiB(localVideoMemoryInfo.CurrentUsage);
-	ImGui::Text("GPU: %ls", AdapterDesc.Description);
-	ImGui::Text("VRAM Usage: %d Mib", usageInMiB);
+	// const auto& AdapterDesc			 = RenderDevice::Instance().GetAdapterDesc();
+	// auto		localVideoMemoryInfo = RenderDevice::Instance().QueryLocalVideoMemoryInfo();
+	// auto		usageInMiB			 = ToMiB(localVideoMemoryInfo.CurrentUsage);
+	// ImGui::Text("GPU: %ls", AdapterDesc.Description);
+	// ImGui::Text("VRAM Usage: %d Mib", usageInMiB);
 
 	ImGui::Text("");
 	ImGui::Text("Total Frame Count: %d", RenderSystem::Statistics::TotalFrameCount);

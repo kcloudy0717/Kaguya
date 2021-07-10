@@ -5,9 +5,9 @@ using Microsoft::WRL::ComPtr;
 
 ShaderCompiler::ShaderCompiler()
 {
-	ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
-	ThrowIfFailed(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
+	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
 	ShaderModel = D3D_SHADER_MODEL_6_5;
 }
 
@@ -22,19 +22,19 @@ void ShaderCompiler::SetIncludeDirectory(const std::filesystem::path& Path)
 }
 
 Shader ShaderCompiler::CompileShader(
-	Shader::EType				  Type,
+	EShaderType					  ShaderType,
 	const std::filesystem::path&  Path,
 	std::wstring_view			  EntryPoint,
 	const std::vector<DxcDefine>& ShaderDefines) const
 {
-	std::wstring ProfileString = ShaderProfileString(Type, ShaderModel);
+	std::wstring ProfileString = ShaderProfileString(ShaderType, ShaderModel);
 
 	IDxcBlob*	 Blob	 = nullptr;
 	IDxcBlob*	 PDBBlob = nullptr;
 	std::wstring PDBName;
 	Compile(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob, &PDBBlob, PDBName);
 
-	return Shader(Type, Blob, PDBBlob, std::move(PDBName));
+	return Shader(ShaderType, Blob, PDBBlob, std::move(PDBName));
 }
 
 Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
@@ -49,33 +49,33 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	return Library(Blob, PDBBlob, std::move(PDBName));
 }
 
-std::wstring ShaderCompiler::ShaderProfileString(Shader::EType Type, D3D_SHADER_MODEL ShaderModel) const
+std::wstring ShaderCompiler::ShaderProfileString(EShaderType ShaderType, D3D_SHADER_MODEL ShaderModel) const
 {
 	std::wstring ProfileString;
-	switch (Type)
+	switch (ShaderType)
 	{
-	case Shader::EType::Vertex:
+	case EShaderType::Vertex:
 		ProfileString = L"vs_";
 		break;
-	case Shader::EType::Hull:
+	case EShaderType::Hull:
 		ProfileString = L"hs_";
 		break;
-	case Shader::EType::Domain:
+	case EShaderType::Domain:
 		ProfileString = L"ds_";
 		break;
-	case Shader::EType::Geometry:
+	case EShaderType::Geometry:
 		ProfileString = L"gs_";
 		break;
-	case Shader::EType::Pixel:
+	case EShaderType::Pixel:
 		ProfileString = L"ps_";
 		break;
-	case Shader::EType::Compute:
+	case EShaderType::Compute:
 		ProfileString = L"cs_";
 		break;
-	case Shader::EType::Amplification:
+	case EShaderType::Amplification:
 		ProfileString = L"as_";
 		break;
-	case Shader::EType::Mesh:
+	case EShaderType::Mesh:
 		ProfileString = L"ms_";
 		break;
 	}
@@ -153,7 +153,7 @@ void ShaderCompiler::Compile(
 
 	// Build arguments
 	ComPtr<IDxcCompilerArgs> DxcCompilerArgs;
-	ThrowIfFailed(Utils->BuildArguments(
+	ASSERTD3D12APISUCCEEDED(Utils->BuildArguments(
 		Path.c_str(),
 		EntryPoint.data(),
 		Profile.data(),
@@ -166,11 +166,11 @@ void ShaderCompiler::Compile(
 	ComPtr<IDxcBlobEncoding> Source;
 	UINT32					 CodePage = CP_ACP;
 
-	ThrowIfFailed(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
+	ASSERTD3D12APISUCCEEDED(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
 
 	BOOL SourceKnown	= FALSE;
 	UINT SourceCodePage = 0;
-	ThrowIfFailed(Source->GetEncoding(&SourceKnown, &CodePage));
+	ASSERTD3D12APISUCCEEDED(Source->GetEncoding(&SourceKnown, &CodePage));
 
 	DxcBuffer DxcBuffer = {};
 	DxcBuffer.Ptr		= Source->GetBufferPointer();
@@ -178,7 +178,7 @@ void ShaderCompiler::Compile(
 	DxcBuffer.Encoding	= SourceCodePage;
 
 	ComPtr<IDxcResult> DxcResult;
-	ThrowIfFailed(Compiler3->Compile(
+	ASSERTD3D12APISUCCEEDED(Compiler3->Compile(
 		&DxcBuffer,
 		DxcCompilerArgs->GetArguments(),
 		DxcCompilerArgs->GetCount(),
@@ -186,22 +186,24 @@ void ShaderCompiler::Compile(
 		IID_PPV_ARGS(DxcResult.ReleaseAndGetAddressOf())));
 
 	HRESULT Status;
-	DxcResult->GetStatus(&Status);
-	if (FAILED(Status))
+	if (SUCCEEDED(DxcResult->GetStatus(&Status)))
 	{
-		ComPtr<IDxcBlobUtf8>  Errors;
-		ComPtr<IDxcBlobUtf16> OutputName;
-		if (SUCCEEDED(DxcResult->GetOutput(
-				DXC_OUT_ERRORS,
-				IID_PPV_ARGS(Errors.GetAddressOf()),
-				OutputName.ReleaseAndGetAddressOf())))
+		if (FAILED(Status))
 		{
-			OutputDebugStringA(std::bit_cast<char*>(Errors->GetBufferPointer()));
-			throw std::runtime_error("Failed to compile shader");
-		}
-		else
-		{
-			throw std::runtime_error("Failed to obtain error");
+			ComPtr<IDxcBlobUtf8>  Errors;
+			ComPtr<IDxcBlobUtf16> OutputName;
+			if (SUCCEEDED(DxcResult->GetOutput(
+					DXC_OUT_ERRORS,
+					IID_PPV_ARGS(Errors.GetAddressOf()),
+					OutputName.ReleaseAndGetAddressOf())))
+			{
+				OutputDebugStringA(std::bit_cast<char*>(Errors->GetBufferPointer()));
+				throw std::runtime_error("Failed to compile shader");
+			}
+			else
+			{
+				throw std::runtime_error("Failed to obtain error");
+			}
 		}
 	}
 
@@ -210,8 +212,6 @@ void ShaderCompiler::Compile(
 	{
 		ComPtr<IDxcBlobUtf16> PDB;
 		DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(ppPDBBlob), PDB.ReleaseAndGetAddressOf());
-		{
-			PDBName = PDB->GetStringPointer();
-		}
+		PDBName = PDB->GetStringPointer();
 	}
 }

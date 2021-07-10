@@ -3,7 +3,7 @@
 
 bool Mouse::IsPressed(Button Button) const
 {
-	return m_ButtonStates[Button];
+	return ButtonStates[Button];
 }
 
 bool Mouse::IsLeftPressed() const
@@ -21,33 +21,28 @@ bool Mouse::IsRightPressed() const
 	return IsPressed(Button::Right);
 }
 
-bool Mouse::IsInWindow() const
-{
-	return m_IsInWindow;
-}
-
 std::optional<Mouse::Event> Mouse::Read()
 {
-	if (m_MouseBuffer.empty())
+	if (MouseBuffer.empty())
 	{
 		return {};
 	}
 
-	Mouse::Event e = m_MouseBuffer.front();
-	m_MouseBuffer.pop();
+	Mouse::Event e = MouseBuffer.front();
+	MouseBuffer.pop();
 
 	return e;
 }
 
 std::optional<Mouse::RawInput> Mouse::ReadRawInput()
 {
-	if (m_RawDeltaBuffer.empty())
+	if (RawDeltaBuffer.empty())
 	{
 		return {};
 	}
 
-	Mouse::RawInput e = m_RawDeltaBuffer.front();
-	m_RawDeltaBuffer.pop();
+	Mouse::RawInput e = RawDeltaBuffer.front();
+	RawDeltaBuffer.pop();
 
 	return e;
 }
@@ -55,96 +50,96 @@ std::optional<Mouse::RawInput> Mouse::ReadRawInput()
 void Mouse::OnMove(int x, int y)
 {
 	this->x = x, this->y = y;
-	m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Move, *this));
-	TrimBuffer(m_MouseBuffer);
+	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Move, *this));
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnEnter()
 {
-	m_IsInWindow = true;
-	m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Enter, *this));
-	TrimBuffer(m_MouseBuffer);
+	IsInWindow = true;
+	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Enter, *this));
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnLeave()
 {
-	m_IsInWindow = false;
-	m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Leave, *this));
-	TrimBuffer(m_MouseBuffer);
+	IsInWindow = false;
+	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Leave, *this));
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnButtonDown(Button Button, int x, int y)
 {
 	this->x = x, this->y = y;
-	m_ButtonStates[Button] = true;
+	ButtonStates[Button] = true;
 	switch (Button)
 	{
 	case Mouse::Left:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBPress, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBPress, *this));
 		break;
 	case Mouse::Middle:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBPress, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBPress, *this));
 		break;
 	case Mouse::Right:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBPress, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBPress, *this));
 		break;
 	case Mouse::NumButtons:
 		[[fallthrough]];
 	default:
 		break;
 	}
-	TrimBuffer(m_MouseBuffer);
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnButtonUp(Button Button, int x, int y)
 {
 	this->x = x, this->y = y;
-	m_ButtonStates[Button] = false;
+	ButtonStates[Button] = false;
 	switch (Button)
 	{
 	case Mouse::Left:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBRelease, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::LMBRelease, *this));
 		break;
 	case Mouse::Middle:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBRelease, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::MMBRelease, *this));
 		break;
 	case Mouse::Right:
-		m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBRelease, *this));
+		MouseBuffer.push(Mouse::Event(Mouse::Event::EType::RMBRelease, *this));
 		break;
 	case Mouse::NumButtons:
 		[[fallthrough]];
 	default:
 		break;
 	}
-	TrimBuffer(m_MouseBuffer);
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnWheelDown(int x, int y)
 {
 	this->x = x, this->y = y;
-	m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::WheelDown, *this));
-	TrimBuffer(m_MouseBuffer);
+	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::WheelDown, *this));
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnWheelUp(int x, int y)
 {
 	this->x = x, this->y = y;
-	m_MouseBuffer.push(Mouse::Event(Mouse::Event::EType::WheelUp, *this));
-	TrimBuffer(m_MouseBuffer);
+	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::WheelUp, *this));
+	TrimBuffer(MouseBuffer);
 }
 
 void Mouse::OnWheelDelta(int WheelDelta, int x, int y)
 {
-	m_WheelDeltaCarry += WheelDelta;
+	WheelDeltaCarry += WheelDelta;
 	// Generate events for every 120
-	while (m_WheelDeltaCarry >= WHEEL_DELTA)
+	while (WheelDeltaCarry >= WHEEL_DELTA)
 	{
-		m_WheelDeltaCarry -= WHEEL_DELTA;
+		WheelDeltaCarry -= WHEEL_DELTA;
 		OnWheelUp(x, y);
 	}
-	while (m_WheelDeltaCarry <= -WHEEL_DELTA)
+	while (WheelDeltaCarry <= -WHEEL_DELTA)
 	{
-		m_WheelDeltaCarry += WHEEL_DELTA;
+		WheelDeltaCarry += WHEEL_DELTA;
 		OnWheelDown(x, y);
 	}
 }
@@ -153,6 +148,6 @@ void Mouse::OnRawInput(int x, int y)
 {
 	xRaw = x, yRaw = y;
 
-	m_RawDeltaBuffer.push({ x, y });
-	TrimBuffer(m_RawDeltaBuffer);
+	RawDeltaBuffer.push({ x, y });
+	TrimBuffer(RawDeltaBuffer);
 }

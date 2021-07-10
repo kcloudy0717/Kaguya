@@ -41,9 +41,10 @@ void CommandAllocatorPool::DiscardCommandAllocator(CommandAllocator* CommandAllo
 	CommandAllocatorQueue.push(CommandAllocator);
 }
 
-CommandQueue::CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType)
+CommandQueue::CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType, ECommandQueueType CommandQueueType)
 	: DeviceChild(Device)
 	, CommandListType(CommandListType)
+	, CommandQueueType(CommandQueueType)
 	, ResourceBarrierCommandAllocatorPool(Device, CommandListType)
 {
 }
@@ -58,9 +59,12 @@ void CommandQueue::Initialize(std::optional<UINT> NumCommandLists /*= {}*/)
 									  .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 									  .Flags	= D3D12_COMMAND_QUEUE_FLAG_NONE,
 									  .NodeMask = NodeMask };
-	ThrowIfFailed(Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(pCommandQueue.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(
+		Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(pCommandQueue.ReleaseAndGetAddressOf())));
 
-	ThrowIfFailed(
+	pCommandQueue->SetName(GetCommandQueueTypeString(CommandQueueType));
+
+	ASSERTD3D12APISUCCEEDED(
 		Device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.ReleaseAndGetAddressOf())));
 
 	FenceValue = 1;
@@ -84,7 +88,7 @@ void CommandQueue::Initialize(std::optional<UINT> NumCommandLists /*= {}*/)
 UINT64 CommandQueue::AdvanceGpu()
 {
 	std::scoped_lock _(FenceMutex);
-	HRESULT			 hr = pCommandQueue->Signal(Fence.Get(), FenceValue);
+	ASSERTD3D12APISUCCEEDED(pCommandQueue->Signal(Fence.Get(), FenceValue));
 	return FenceValue++;
 }
 
@@ -101,20 +105,20 @@ void CommandQueue::WaitForFence(UINT64 FenceValue)
 	}
 
 	std::scoped_lock _(FenceMutex);
-	Fence->SetEventOnCompletion(FenceValue, nullptr);
+	ASSERTD3D12APISUCCEEDED(Fence->SetEventOnCompletion(FenceValue, nullptr));
 }
 
 void CommandQueue::Wait(CommandQueue* CommandQueue)
 {
 	UINT64 Value = CommandQueue->FenceValue - 1;
-	pCommandQueue->Wait(CommandQueue->Fence.Get(), Value);
+	ASSERTD3D12APISUCCEEDED(pCommandQueue->Wait(CommandQueue->Fence.Get(), Value));
 }
 
 void CommandQueue::WaitForSyncPoint(const CommandSyncPoint& SyncPoint)
 {
 	if (SyncPoint.IsValid())
 	{
-		pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value);
+		ASSERTD3D12APISUCCEEDED(pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value));
 	}
 }
 

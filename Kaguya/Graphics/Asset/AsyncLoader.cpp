@@ -24,25 +24,25 @@ AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMet
 	ScratchImage OutImage	 = {};
 	if (Extension == ".dds")
 	{
-		ThrowIfFailed(LoadFromDDSFile(Path.c_str(), DDS_FLAGS::DDS_FLAGS_FORCE_RGB, &TexMetadata, OutImage));
+		assert(SUCCEEDED((LoadFromDDSFile(Path.c_str(), DDS_FLAGS::DDS_FLAGS_FORCE_RGB, &TexMetadata, OutImage))));
 	}
 	else if (Extension == ".tga")
 	{
 		ScratchImage BaseImage;
-		ThrowIfFailed(LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage));
-		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
+		assert(SUCCEEDED((LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage))));
+		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
 	}
 	else if (Extension == ".hdr")
 	{
 		ScratchImage BaseImage;
-		ThrowIfFailed(LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage));
-		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
+		assert(SUCCEEDED((LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage))));
+		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
 	}
 	else
 	{
 		ScratchImage BaseImage;
-		ThrowIfFailed(LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage));
-		ThrowIfFailed(GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false));
+		assert(SUCCEEDED((LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage))));
+		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
 	}
 
 	auto Image		  = std::make_shared<Asset::Image>();

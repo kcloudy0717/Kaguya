@@ -1,6 +1,6 @@
 #pragma once
 #include <Core/CoreDefines.h>
-#include "DeviceChild.h"
+#include "D3D12Common.h"
 #include "CommandQueue.h"
 #include "MemoryAllocator.h"
 

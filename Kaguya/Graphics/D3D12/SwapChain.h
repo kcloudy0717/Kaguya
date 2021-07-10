@@ -1,5 +1,5 @@
 #pragma once
-#include "DescriptorHeap.h"
+#include "D3D12Common.h"
 
 class SwapChain
 {

@@ -6,12 +6,12 @@
 InputHandler::InputHandler(_In_ HWND hWnd)
 {
 	// Register RAWINPUTDEVICE for handling input
-	RAWINPUTDEVICE rid[2] = {
+	RAWINPUTDEVICE RIDs[2] = {
 		RAWINPUTDEVICE{ HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_MOUSE, RIDEV_INPUTSINK, hWnd },
 		RAWINPUTDEVICE{ HID_USAGE_PAGE_GENERIC, HID_USAGE_GENERIC_KEYBOARD, RIDEV_INPUTSINK, hWnd }
 	};
 
-	if (!::RegisterRawInputDevices(rid, 2, sizeof(rid[0])))
+	if (!::RegisterRawInputDevices(RIDs, 2, sizeof(RIDs[0])))
 	{
 		ErrorExit(TEXT("RegisterRawInputDevices"));
 	}
@@ -47,10 +47,10 @@ void InputHandler::DisableCursor()
 
 void InputHandler::ConfineCursor()
 {
-	RECT rect = {};
-	::GetClientRect(hWnd, &rect);
-	::MapWindowPoints(hWnd, nullptr, reinterpret_cast<POINT*>(&rect), 2);
-	::ClipCursor(&rect);
+	RECT ClientRect = {};
+	::GetClientRect(hWnd, &ClientRect);
+	::MapWindowPoints(hWnd, nullptr, reinterpret_cast<POINT*>(&ClientRect), 2);
+	::ClipCursor(&ClientRect);
 }
 
 void InputHandler::FreeCursor()
@@ -172,7 +172,7 @@ void InputHandler::HandleStandardInput(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ 
 		if (points.x >= 0 && points.x < width && points.y >= 0 && points.y < height)
 		{
 			Mouse.OnMove(points.x, points.y);
-			if (!Mouse.IsInWindow())
+			if (!Mouse.IsInWindow)
 			{
 				::SetCapture(hWnd);
 				Mouse.OnEnter();

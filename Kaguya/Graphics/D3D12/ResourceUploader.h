@@ -1,5 +1,5 @@
 #pragma once
-#include "DeviceChild.h"
+#include "D3D12Common.h"
 #include "CommandContext.h"
 #include "CommandQueue.h"
 #include "MemoryAllocator.h"
@@ -20,7 +20,7 @@ public:
 	void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* pResource);
 
 private:
-	CommandContext&										CopyContext;
+	CommandContext&										CopyContext2;
 	CommandSyncPoint									SyncPoint;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> TrackedResources;
 };

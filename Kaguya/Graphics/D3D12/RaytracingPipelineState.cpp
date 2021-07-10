@@ -254,9 +254,9 @@ RaytracingPipelineState::RaytracingPipelineState(ID3D12Device5* pDevice, Raytrac
 {
 	D3D12_STATE_OBJECT_DESC Desc = Builder.Build();
 
-	ThrowIfFailed(pDevice->CreateStateObject(&Desc, IID_PPV_ARGS(StateObject.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(pDevice->CreateStateObject(&Desc, IID_PPV_ARGS(StateObject.ReleaseAndGetAddressOf())));
 	// Query the state object properties
-	ThrowIfFailed(StateObject.As(&StateObjectProperties));
+	ASSERTD3D12APISUCCEEDED(StateObject.As(&StateObjectProperties));
 }
 
 void* RaytracingPipelineState::GetShaderIdentifier(std::wstring_view pExportName)

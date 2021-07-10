@@ -1,26 +1,26 @@
 #pragma once
+#include "D3D12Common.h"
 #include "dxcapi.h"
 #include "d3d12shader.h"
+
+enum class EShaderType
+{
+	Vertex,
+	Hull,
+	Domain,
+	Geometry,
+	Pixel,
+	Compute,
+	Amplification,
+	Mesh
+};
 
 class Shader
 {
 public:
-	enum class EType
-	{
-		Unknown,
-		Vertex,
-		Hull,
-		Domain,
-		Geometry,
-		Pixel,
-		Compute,
-		Amplification,
-		Mesh,
-	};
-
 	Shader() noexcept = default;
-	Shader(EType Type, IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring&& PDBName) noexcept
-		: Type(Type)
+	Shader(EShaderType ShaderType, IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring PDBName) noexcept
+		: ShaderType(ShaderType)
 		, Blob(Blob)
 		, PDBBlob(PDBBlob)
 		, PDBName(std::move(PDBName))
@@ -34,7 +34,7 @@ public:
 	}
 
 private:
-	EType							 Type;
+	EShaderType						 ShaderType;
 	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
 	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob;
 	std::wstring					 PDBName;
@@ -50,7 +50,7 @@ class Library
 {
 public:
 	Library() noexcept = default;
-	Library(IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring&& PDBName) noexcept
+	Library(IDxcBlob* Blob, IDxcBlob* PDBBlob, std::wstring PDBName) noexcept
 		: Blob(Blob)
 		, PDBBlob(PDBBlob)
 		, PDBName(std::move(PDBName))
@@ -79,7 +79,7 @@ public:
 	void SetIncludeDirectory(const std::filesystem::path& Path);
 
 	Shader CompileShader(
-		Shader::EType				  Type,
+		EShaderType					  ShaderType,
 		const std::filesystem::path&  Path,
 		std::wstring_view			  EntryPoint,
 		const std::vector<DxcDefine>& ShaderDefines) const;
@@ -87,7 +87,7 @@ public:
 	Library CompileLibrary(const std::filesystem::path& Path) const;
 
 private:
-	std::wstring ShaderProfileString(Shader::EType Type, D3D_SHADER_MODEL ShaderModel) const;
+	std::wstring ShaderProfileString(EShaderType ShaderType, D3D_SHADER_MODEL ShaderModel) const;
 
 	std::wstring LibraryProfileString(D3D_SHADER_MODEL ShaderModel) const;
 

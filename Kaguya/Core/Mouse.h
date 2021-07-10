@@ -72,7 +72,6 @@ public:
 	bool IsLeftPressed() const;
 	bool IsMiddlePressed() const;
 	bool IsRightPressed() const;
-	bool IsInWindow() const;
 
 	std::optional<Mouse::Event> Read();
 
@@ -108,10 +107,11 @@ public:
 	int xRaw = 0;
 	int yRaw = 0;
 
+	bool IsInWindow = false;
+
 private:
-	std::bitset<NumButtons>	 m_ButtonStates;
-	bool					 m_IsInWindow	   = false;
-	int						 m_WheelDeltaCarry = 0;
-	std::queue<Mouse::Event> m_MouseBuffer;
-	std::queue<RawInput>	 m_RawDeltaBuffer;
+	std::bitset<NumButtons>	 ButtonStates;
+	int						 WheelDeltaCarry = 0;
+	std::queue<Mouse::Event> MouseBuffer;
+	std::queue<RawInput>	 RawDeltaBuffer;
 };

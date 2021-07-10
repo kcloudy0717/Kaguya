@@ -1,6 +1,5 @@
 #pragma once
-#include "DeviceChild.h"
-#include "D3D12Utility.h"
+#include "D3D12Common.h"
 #include "ResourceStateTracker.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
@@ -33,7 +32,7 @@ public:
 	void Reset()
 	{
 		assert(IsReady());
-		ThrowIfFailed(pCommandAllocator->Reset());
+		ASSERTD3D12APISUCCEEDED(pCommandAllocator->Reset());
 	}
 
 private:

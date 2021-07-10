@@ -80,3 +80,103 @@ inline std::size_t ToGiB(std::size_t Byte)
 {
 	return Byte / 1024 / 1024 / 1024;
 }
+
+#include <type_traits>
+// http://blog.bitwigglers.org/using-enum-classes-as-type-safe-bitmasks/
+
+template<typename Enum>
+struct EnableBitMaskOperators
+{
+	static const bool Enable = false;
+};
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator|(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum>(static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator&(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum>(static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator^(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum>(static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator~(Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum>(~static_cast<underlying>(rhs));
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator|=(Enum& lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	return lhs;
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator&=(Enum& lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+	return lhs;
+}
+
+template<typename Enum>
+typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator^=(Enum& lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
+	return lhs;
+}
+
+#define ENABLE_BITMASK_OPERATORS(Enum)                                                                                 \
+	template<>                                                                                                         \
+	struct EnableBitMaskOperators<Enum>                                                                                \
+	{                                                                                                                  \
+		static const bool Enable = true;                                                                               \
+	};                                                                                                                 \
+                                                                                                                       \
+	inline bool EnumMaskBitSet(Enum Mask, Enum Component) { return (Mask & Component) == Component; }
+
+// http://reedbeta.com/blog/python-like-enumerate-in-cpp17/
+#include <tuple>
+
+template<
+	typename T,
+	typename TIter = decltype(std::begin(std::declval<T>())),
+	typename	   = decltype(std::end(std::declval<T>()))>
+constexpr auto enumerate(T&& iterable)
+{
+	struct iterator
+	{
+		size_t i;
+		TIter  iter;
+		bool   operator!=(const iterator& other) const { return iter != other.iter; }
+		void   operator++()
+		{
+			++i;
+			++iter;
+		}
+		auto operator*() const { return std::tie(i, *iter); }
+	};
+	struct iterable_wrapper
+	{
+		T	 iterable;
+		auto begin() { return iterator{ 0, std::begin(iterable) }; }
+		auto end() { return iterator{ 0, std::end(iterable) }; }
+	};
+	return iterable_wrapper{ std::forward<T>(iterable) };
+}

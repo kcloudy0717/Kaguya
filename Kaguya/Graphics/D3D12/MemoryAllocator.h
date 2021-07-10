@@ -1,7 +1,7 @@
 #pragma once
 #include <Core/CoreDefines.h>
 #include <Core/CriticalSection.h>
-#include "DeviceChild.h"
+#include "D3D12Common.h"
 
 struct Allocation
 {

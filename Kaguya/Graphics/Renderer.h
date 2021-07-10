@@ -3,7 +3,6 @@
 
 #include "RaytracingAccelerationStructure.h"
 #include "PathIntegrator.h"
-#include "Picking.h"
 #include "ToneMapper.h"
 
 class Renderer : public RenderSystem
@@ -20,7 +19,6 @@ public:
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
 	const ShaderResourceView& GetViewportDescriptor() { return m_ToneMapper.GetSRV(); }
-	Entity					  GetSelectedEntity() { return m_Picking.GetSelectedEntity().value_or(Entity()); }
 
 protected:
 	void Initialize() override;
@@ -41,7 +39,6 @@ private:
 
 	RaytracingAccelerationStructure AccelerationStructure;
 	PathIntegrator					m_PathIntegrator;
-	Picking							m_Picking;
 	ToneMapper						m_ToneMapper;
 
 	Buffer			Materials;

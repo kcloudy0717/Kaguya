@@ -1,5 +1,5 @@
 #pragma once
-#include "DeviceChild.h"
+#include "D3D12Common.h"
 
 template<typename ViewDesc>
 class Descriptor : public DeviceChild

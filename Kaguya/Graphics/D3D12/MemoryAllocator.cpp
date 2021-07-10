@@ -106,13 +106,13 @@ LinearAllocatorPage* LinearAllocator::CreateNewPage(UINT64 PageSize)
 	auto ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
-	Device->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(Device->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf())));
 
 #ifdef _DEBUG
 	pResource->SetName(L"Linear Allocator Page");
@@ -178,18 +178,19 @@ void BuddyAllocator::Initialize()
 		Desc.Alignment		 = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 		Desc.Flags			 = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 
-		GetParentDevice()->GetDevice()->CreateHeap(&Desc, IID_PPV_ARGS(Heap.ReleaseAndGetAddressOf()));
+		ASSERTD3D12APISUCCEEDED(
+			GetParentDevice()->GetDevice()->CreateHeap(&Desc, IID_PPV_ARGS(Heap.ReleaseAndGetAddressOf())));
 	}
 	else
 	{
 		D3D12_RESOURCE_DESC Desc = CD3DX12_RESOURCE_DESC::Buffer(MaxBlockSize);
-		GetParentDevice()->GetDevice()->CreateCommittedResource(
+		ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
 			&HeapProperties,
 			D3D12_HEAP_FLAG_NONE,
 			&Desc,
 			GetBufferInitialState(HeapType),
 			nullptr,
-			IID_PPV_ARGS(Buffer.ReleaseAndGetAddressOf()));
+			IID_PPV_ARGS(Buffer.ReleaseAndGetAddressOf())));
 	}
 }
 

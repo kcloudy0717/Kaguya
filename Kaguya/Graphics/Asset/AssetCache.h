@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 #include <Core/RWLock.h>
-#include <Core/Utility.h>
 
 template<typename T>
 class AssetCache;

@@ -1,6 +1,5 @@
 #pragma once
-#include "D3D12Utility.h"
-#include "DeviceChild.h"
+#include "D3D12Common.h"
 #include "Descriptor.h"
 
 // Custom resource states
@@ -254,7 +253,7 @@ public:
 	{
 		auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
 		auto rd = CD3DX12_RESOURCE_DESC::Buffer(Size);
-		ThrowIfFailed(Device->CreateCommittedResource(
+		ASSERTD3D12APISUCCEEDED(Device->CreateCommittedResource(
 			&hp,
 			D3D12_HEAP_FLAG_NONE,
 			&rd,

@@ -112,7 +112,7 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 
 			Builder.SetRaytracingShaderConfig(
 				12 * sizeof(float) + 2 * sizeof(unsigned int),
-				SizeOfBuiltInTriangleIntersectionAttributes);
+				D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES);
 
 			// +1 for Primary, +1 for Shadow
 			Builder.SetRaytracingPipelineConfig(2);

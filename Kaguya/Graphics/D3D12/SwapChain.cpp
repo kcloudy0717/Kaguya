@@ -29,14 +29,14 @@ SwapChain::SwapChain(HWND hWnd, IDXGIFactory5* pFactory5, ID3D12Device* pDevice,
 	Desc.Flags = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	ComPtr<IDXGISwapChain1> SwapChain1;
-	ThrowIfFailed(pFactory5->CreateSwapChainForHwnd(
+	ASSERTD3D12APISUCCEEDED(pFactory5->CreateSwapChainForHwnd(
 		pCommandQueue,
 		hWnd,
 		&Desc,
 		nullptr,
 		nullptr,
 		SwapChain1.ReleaseAndGetAddressOf()));
-	ThrowIfFailed(pFactory5->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
+	ASSERTD3D12APISUCCEEDED(pFactory5->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
 	SwapChain1.As(&SwapChain4);
 
 	// Create Descriptor heap
@@ -44,7 +44,7 @@ SwapChain::SwapChain(HWND hWnd, IDXGIFactory5* pFactory5, ID3D12Device* pDevice,
 											.NumDescriptors = BackBufferCount,
 											.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 											.NodeMask		= 0 };
-	ThrowIfFailed(pDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(RTVHeaps.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(pDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(RTVHeaps.ReleaseAndGetAddressOf())));
 	UINT RTVViewStride = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// Initialize RTVs
@@ -60,7 +60,7 @@ SwapChain::SwapChain(HWND hWnd, IDXGIFactory5* pFactory5, ID3D12Device* pDevice,
 ID3D12Resource* SwapChain::GetBackBuffer(UINT Index) const
 {
 	ID3D12Resource* pBackBuffer = nullptr;
-	ThrowIfFailed(SwapChain4->GetBuffer(Index, IID_PPV_ARGS(&pBackBuffer)));
+	ASSERTD3D12APISUCCEEDED(SwapChain4->GetBuffer(Index, IID_PPV_ARGS(&pBackBuffer)));
 	pBackBuffer->Release();
 	return pBackBuffer;
 }
@@ -77,8 +77,8 @@ void SwapChain::Resize(UINT Width, UINT Height)
 	// Resize backbuffer
 	// Note: Cannot use ResizeBuffers1 when debugging in Nsight Graphics, it will crash
 	DXGI_SWAP_CHAIN_DESC1 Desc = {};
-	ThrowIfFailed(SwapChain4->GetDesc1(&Desc));
-	ThrowIfFailed(SwapChain4->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, Desc.Flags));
+	ASSERTD3D12APISUCCEEDED(SwapChain4->GetDesc1(&Desc));
+	ASSERTD3D12APISUCCEEDED(SwapChain4->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, Desc.Flags));
 
 	CreateRenderTargetViews();
 }
@@ -99,7 +99,6 @@ void SwapChain::Present(bool VSync)
 	catch (HRESULT hr)
 	{
 		HRESULT errorCode = hr;
-		throw hresult_exception(hr);
 	}
 }
 
@@ -108,7 +107,7 @@ void SwapChain::CreateRenderTargetViews()
 	for (UINT i = 0; i < BackBufferCount; ++i)
 	{
 		ComPtr<ID3D12Resource> pBackBuffer;
-		ThrowIfFailed(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
+		ASSERTD3D12APISUCCEEDED(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
 
 		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
 		ViewDesc.Format						   = Format;

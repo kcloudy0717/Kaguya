@@ -1,7 +1,7 @@
 #pragma once
 #include "D3D12/ShaderCompiler.h"
 
-#include "D3D12/D3D12Utility.h"
+#include "D3D12/Adapter.h"
 #include "D3D12/Device.h"
 #include "D3D12/CommandQueue.h"
 #include "D3D12/PipelineState.h"
@@ -49,8 +49,8 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = m_Device->GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = m_Device->GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = Adapter.GetDevice()->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = Adapter.GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
 
 		Context->SetGraphicsRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
@@ -67,8 +67,8 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = m_Device->GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = m_Device->GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = Adapter.GetDevice()->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = Adapter.GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
 
 		Context->SetComputeRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
@@ -88,18 +88,15 @@ public:
 	template<typename PipelineStateStream>
 	[[nodiscard]] PipelineState CreatePipelineState(PipelineStateStream& Stream)
 	{
-		return PipelineState(m_Device->GetDevice5(), Stream);
+		return PipelineState(Adapter.GetD3D12Device5(), Stream);
 	}
 
 	[[nodiscard]] RaytracingPipelineState CreateRaytracingPipelineState(
 		std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
 
-	const auto&					 GetAdapterDesc() const { return AdapterDesc; }
-	DXGI_QUERY_VIDEO_MEMORY_INFO QueryLocalVideoMemoryInfo() const;
-
 	auto GetCurrentBackBufferResource() const { return m_SwapChain.GetCurrentBackBufferResource(); }
 
-	Device* GetDevice() noexcept { return m_Device.get(); }
+	Device* GetDevice() noexcept { return Adapter.GetDevice(); }
 
 private:
 	RenderDevice();
@@ -108,16 +105,10 @@ private:
 	RenderDevice(const RenderDevice&) = delete;
 	RenderDevice& operator=(const RenderDevice&) = delete;
 
-	void InitializeDXGIObjects();
-
 	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
 private:
-	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> Adapter4;
-	DXGI_ADAPTER_DESC3					  AdapterDesc;
-
-	std::unique_ptr<Device> m_Device;
+	Adapter Adapter;
 
 	SwapChain m_SwapChain;
 

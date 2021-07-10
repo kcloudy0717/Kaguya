@@ -66,7 +66,6 @@ void Renderer::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator::NumHitGroups);
 
 	m_PathIntegrator = PathIntegrator(RenderDevice::Instance());
-	m_Picking.Create();
 	m_ToneMapper = ToneMapper(RenderDevice::Instance());
 
 	Materials = Buffer(
@@ -75,7 +74,7 @@ void Renderer::Initialize()
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	ThrowIfFailed(Materials.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pMaterials)));
+	Materials.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pMaterials));
 
 	Lights = Buffer(
 		RenderDevice.GetDevice(),
@@ -83,7 +82,7 @@ void Renderer::Initialize()
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	ThrowIfFailed(Lights.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pLights)));
+	Lights.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pLights));
 }
 
 void Renderer::Render(Scene& Scene)
@@ -116,7 +115,6 @@ void Renderer::Render(Scene& Scene)
 
 		// Update shader table
 		m_PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
-		m_Picking.UpdateShaderTable(AccelerationStructure, Copy);
 
 		Copy.CloseCommandList();
 
@@ -229,8 +227,6 @@ void Renderer::Render(Scene& Scene)
 			Materials.GetGPUVirtualAddress(),
 			Lights.GetGPUVirtualAddress(),
 			Context);
-
-		m_Picking.ShootPickingRay(Allocation.GPUVirtualAddress, AccelerationStructure, Context);
 	}
 
 	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);

@@ -1,14 +1,15 @@
 #pragma once
+#include "D3D12Common.h"
 
 class PipelineState
 {
 public:
 	PipelineState() noexcept = default;
-	PipelineState(_In_ ID3D12Device* pDevice, _In_ const D3D12_GRAPHICS_PIPELINE_STATE_DESC* pDesc);
-	PipelineState(_In_ ID3D12Device* pDevice, _In_ const D3D12_COMPUTE_PIPELINE_STATE_DESC* pDesc);
-	PipelineState(_In_ ID3D12Device2* pDevice, _In_ const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
+	PipelineState(ID3D12Device* pDevice, const D3D12_GRAPHICS_PIPELINE_STATE_DESC* pDesc);
+	PipelineState(ID3D12Device* pDevice, const D3D12_COMPUTE_PIPELINE_STATE_DESC* pDesc);
+	PipelineState(ID3D12Device2* pDevice, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
 	template<typename PipelineStateStream>
-	PipelineState(_In_ ID3D12Device2* pDevice, _In_ PipelineStateStream& Stream)
+	PipelineState(ID3D12Device2* pDevice, PipelineStateStream& Stream)
 		: PipelineState(
 			  pDevice,
 			  D3D12_PIPELINE_STATE_STREAM_DESC{ .SizeInBytes				   = sizeof(PipelineStateStream),

@@ -158,13 +158,13 @@ Texture::Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<
 		ResourceStateDeterminer(Desc, D3D12_HEAP_TYPE_DEFAULT).GetOptimalInitialState();
 	const D3D12_CLEAR_VALUE* OptimizedClearValue = ClearValue.has_value() ? &(*ClearValue) : nullptr;
 
-	Device->GetDevice()->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(Device->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&Desc,
 		InitialResourceState,
 		OptimizedClearValue,
-		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf())));
 
 	UINT8 PlaneCount = D3D12GetFormatPlaneCount(Device->GetDevice(), Desc.Format);
 	NumSubresources	 = Desc.MipLevels * Desc.DepthOrArraySize * PlaneCount;
@@ -358,13 +358,13 @@ ASBuffer::ASBuffer(Device* Device, UINT64 SizeInBytes)
 	const D3D12_HEAP_PROPERTIES HeapProperties		 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
 	const D3D12_RESOURCE_STATES InitialResourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
-	Device->GetDevice()->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(Device->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&Desc,
 		InitialResourceState,
 		nullptr,
-		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf())));
 
 	ResourceState = CResourceState(NumSubresources);
 	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
@@ -383,20 +383,20 @@ Buffer::Buffer(
 
 	const D3D12_RESOURCE_STATES InitialResourceState = ResourceStateDeterminer(Desc, HeapType).GetOptimalInitialState();
 
-	Device->GetDevice()->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(Device->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&Desc,
 		InitialResourceState,
 		nullptr,
-		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf()));
+		IID_PPV_ARGS(pResource.ReleaseAndGetAddressOf())));
 
 	ResourceState = CResourceState(NumSubresources);
 	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
 
 	if (HeapType == D3D12_HEAP_TYPE_UPLOAD)
 	{
-		ThrowIfFailed(pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress)));
+		ASSERTD3D12APISUCCEEDED(pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress)));
 
 		// We do not need to unmap until we are done with the resource.  However, we must not write to
 		// the resource while it is in use by the GPU (so we must use synchronization techniques).

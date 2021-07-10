@@ -1,5 +1,5 @@
 #pragma once
-#include "d3dx12.h"
+#include "D3D12Common.h"
 
 /*
 	The maximum size of a root signature is 64 DWORDs.
@@ -216,7 +216,7 @@ class RootSignature
 public:
 	RootSignature() noexcept = default;
 
-	RootSignature(_In_ ID3D12Device* pDevice, _In_ RootSignatureBuilder& Builder);
+	RootSignature(ID3D12Device* pDevice, RootSignatureBuilder& Builder);
 
 	operator ID3D12RootSignature*() const { return pRootSignature.Get(); }
 

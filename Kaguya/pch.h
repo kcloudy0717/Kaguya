@@ -77,53 +77,13 @@
 #include <DirectXTex.h>
 #include <nfd.h>
 
-#include <Core/CoreDefines.h>
-#include <Core/Console.h>
+#include <Core/Core.h>
 #include <Core/Application.h>
-#include <Core/Utility.h>
+#include <Core/Console.h>
 #include <Core/Log.h>
 #include <Core/Math.h>
 #include <Core/CriticalSection.h>
 #include <Core/RWLock.h>
-
-inline std::string hresult_to_string(HRESULT hr)
-{
-	char s_str[64] = {};
-	sprintf_s(s_str, "HRESULT of 0x%08X", static_cast<UINT>(hr));
-	return std::string(s_str);
-}
-
-class hresult_exception : public std::runtime_error
-{
-public:
-	hresult_exception(HRESULT hr)
-		: std::runtime_error(hresult_to_string(hr))
-		, m_hr(hr)
-	{
-	}
-	HRESULT Error() const { return m_hr; }
-
-private:
-	const HRESULT m_hr;
-};
-
-inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw hresult_exception(hr);
-	}
-}
-
-template<typename T>
-void SafeRelease(T*& Ptr)
-{
-	if (Ptr)
-	{
-		Ptr->Release();
-		Ptr = nullptr;
-	}
-}
 
 // https://docs.microsoft.com/en-us/windows/win32/debug/retrieving-the-last-error-code?redirectedfrom=MSDN
 inline static void ErrorExit(LPCTSTR lpszFunction)

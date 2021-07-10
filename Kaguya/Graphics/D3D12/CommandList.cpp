@@ -7,7 +7,7 @@ using Microsoft::WRL::ComPtr;
 
 CommandAllocator::CommandAllocator(ID3D12Device* pDevice, D3D12_COMMAND_LIST_TYPE Type)
 {
-	ThrowIfFailed(pDevice->CreateCommandAllocator(Type, IID_PPV_ARGS(pCommandAllocator.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(pDevice->CreateCommandAllocator(Type, IID_PPV_ARGS(pCommandAllocator.ReleaseAndGetAddressOf())));
 }
 
 CommandListHandle::CommandListHandle(Device* Device, D3D12_COMMAND_LIST_TYPE Type, CommandQueue* CommandQueue)
@@ -104,7 +104,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 	, pCommandAllocator(nullptr)
 	, IsClosed(true)
 {
-	ThrowIfFailed(Device->GetDevice5()->CreateCommandList1(
+	ASSERTD3D12APISUCCEEDED(Device->GetDevice5()->CreateCommandList1(
 		1,
 		Type,
 		D3D12_COMMAND_LIST_FLAG_NONE,
@@ -125,7 +125,7 @@ void CommandListHandle::CommandList::Close()
 		IsClosed = true;
 
 		FlushResourceBarriers();
-		ThrowIfFailed(GraphicsCommandList->Close());
+		ASSERTD3D12APISUCCEEDED(GraphicsCommandList->Close());
 	}
 }
 
@@ -134,7 +134,7 @@ void CommandListHandle::CommandList::Reset(CommandAllocator* CommandAllocator)
 	pCommandAllocator = CommandAllocator;
 	IsClosed		  = false;
 
-	ThrowIfFailed(GraphicsCommandList->Reset(*pCommandAllocator, nullptr));
+	ASSERTD3D12APISUCCEEDED(GraphicsCommandList->Reset(*pCommandAllocator, nullptr));
 
 	// Reset resource state tracking and resource barriers
 	ResourceStateTracker.Reset();
