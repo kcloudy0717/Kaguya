@@ -7,15 +7,15 @@
 struct SystemConstants
 {
 	Camera Camera;
-	
+
 	// x, y = Resolution
 	// z, w = 1 / Resolution
 	float4 Resolution;
 
 	float2 MousePosition;
 
-	uint TotalFrameCount;
 	uint NumLights;
+	uint TotalFrameCount;
 };
 
 struct RenderPassData
@@ -27,11 +27,11 @@ struct RenderPassData
 };
 
 ConstantBuffer<SystemConstants> g_SystemConstants : register(b0, space0);
-ConstantBuffer<RenderPassData> g_RenderPassData : register(b1, space0);
+ConstantBuffer<RenderPassData>	g_RenderPassData : register(b1, space0);
 
 RaytracingAccelerationStructure g_Scene : register(t0, space0);
-StructuredBuffer<Material> g_Materials : register(t1, space0);
-StructuredBuffer<Light> g_Lights : register(t2, space0);
+StructuredBuffer<Material>		g_Materials : register(t1, space0);
+StructuredBuffer<Light>			g_Lights : register(t2, space0);
 
 SamplerState g_SamplerPointWrap : register(s0, space0);
 SamplerState g_SamplerPointClamp : register(s1, space0);

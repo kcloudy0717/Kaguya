@@ -14,6 +14,7 @@
 #include <optional>
 #include <compare>
 #include <mutex>
+#include <span>
 
 // c++ stl
 #include <array>

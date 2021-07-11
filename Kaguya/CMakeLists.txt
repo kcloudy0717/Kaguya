@@ -1,20 +1,14 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 set(PROJECTNAME Kaguya)
+set(PROJECTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Kaguya")
 set(Main "main.cpp")
-set(PCH_Header "pch.h")
-set(PCH_Source "pch.cpp")
-set_source_files_properties("pch.cpp" PROPERTIES COMPILE_FLAGS "/Ycpch.h")
 
-file(GLOB_RECURSE HeaderList
-Core/*.h
-Graphics/*.h
-Core/*.inl
-Graphics/*.inl)
+file(GLOB_RECURSE inc
+${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.h)
 
-file(GLOB_RECURSE SourceList
-Core/*.cpp
-Graphics/*.cpp)
+file(GLOB_RECURSE src
+${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.cpp)
 
 # ext
 set(cityhash
@@ -57,20 +51,14 @@ file(GLOB_RECURSE yaml_cpp
 	${CMAKE_SOURCE_DIR}/ext/yaml-cpp/src/*.cpp)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${PCH_Header})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${PCH_Source})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HeaderList})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SourceList})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${DXC})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${IMGUI})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${IMGUIZMO})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${SPDLOG})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${yaml_cpp})
-
-foreach(Source IN LISTS SourceList)
-    set_source_files_properties("${Source}" PROPERTIES COMPILE_FLAGS "/Yupch.h")
-endforeach()
 
 if (MSVC)
     add_compile_options(/W3) # warning level 3
@@ -80,10 +68,8 @@ endif()
 add_executable(
 	${PROJECTNAME}
 	${Main}
-	${PCH_Header}
-	${PCH_Source}
-	${HeaderList}
-	${SourceList}
+	${inc}
+	${src}
 	${cityhash}
 	${DXC}
 	${IMGUI}
@@ -92,8 +78,9 @@ add_executable(
 	${yaml_cpp})
 
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
+target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+include_directories(${PROJECTDIR})
 
 # ext
 include_directories("${CMAKE_SOURCE_DIR}/ext/assimp/include")
@@ -128,6 +115,7 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxil.dll
 	${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.dll
 	${CMAKE_SOURCE_DIR}/imgui.ini
+
 	$<TARGET_FILE_DIR:${PROJECTNAME}>
 DEPENDS ${PROJECTNAME})
 
@@ -135,6 +123,7 @@ add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
+
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 DEPENDS ${PROJECTNAME})
 
@@ -143,7 +132,8 @@ add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/assets
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/assets
+
+	$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
 DEPENDS ${PROJECTNAME})
 
 # copy shaders
@@ -151,5 +141,6 @@ add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/shaders
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/shaders
+
+	$<TARGET_FILE_DIR:${PROJECTNAME}>/Shaders
 DEPENDS ${PROJECTNAME})
