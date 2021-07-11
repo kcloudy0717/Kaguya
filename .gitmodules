@@ -1,6 +1,3 @@
-[submodule "ext/D3D12MemoryAllocator"]
-	path = ext/D3D12MemoryAllocator
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git
 [submodule "ext/ImGuizmo"]
 	path = ext/ImGuizmo
 	url = https://github.com/CedricGuillemet/ImGuizmo.git

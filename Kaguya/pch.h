@@ -1,37 +1,20 @@
 #pragma once
 #pragma warning(disable : 26812) // prefer enum class over enum warning
 
-// Win32 APIs
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
-#endif
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif 
-
-#include <Windows.h>
-#include <DirectXMath.h>
-#include <DirectXColors.h>
-#include <wrl/client.h>
-
-// C++ Standard Libraries
+// c++ std
+#include <stdexcept>
+#include <exception>
 #include <cassert>
 #include <memory>
-#include <typeinfo>
 #include <functional>
 #include <algorithm>
 #include <numeric>
 #include <string>
 #include <filesystem>
-#include <iostream>
-#include <exception>
 #include <optional>
-#include <variant>
-#include <sstream>
-#include <codecvt>
-#include <optional>
-#include <future>
+#include <compare>
+#include <mutex>
+#include <span>
 
 // c++ stl
 #include <array>
@@ -42,8 +25,29 @@
 #include <unordered_map>
 #include <queue>
 
-// operator <=>
-#include <compare>
+// win32
+#define NOMINMAX
+
+// DirectX apps don't need GDI
+#define NODRAWTEXT
+//#define NOGDI
+#define NOBITMAP
+
+// Include <mcx.h> if you need this
+#define NOMCX
+
+// Include <winsvc.h> if you need this
+#define NOSERVICE
+
+// WinHelp is deprecated
+#define NOHELP
+
+#define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers.
+
+#include <Windows.h>
+#include <synchapi.h>
+#include <wrl/client.h>
+#include <wrl/event.h>
 
 // dxgi
 #include <dxgi1_6.h>
@@ -57,47 +61,62 @@
 #include "d3d12.h"
 #include "d3d12sdklayers.h"
 #include "d3d12shader.h"
+#include <DXProgrammableCapture.h>
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
+#include <DirectXMath.h>
+
 // ext
+#include <city.h>
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
 #include <ImGuizmo.h>
 #include <entt.hpp>
 #include <wil/resource.h>
-#include <D3D12MemAlloc.h>
-#include <GraphicsMemory.h>
 #include <DirectXTex.h>
 #include <nfd.h>
 
+#include <Core/Core.h>
 #include <Core/Application.h>
-#include <Core/Pool.h>
-#include <Core/Utility.h>
+#include <Core/Console.h>
 #include <Core/Log.h>
 #include <Core/Math.h>
-#include <Core/Exception.h>
-#include <Core/Synchronization/RWLock.h>
-#include <Core/Synchronization/CriticalSection.h>
-#include <Core/Synchronization/ConditionVariable.h>
+#include <Core/CriticalSection.h>
+#include <Core/RWLock.h>
 
-template<typename T>
-void SafeRelease(T*& Ptr)
+// https://docs.microsoft.com/en-us/windows/win32/debug/retrieving-the-last-error-code?redirectedfrom=MSDN
+inline static void ErrorExit(LPCTSTR lpszFunction)
 {
-	if (Ptr)
-	{
-		Ptr->Release();
-		Ptr = nullptr;
-	}
-}
+	// Retrieve the system error message for the last-error code
+	LPVOID lpMsgBuf;
+	LPVOID lpDisplayBuf;
+	DWORD  dw = GetLastError();
 
-inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		throw COMException(__FILE__, __LINE__, hr);
-	}
-}
+	FormatMessage(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		nullptr,
+		dw,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		(LPTSTR)&lpMsgBuf,
+		0,
+		nullptr);
 
-using ShaderIdentifier = std::array<BYTE, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
+	// Display the error message and exit the process
+	lpDisplayBuf = (LPVOID)LocalAlloc(
+		LMEM_ZEROINIT,
+		(lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
+	StringCchPrintf(
+		(LPTSTR)lpDisplayBuf,
+		LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+		TEXT("%s failed with error %d: %s"),
+		lpszFunction,
+		dw,
+		lpMsgBuf);
+	MessageBox(nullptr, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+
+	LocalFree(lpMsgBuf);
+	LocalFree(lpDisplayBuf);
+	ExitProcess(dw);
+}

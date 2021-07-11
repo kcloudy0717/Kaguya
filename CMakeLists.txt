@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 # Group CMakePredefinedTargets into a folder filter
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Set Windows SDK Version
 set(CMAKE_SYSTEM_VERSION 10.0.19041.0)
 project(Kaguya LANGUAGES CXX)
 

@@ -1,20 +1,5 @@
 // main.cpp : Defines the entry point for the application.
 //
-#include "pch.h"
-
-#if defined(_DEBUG)
-// memory leak
-#define _CRTDBG_MAP_ALLOC
-#include <cstdlib>
-#include <crtdbg.h>
-#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
-#define SET_LEAK_BREAKPOINT(x) _CrtSetBreakAlloc(x)
-#else
-#define ENABLE_LEAK_DETECTION() 0
-#define SET_LEAK_BREAKPOINT(X) X
-#endif
-
-#define NOMINMAX
 #include <Core/Application.h>
 #include <Graphics/RenderDevice.h>
 #include <Graphics/AssetManager.h>
@@ -22,46 +7,41 @@
 #include <Graphics/UI/HierarchyWindow.h>
 #include <Graphics/UI/ViewportWindow.h>
 #include <Graphics/UI/InspectorWindow.h>
-#include <Graphics/UI/RenderSystemWindow.h>
 #include <Graphics/UI/AssetWindow.h>
 #include <Graphics/UI/ConsoleWindow.h>
 
-#define SHOW_IMGUI_DEMO_WINDOW 1
-
 #define RENDER_AT_1920x1080 0
 
-class Editor
+class Editor : public Application
 {
 public:
-	Editor()
+	Editor() {}
+
+	~Editor() {}
+
+	bool Initialize() override
 	{
-		std::string iniFile = (Application::ExecutableFolderPath / "imgui.ini").string();
+		atexit(Adapter::ReportLiveObjects);
+		RenderDevice::Initialize();
+		AssetManager::Initialize();
+
+		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 
 		ImGui::LoadIniSettingsFromDisk(iniFile.data());
 
-		m_HierarchyWindow.SetContext(&Scene);
-		m_InspectorWindow.SetContext(&Scene, {});
-		m_RenderSystemWindow.SetContext(&Renderer);
-		m_AssetWindow.SetContext(&Scene);
+		HierarchyWindow.SetContext(&Scene);
+		InspectorWindow.SetContext(&Scene, {});
+		AssetWindow.SetContext(&Scene);
 
-		Renderer.OnInitialize();
+		pRenderer = std::make_unique<Renderer>();
+		pRenderer->OnInitialize();
+
+		return true;
 	}
 
-	~Editor()
+	void Update(float DeltaTime) override
 	{
-		Renderer.OnDestroy();
-	}
-
-	void Render()
-	{
-		Time& Time = Application::Time;
-		Mouse& Mouse = Application::InputHandler.Mouse;
-		Keyboard& Keyboard = Application::InputHandler.Keyboard;
-
-		Time.Signal();
-		float dt = Time.DeltaTime();
-
-		Scene.SceneState = Scene::SCENE_STATE_RENDER;
+		Scene.SceneState = ESceneState::SceneState_Render;
 
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -70,125 +50,79 @@ public:
 
 		ImGui::DockSpaceOverViewport();
 
-#if SHOW_IMGUI_DEMO_WINDOW
 		ImGui::ShowDemoWindow();
-#endif
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		m_ViewportWindow.SetContext((void*)Renderer.GetViewportDescriptor().GpuHandle.ptr);
-
-		m_HierarchyWindow.RenderGui();
-		m_ViewportWindow.RenderGui();
-		m_RenderSystemWindow.RenderGui();
-		m_AssetWindow.RenderGui();
-		m_ConsoleWindow.RenderGui();
+		HierarchyWindow.RenderGui();
+		ViewportWindow.RenderGui();
+		AssetWindow.RenderGui();
+		ConsoleWindow.RenderGui();
 
 		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
-		m_InspectorWindow.SetContext(&Scene, m_HierarchyWindow.GetSelectedEntity());
-		m_InspectorWindow.RenderGui();
+		InspectorWindow.SetContext(&Scene, HierarchyWindow.GetSelectedEntity());
+		InspectorWindow.RenderGui();
 
-		auto [vpx, vpy] = m_ViewportWindow.GetMousePosition();
+		auto [vpx, vpy] = ViewportWindow.GetMousePosition();
 #if RENDER_AT_1920x1080
-		// TODO: Fix: Picking will become buggy when RENDER_AT_1920x1080 is enabled
-		uint32_t viewportWidth = 1920, viewportHeight = 1080;
+		const uint32_t viewportWidth = 1920, viewportHeight = 1080;
 #else
-		uint32_t viewportWidth = m_ViewportWindow.Resolution.x, viewportHeight = m_ViewportWindow.Resolution.y;
+		const uint32_t viewportWidth = ViewportWindow.Resolution.x, viewportHeight = ViewportWindow.Resolution.y;
 #endif
 
-		// Update
-		Scene.PreviousCamera = Scene.Camera;
-
-		Scene.Camera.AspectRatio = static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);
-
-		// Update selected entity
-		// If LMB is pressed and we are not handling raw input and if we are not hovering over any imgui stuff then we update the
-		// instance id for editor
-		if (Mouse.IsLMBPressed() && !Mouse.UseRawInput && m_ViewportWindow.IsHovered && !ImGuizmo::IsUsing())
-		{
-			m_HierarchyWindow.SetSelectedEntity(Renderer.GetSelectedEntity());
-		}
-
-		if (Mouse.UseRawInput)
-		{
-			if (Keyboard.IsKeyPressed('W'))
-				Scene.Camera.Translate(0.0f, 0.0f, dt);
-			if (Keyboard.IsKeyPressed('A'))
-				Scene.Camera.Translate(-dt, 0.0f, 0.0f);
-			if (Keyboard.IsKeyPressed('S'))
-				Scene.Camera.Translate(0.0f, 0.0f, -dt);
-			if (Keyboard.IsKeyPressed('D'))
-				Scene.Camera.Translate(dt, 0.0f, 0.0f);
-			if (Keyboard.IsKeyPressed('E'))
-				Scene.Camera.Translate(0.0f, dt, 0.0f);
-			if (Keyboard.IsKeyPressed('Q'))
-				Scene.Camera.Translate(0.0f, -dt, 0.0f);
-
-			while (const auto rawInput = Mouse.ReadRawInput())
-			{
-				Scene.Camera.Rotate(rawInput->Y * dt, rawInput->X * dt);
-			}
-		}
-
-		Scene.Update();
+		Scene.Update(DeltaTime);
 
 		// Render
-		Renderer.SetViewportMousePosition(vpx, vpy);
-		Renderer.SetViewportResolution(viewportWidth, viewportHeight);
+		pRenderer->SetViewportMousePosition(vpx, vpy);
+		pRenderer->SetViewportResolution(viewportWidth, viewportHeight);
 
-		Renderer.OnRender(Time, Scene);
+		ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
+
+		pRenderer->OnRender(Scene);
 	}
 
-	void Resize(uint32_t Width, uint32_t Height)
+	void Shutdown() override
 	{
-		Renderer.OnResize(Width, Height);
+		pRenderer->OnDestroy();
+		pRenderer.reset();
+		Scene.Clear();
+		AssetManager::Shutdown();
+		RenderDevice::Shutdown();
 	}
-private:
-	HierarchyWindow	m_HierarchyWindow;
-	ViewportWindow m_ViewportWindow;
-	InspectorWindow m_InspectorWindow;
-	RenderSystemWindow m_RenderSystemWindow;
-	AssetWindow m_AssetWindow;
-	ConsoleWindow m_ConsoleWindow;
 
-	Scene Scene;
-	Renderer Renderer;
+	void Resize(UINT Width, UINT Height) override { pRenderer->OnResize(Width, Height); }
+
+private:
+	HierarchyWindow HierarchyWindow;
+	ViewportWindow	ViewportWindow;
+	InspectorWindow InspectorWindow;
+	AssetWindow		AssetWindow;
+	ConsoleWindow	ConsoleWindow;
+
+	Scene	 Scene;
+	std::unique_ptr<Renderer> pRenderer;
 };
 
 int main(int argc, char* argv[])
 {
-#if defined(_DEBUG)
-	ENABLE_LEAK_DETECTION();
-	SET_LEAK_BREAKPOINT(-1);
-#endif
-
-	Application::Config config = {
-		.Title = L"Kaguya",
-		.Width = 1280,
-		.Height = 720,
-		.Maximize = true };
-
-	Application::Initialize(config);
-	RenderDevice::Initialize();
-	AssetManager::Initialize();
-
-	std::unique_ptr<Editor> editor = std::make_unique<Editor>();
-
-	Application::Window.SetRenderFunc([&]()
+	try
 	{
-		editor->Render();
-	});
+		Application::InitializeComponents();
 
-	Application::Window.SetResizeFunc([&](UINT Width, UINT Height)
-	{
-		editor->Resize(Width, Height);
-	});
+		ApplicationOptions AppOptions = { .Name		= L"Kaguya",
+										  .Width	= 1280,
+										  .Height	= 720,
+										  .Maximize = true,
+										  .Icon		= Application::ExecutableDirectory / "Assets/Kaguya.ico" };
 
-	Application::Time.Restart();
-	return Application::Run([&]()
+		Editor App;
+		Application::Run(App, AppOptions);
+	}
+	catch (std::exception& e)
 	{
-		editor.reset();
-		AssetManager::Shutdown();
-		RenderDevice::Shutdown();
-	});
+		MessageBoxA(nullptr, e.what(), "Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		return 1;
+	}
+
+	return 0;
 }
