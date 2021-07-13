@@ -2,7 +2,7 @@
 #include "Core/Stopwatch.h"
 
 #include "RenderDevice.h"
-#include "Scene/Entity.h"
+#include "World/Entity.h"
 
 #include <wincodec.h> // GUID for different file formats, needed for ScreenGrab
 
@@ -12,9 +12,7 @@ using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
 Renderer::Renderer()
-	: Width(Application::Width())
-	, Height(Application::Height())
-	, ViewportMouseX(0)
+	: ViewportMouseX(0)
 	, ViewportMouseY(0)
 	, ViewportWidth(0)
 	, ViewportHeight(0)
@@ -61,7 +59,7 @@ void Renderer::OnInitialize()
 
 	Materials = Buffer(
 		RenderDevice.GetDevice(),
-		sizeof(HLSL::Material) * Scene::MaterialLimit,
+		sizeof(HLSL::Material) * World::MaterialLimit,
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
@@ -69,21 +67,22 @@ void Renderer::OnInitialize()
 
 	Lights = Buffer(
 		RenderDevice.GetDevice(),
-		sizeof(HLSL::Light) * Scene::LightLimit,
+		sizeof(HLSL::Light) * World::LightLimit,
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pLights));
 }
 
-void Renderer::OnRender(Scene& Scene)
+void Renderer::OnRender(World& World)
 {
-	auto& RenderDevice = RenderDevice::Instance();
+	World.ActiveCamera->AspectRatio = float(ViewportWidth) / float(ViewportHeight);
+	auto& RenderDevice				= RenderDevice::Instance();
 
 	UINT NumMaterials = 0, NumLights = 0;
 
 	AccelerationStructure.clear();
-	Scene.Registry.view<Transform, MeshFilter, MeshRenderer>().each(
+	World.Registry.view<Transform, MeshFilter, MeshRenderer>().each(
 		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
 		{
 			if (MeshFilter.Mesh)
@@ -92,7 +91,7 @@ void Renderer::OnRender(Scene& Scene)
 				pMaterials[NumMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
 			}
 		});
-	Scene.Registry.view<Transform, Light>().each(
+	World.Registry.view<Transform, Light>().each(
 		[&](auto&& Transform, auto&& Light)
 		{
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
@@ -170,8 +169,9 @@ void Renderer::OnRender(Scene& Scene)
 		ASBuildSyncPoint = AsyncCompute.Execute(false);
 	}
 
-	if (Scene.SceneState & ESceneState::SceneState_Update)
+	if (World.WorldState & EWorldState::EWorldState_Update)
 	{
+		World.WorldState = EWorldState_Render;
 		m_PathIntegrator.Reset();
 	}
 
@@ -189,14 +189,14 @@ void Renderer::OnRender(Scene& Scene)
 
 		// x, y = Resolution
 		// z, w = 1 / Resolution
-		float4 Resolution;
+		DirectX::XMFLOAT4 Resolution;
 
-		float2 MousePosition;
+		DirectX::XMFLOAT2 MousePosition;
 
 		unsigned int NumLights;
 		unsigned int TotalFrameCount;
 	} g_GlobalConstants				  = {};
-	g_GlobalConstants.Camera		  = GetHLSLCameraDesc(Scene.Camera);
+	g_GlobalConstants.Camera		  = GetHLSLCameraDesc(*World.ActiveCamera);
 	g_GlobalConstants.Resolution	  = { float(ViewportWidth),
 									  float(ViewportHeight),
 									  1.0f / float(ViewportWidth),
@@ -231,8 +231,8 @@ void Renderer::OnRender(Scene& Scene)
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Context->ResourceBarrier(1, &ResourceBarrier);
 	{
-		Viewport	= CD3DX12_VIEWPORT(0.0f, 0.0f, float(Width), float(Height));
-		ScissorRect = CD3DX12_RECT(0, 0, Width, Height);
+		Viewport	= CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
+		ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
 
 		Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		Context->RSSetViewports(1, &Viewport);

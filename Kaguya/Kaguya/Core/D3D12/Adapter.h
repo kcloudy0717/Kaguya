@@ -39,6 +39,26 @@ public:
 	ID3D12Device*  GetD3D12Device() const;
 	ID3D12Device5* GetD3D12Device5() const;
 
+	void RegisterMessageCallback(D3D12MessageFunc CallbackFunc)
+	{
+		if (D3D12InfoQueue1)
+		{
+			ASSERTD3D12APISUCCEEDED(D3D12InfoQueue1->RegisterMessageCallback(
+				CallbackFunc,
+				D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+				nullptr,
+				&CallbackCookie));
+		}
+	}
+
+	void UnregisterMessageCallback()
+	{
+		if (D3D12InfoQueue1)
+		{
+			ASSERTD3D12APISUCCEEDED(D3D12InfoQueue1->UnregisterMessageCallback(CallbackCookie));
+		}
+	}
+
 	Device* GetDevice() { return &Device; }
 
 private:
@@ -54,6 +74,9 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Device>  D3D12Device;
 	Microsoft::WRL::ComPtr<ID3D12Device5> D3D12Device5;
+
+	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> D3D12InfoQueue1;
+	DWORD									 CallbackCookie = 0;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> DeviceRemovedFence;
 	HANDLE								DeviceRemovedWaitHandle = nullptr;

@@ -13,10 +13,11 @@ concept IsUIFunction = requires(T F, Component C)
 };
 
 template<is_component T, bool IsCoreComponent, IsUIFunction<T> UIFunction>
-static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, bool (*UISettingFunction)(T&))
+static void RenderComponent(const char* pName, Entity Entity, UIFunction UI)
 {
 	if (Entity.HasComponent<T>())
 	{
+		bool  IsEdited	= false;
 		auto& Component = Entity.GetComponent<T>();
 
 		ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
@@ -48,32 +49,25 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI, boo
 				}
 			}
 
-			if (UISettingFunction)
-			{
-				Component.IsEdited |= UISettingFunction(Component);
-			}
-
 			ImGui::EndPopup();
 		}
 
 		if (Collapsed)
 		{
-			Component.IsEdited |= UI(Component);
+			IsEdited |= UI(Component);
 			ImGui::TreePop();
 		}
 
-		if (Component.IsEdited)
+		if (IsEdited)
 		{
-			Component.IsEdited = false;
-
-			Entity.pScene->SceneState |= ESceneState::SceneState_Update;
+			Entity.pWorld->WorldState |= EWorldState::EWorldState_Update;
 		}
 
 		if (RemoveComponent)
 		{
 			Entity.RemoveComponent<T>();
 
-			Entity.pScene->SceneState |= ESceneState::SceneState_Update;
+			Entity.pWorld->WorldState |= EWorldState::EWorldState_Update;
 		}
 	}
 }
@@ -294,34 +288,36 @@ static bool RenderFloat3Control(
 
 static bool EditTransform(Transform& Transform, const float* pCameraView, float* pCameraProjection, float* pMatrix)
 {
-	static float		  s_Snap[3]			 = { 1, 1, 1 };
-	static ImGuizmo::MODE s_CurrentGizmoMode = ImGuizmo::WORLD;
+	static bool			  UseSnap				= false;
+	static UINT			  CurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+	static float		  s_Snap[3]				= { 1, 1, 1 };
+	static ImGuizmo::MODE s_CurrentGizmoMode	= ImGuizmo::WORLD;
 
 	bool isEdited = false;
 
 	ImGui::Text("Operation");
 
-	if (ImGui::RadioButton("Translate", Transform.CurrentGizmoOperation == ImGuizmo::TRANSLATE))
+	if (ImGui::RadioButton("Translate", CurrentGizmoOperation == ImGuizmo::TRANSLATE))
 	{
-		Transform.CurrentGizmoOperation = ImGuizmo::TRANSLATE;
+		CurrentGizmoOperation = ImGuizmo::TRANSLATE;
 	}
 	ImGui::SameLine();
 
-	if (ImGui::RadioButton("Rotate", Transform.CurrentGizmoOperation == ImGuizmo::ROTATE))
+	if (ImGui::RadioButton("Rotate", CurrentGizmoOperation == ImGuizmo::ROTATE))
 	{
-		Transform.CurrentGizmoOperation = ImGuizmo::ROTATE;
+		CurrentGizmoOperation = ImGuizmo::ROTATE;
 	}
 	ImGui::SameLine();
 
-	if (ImGui::RadioButton("Scale", Transform.CurrentGizmoOperation == ImGuizmo::SCALE))
+	if (ImGui::RadioButton("Scale", CurrentGizmoOperation == ImGuizmo::SCALE))
 	{
-		Transform.CurrentGizmoOperation = ImGuizmo::SCALE;
+		CurrentGizmoOperation = ImGuizmo::SCALE;
 	}
 
-	ImGui::Checkbox("Snap", &Transform.UseSnap);
+	ImGui::Checkbox("Snap", &UseSnap);
 	ImGui::SameLine();
 
-	switch (Transform.CurrentGizmoOperation)
+	switch (CurrentGizmoOperation)
 	{
 	case ImGuizmo::TRANSLATE:
 		ImGui::InputFloat3("Snap", &s_Snap[0]);
@@ -337,11 +333,11 @@ static bool EditTransform(Transform& Transform, const float* pCameraView, float*
 	isEdited |= ImGuizmo::Manipulate(
 		pCameraView,
 		pCameraProjection,
-		(ImGuizmo::OPERATION)Transform.CurrentGizmoOperation,
+		(ImGuizmo::OPERATION)CurrentGizmoOperation,
 		s_CurrentGizmoMode,
 		pMatrix,
 		nullptr,
-		Transform.UseSnap ? s_Snap : nullptr);
+		UseSnap ? s_Snap : nullptr);
 
 	return isEdited;
 }
@@ -352,12 +348,12 @@ void InspectorWindow::RenderGui()
 
 	UIWindow::Update();
 
-	if (m_SelectedEntity)
+	if (SelectedEntity)
 	{
 		RenderComponent<Tag, true>(
 			"Tag",
-			m_SelectedEntity,
-			[](Tag& Component)
+			SelectedEntity,
+			[&](Tag& Component)
 			{
 				char buffer[MAX_PATH] = {};
 				memcpy(buffer, Component.Name.data(), Component.Name.size());
@@ -367,73 +363,61 @@ void InspectorWindow::RenderGui()
 				}
 
 				return false;
-			},
-			nullptr);
+			});
 
 		RenderComponent<Transform, true>(
 			"Transform",
-			m_SelectedEntity,
+			SelectedEntity,
 			[&](Transform& Component)
 			{
-				bool isEdited = false;
+				bool IsEdited = false;
 
-				DirectX::XMFLOAT4X4 world, view, projection;
+				DirectX::XMFLOAT4X4 World, View, Projection;
 
 				// Dont transpose this
-				XMStoreFloat4x4(&world, Component.Matrix());
+				XMStoreFloat4x4(&World, Component.Matrix());
 
 				float matrixTranslation[3], matrixRotation[3], matrixScale[3];
 				ImGuizmo::DecomposeMatrixToComponents(
-					reinterpret_cast<float*>(&world),
+					reinterpret_cast<float*>(&World),
 					matrixTranslation,
 					matrixRotation,
 					matrixScale);
-				isEdited |= RenderFloat3Control("Translation", matrixTranslation);
-				isEdited |= RenderFloat3Control("Rotation", matrixRotation);
-				isEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
+				IsEdited |= RenderFloat3Control("Translation", matrixTranslation);
+				IsEdited |= RenderFloat3Control("Rotation", matrixRotation);
+				IsEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
 				ImGuizmo::RecomposeMatrixFromComponents(
 					matrixTranslation,
 					matrixRotation,
 					matrixScale,
-					reinterpret_cast<float*>(&world));
+					reinterpret_cast<float*>(&World));
 
 				// Dont transpose this
-				XMStoreFloat4x4(&view, m_pScene->Camera.ViewMatrix);
-				XMStoreFloat4x4(&projection, m_pScene->Camera.ProjectionMatrix);
+				XMStoreFloat4x4(&View, pWorld->ActiveCamera->ViewMatrix);
+				XMStoreFloat4x4(&Projection, pWorld->ActiveCamera->ProjectionMatrix);
 
 				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
-				isEdited |= EditTransform(
+				IsEdited |= EditTransform(
 					Component,
-					reinterpret_cast<float*>(&view),
-					reinterpret_cast<float*>(&projection),
-					reinterpret_cast<float*>(&world));
+					reinterpret_cast<float*>(&View),
+					reinterpret_cast<float*>(&Projection),
+					reinterpret_cast<float*>(&World));
 
-				if (isEdited)
+				if (IsEdited)
 				{
-					DirectX::XMMATRIX mWorld = XMLoadFloat4x4(&world);
+					DirectX::XMMATRIX mWorld = XMLoadFloat4x4(&World);
 					Component.SetTransform(mWorld);
 				}
 
-				return isEdited;
-			},
-			[](auto Component)
-			{
-				bool isEdited = false;
-
-				if (isEdited |= ImGui::MenuItem("Reset"))
-				{
-					Component = Transform();
-				}
-
-				return isEdited;
+				return IsEdited;
 			});
 
 		RenderComponent<MeshFilter, false>(
 			"Mesh Filter",
-			m_SelectedEntity,
+			SelectedEntity,
 			[&](MeshFilter& Component)
 			{
-				bool isEdited = false;
+				bool IsEdited = false;
 
 				auto handle = AssetManager::GetMeshCache().Load(Component.Key);
 
@@ -456,19 +440,18 @@ void InspectorWindow::RenderGui()
 						Component.Key  = (*(UINT64*)payload->Data);
 						Component.Mesh = AssetManager::GetMeshCache().Load(Component.Key);
 
-						isEdited = true;
+						IsEdited = true;
 					}
 					ImGui::EndDragDropTarget();
 				}
 
-				return isEdited;
-			},
-			nullptr);
+				return IsEdited;
+			});
 
 		RenderComponent<MeshRenderer, false>(
 			"Mesh Renderer",
-			m_SelectedEntity,
-			[](MeshRenderer& Component)
+			SelectedEntity,
+			[&](MeshRenderer& Component)
 			{
 				bool isEdited = false;
 
@@ -478,25 +461,32 @@ void InspectorWindow::RenderGui()
 
 					ImGui::Text("Attributes");
 
-					const char* BSDFTypes[BSDFTypes::NumBSDFTypes] = { "Lambertian", "Mirror", "Glass", "Disney" };
-					isEdited |=
-						ImGui::Combo("Type", &Material.BSDFType, BSDFTypes, ARRAYSIZE(BSDFTypes), ARRAYSIZE(BSDFTypes));
+					const char* BSDFTypes[(int)EBSDFTypes::NumBSDFTypes] = { "Lambertian",
+																			 "Mirror",
+																			 "Glass",
+																			 "Disney" };
+					isEdited |= ImGui::Combo(
+						"Type",
+						(int*)&Material.BSDFType,
+						BSDFTypes,
+						ARRAYSIZE(BSDFTypes),
+						ARRAYSIZE(BSDFTypes));
 
 					switch (Material.BSDFType)
 					{
-					case BSDFTypes::Lambertian:
+					case EBSDFTypes::Lambertian:
 						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						break;
-					case BSDFTypes::Mirror:
+					case EBSDFTypes::Mirror:
 						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						break;
-					case BSDFTypes::Glass:
+					case EBSDFTypes::Glass:
 						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						isEdited |= RenderFloat3Control("T", &Material.T.x);
 						isEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
 						isEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
 						break;
-					case BSDFTypes::Disney:
+					case EBSDFTypes::Disney:
 						isEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
 						isEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
 						isEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
@@ -509,11 +499,9 @@ void InspectorWindow::RenderGui()
 						isEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
 						isEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
 						break;
-					default:
-						break;
 					}
 
-					auto ImageBox = [&](TextureTypes TextureType, UINT64& Key, std::string_view Name)
+					auto ImageBox = [&](ETextureTypes TextureType, UINT64& Key, std::string_view Name)
 					{
 						auto handle = AssetManager::GetImageCache().Load(Key);
 
@@ -543,44 +531,85 @@ void InspectorWindow::RenderGui()
 						}
 					};
 
-					ImageBox(TextureTypes::AlbedoIdx, Material.TextureKeys[0], "Albedo: ");
+					ImageBox(ETextureTypes::AlbedoIdx, Material.TextureKeys[0], "Albedo: ");
 
 					ImGui::TreePop();
 				}
 
 				return isEdited;
-			},
-			nullptr);
+			});
 
 		RenderComponent<Light, false>(
 			"Light",
-			m_SelectedEntity,
-			[](Light& Component)
+			SelectedEntity,
+			[&](Light& Component)
 			{
-				bool isEdited = false;
+				bool IsEdited = false;
 
 				auto pType = (int*)&Component.Type;
 
 				const char* LightTypes[] = { "Point", "Quad" };
-				isEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
+				IsEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
 
 				switch (Component.Type)
 				{
-				case Light::Point:
-					isEdited |= RenderFloat3Control("I", &Component.I.x);
+				case ELightType::Point:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
 					break;
-				case Light::Quad:
-					isEdited |= RenderFloat3Control("I", &Component.I.x);
-					isEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
-					isEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
-					break;
-				default:
+				case ELightType::Quad:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
+					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
+					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
 					break;
 				}
 
-				return isEdited;
-			},
-			nullptr);
+				return IsEdited;
+			});
+
+		RenderComponent<StaticRigidBody, false>(
+			"Static Rigid Body",
+			SelectedEntity,
+			[&](StaticRigidBody& Component)
+			{
+				bool IsEdited = false;
+
+				return IsEdited;
+			});
+
+		RenderComponent<DynamicRigidBody, false>(
+			"Dynamic Rigid Body",
+			SelectedEntity,
+			[&](DynamicRigidBody& Component)
+			{
+				bool IsEdited = false;
+
+				return IsEdited;
+			});
+
+		RenderComponent<BoxCollider, false>(
+			"Box Collider",
+			SelectedEntity,
+			[&](BoxCollider& Component)
+			{
+				bool IsEdited = false;
+
+				IsEdited |= RenderFloat3Control("Extents", &Component.Extents.x);
+
+				return IsEdited;
+			});
+
+		RenderComponent<CapsuleCollider, false>(
+			"Capsule Collider",
+			SelectedEntity,
+			[&](CapsuleCollider& Component)
+			{
+				bool IsEdited = false;
+
+				IsEdited |= RenderFloatControl("Radius", &Component.Radius);
+				IsEdited |= RenderFloatControl("Height", &Component.Height);
+
+				return IsEdited;
+			});
 
 		if (ImGui::Button("Add Component"))
 		{
@@ -589,9 +618,15 @@ void InspectorWindow::RenderGui()
 
 		if (ImGui::BeginPopup("Component List"))
 		{
-			AddNewComponent<MeshFilter>("Mesh Filter", m_SelectedEntity);
-			AddNewComponent<MeshRenderer>("Mesh Renderer", m_SelectedEntity);
-			AddNewComponent<Light>("Light", m_SelectedEntity);
+			AddNewComponent<MeshFilter>("Mesh Filter", SelectedEntity);
+			AddNewComponent<MeshRenderer>("Mesh Renderer", SelectedEntity);
+			AddNewComponent<Light>("Light", SelectedEntity);
+
+			AddNewComponent<StaticRigidBody>("Static Rigid Body", SelectedEntity);
+			AddNewComponent<DynamicRigidBody>("Dynamic Rigid Body", SelectedEntity);
+
+			AddNewComponent<BoxCollider>("Box Collider", SelectedEntity);
+			AddNewComponent<CapsuleCollider>("Capsule Collider", SelectedEntity);
 
 			ImGui::EndPopup();
 		}

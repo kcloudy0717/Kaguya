@@ -16,7 +16,7 @@ void AssetWindow::RenderGui()
 
 	UIWindow::Update();
 
-	bool addAllMeshToHierarchy = false;
+	bool AddAllMeshToHierarchy = false;
 
 	if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
 	{
@@ -28,8 +28,8 @@ void AssetWindow::RenderGui()
 			}
 
 			// Always center this window when appearing
-			const ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 			if (ImGui::BeginPopupModal("Texture Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static bool sRGB = true;
@@ -66,8 +66,8 @@ void AssetWindow::RenderGui()
 			}
 
 			// Always center this window when appearing
-			const ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 			if (ImGui::BeginPopupModal("Mesh Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static bool KeepGeometryInRAM = true;
@@ -99,18 +99,18 @@ void AssetWindow::RenderGui()
 
 		if (ImGui::Button("Add all mesh to hierarchy"))
 		{
-			addAllMeshToHierarchy = true;
+			AddAllMeshToHierarchy = true;
 		}
 
 		ImGui::EndPopup();
 	}
 
-	constexpr ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-									  ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter |
-									  ImGuiTableFlags_BordersV;
+	constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+										   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
+										   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
 
 	ImGui::Text("Images");
-	if (ImGui::BeginTable("ImageCache", 4, flags))
+	if (ImGui::BeginTable("ImageCache", 4, TableFlags))
 	{
 		auto& ImageCache = AssetManager::GetImageCache();
 
@@ -126,13 +126,13 @@ void AssetWindow::RenderGui()
 		ImGui::TableHeadersRow();
 
 		// Demonstrate using clipper for large vertical lists
-		ImGuiListClipper clipper;
-		clipper.Begin(ImageCache.size());
+		ImGuiListClipper ListClipper;
+		ListClipper.Begin(ImageCache.size());
 
 		auto iter = ImageCache.Cache.begin();
-		while (clipper.Step())
+		while (ListClipper.Step())
 		{
-			for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++, iter++)
+			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
 			{
 				ImGui::PushID(iter->first);
 				{
@@ -167,21 +167,21 @@ void AssetWindow::RenderGui()
 
 	auto& MeshCache = AssetManager::GetMeshCache();
 
-	if (addAllMeshToHierarchy)
+	if (AddAllMeshToHierarchy)
 	{
 		MeshCache.Each(
 			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
 			{
-				auto  entity	 = m_pScene->CreateEntity(Resource->Name);
-				auto& meshFilter = entity.AddComponent<MeshFilter>();
-				meshFilter.Key	 = Key;
+				auto  Entity			  = pWorld->CreateEntity(Resource->Name);
+				auto& MeshFilterComponent = Entity.AddComponent<MeshFilter>();
+				MeshFilterComponent.Key	  = Key;
 
-				auto& meshRenderer = entity.AddComponent<MeshRenderer>();
+				auto& MeshRendererComponent = Entity.AddComponent<MeshRenderer>();
 			});
 	}
 
 	ImGui::Text("Meshes");
-	if (ImGui::BeginTable("MeshCache", 4, flags))
+	if (ImGui::BeginTable("MeshCache", 4, TableFlags))
 	{
 		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
@@ -195,13 +195,13 @@ void AssetWindow::RenderGui()
 		ImGui::TableHeadersRow();
 
 		// Demonstrate using clipper for large vertical lists
-		ImGuiListClipper clipper;
-		clipper.Begin(MeshCache.size());
+		ImGuiListClipper ListClipper;
+		ListClipper.Begin(MeshCache.size());
 
 		auto iter = MeshCache.Cache.begin();
-		while (clipper.Step())
+		while (ListClipper.Step())
 		{
-			for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++, iter++)
+			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
 			{
 				ImGui::PushID(iter->first);
 				{

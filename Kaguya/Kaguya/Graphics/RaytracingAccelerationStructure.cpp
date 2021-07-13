@@ -9,7 +9,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 
 	InstanceDescs = Buffer(
 		RenderDevice.GetDevice(),
-		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * Scene::InstanceLimit,
+		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);

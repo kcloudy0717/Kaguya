@@ -86,6 +86,11 @@
 #include <Core/CriticalSection.h>
 #include <Core/RWLock.h>
 
+#include <Core/Asset/AssetCache.h>
+#include <Core/Asset/AsyncLoader.h>
+#include <Core/Asset/Image.h>
+#include <Core/Asset/Mesh.h>
+
 // https://docs.microsoft.com/en-us/windows/win32/debug/retrieving-the-last-error-code?redirectedfrom=MSDN
 inline static void ErrorExit(LPCTSTR lpszFunction)
 {

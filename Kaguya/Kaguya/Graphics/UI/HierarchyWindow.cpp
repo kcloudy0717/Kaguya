@@ -1,6 +1,6 @@
 #include "HierarchyWindow.h"
 
-#include <Graphics/Scene/SceneParser.h>
+#include <World/SceneParser.h>
 
 void HierarchyWindow::RenderGui()
 {
@@ -8,19 +8,18 @@ void HierarchyWindow::RenderGui()
 
 	UIWindow::Update();
 
-	pScene->Registry.each(
+	pWorld->Registry.each(
 		[&](auto Handle)
 		{
-			Entity entity(Handle, pScene);
+			Entity Entity(Handle, pWorld);
 
-			auto& Name = entity.GetComponent<Tag>().Name;
+			auto& Name = Entity.GetComponent<Tag>().Name;
 
-			ImGuiTreeNodeFlags flags = ((SelectedEntity == entity) ? ImGuiTreeNodeFlags_Selected : 0);
-			flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-			bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, Name.data());
+			ImGuiTreeNodeFlags TreeNodeFlags = ((SelectedEntity == Entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth;
+			bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
 			if (ImGui::IsItemClicked())
 			{
-				SelectedEntity = entity;
+				SelectedEntity = Entity;
 			}
 
 			bool Delete = false;
@@ -41,8 +40,8 @@ void HierarchyWindow::RenderGui()
 
 			if (Delete)
 			{
-				pScene->DestroyEntity(entity);
-				if (SelectedEntity == entity)
+				pWorld->DestroyEntity(Entity);
+				if (SelectedEntity == Entity)
 				{
 					SelectedEntity = {};
 				}
@@ -56,13 +55,13 @@ void HierarchyWindow::RenderGui()
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity entity	 = pScene->CreateEntity("GameObject");
+			Entity entity  = pWorld->CreateEntity("GameObject");
 			SelectedEntity = entity;
 		}
 
 		if (ImGui::MenuItem("Clear"))
 		{
-			pScene->Clear();
+			pWorld->Clear();
 			SelectedEntity = {};
 		}
 
@@ -78,7 +77,7 @@ void HierarchyWindow::RenderGui()
 						Path += ".yaml";
 					}
 
-					SceneParser::Save(Path, pScene);
+					SceneParser::Save(Path, pWorld);
 				});
 		}
 
@@ -89,7 +88,7 @@ void HierarchyWindow::RenderGui()
 				"",
 				[&](auto Path)
 				{
-					SceneParser::Load(Path, pScene);
+					SceneParser::Load(Path, pWorld);
 				});
 		}
 

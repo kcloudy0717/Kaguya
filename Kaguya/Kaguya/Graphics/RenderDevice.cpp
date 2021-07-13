@@ -31,6 +31,25 @@ bool RenderDevice::IsValid()
 	return g_pRenderDevice != nullptr;
 }
 
+const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
+{
+	switch (Severity)
+	{
+	case D3D12_MESSAGE_SEVERITY_CORRUPTION:
+		return "[Corruption]";
+	case D3D12_MESSAGE_SEVERITY_ERROR:
+		return "[Error]";
+	case D3D12_MESSAGE_SEVERITY_WARNING:
+		return "[Warning]";
+	case D3D12_MESSAGE_SEVERITY_INFO:
+		return "[Info]";
+	case D3D12_MESSAGE_SEVERITY_MESSAGE:
+		return "[Message]";
+	}
+
+	return nullptr;
+}
+
 RenderDevice::RenderDevice()
 {
 	DeviceOptions  DeviceOptions  = { .EnableDebugLayer			= true,
@@ -40,6 +59,16 @@ RenderDevice::RenderDevice()
 
 	Adapter.Initialize(DeviceOptions);
 	Adapter.InitializeDevice(DeviceFeatures);
+
+	Adapter.RegisterMessageCallback(
+		[](D3D12_MESSAGE_CATEGORY Category,
+		   D3D12_MESSAGE_SEVERITY Severity,
+		   D3D12_MESSAGE_ID		  ID,
+		   LPCSTR				  pDescription,
+		   void*				  pContext)
+		{
+			LOG_INFO("Severity: %s\n%s", GetD3D12MessageSeverity(Severity), pDescription);
+		});
 
 	m_SwapChain = SwapChain(
 		Application::GetWindowHandle(),
@@ -66,6 +95,7 @@ RenderDevice::RenderDevice()
 RenderDevice::~RenderDevice()
 {
 	ImGui_ImplDX12_Shutdown();
+	Adapter.UnregisterMessageCallback();
 }
 
 void RenderDevice::Present(bool VSync)

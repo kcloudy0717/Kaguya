@@ -129,7 +129,7 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 	MissShaderTable->AddShaderRecord(g_MissSID);
 	MissShaderTable->AddShaderRecord(g_ShadowMissSID);
 
-	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(Scene::InstanceLimit);
+	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
 
 	ShaderBindingTable.Generate(RenderDevice.GetDevice());
 }

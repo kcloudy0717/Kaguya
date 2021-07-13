@@ -16,7 +16,7 @@ public:
 
 	void OnInitialize();
 
-	void OnRender(Scene& Scene);
+	void OnRender(World& World);
 
 	void OnResize(uint32_t Width, uint32_t Height);
 
@@ -25,8 +25,6 @@ public:
 	void RequestCapture();
 
 private:
-	uint32_t Width, Height;
-
 	float		   ViewportMouseX, ViewportMouseY;
 	uint32_t	   ViewportWidth, ViewportHeight;
 	D3D12_VIEWPORT Viewport;

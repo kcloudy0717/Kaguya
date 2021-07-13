@@ -70,6 +70,7 @@ add_executable(
 	${Main}
 	${inc}
 	${src}
+
 	${cityhash}
 	${DXC}
 	${IMGUI}
@@ -83,6 +84,37 @@ target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 include_directories(${PROJECTDIR})
 
 # ext
+set(PhysX_SDK
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/LowLevel_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/LowLevelAABB_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/LowLevelDynamics_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysX_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXCharacterKinematic_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXCommon_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXCooking_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXExtensions_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXFoundation_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXPvdSDK_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXTask_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/PhysXVehicle_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/SceneQuery_static_64.lib
+	debug ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/debug/SimulationController_static_64.lib
+
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/LowLevel_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/LowLevelAABB_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/LowLevelDynamics_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysX_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXCharacterKinematic_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXCommon_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXCooking_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXExtensions_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXFoundation_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXPvdSDK_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXTask_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
+	optimized ${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
+
 include_directories("${CMAKE_SOURCE_DIR}/ext/assimp/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/DirectXTex/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/google/cityhash")
@@ -92,6 +124,7 @@ include_directories("${CMAKE_SOURCE_DIR}/ext/imgui")
 include_directories("${CMAKE_SOURCE_DIR}/ext/ImGuizmo")
 include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/nativefiledialog/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/wil/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/Include/WinPixEventRuntime")
@@ -103,6 +136,7 @@ target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/DirectXTe
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.lib)
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Debug/nfd.lib)
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/nativefiledialog/lib/Release/nfd.lib)
+target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.lib)
 
 # ext
@@ -113,6 +147,12 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${CMAKE_SOURCE_DIR}/ext/assimp/bin/release/assimp-vc142-mt.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxil.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
+	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
 	${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.dll
 	${CMAKE_SOURCE_DIR}/imgui.ini
 

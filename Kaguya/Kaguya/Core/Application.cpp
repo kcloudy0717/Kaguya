@@ -113,6 +113,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	int y		 = Options.y.value_or(CW_USEDEFAULT);
 	WindowWidth	 = WindowRect.right - WindowRect.left;
 	WindowHeight = WindowRect.bottom - WindowRect.top;
+	AspectRatio = float(WindowWidth) / float(WindowHeight);
 
 	hWnd = wil::unique_hwnd(::CreateWindowW(
 		wcexw.lpszClassName,
@@ -210,6 +211,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 		WindowWidth	 = LOWORD(lParam);
 		WindowHeight = HIWORD(lParam);
+		AspectRatio = float(WindowWidth) / float(WindowHeight);
 
 		if (wParam == SIZE_MINIMIZED)
 		{

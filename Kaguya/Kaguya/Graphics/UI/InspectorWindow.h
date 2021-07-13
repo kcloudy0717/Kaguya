@@ -1,21 +1,21 @@
 #pragma once
 #include "UIWindow.h"
 
-#include "../Scene/Scene.h"
-#include "../Scene/Entity.h"
+#include <World/World.h>
+#include <World/Entity.h>
 
 class InspectorWindow : public UIWindow
 {
 public:
-	void SetContext(Scene* pScene, Entity Entity)
+	void SetContext(World* pWorld, Entity Entity)
 	{
-		m_pScene		 = pScene;
-		m_SelectedEntity = Entity;
+		this->pWorld   = pWorld;
+		SelectedEntity = Entity;
 	}
 
 	void RenderGui();
 
 private:
-	Scene* m_pScene			= nullptr;
-	Entity m_SelectedEntity = {};
+	World* pWorld		  = nullptr;
+	Entity SelectedEntity = {};
 };

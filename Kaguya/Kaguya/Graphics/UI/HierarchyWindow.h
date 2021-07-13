@@ -1,14 +1,14 @@
 #pragma once
 #include "UIWindow.h"
-#include "../Scene/Scene.h"
-#include "../Scene/Entity.h"
+#include <World/World.h>
+#include <World/Entity.h>
 
 class HierarchyWindow : public UIWindow
 {
 public:
-	void SetContext(Scene* pScene)
+	void SetContext(World* pWorld)
 	{
-		this->pScene   = pScene;
+		this->pWorld   = pWorld;
 		SelectedEntity = {};
 	}
 
@@ -19,6 +19,6 @@ public:
 	void SetSelectedEntity(Entity Entity) { SelectedEntity = Entity; }
 
 private:
-	Scene* pScene		  = nullptr;
+	World* pWorld		  = nullptr;
 	Entity SelectedEntity = {};
 };

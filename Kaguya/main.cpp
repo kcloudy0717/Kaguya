@@ -1,6 +1,7 @@
 // main.cpp : Defines the entry point for the application.
 //
 #include <Core/Application.h>
+#include <Physics/PhysicsManager.h>
 #include <Graphics/RenderDevice.h>
 #include <Graphics/AssetManager.h>
 #include <Graphics/Renderer.h>
@@ -22,6 +23,7 @@ public:
 	bool Initialize() override
 	{
 		atexit(Adapter::ReportLiveObjects);
+		PhysicsManager::Initialize();
 		RenderDevice::Initialize();
 		AssetManager::Initialize();
 
@@ -29,9 +31,9 @@ public:
 
 		ImGui::LoadIniSettingsFromDisk(iniFile.data());
 
-		HierarchyWindow.SetContext(&Scene);
-		InspectorWindow.SetContext(&Scene, {});
-		AssetWindow.SetContext(&Scene);
+		HierarchyWindow.SetContext(&World);
+		InspectorWindow.SetContext(&World, {});
+		AssetWindow.SetContext(&World);
 
 		pRenderer = std::make_unique<Renderer>();
 		pRenderer->OnInitialize();
@@ -41,7 +43,7 @@ public:
 
 	void Update(float DeltaTime) override
 	{
-		Scene.SceneState = ESceneState::SceneState_Render;
+		World.WorldState = EWorldState::EWorldState_Render;
 
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
@@ -60,7 +62,7 @@ public:
 		ConsoleWindow.RenderGui();
 
 		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
-		InspectorWindow.SetContext(&Scene, HierarchyWindow.GetSelectedEntity());
+		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
 		InspectorWindow.RenderGui();
 
 		auto [vpx, vpy] = ViewportWindow.GetMousePosition();
@@ -70,7 +72,7 @@ public:
 		const uint32_t viewportWidth = ViewportWindow.Resolution.x, viewportHeight = ViewportWindow.Resolution.y;
 #endif
 
-		Scene.Update(DeltaTime);
+		World.Update(DeltaTime);
 
 		// Render
 		pRenderer->SetViewportMousePosition(vpx, vpy);
@@ -78,16 +80,17 @@ public:
 
 		ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
 
-		pRenderer->OnRender(Scene);
+		pRenderer->OnRender(World);
 	}
 
 	void Shutdown() override
 	{
 		pRenderer->OnDestroy();
 		pRenderer.reset();
-		Scene.Clear();
+		World.Clear();
 		AssetManager::Shutdown();
 		RenderDevice::Shutdown();
+		PhysicsManager::Shutdown();
 	}
 
 	void Resize(UINT Width, UINT Height) override { pRenderer->OnResize(Width, Height); }
@@ -99,7 +102,7 @@ private:
 	AssetWindow		AssetWindow;
 	ConsoleWindow	ConsoleWindow;
 
-	Scene	 Scene;
+	World	 World;
 	std::unique_ptr<Renderer> pRenderer;
 };
 

@@ -5,6 +5,7 @@
 #include "CommandContext.h"
 #include "DescriptorHeap.h"
 #include "Resource.h"
+#include "Raytracing.h"
 
 // I really want to do mGpu, gotta get myself another 2070 for mGpu
 // or get 2 30 series, I can't get one because they're always out of stock >:(

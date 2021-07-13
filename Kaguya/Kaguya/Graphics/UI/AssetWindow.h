@@ -1,16 +1,16 @@
 #pragma once
 #include "UIWindow.h"
 
-#include "../Scene/Scene.h"
-#include "../Scene/Entity.h"
+#include <World/World.h>
+#include <World/Entity.h>
 
 class AssetWindow : public UIWindow
 {
 public:
-	void SetContext(Scene* pScene) { m_pScene = pScene; }
+	void SetContext(World* pWorld) { this->pWorld = pWorld; }
 
 	void RenderGui();
 
 private:
-	Scene* m_pScene = nullptr;
+	World* pWorld = nullptr;
 };

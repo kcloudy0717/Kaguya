@@ -24,9 +24,9 @@ public:
 
 	static int Run(Application& Application, const ApplicationOptions& Options);
 
-	static int	 Width() { return WindowWidth; }
-	static int	 Height() { return WindowHeight; }
-	static float AspectRatio() { return (float)Width() / (float)Height(); }
+	static int	 GetWidth() { return WindowWidth; }
+	static int	 GetHeight() { return WindowHeight; }
+	static float GetAspectRatio() { return AspectRatio; }
 	static HWND	 GetWindowHandle() { return hWnd.get(); }
 
 	static InputHandler& GetInputHandler() { return InputHandler; }
@@ -49,6 +49,7 @@ public:
 
 protected:
 	inline static int				  WindowWidth, WindowHeight;
+	inline static float				  AspectRatio;
 	inline static wil::unique_hicon	  hIcon;
 	inline static wil::unique_hcursor hCursor;
 	inline static wil::unique_hwnd	  hWnd;

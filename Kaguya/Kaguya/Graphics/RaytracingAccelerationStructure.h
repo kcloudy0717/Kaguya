@@ -1,6 +1,6 @@
 #pragma once
-#include "Scene/Scene.h"
-#include "Scene/Entity.h"
+#include "World/World.h"
+#include "World/Entity.h"
 
 #define RAYTRACING_INSTANCEMASK_ALL	   (0xff)
 #define RAYTRACING_INSTANCEMASK_OPAQUE (1 << 0)

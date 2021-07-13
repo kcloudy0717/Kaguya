@@ -96,6 +96,8 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 
 	D3D12Device.As(&D3D12Device5);
 
+	D3D12Device.As(&D3D12InfoQueue1);
+
 	ComPtr<ID3D12InfoQueue> InfoQueue;
 	if (SUCCEEDED(D3D12Device.As(&InfoQueue)))
 	{
