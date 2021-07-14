@@ -4,7 +4,7 @@
 struct Vertex
 {
 	float3 Position;
-	float2 TextureCoordinate;
+	float2 TextureCoord;
 	float3 Normal;
 };
 
@@ -26,9 +26,9 @@ float3 BarycentricInterpolation(float3 v0, float3 v1, float3 v2, float3 barycent
 Vertex BarycentricInterpolation(Vertex v0, Vertex v1, Vertex v2, float3 barycentric)
 {
 	Vertex vertex;
-	vertex.Position = BarycentricInterpolation(v0.Position, v1.Position, v2.Position, barycentric);
-	vertex.TextureCoordinate = BarycentricInterpolation(v0.TextureCoordinate, v1.TextureCoordinate, v2.TextureCoordinate, barycentric);
-	vertex.Normal = BarycentricInterpolation(v0.Normal, v1.Normal, v2.Normal, barycentric);
+	vertex.Position		= BarycentricInterpolation(v0.Position, v1.Position, v2.Position, barycentric);
+	vertex.TextureCoord = BarycentricInterpolation(v0.TextureCoord, v1.TextureCoord, v2.TextureCoord, barycentric);
+	vertex.Normal		= BarycentricInterpolation(v0.Normal, v1.Normal, v2.Normal, barycentric);
 
 	return vertex;
 }

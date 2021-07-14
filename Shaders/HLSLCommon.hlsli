@@ -11,8 +11,8 @@
 float3 CartesianToSpherical(float x, float y, float z)
 {
 	float radius = sqrt(x * x + y * y + z * z);
-	float theta = acos(z / radius);
-	float phi = atan(y / x);
+	float theta	 = acos(z / radius);
+	float phi	 = atan(y / x);
 	return float3(radius, theta, phi);
 }
 
@@ -40,13 +40,13 @@ float3 NDCDepthToViewPosition(float NDCDepth, float2 ScreenSpaceUV, Camera Camer
 {
 	ScreenSpaceUV.y = 1.0f - ScreenSpaceUV.y; // Flip due to DirectX convention
 
-	float z = NDCDepth;
+	float  z  = NDCDepth;
 	float2 xy = ScreenSpaceUV * 2.0f - 1.0f;
 
 	float4 clipSpacePosition = float4(xy, z, 1.0f);
 	float4 viewSpacePosition = mul(clipSpacePosition, Camera.InvProjection);
 
-    // Perspective division
+	// Perspective division
 	viewSpacePosition /= viewSpacePosition.w;
 
 	return viewSpacePosition.xyz;
@@ -55,7 +55,7 @@ float3 NDCDepthToViewPosition(float NDCDepth, float2 ScreenSpaceUV, Camera Camer
 // Reconstructs world position from depth buffer
 float3 NDCDepthToWorldPosition(float NDCDepth, float2 ScreenSpaceUV, Camera Camera)
 {
-	float4 viewSpacePosition = float4(NDCDepthToViewPosition(NDCDepth, ScreenSpaceUV, Camera), 1.0f);
+	float4 viewSpacePosition  = float4(NDCDepthToViewPosition(NDCDepth, ScreenSpaceUV, Camera), 1.0f);
 	float4 worldSpacePosition = mul(viewSpacePosition, Camera.InvView);
 	return worldSpacePosition.xyz;
 }
@@ -92,8 +92,7 @@ uint Halton3Inverse(uint Index, uint Digits)
 
 uint HaltonIndex(uint x, uint y, uint i, uint Increment)
 {
-	return ((Halton2Inverse(x % 256, 8) * 76545 +
-      Halton3Inverse(y % 256, 6) * 110080) % Increment) + i * 186624;
+	return ((Halton2Inverse(x % 256, 8) * 76545 + Halton3Inverse(y % 256, 6) * 110080) % Increment) + i * 186624;
 }
 
 struct HaltonState
@@ -102,38 +101,30 @@ struct HaltonState
 	uint SequenceIndex;
 };
 
-HaltonState InitHaltonState(int x, int y,
-	int Path, int NumPaths,
-	int FrameId,
-	int Loop, uint Increment)
+HaltonState InitHaltonState(int x, int y, int Path, int NumPaths, int FrameId, int Loop, uint Increment)
 {
 	HaltonState HaltonState;
-	HaltonState.Dimension = 2;
+	HaltonState.Dimension	  = 2;
 	HaltonState.SequenceIndex = HaltonIndex(x, y, (FrameId * NumPaths + Path) % (Loop * NumPaths), Increment);
 	return HaltonState;
 }
 
 float HaltonSample(uint Dimension, uint SampleIndex)
 {
-	static float PrimeNumbers[32] =
-	{
-		2, 3, 5, 7, 11, 13, 17, 19, 23, 29,
-        31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
-        73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
-        127, 131
-	};
-	
+	static float PrimeNumbers[32] = { 2,  3,  5,  7,  11, 13, 17, 19, 23, 29,  31,	37,	 41,  43,  47,	53,
+									  59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131 };
+
 	int base = Dimension < 32 ? PrimeNumbers[Dimension] : 2;
 
 	// Compute the radical inverse.
-	float a = 0;
+	float a		  = 0;
 	float invBase = 1.0f / float(base);
-  
+
 	for (float mult = invBase; SampleIndex != 0; SampleIndex /= base, mult *= invBase)
 	{
 		a += float(SampleIndex % base) * mult;
 	}
-  
+
 	return a;
 }
 

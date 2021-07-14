@@ -25,6 +25,11 @@ class PxController;
 #include "Components/CharacterController.h"
 #include "Components/NativeScript.h"
 
+// Collider
+#include "Components/Collider/BoxCollider.h"
+#include "Components/Collider/CapsuleCollider.h"
+#include "Components/Collider/MeshCollider.h"
+
 // Rigid Body
 
 // struct RigidBody : Component
@@ -41,8 +46,3 @@ class PxController;
 
 #include "Components/RigidBody/StaticRigidBody.h"
 #include "Components/RigidBody/DynamicRigidBody.h"
-
-// Collider
-#include "Components/Collider/BoxCollider.h"
-#include "Components/Collider/CapsuleCollider.h"
-#include "Components/Collider/MeshCollider.h"

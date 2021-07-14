@@ -66,7 +66,7 @@ void Application::InitializeComponents()
 	}
 
 	// Initialize Log
-	Log::Create();
+	Log::Initialize();
 }
 
 int Application::Run(Application& Application, const ApplicationOptions& Options)
@@ -113,7 +113,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	int y		 = Options.y.value_or(CW_USEDEFAULT);
 	WindowWidth	 = WindowRect.right - WindowRect.left;
 	WindowHeight = WindowRect.bottom - WindowRect.top;
-	AspectRatio = float(WindowWidth) / float(WindowHeight);
+	AspectRatio	 = float(WindowWidth) / float(WindowHeight);
 
 	hWnd = wil::unique_hwnd(::CreateWindowW(
 		wcexw.lpszClassName,
@@ -156,6 +156,81 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	BOOL b = ::UnregisterClass(wcexw.lpszClassName, hInstance);
 	return !b;
+}
+
+std::filesystem::path Application::OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs)
+{
+	// COMDLG_FILTERSPEC ComDlgFS[3] = { { L"C++ code files", L"*.cpp;*.h;*.rc" },
+	//								  { L"Executable Files", L"*.exe;*.dll" },
+	//								  { L"All Files (*.*)", L"*.*" } };
+	using Microsoft::WRL::ComPtr;
+
+	std::filesystem::path	Path;
+	ComPtr<IFileOpenDialog> pFileOpen;
+
+	if (SUCCEEDED(CoCreateInstance(
+			CLSID_FileOpenDialog,
+			nullptr,
+			CLSCTX_ALL,
+			IID_PPV_ARGS(pFileOpen.ReleaseAndGetAddressOf()))))
+	{
+		pFileOpen->SetFileTypes(NumFilters, pFilterSpecs);
+
+		// Show the Open dialog box.
+		// Get the file name from the dialog box.
+		if (SUCCEEDED(pFileOpen->Show(nullptr)))
+		{
+			ComPtr<IShellItem> pItem;
+			if (SUCCEEDED(pFileOpen->GetResult(&pItem)))
+			{
+				PWSTR pszFilePath;
+				// Display the file name to the user.
+				if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+				{
+					Path = pszFilePath;
+					CoTaskMemFree(pszFilePath);
+				}
+			}
+		}
+	}
+
+	return Path;
+}
+
+std::filesystem::path Application::SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs)
+{
+	using Microsoft::WRL::ComPtr;
+
+	std::filesystem::path	Path;
+	ComPtr<IFileSaveDialog> pFileSave;
+
+	if (SUCCEEDED(CoCreateInstance(
+			CLSID_FileSaveDialog,
+			nullptr,
+			CLSCTX_ALL,
+			IID_PPV_ARGS(pFileSave.ReleaseAndGetAddressOf()))))
+	{
+		pFileSave->SetFileTypes(NumFilters, pFilterSpecs);
+
+		// Show the Save dialog box.
+		// Get the file name from the dialog box.
+		if (SUCCEEDED(pFileSave->Show(nullptr)))
+		{
+			ComPtr<IShellItem> pItem;
+			if (SUCCEEDED(pFileSave->GetResult(&pItem)))
+			{
+				PWSTR pszFilePath;
+				// Display the file name to the user.
+				if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+				{
+					Path = pszFilePath;
+					CoTaskMemFree(pszFilePath);
+				}
+			}
+		}
+	}
+
+	return Path;
 }
 
 bool Application::ProcessMessages()
@@ -211,7 +286,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 		WindowWidth	 = LOWORD(lParam);
 		WindowHeight = HIWORD(lParam);
-		AspectRatio = float(WindowWidth) / float(WindowHeight);
+		AspectRatio	 = float(WindowWidth) / float(WindowHeight);
 
 		if (wParam == SIZE_MINIMIZED)
 		{

@@ -39,13 +39,14 @@ void AssetWindow::RenderGui()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					OpenDialogMultiple(
-						"dds,tga,hdr",
-						"",
-						[&](auto Path)
-						{
-							AssetManager::AsyncLoadImage(Path, sRGB);
-						});
+					COMDLG_FILTERSPEC ComDlgFS[] = { { L"Image Files", L"*.dds;*.tga;*.hdr" },
+													 { L"All Files (*.*)", L"*.*" } };
+
+					std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+					if (!Path.empty())
+					{
+						AssetManager::AsyncLoadImage(Path, sRGB);
+					}
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -77,13 +78,14 @@ void AssetWindow::RenderGui()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					OpenDialogMultiple(
-						"obj,stl,ply",
-						"",
-						[&](auto Path)
-						{
-							AssetManager::AsyncLoadMesh(Path, KeepGeometryInRAM);
-						});
+					COMDLG_FILTERSPEC ComDlgFS[] = { { L"Mesh Files", L"*.obj;*.stl;*.ply" },
+													 { L"All Files (*.*)", L"*.*" } };
+
+					std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+					if (!Path.empty())
+					{
+						AssetManager::AsyncLoadMesh(Path, KeepGeometryInRAM);
+					}
 
 					ImGui::CloseCurrentPopup();
 				}

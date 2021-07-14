@@ -43,7 +43,6 @@ public:
 
 	template<UINT BaseShaderRegister, UINT RegisterSpace>
 	void AddUAVRange(
-
 		UINT						 NumDescriptors,
 		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
 		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
@@ -57,7 +56,6 @@ public:
 
 	template<UINT BaseShaderRegister, UINT RegisterSpace>
 	void AddCBVRange(
-
 		UINT						 NumDescriptors,
 		D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
 		UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)

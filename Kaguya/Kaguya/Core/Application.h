@@ -33,6 +33,9 @@ public:
 	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
 	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
 
+	static std::filesystem::path OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
+	static std::filesystem::path SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
+
 	virtual bool Initialize()					 = 0;
 	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Shutdown()						 = 0;
@@ -63,81 +66,3 @@ protected:
 private:
 	inline static bool Initialized = false;
 };
-
-template<class T>
-concept IsDialogFunction = requires(T F, std::filesystem::path Path)
-{
-	{
-		F(Path)
-		} -> std::convertible_to<void>;
-};
-
-template<IsDialogFunction DialogFunction>
-inline void OpenDialog(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
-{
-	nfdchar_t*	outPath = nullptr;
-	nfdresult_t result =
-		NFD_OpenDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &outPath);
-
-	if (result == NFD_OKAY)
-	{
-		Function(std::filesystem::path(outPath));
-		free(outPath);
-	}
-	else if (result == NFD_CANCEL)
-	{
-		UNREFERENCED_PARAMETER(result);
-	}
-	else
-	{
-		printf("Error: %s\n", NFD_GetError());
-	}
-}
-
-// Function is called for each path
-template<IsDialogFunction DialogFunction>
-inline void OpenDialogMultiple(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
-{
-	nfdpathset_t pathSet;
-	nfdresult_t	 result =
-		NFD_OpenDialogMultiple(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &pathSet);
-	if (result == NFD_OKAY)
-	{
-		size_t i;
-		for (i = 0; i < NFD_PathSet_GetCount(&pathSet); ++i)
-		{
-			nfdchar_t* path = NFD_PathSet_GetPath(&pathSet, i);
-			Function(std::filesystem::path(path));
-		}
-		NFD_PathSet_Free(&pathSet);
-	}
-	else if (result == NFD_CANCEL)
-	{
-		UNREFERENCED_PARAMETER(result);
-	}
-	else
-	{
-		printf("Error: %s\n", NFD_GetError());
-	}
-}
-
-template<IsDialogFunction DialogFunction>
-inline void SaveDialog(std::string_view FilterList, std::string_view DefaultPath, DialogFunction Function)
-{
-	nfdchar_t*	savePath = nullptr;
-	nfdresult_t result =
-		NFD_SaveDialog(FilterList.data(), DefaultPath.empty() ? DefaultPath.data() : nullptr, &savePath);
-	if (result == NFD_OKAY)
-	{
-		Function(std::filesystem::path(savePath));
-		free(savePath);
-	}
-	else if (result == NFD_CANCEL)
-	{
-		UNREFERENCED_PARAMETER(result);
-	}
-	else
-	{
-		printf("Error: %s\n", NFD_GetError());
-	}
-}

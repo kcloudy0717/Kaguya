@@ -32,22 +32,22 @@ struct Shaders
 
 	static void Compile(const ShaderCompiler& ShaderCompiler)
 	{
-		const auto& ExecutableFolderPath = Application::ExecutableDirectory;
+		const auto& ExecutableDirectory = Application::ExecutableDirectory;
 
-		// Load VS
+		// VS
 		{
 			VS::FullScreenTriangle = ShaderCompiler.CompileShader(
 				EShaderType::Vertex,
-				ExecutableFolderPath / L"Shaders/FullScreenTriangle.hlsl",
+				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
 				g_VSEntryPoint,
 				{});
 		}
 
-		// Load PS
+		// PS
 		{
 			PS::ToneMap = ShaderCompiler.CompileShader(
 				EShaderType::Pixel,
-				ExecutableFolderPath / L"Shaders/PostProcess/ToneMap.hlsl",
+				ExecutableDirectory / L"Shaders/PostProcess/ToneMap.hlsl",
 				g_PSEntryPoint,
 				{});
 		}
@@ -57,13 +57,11 @@ struct Shaders
 struct Libraries
 {
 	inline static Library PathTrace;
-	inline static Library Picking;
 
 	static void Compile(const ShaderCompiler& ShaderCompiler)
 	{
-		const auto& ExecutableFolderPath = Application::ExecutableDirectory;
+		const auto& ExecutableDirectory = Application::ExecutableDirectory;
 
-		PathTrace = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/PathTrace.hlsl");
-		Picking	  = ShaderCompiler.CompileLibrary(ExecutableFolderPath / L"Shaders/Picking.hlsl");
+		PathTrace = ShaderCompiler.CompileLibrary(ExecutableDirectory / L"Shaders/PathTrace.hlsl");
 	}
 };

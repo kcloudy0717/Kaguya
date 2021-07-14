@@ -5,14 +5,19 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 # Features
 
 - Progressive stochastic path tracing
-- Bindless resource
-- Multi-threaded rendering
-- Utilization of graphics and asynchronous compute queues
+- Importance sampling of BSDFs and multiple importance sampling of lights
 - Lambertian, Mirror, Glass, and Disney BSDFs
 - Point and quad lights
-- Entity component system with the following implemented components:
+- Bindless resource
+- Utilization of graphics and asynchronous compute queues
+- ECS with the following implemented components:
   - Tag: used to identify a game object
   - Transform: controls position, scale, orientation of GameObject
+  - Camera: controls camera parameters for scene viewing
+  - Light: used to illuminate the scene, controls light parameters
+    - Supported types:
+      - Point
+      - Quad
   - Mesh Filter: references a mesh in the asset window to be rendered
   - Mesh Renderer: controls material parameters and submits the referenced mesh to RaytracingAccelerationStructure for path tracing
     - Supported BSDFs:
@@ -20,24 +25,30 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
       - Mirror
       - Glass
       - Disney
-  - Light: used to illuminate the scene, controls light parameters
-    - Supported types:
-      - Point
-      - Quad
+  - NativeScript: C++ scripting
+  - Collider: Adds collider to the entity to detect collisions with other rigidbodies with a collider
+    - Supported Collider:
+      - Box Collider
+      - Capsule Collider
+      - Mesh Collider (WIP)
+  - Rigid Body: Adds rigidbody physics to the entity and can be applied forces and velocities
+    - Static Rigid Body
+    - Dynamic Rigid Body
 - Custom scene parser using yaml
 - Asynchronous resource loading
-- Importance sampling of BSDFs and multiple importance sampling of lights
 
 # Goals
 
 - Implement spectral path tracing
+- Implement bi-directional path tracing
+- Implement wavefront path tracer
 - Implement volumetric scattering and sub-surface scattering
 - Implement anti-aliasing techniques
 - Implement more materials
 - Implement more light types (spot, directional, spherical)
 - Implement denoising
-- Implement compaction to acceleration structures
-- Upgrade bindless resource using SM6.6 (Reduces root parameter, potentially minor performance increase)
+- Implement compaction to DXR acceleration structures
+- SM6.6 Dynamic resource binding
 - Add environment lights ([Portal-masked environment map sampling](https://cs.dartmouth.edu/wjarosz/publications/bitterli15portal.html)) and geometry area lights ([Spherical triangle sampling](https://www.graphics.cornell.edu/pubs/1995/Arv95c.pdf))
 - Upgrade from DXR 1.0 to DXR 1.1 (inline raytracing)
 
@@ -60,7 +71,10 @@ Let me know if you have any trouble setting up the project and getting it up and
 
 # Acknowledgements
 
-- [D3D12MemoryAllocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
+- [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
+- [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler)
+- [DirectXTex](https://github.com/microsoft/DirectXTex)
+- [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
 - [EnTT](https://github.com/skypjack/entt)
 - [imgui](https://github.com/ocornut/imgui)
 - [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
@@ -68,11 +82,7 @@ Let me know if you have any trouble setting up the project and getting it up and
 - [wil](https://github.com/microsoft/wil)
 - [yaml-cpp](https://github.com/jbeder/yaml-cpp)
 - [assimp](https://github.com/assimp/assimp)
-- [DirectXTex](https://github.com/microsoft/DirectXTex)
-- [DirectXTK12](https://github.com/microsoft/DirectXTK12)
-- [dxc](https://github.com/microsoft/DirectXShaderCompiler)
-- [nativefiledialog](https://github.com/mlabbe/nativefiledialog)
-- [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
+- [NVIDIA PhysX](https://github.com/NVIDIAGameWorks/PhysX)
 
 Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.me/resources/)!
 
@@ -80,6 +90,7 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
 
 - 3D Game Programming with DirectX 12 Book by Frank D Luna
 - [Direct3D 12 programming guide from MSDN](https://docs.microsoft.com/en-us/windows/win32/direct3d12/directx-12-programming-guide)
+- [DirectX Specs](https://microsoft.github.io/DirectX-Specs/)
 - [Physically Based Rendering: From Theory to Implementation](http://www.pbr-book.org/) by Matt Pharr, Wenzel Jakob, and Greg Humphreys.
 - [Ray Tracing Gems: High-Quality and Real-Time Rendering with DXR and Other APIs](http://www.realtimerendering.com/raytracinggems/)
 - [Ray Tracing book series (In One Weekend, The Next Week, The Rest of Your Life)](https://github.com/RayTracing/raytracing.github.io) by Peter Shirley

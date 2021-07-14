@@ -19,13 +19,13 @@ public:
 	static constexpr UINT64 LightLimit	  = 100;
 	static constexpr UINT64 InstanceLimit = 1024;
 
-	World() { Clear(); }
+	World() { AddDefaultEntities(); }
 
 	Entity GetMainCamera();
 
-	void Clear();
+	void Clear(bool bAddDefaultEntities = true);
 
-	Entity CreateEntity(std::string_view Name);
+	Entity CreateEntity(std::string_view Name = {});
 
 	void DestroyEntity(Entity Entity);
 

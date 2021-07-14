@@ -27,7 +27,7 @@ inline const char* GetClass()
 }
 
 template<typename TClass>
-inline const auto& GetAttributes()
+inline auto& GetAttributes()
 {
 	return AttributeContainer<TClass, decltype(RegisterClassAttributes<TClass>())>::Attributes;
 }
@@ -63,9 +63,14 @@ public:
 
 	const char* GetName() const noexcept { return Name; }
 
+	// Used exclusively by decltype
+	T GetType() const noexcept { return T(); }
+
 	const T& Get(const TClass& Class) const noexcept { return Class.*pPtr; }
 
 	T& Get(TClass& Class) noexcept { return Class.*pPtr; }
+
+	void Set(TClass& Class, T&& Value) { Class.*pPtr = std::forward<T>(Value); }
 
 private:
 	const char* Name;

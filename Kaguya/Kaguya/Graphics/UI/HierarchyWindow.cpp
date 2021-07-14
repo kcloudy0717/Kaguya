@@ -15,7 +15,8 @@ void HierarchyWindow::RenderGui()
 
 			auto& Name = Entity.GetComponent<Tag>().Name;
 
-			ImGuiTreeNodeFlags TreeNodeFlags = ((SelectedEntity == Entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth;
+			ImGuiTreeNodeFlags TreeNodeFlags =
+				((SelectedEntity == Entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth;
 			bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
 			if (ImGui::IsItemClicked())
 			{
@@ -65,31 +66,29 @@ void HierarchyWindow::RenderGui()
 			SelectedEntity = {};
 		}
 
+		COMDLG_FILTERSPEC ComDlgFS[] = { { L"Scene File", L"*.yaml" }, { L"All Files (*.*)", L"*.*" } };
+
 		if (ImGui::MenuItem("Save"))
 		{
-			SaveDialog(
-				"yaml",
-				"",
-				[&](auto Path)
+			std::filesystem::path Path = Application::SaveDialog(2, ComDlgFS);
+			if (!Path.empty())
+			{
+				if (!Path.has_extension())
 				{
-					if (!Path.has_extension())
-					{
-						Path += ".yaml";
-					}
+					Path += ".yaml";
+				}
 
-					SceneParser::Save(Path, pWorld);
-				});
+				SceneParser::Save(Path, pWorld);
+			}
 		}
 
 		if (ImGui::MenuItem("Load"))
 		{
-			OpenDialog(
-				"yaml",
-				"",
-				[&](auto Path)
-				{
-					SceneParser::Load(Path, pWorld);
-				});
+			std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+			if (!Path.empty())
+			{
+				SceneParser::Load(Path, pWorld);
+			}
 		}
 
 		ImGui::EndPopup();

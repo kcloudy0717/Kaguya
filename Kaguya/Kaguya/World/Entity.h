@@ -11,12 +11,12 @@ struct Entity
 	{
 	}
 
-	template<typename T, typename... Args>
-	T& AddComponent(Args&&... args)
+	template<typename T, typename... TArgs>
+	T& AddComponent(TArgs&&... Args)
 	{
 		assert(!HasComponent<T>());
 
-		T& Component = pWorld->Registry.emplace<T>(Handle, std::forward<Args>(args)...);
+		T& Component = pWorld->Registry.emplace<T>(Handle, std::forward<TArgs>(Args)...);
 		pWorld->OnComponentAdded<T>(*this, Component);
 		return Component;
 	}
@@ -29,14 +29,14 @@ struct Entity
 		return pWorld->Registry.get<T>(Handle);
 	}
 
-	template<typename T, typename... Args>
-	T& GetOrAddComponent(Args&&... args)
+	template<typename T, typename... TArgs>
+	T& GetOrAddComponent(TArgs&&... Args)
 	{
 		if (HasComponent<T>())
 		{
 			return GetComponent<T>();
 		}
-		return AddComponent<T>(args...);
+		return AddComponent<T>(std::forward<TArgs>(Args)...);
 	}
 
 	template<typename T>

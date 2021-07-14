@@ -23,14 +23,18 @@ Entity World::GetMainCamera()
 	return Entity(entt::null, this);
 }
 
-void World::Clear()
+void World::Clear(bool bAddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
 	Registry.clear();
-	AddDefaultEntities();
+	ActiveCamera = nullptr;
+	if (bAddDefaultEntities)
+	{
+		AddDefaultEntities();
+	}
 }
 
-Entity World::CreateEntity(std::string_view Name)
+Entity World::CreateEntity(std::string_view Name /*= {}*/)
 {
 	Entity NewEntity	= { Registry.create(), this };
 	auto&  TagComponent = NewEntity.AddComponent<Tag>(Name.empty() ? DefaultEntityName : Name);
@@ -156,7 +160,6 @@ void World::AddDefaultEntities()
 {
 	Entity MainCamera = CreateEntity("Main Camera");
 	MainCamera.AddComponent<Camera>();
-	MainCamera.AddComponent<NativeScript>().Bind<PlayerScript>();
 }
 
 template<typename T>
@@ -180,6 +183,7 @@ void World::OnComponentAdded<Camera>(Entity Entity, Camera& Component)
 	if (!ActiveCamera)
 	{
 		ActiveCamera = &Component;
+		Entity.AddComponent<NativeScript>().Bind<PlayerScript>();
 	}
 	else
 	{
@@ -232,6 +236,21 @@ void World::OnComponentAdded<NativeScript>(Entity Entity, NativeScript& Componen
 }
 
 template<>
+void World::OnComponentAdded<BoxCollider>(Entity Entity, BoxCollider& Component)
+{
+}
+
+template<>
+void World::OnComponentAdded<CapsuleCollider>(Entity Entity, CapsuleCollider& Component)
+{
+}
+
+template<>
+void World::OnComponentAdded<MeshCollider>(Entity Entity, MeshCollider& Component)
+{
+}
+
+template<>
 void World::OnComponentAdded<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
 {
 	if (Entity.HasComponent<BoxCollider>())
@@ -255,21 +274,6 @@ void World::OnComponentAdded<DynamicRigidBody>(Entity Entity, DynamicRigidBody& 
 	{
 		Component.Actor = PhysicsManager::AddDynamicActorEntity(Entity, Entity.GetComponent<CapsuleCollider>());
 	}
-}
-
-template<>
-void World::OnComponentAdded<BoxCollider>(Entity Entity, BoxCollider& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<CapsuleCollider>(Entity Entity, CapsuleCollider& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<MeshCollider>(Entity Entity, MeshCollider& Component)
-{
 }
 
 //
@@ -319,16 +323,6 @@ void World::OnComponentRemoved<NativeScript>(Entity Entity, NativeScript& Compon
 }
 
 template<>
-void World::OnComponentRemoved<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<DynamicRigidBody>(Entity Entity, DynamicRigidBody& Component)
-{
-}
-
-template<>
 void World::OnComponentRemoved<BoxCollider>(Entity Entity, BoxCollider& Component)
 {
 }
@@ -340,5 +334,15 @@ void World::OnComponentRemoved<CapsuleCollider>(Entity Entity, CapsuleCollider& 
 
 template<>
 void World::OnComponentRemoved<MeshCollider>(Entity Entity, MeshCollider& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<DynamicRigidBody>(Entity Entity, DynamicRigidBody& Component)
 {
 }

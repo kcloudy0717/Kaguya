@@ -8,9 +8,79 @@ class Log
 	friend struct imgui_sink;
 
 public:
-	static void Create();
+	static void Initialize();
 
-	inline static auto Instance() { return s_Logger.get(); }
+	template<typename T>
+	static void Trace(const T& Msg)
+	{
+		s_Logger->trace(Msg);
+	}
+
+	template<typename T>
+	static void Debug(const T& Msg)
+	{
+		s_Logger->debug(Msg);
+	}
+
+	template<typename T>
+	static void Info(const T& Msg)
+	{
+		s_Logger->info(Msg);
+	}
+
+	template<typename T>
+	static void Warn(const T& Msg)
+	{
+		s_Logger->warn(Msg);
+	}
+
+	template<typename T>
+	static void Error(const T& Msg)
+	{
+		s_Logger->error(Msg);
+	}
+
+	template<typename T>
+	static void Critical(const T& Msg)
+	{
+		s_Logger->critical(Msg);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Trace(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->trace(Msg, std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Debug(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->debug(Msg, std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Info(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->info(Msg, std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Warn(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->warn(Msg, std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Error(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->error(Msg, std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T, typename... TArgs>
+	static void Critical(const T& Msg, TArgs&&... Args)
+	{
+		s_Logger->critical(Msg, std::forward<TArgs>(Args)...);
+	}
 
 private:
 	inline static std::shared_ptr<spdlog::logger> s_Logger;
@@ -20,8 +90,8 @@ private:
 	inline static ImVector<int>	  LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
 };
 
-#define LOG_TRACE(...)	  Log::Instance()->trace(__VA_ARGS__)
-#define LOG_INFO(...)	  Log::Instance()->info(__VA_ARGS__)
-#define LOG_WARN(...)	  Log::Instance()->warn(__VA_ARGS__)
-#define LOG_ERROR(...)	  Log::Instance()->error(__VA_ARGS__)
-#define LOG_CRITICAL(...) Log::Instance()->critical(__VA_ARGS__)
+#define LOG_TRACE(...)	  Log::Trace(__VA_ARGS__)
+#define LOG_INFO(...)	  Log::Info(__VA_ARGS__)
+#define LOG_WARN(...)	  Log::Warn(__VA_ARGS__)
+#define LOG_ERROR(...)	  Log::Error(__VA_ARGS__)
+#define LOG_CRITICAL(...) Log::Critical(__VA_ARGS__)

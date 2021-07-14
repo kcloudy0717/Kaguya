@@ -51,7 +51,7 @@ SurfaceInteraction GetSurfaceInteraction(in BuiltInTriangleIntersectionAttribute
 	si.p  = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
 	si.wo = -WorldRayDirection();
 	si.n  = n;
-	si.uv = vertex.TextureCoordinate;
+	si.uv = vertex.TextureCoord;
 
 	// Compute geometry basis and shading basis
 	si.GeometryFrame = InitFrameFromZ(n);
@@ -217,7 +217,8 @@ float3 Li(RayDesc DXRRay, inout uint Seed)
 	return RayPayload.L;
 }
 
-[shader("raygeneration")] void RayGeneration()
+[shader("raygeneration")]
+void RayGeneration()
 {
 	const uint2 launchIndex		 = DispatchRaysIndex().xy;
 	const uint2 launchDimensions = DispatchRaysDimensions().xy;

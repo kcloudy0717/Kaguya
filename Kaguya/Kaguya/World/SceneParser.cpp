@@ -58,12 +58,12 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const DirectX::XMFLOAT4& Float
 
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, ELightTypes LightType)
 {
-	return Emitter << (int)LightType;
+	return Emitter << (unsigned int)LightType;
 }
 
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, EBSDFTypes BSDFType)
 {
-	return Emitter << (int)BSDFType;
+	return Emitter << (unsigned int)BSDFType;
 }
 
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MaterialTexture& MaterialTexture)
@@ -182,6 +182,50 @@ struct convert<DirectX::XMFLOAT4>
 		return true;
 	}
 };
+
+template<>
+struct convert<ELightTypes>
+{
+	static bool decode(const Node& Node, ELightTypes& LightType)
+	{
+		LightType = (ELightTypes)Node.as<unsigned int>();
+		return true;
+	}
+};
+
+template<>
+struct convert<EBSDFTypes>
+{
+	static bool decode(const Node& Node, EBSDFTypes& BSDFType)
+	{
+		BSDFType = (EBSDFTypes)Node.as<unsigned int>();
+		return true;
+	}
+};
+
+template<>
+struct convert<MaterialTexture>
+{
+	static bool decode(const Node& Node, MaterialTexture& OutMaterialTexture)
+	{
+		OutMaterialTexture.Path = Node.as<std::string>();
+		return true;
+	}
+};
+
+template<>
+struct convert<Material>
+{
+	static bool decode(const Node& Node, Material& OutMaterial)
+	{
+		ForEachAttribute<Material>(
+			[&](auto&& Attribute)
+			{
+				Attribute.Set(OutMaterial, Node[Attribute.GetName()].as<decltype(Attribute.GetType())>());
+			});
+		return true;
+	}
+};
 } // namespace YAML
 
 static void SerializeImages(YAML::Emitter& Emitter)
@@ -251,7 +295,6 @@ static void SerializeEntity(YAML::Emitter& Emitter, Entity Entity)
 	ComponentSerializer<Transform>(Emitter, Entity);
 	ComponentSerializer<Camera>(Emitter, Entity);
 	ComponentSerializer<Light>(Emitter, Entity);
-
 	ComponentSerializer<MeshFilter>(Emitter, Entity);
 	ComponentSerializer<MeshRenderer>(Emitter, Entity);
 
@@ -315,131 +358,66 @@ static void DeserializeMesh(const YAML::Node& Node)
 	AssetManager::AsyncLoadMesh(Path, keepGeometryInRAM);
 }
 
-template<is_component T, typename DeserializeFunction>
-void DeserializeComponent(const YAML::Node& Node, Entity* pEntity, DeserializeFunction Deserialize)
+template<typename T>
+struct ComponentDeserializer
 {
-	if (Node)
+	ComponentDeserializer(const YAML::Node& Node, Entity* pEntity)
 	{
-		auto& Component = pEntity->GetOrAddComponent<T>();
+		if (YAML::Node Child = Node[GetClass<T>()])
+		{
+			auto& Component = pEntity->GetOrAddComponent<T>();
 
-		Deserialize(Node, Component);
+			ForEachAttribute<T>(
+				[&](auto&& Attribute)
+				{
+					Attribute.Set(Component, Child[Attribute.GetName()].as<decltype(Attribute.GetType())>());
+				});
+		}
 	}
-}
+};
 
 static void DeserializeEntity(const YAML::Node& Node, World* pWorld)
 {
-	// Tag component have to exist
-	auto Name = Node["Tag"]["Name"].as<std::string>();
+	Entity Entity = pWorld->CreateEntity();
 
-	// Create entity after getting our tag component
-	Entity Entity = pWorld->CreateEntity(Name);
+	ComponentDeserializer<Tag>(Node, &Entity);
+	ComponentDeserializer<Transform>(Node, &Entity);
+	ComponentDeserializer<Camera>(Node, &Entity);
+	ComponentDeserializer<Light>(Node, &Entity);
+	ComponentDeserializer<MeshFilter>(Node, &Entity);
+	ComponentDeserializer<MeshRenderer>(Node, &Entity);
 
-	// TODO: Come up with some template meta programming for serialize/deserialize
-	DeserializeComponent<Transform>(
-		Node["Transform"],
-		&Entity,
-		[](auto& Node, auto& Transform)
+	ComponentDeserializer<BoxCollider>(Node, &Entity);
+	ComponentDeserializer<CapsuleCollider>(Node, &Entity);
+
+	if (Entity.HasComponent<MeshFilter>())
+	{
+		auto& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
+
+		if (MeshFilterComponent.Path != "NULL")
 		{
-			Transform.Position	  = Node["Position"].as<DirectX::XMFLOAT3>();
-			Transform.Scale		  = Node["Scale"].as<DirectX::XMFLOAT3>();
-			Transform.Orientation = Node["Orientation"].as<DirectX::XMFLOAT4>();
-		});
+			MeshFilterComponent.Path = (Application::ExecutableDirectory / MeshFilterComponent.Path).string();
 
-	DeserializeComponent<Camera>(
-		Node["Camera"],
-		&Entity,
-		[](auto& Node, auto& Camera)
+			MeshFilterComponent.Key = CityHash64(MeshFilterComponent.Path.data(), MeshFilterComponent.Path.size());
+		}
+	}
+
+	if (Entity.HasComponent<MeshRenderer>())
+	{
+		auto&			 MeshRendererComponent = Entity.GetComponent<MeshRenderer>();
+		MaterialTexture& Albedo				   = MeshRendererComponent.Material.Albedo;
+		if (Albedo.Path != "NULL")
 		{
-			Camera.FoVY		   = Node["Field of View"].as<float>();
-			Camera.AspectRatio = 16.0f / 9.0f;
+			Albedo.Path = (Application::ExecutableDirectory / Albedo.Path).string();
 
-			DirectX::XMFLOAT2 ClippingPlanes = Node["Clipping Planes"].as<DirectX::XMFLOAT2>();
-			Camera.NearZ					 = ClippingPlanes.x;
-			Camera.FarZ						 = ClippingPlanes.y;
-
-			Camera.FocalLength		= Node["Focal Length"].as<float>();
-			Camera.RelativeAperture = Node["Relative Aperture"].as<float>();
-		});
-
-	DeserializeComponent<Light>(
-		Node["Light"],
-		&Entity,
-		[](auto& Node, auto& Light)
-		{
-			Light.Type	 = static_cast<ELightTypes>(Node["Type"].as<int>());
-			Light.I		 = Node["I"].as<DirectX::XMFLOAT3>();
-			Light.Width	 = Node["Width"].as<float>();
-			Light.Height = Node["Height"].as<float>();
-		});
-
-	DeserializeComponent<MeshFilter>(
-		Node["Mesh Filter"],
-		&Entity,
-		[](auto& Node, auto& MeshFilter)
-		{
-			auto String = Node["Name"].as<std::string>();
-			if (String != "NULL")
-			{
-				String = (Application::ExecutableDirectory / String).string();
-
-				MeshFilter.Key = CityHash64(String.data(), String.size());
-			}
-		});
-
-	DeserializeComponent<MeshRenderer>(
-		Node["Mesh Renderer"],
-		&Entity,
-		[](auto& Node, MeshRenderer& MeshRenderer)
-		{
-			auto& Material				   = Node["Material"];
-			MeshRenderer.Material.BSDFType = (EBSDFTypes)Material["BSDFType"].as<int>();
-
-			MeshRenderer.Material.baseColor		 = Material["baseColor"].as<DirectX::XMFLOAT3>();
-			MeshRenderer.Material.metallic		 = Material["metallic"].as<float>();
-			MeshRenderer.Material.subsurface	 = Material["subsurface"].as<float>();
-			MeshRenderer.Material.specular		 = Material["specular"].as<float>();
-			MeshRenderer.Material.roughness		 = Material["roughness"].as<float>();
-			MeshRenderer.Material.specularTint	 = Material["specularTint"].as<float>();
-			MeshRenderer.Material.anisotropic	 = Material["anisotropic"].as<float>();
-			MeshRenderer.Material.sheen			 = Material["sheen"].as<float>();
-			MeshRenderer.Material.sheenTint		 = Material["sheenTint"].as<float>();
-			MeshRenderer.Material.clearcoat		 = Material["clearcoat"].as<float>();
-			MeshRenderer.Material.clearcoatGloss = Material["clearcoatGloss"].as<float>();
-
-			MeshRenderer.Material.T	   = Material["T"].as<DirectX::XMFLOAT3>();
-			MeshRenderer.Material.etaA = Material["etaA"].as<float>();
-			MeshRenderer.Material.etaB = Material["etaB"].as<float>();
-
-			auto String = Material["Albedo"].as<std::string>();
-			if (String != "NULL")
-			{
-				String = (Application::ExecutableDirectory / String).string();
-
-				MeshRenderer.Material.Albedo.Key = CityHash64(String.data(), String.size());
-			}
-		});
-
-	DeserializeComponent<BoxCollider>(
-		Node["Box Collider"],
-		&Entity,
-		[](auto& Node, BoxCollider& BoxCollider)
-		{
-			BoxCollider.Extents = Node["Extents"].as<XMFLOAT3>();
-		});
-
-	DeserializeComponent<CapsuleCollider>(
-		Node["Capsule Collider"],
-		&Entity,
-		[](auto& Node, CapsuleCollider& CapsuleCollider)
-		{
-			CapsuleCollider.Radius = Node["Radius"].as<float>();
-			CapsuleCollider.Height = Node["Height"].as<float>();
-		});
+			Albedo.Key = CityHash64(Albedo.Path.data(), Albedo.Path.size());
+		}
+	}
 }
 
 void SceneParser::Load(const std::filesystem::path& Path, World* pWorld)
 {
-	pWorld->Clear();
+	pWorld->Clear(false);
 
 	AssetManager::GetImageCache().DestroyAll();
 	AssetManager::GetMeshCache().DestroyAll();
@@ -484,12 +462,6 @@ void SceneParser::Load(const std::filesystem::path& Path, World* pWorld)
 	{
 		for (auto Entity : YAMLWorld)
 		{
-			auto Name = Entity["Tag"]["Name"].as<std::string>();
-			if (Name == "Main Camera")
-			{
-				continue;
-			}
-
 			DeserializeEntity(Entity, pWorld);
 		}
 	}

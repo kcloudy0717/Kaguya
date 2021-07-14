@@ -622,11 +622,11 @@ void InspectorWindow::RenderGui()
 			AddNewComponent<MeshRenderer>("Mesh Renderer", SelectedEntity);
 			AddNewComponent<Light>("Light", SelectedEntity);
 
-			AddNewComponent<StaticRigidBody>("Static Rigid Body", SelectedEntity);
-			AddNewComponent<DynamicRigidBody>("Dynamic Rigid Body", SelectedEntity);
-
 			AddNewComponent<BoxCollider>("Box Collider", SelectedEntity);
 			AddNewComponent<CapsuleCollider>("Capsule Collider", SelectedEntity);
+
+			AddNewComponent<StaticRigidBody>("Static Rigid Body", SelectedEntity);
+			AddNewComponent<DynamicRigidBody>("Dynamic Rigid Body", SelectedEntity);
 
 			ImGui::EndPopup();
 		}

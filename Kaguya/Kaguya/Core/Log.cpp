@@ -31,7 +31,7 @@ struct imgui_sink : public spdlog::sinks::base_sink<Mutex>
 using imgui_sink_mt = imgui_sink<std::mutex>;
 using imgui_sink_st = imgui_sink<spdlog::details::null_mutex>;
 
-void Log::Create()
+void Log::Initialize()
 {
 	spdlog::set_pattern("%^[%T] %n: %v%$");
 	s_Logger = spdlog::stdout_color_mt("Kaguya");

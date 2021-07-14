@@ -48,6 +48,7 @@
 #include <synchapi.h>
 #include <wrl/client.h>
 #include <wrl/event.h>
+#include <shobjidl.h> 
 
 // dxgi
 #include <dxgi1_6.h>
@@ -76,7 +77,6 @@
 #include <entt.hpp>
 #include <wil/resource.h>
 #include <DirectXTex.h>
-#include <nfd.h>
 
 #include <Core/Core.h>
 #include <Core/Application.h>
