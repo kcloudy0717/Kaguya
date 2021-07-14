@@ -3,16 +3,8 @@
 enum ETextureTypes
 {
 	AlbedoIdx,
-	NormalIdx,
-	RoughnessIdx,
-	MetallicIdx,
 	NumTextureTypes
 };
-
-#define TEXTURE_CHANNEL_RED	  0
-#define TEXTURE_CHANNEL_GREEN 1
-#define TEXTURE_CHANNEL_BLUE  2
-#define TEXTURE_CHANNEL_ALPHA 3
 
 enum class EBSDFTypes
 {
@@ -23,16 +15,20 @@ enum class EBSDFTypes
 	NumBSDFTypes
 };
 
+struct MaterialTexture
+{
+	std::string				  Path;
+	UINT64					  Key;
+	AssetHandle<Asset::Image> Image;
+};
+
 struct Material
 {
 	Material()
 	{
-		for (int i = 0; i < NumTextureTypes; ++i)
+		for (int& TextureIndice : TextureIndices)
 		{
-			TextureIndices[i] = -1;
-			TextureChannel[i] = 0;
-
-			TextureKeys[i] = 0;
+			TextureIndice = -1;
 		}
 	}
 
@@ -54,11 +50,9 @@ struct Material
 	float			  etaA = 1.000277f; // air
 	float			  etaB = 1.5046f;	// glass
 
-	int TextureIndices[NumTextureTypes];
-	int TextureChannel[NumTextureTypes];
+	MaterialTexture Albedo;
 
-	UINT64					  TextureKeys[NumTextureTypes];
-	AssetHandle<Asset::Image> Textures[NumTextureTypes];
+	int TextureIndices[ETextureTypes::NumTextureTypes];
 };
 
 struct MeshRenderer : Component
@@ -66,3 +60,28 @@ struct MeshRenderer : Component
 	MeshFilter* pMeshFilter = nullptr;
 	Material	Material;
 };
+
+REGISTER_CLASS_ATTRIBUTES(MaterialTexture, CLASS_ATTRIBUTE(MaterialTexture, Path))
+
+REGISTER_CLASS_ATTRIBUTES(
+	Material,
+	CLASS_ATTRIBUTE(Material, BSDFType),
+	CLASS_ATTRIBUTE(Material, baseColor),
+	CLASS_ATTRIBUTE(Material, metallic),
+	CLASS_ATTRIBUTE(Material, subsurface),
+	CLASS_ATTRIBUTE(Material, specular),
+	CLASS_ATTRIBUTE(Material, roughness),
+	CLASS_ATTRIBUTE(Material, specularTint),
+	CLASS_ATTRIBUTE(Material, anisotropic),
+	CLASS_ATTRIBUTE(Material, sheen),
+	CLASS_ATTRIBUTE(Material, sheenTint),
+	CLASS_ATTRIBUTE(Material, clearcoat),
+	CLASS_ATTRIBUTE(Material, clearcoatGloss),
+	CLASS_ATTRIBUTE(Material, T),
+	CLASS_ATTRIBUTE(Material, etaA),
+	CLASS_ATTRIBUTE(Material, etaB),
+	CLASS_ATTRIBUTE(Material, Albedo))
+
+REGISTER_CLASS_ATTRIBUTES(
+		MeshRenderer,
+		CLASS_ATTRIBUTE(MeshRenderer, Material))

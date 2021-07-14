@@ -8,6 +8,21 @@
 
 static const char* DefaultEntityName = "GameObject";
 
+Entity World::GetMainCamera()
+{
+	auto CameraView = Registry.view<Camera>();
+	for (entt::entity Handle : CameraView)
+	{
+		const auto& Component = CameraView.get<Camera>(Handle);
+		if (Component.Main)
+		{
+			return Entity(Handle, this);
+		}
+	}
+
+	return Entity(entt::null, this);
+}
+
 void World::Clear()
 {
 	WorldState = EWorldState_Update;
@@ -70,6 +85,12 @@ void World::ResolveComponentDependencies()
 		[](auto&& MeshFilter)
 		{
 			MeshFilter.Mesh = AssetManager::GetMeshCache().Load(MeshFilter.Key);
+			std::string RelativePath =
+				MeshFilter.Mesh
+					? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory)
+						  .string()
+					: "NULL";
+			MeshFilter.Path = RelativePath;
 		});
 
 	// Update all mesh renderers
@@ -80,15 +101,15 @@ void World::ResolveComponentDependencies()
 			// access violation when I add new mesh filter to entt, need to investigate
 			MeshRenderer.pMeshFilter = &MeshFilter;
 
-			for (int i = 0; i < ETextureTypes::NumTextureTypes; ++i)
-			{
-				auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.TextureKeys[i]);
+			auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.Albedo.Key);
 
-				if (Texture)
-				{
-					MeshRenderer.Material.Textures[i]		= Texture;
-					MeshRenderer.Material.TextureIndices[i] = Texture->SRV.GetIndex();
-				}
+			MeshRenderer.Material.Albedo.Path =
+				Texture ? std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string()
+						: "NULL";
+
+			if (Texture)
+			{
+				MeshRenderer.Material.TextureIndices[0] = Texture->SRV.GetIndex();
 			}
 		});
 }
@@ -156,8 +177,14 @@ void World::OnComponentAdded<Transform>(Entity Entity, Transform& Component)
 template<>
 void World::OnComponentAdded<Camera>(Entity Entity, Camera& Component)
 {
-	// A simple hack for now, need to implement proper camera system for multiple cameras
-	ActiveCamera = &Component;
+	if (!ActiveCamera)
+	{
+		ActiveCamera = &Component;
+	}
+	else
+	{
+		Component.Main = false;
+	}
 }
 
 template<>
@@ -242,5 +269,76 @@ void World::OnComponentAdded<CapsuleCollider>(Entity Entity, CapsuleCollider& Co
 
 template<>
 void World::OnComponentAdded<MeshCollider>(Entity Entity, MeshCollider& Component)
+{
+}
+
+//
+template<typename T>
+void World::OnComponentRemoved(Entity Entity, T& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<Tag>(Entity Entity, Tag& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<Transform>(Entity Entity, Transform& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<Camera>(Entity Entity, Camera& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<Light>(Entity Entity, Light& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<MeshFilter>(Entity Entity, MeshFilter& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<MeshRenderer>(Entity Entity, MeshRenderer& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<CharacterController>(Entity Entity, CharacterController& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<NativeScript>(Entity Entity, NativeScript& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<DynamicRigidBody>(Entity Entity, DynamicRigidBody& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<BoxCollider>(Entity Entity, BoxCollider& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<CapsuleCollider>(Entity Entity, CapsuleCollider& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<MeshCollider>(Entity Entity, MeshCollider& Component)
 {
 }

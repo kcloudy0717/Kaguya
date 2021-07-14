@@ -16,9 +16,9 @@ struct Entity
 	{
 		assert(!HasComponent<T>());
 
-		T& component = pWorld->Registry.emplace<T>(Handle, std::forward<Args>(args)...);
-		pWorld->OnComponentAdded<T>(*this, component);
-		return component;
+		T& Component = pWorld->Registry.emplace<T>(Handle, std::forward<Args>(args)...);
+		pWorld->OnComponentAdded<T>(*this, Component);
+		return Component;
 	}
 
 	template<typename T>
@@ -50,14 +50,15 @@ struct Entity
 	{
 		assert(HasComponent<T>());
 
+		T& Component = GetComponent<T>();
+		pWorld->OnComponentRemoved<T>(*this, Component);
+
 		pWorld->Registry.remove<T>(Handle);
 	}
 
 	operator bool() const { return Handle != entt::null; }
 
 	operator entt::entity() const { return Handle; }
-
-	operator uint32_t() const { return (uint32_t)Handle; }
 
 	bool operator==(const Entity& other) const { return Handle == other.Handle && pWorld == other.pWorld; }
 

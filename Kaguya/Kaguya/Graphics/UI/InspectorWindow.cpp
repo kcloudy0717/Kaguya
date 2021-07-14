@@ -453,7 +453,7 @@ void InspectorWindow::RenderGui()
 			SelectedEntity,
 			[&](MeshRenderer& Component)
 			{
-				bool isEdited = false;
+				bool IsEdited = false;
 
 				if (ImGui::TreeNode("Material"))
 				{
@@ -465,7 +465,7 @@ void InspectorWindow::RenderGui()
 																			 "Mirror",
 																			 "Glass",
 																			 "Disney" };
-					isEdited |= ImGui::Combo(
+					IsEdited |= ImGui::Combo(
 						"Type",
 						(int*)&Material.BSDFType,
 						BSDFTypes,
@@ -475,29 +475,29 @@ void InspectorWindow::RenderGui()
 					switch (Material.BSDFType)
 					{
 					case EBSDFTypes::Lambertian:
-						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						break;
 					case EBSDFTypes::Mirror:
-						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						break;
 					case EBSDFTypes::Glass:
-						isEdited |= RenderFloat3Control("R", &Material.baseColor.x);
-						isEdited |= RenderFloat3Control("T", &Material.T.x);
-						isEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
-						isEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
+						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						IsEdited |= RenderFloat3Control("T", &Material.T.x);
+						IsEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
+						IsEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
 						break;
 					case EBSDFTypes::Disney:
-						isEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
-						isEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
-						isEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
-						isEdited |= ImGui::SliderFloat("Specular", &Material.specular, 0, 1);
-						isEdited |= ImGui::SliderFloat("Roughness", &Material.roughness, 0, 1);
-						isEdited |= ImGui::SliderFloat("SpecularTint", &Material.specularTint, 0, 1);
-						isEdited |= ImGui::SliderFloat("Anisotropic", &Material.anisotropic, 0, 1);
-						isEdited |= ImGui::SliderFloat("Sheen", &Material.sheen, 0, 1);
-						isEdited |= ImGui::SliderFloat("SheenTint", &Material.sheenTint, 0, 1);
-						isEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
-						isEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
+						IsEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
+						IsEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Specular", &Material.specular, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Roughness", &Material.roughness, 0, 1);
+						IsEdited |= ImGui::SliderFloat("SpecularTint", &Material.specularTint, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Anisotropic", &Material.anisotropic, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Sheen", &Material.sheen, 0, 1);
+						IsEdited |= ImGui::SliderFloat("SheenTint", &Material.sheenTint, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
+						IsEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
 						break;
 					}
 
@@ -525,18 +525,18 @@ void InspectorWindow::RenderGui()
 								IM_ASSERT(payload->DataSize == sizeof(UINT64));
 								Key = (*(UINT64*)payload->Data);
 
-								isEdited = true;
+								IsEdited = true;
 							}
 							ImGui::EndDragDropTarget();
 						}
 					};
 
-					ImageBox(ETextureTypes::AlbedoIdx, Material.TextureKeys[0], "Albedo: ");
+					ImageBox(ETextureTypes::AlbedoIdx, Material.Albedo.Key, "Albedo: ");
 
 					ImGui::TreePop();
 				}
 
-				return isEdited;
+				return IsEdited;
 			});
 
 		RenderComponent<Light, false>(
@@ -553,10 +553,10 @@ void InspectorWindow::RenderGui()
 
 				switch (Component.Type)
 				{
-				case ELightType::Point:
+				case ELightTypes::Point:
 					IsEdited |= RenderFloat3Control("I", &Component.I.x);
 					break;
-				case ELightType::Quad:
+				case ELightTypes::Quad:
 					IsEdited |= RenderFloat3Control("I", &Component.I.x);
 					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
 					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);

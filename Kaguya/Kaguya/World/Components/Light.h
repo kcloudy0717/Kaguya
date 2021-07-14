@@ -1,6 +1,6 @@
 #pragma once
 
-enum class ELightType
+enum class ELightTypes
 {
 	Point,
 	Quad
@@ -8,7 +8,7 @@ enum class ELightType
 
 struct Light : Component
 {
-	ELightType		  Type = ELightType::Point;
+	ELightTypes		  Type = ELightTypes::Point;
 	DirectX::XMFLOAT3 I;			 // Intensity of the light
 	float			  Width, Height; // Used by QuadLight
 };

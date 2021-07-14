@@ -16,8 +16,6 @@ struct Camera : Component
 
 	Transform* pTransform;
 
-	bool Dirty = true;
-
 	float FoVY		  = 65.0f; // Degrees
 	float AspectRatio = 16.0f / 9.0f;
 	float NearZ		  = 0.1f;
@@ -35,6 +33,9 @@ struct Camera : Component
 	DirectX::XMMATRIX InverseViewProjectionMatrix = DirectX::XMMatrixIdentity();
 
 	DirectX::XMMATRIX PrevViewProjectionMatrix = DirectX::XMMatrixIdentity();
+
+	bool Dirty = true;
+	bool Main  = true;
 };
 
 REGISTER_CLASS_ATTRIBUTES(

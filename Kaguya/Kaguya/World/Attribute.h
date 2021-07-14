@@ -61,9 +61,11 @@ public:
 	{
 	}
 
-	const T& Get(const TClass& Class) const { return Class.*pPtr; }
+	const char* GetName() const noexcept { return Name; }
 
-	T& Get(TClass& Class) { return Class.*pPtr; }
+	const T& Get(const TClass& Class) const noexcept { return Class.*pPtr; }
+
+	T& Get(TClass& Class) noexcept { return Class.*pPtr; }
 
 private:
 	const char* Name;

@@ -21,6 +21,8 @@ public:
 
 	World() { Clear(); }
 
+	Entity GetMainCamera();
+
 	void Clear();
 
 	Entity CreateEntity(std::string_view Name);
@@ -31,6 +33,9 @@ public:
 
 	template<typename T>
 	void OnComponentAdded(Entity Entity, T& Component);
+
+	template<typename T>
+	void OnComponentRemoved(Entity Entity, T& Component);
 
 	void Update(float dt);
 
@@ -51,7 +56,7 @@ namespace HLSL
 {
 struct Material
 {
-	int				  BSDFType;
+	unsigned int	  BSDFType;
 	DirectX::XMFLOAT3 baseColor;
 	float			  metallic;
 	float			  subsurface;
@@ -68,8 +73,7 @@ struct Material
 	DirectX::XMFLOAT3 T;
 	float			  etaA, etaB;
 
-	int TextureIndices[NumTextureTypes];
-	int TextureChannel[NumTextureTypes];
+	int Albedo;
 };
 
 struct Light
@@ -104,13 +108,8 @@ struct Camera
 {
 	float NearZ;
 	float FarZ;
-	float _padding0;
-	float _padding1;
-
 	float FocalLength;
 	float RelativeAperture;
-	float ShutterTime;
-	float SensorSensitivity;
 
 	DirectX::XMFLOAT4 Position;
 	DirectX::XMFLOAT4 U;
@@ -128,7 +127,7 @@ struct Camera
 
 inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
 {
-	return { .BSDFType		 = (int)Material.BSDFType,
+	return { .BSDFType		 = (unsigned int)Material.BSDFType,
 			 .baseColor		 = Material.baseColor,
 			 .metallic		 = Material.metallic,
 			 .subsurface	 = Material.subsurface,
@@ -145,14 +144,7 @@ inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
 			 .etaA = Material.etaA,
 			 .etaB = Material.etaB,
 
-			 .TextureIndices = { Material.TextureIndices[0],
-								 Material.TextureIndices[1],
-								 Material.TextureIndices[2],
-								 Material.TextureIndices[3] },
-			 .TextureChannel = { Material.TextureChannel[0],
-								 Material.TextureChannel[1],
-								 Material.TextureChannel[2],
-								 Material.TextureChannel[3] } };
+			 .Albedo = Material.TextureIndices[0] };
 }
 
 inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Light)
@@ -211,15 +203,10 @@ inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
 	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix));
 	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix));
 
-	return { .NearZ		= Camera.NearZ,
-			 .FarZ		= Camera.FarZ,
-			 ._padding0 = 0.0f,
-			 ._padding1 = 0.0f,
-
-			 .FocalLength		= Camera.FocalLength,
-			 .RelativeAperture	= Camera.RelativeAperture,
-			 .ShutterTime		= 0.0f,
-			 .SensorSensitivity = 0.0f,
+	return { .NearZ			   = Camera.NearZ,
+			 .FarZ			   = Camera.FarZ,
+			 .FocalLength	   = Camera.FocalLength,
+			 .RelativeAperture = Camera.RelativeAperture,
 
 			 .Position = Position,
 			 .U		   = U,

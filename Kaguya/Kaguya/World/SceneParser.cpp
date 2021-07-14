@@ -18,6 +18,23 @@ constexpr int	  Revision = 0;
 const std::string String   = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
 } // namespace Version
 
+struct YAMLScopedMapObject
+{
+	YAMLScopedMapObject(YAML::Emitter& Emitter)
+		: Emitter(Emitter)
+	{
+		Emitter << YAML::BeginMap;
+	}
+
+	~YAMLScopedMapObject() { Emitter << YAML::EndMap; }
+
+	YAML::Emitter& Emitter;
+};
+
+#define YAMLConcatenate(a, b)				 a##b
+#define YAMLGetScopedEventVariableName(a, b) YAMLConcatenate(a, b)
+#define YAMLScopedMap(context)				 YAMLScopedMapObject YAMLGetScopedEventVariableName(scopedMap, __LINE__)(context)
+
 YAML::Emitter& operator<<(YAML::Emitter& Emitter, const DirectX::XMFLOAT2& Float2)
 {
 	Emitter << YAML::Flow;
@@ -39,161 +56,52 @@ YAML::Emitter& operator<<(YAML::Emitter& Emitter, const DirectX::XMFLOAT4& Float
 	return Emitter;
 }
 
-template<is_component T>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const T& Component)
+YAML::Emitter& operator<<(YAML::Emitter& Emitter, ELightTypes LightType)
 {
-	return Emitter;
+	return Emitter << (int)LightType;
 }
 
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const Tag& Tag)
+YAML::Emitter& operator<<(YAML::Emitter& Emitter, EBSDFTypes BSDFType)
 {
-	Emitter << YAML::Key << "Tag";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Name" << YAML::Value << Tag.Name;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
+	return Emitter << (int)BSDFType;
 }
 
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const Transform& Transform)
+YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MaterialTexture& MaterialTexture)
 {
-	Emitter << YAML::Key << "Transform";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Position" << YAML::Value << Transform.Position;
-		Emitter << YAML::Key << "Scale" << YAML::Value << Transform.Scale;
-		Emitter << YAML::Key << "Orientation" << YAML::Value << Transform.Orientation;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
+	return Emitter << MaterialTexture.Path;
 }
 
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const Camera& Camera)
+template<typename T>
+YAML::Emitter& operator<<(YAML::Emitter& Emitter, const T& Type)
 {
-	Emitter << YAML::Key << "Camera";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Field of View" << YAML::Value << Camera.FoVY;
-		Emitter << YAML::Key << "Clipping Planes" << YAML::Value << DirectX::XMFLOAT2(Camera.NearZ, Camera.FarZ);
-		Emitter << YAML::Key << "Focal Length" << YAML::Value << Camera.FocalLength;
-		Emitter << YAML::Key << "Relative Aperture" << YAML::Value << Camera.RelativeAperture;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
-
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const Light& Light)
-{
-	Emitter << YAML::Key << "Light";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Type" << (int)Light.Type;
-		Emitter << YAML::Key << "I" << Light.I;
-		Emitter << YAML::Key << "Width" << Light.Width;
-		Emitter << YAML::Key << "Height" << Light.Height;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
-
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshFilter& MeshFilter)
-{
-	Emitter << YAML::Key << "Mesh Filter";
-	Emitter << YAML::BeginMap;
-	{
-		std::string RelativePath =
-			MeshFilter.Mesh
-				? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string()
-				: "NULL";
-
-		Emitter << YAML::Key << "Name" << RelativePath;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
-
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const MeshRenderer& MeshRenderer)
-{
-	Emitter << YAML::Key << "Mesh Renderer";
-	Emitter << YAML::BeginMap;
-	{
-		auto& material = MeshRenderer.Material;
-		Emitter << YAML::Key << "Material";
-		Emitter << YAML::BeginMap;
+	YAMLScopedMap(Emitter);
+	ForEachAttribute<T>(
+		[&](auto&& Attribute)
 		{
-			Emitter << YAML::Key << "BSDFType" << (int)material.BSDFType;
+			Emitter << YAML::Key << Attribute.GetName() << YAML::Value << Attribute.Get(Type);
+		});
+	return Emitter;
+}
 
-			Emitter << YAML::Key << "baseColor" << material.baseColor;
-			Emitter << YAML::Key << "metallic" << material.metallic;
-			Emitter << YAML::Key << "subsurface" << material.subsurface;
-			Emitter << YAML::Key << "specular" << material.specular;
-			Emitter << YAML::Key << "roughness" << material.roughness;
-			Emitter << YAML::Key << "specularTint" << material.specularTint;
-			Emitter << YAML::Key << "anisotropic" << material.anisotropic;
-			Emitter << YAML::Key << "sheen" << material.sheen;
-			Emitter << YAML::Key << "sheenTint" << material.sheenTint;
-			Emitter << YAML::Key << "clearcoat" << material.clearcoat;
-			Emitter << YAML::Key << "clearcoatGloss" << material.clearcoatGloss;
+template<typename T>
+struct ComponentSerializer
+{
+	ComponentSerializer(YAML::Emitter& Emitter, Entity Entity)
+	{
+		if (Entity.HasComponent<T>())
+		{
+			auto& Component = Entity.GetComponent<T>();
 
-			Emitter << YAML::Key << "T" << material.T;
-			Emitter << YAML::Key << "etaA" << material.etaA;
-			Emitter << YAML::Key << "etaB" << material.etaB;
-
-			const char* textureTypes[(int)ETextureTypes::NumTextureTypes] = { "Albedo",
-																			  "Normal",
-																			  "Roughness",
-																			  "Metallic" };
-			for (int i = 0; i < (int)ETextureTypes::NumTextureTypes; ++i)
-			{
-				const auto& texture = material.Textures[i];
-
-				std::string relativePath =
-					texture
-						? std::filesystem::relative(texture->Metadata.Path, Application::ExecutableDirectory).string()
-						: "NULL";
-
-				Emitter << YAML::Key << textureTypes[i] << relativePath;
-			}
+			Emitter << YAML::Key << GetClass<T>();
+			YAMLScopedMap(Emitter);
+			ForEachAttribute<T>(
+				[&](auto&& Attribute)
+				{
+					Emitter << YAML::Key << Attribute.GetName() << YAML::Value << Attribute.Get(Component);
+				});
 		}
-		Emitter << YAML::EndMap;
 	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
-
-// TODO: Serialize CharacterController
-
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const BoxCollider& BoxCollider)
-{
-	Emitter << YAML::Key << "Box Collider";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Extents" << BoxCollider.Extents;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
-
-template<>
-YAML::Emitter& operator<<(YAML::Emitter& Emitter, const CapsuleCollider& CapsuleCollider)
-{
-	Emitter << YAML::Key << "Capsule Collider";
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Radius" << CapsuleCollider.Radius;
-		Emitter << YAML::Key << "Height" << CapsuleCollider.Height;
-	}
-	Emitter << YAML::EndMap;
-	return Emitter;
-}
+};
 
 namespace YAML
 {
@@ -282,30 +190,24 @@ static void SerializeImages(YAML::Emitter& Emitter)
 
 	Emitter << YAML::Key << "Images" << YAML::Value << YAML::BeginSeq;
 	{
-		std::map<std::string, AssetHandle<Asset::Image>> sortedImages;
+		std::map<std::string, AssetHandle<Asset::Image>> SortedImages;
 		ImageCache.Each_ThreadSafe(
 			[&](UINT64 Key, AssetHandle<Asset::Image> Resource)
 			{
-				sortedImages.insert({ Resource->Metadata.Path.string(), Resource });
+				SortedImages.insert({ Resource->Metadata.Path.string(), Resource });
 			});
 
-		for (auto& SortedImage : sortedImages)
+		for (auto& SortedImage : SortedImages)
 		{
-			Emitter << YAML::BeginMap;
+			YAMLScopedMap(Emitter);
+			Emitter << YAML::Key << "Image"
+					<< std::filesystem::relative(SortedImage.second->Metadata.Path, Application::ExecutableDirectory)
+						   .string();
+			Emitter << YAML::Key << "Metadata";
 			{
-				Emitter << YAML::Key << "Image"
-						<< std::filesystem::relative(
-							   SortedImage.second->Metadata.Path,
-							   Application::ExecutableDirectory)
-							   .string();
-				Emitter << YAML::Key << "Metadata";
-				Emitter << YAML::BeginMap;
-				{
-					Emitter << YAML::Key << "sRGB" << SortedImage.second->Metadata.sRGB;
-				}
-				Emitter << YAML::EndMap;
+				YAMLScopedMap(Emitter);
+				Emitter << YAML::Key << "sRGB" << SortedImage.second->Metadata.sRGB;
 			}
-			Emitter << YAML::EndMap;
 		}
 	}
 	Emitter << YAML::EndSeq;
@@ -317,76 +219,60 @@ static void SerializeMeshes(YAML::Emitter& Emitter)
 
 	Emitter << YAML::Key << "Meshes" << YAML::Value << YAML::BeginSeq;
 	{
-		std::map<std::string, AssetHandle<Asset::Mesh>> sortedMeshes;
+		std::map<std::string, AssetHandle<Asset::Mesh>> SortedMeshes;
 		MeshCache.Each_ThreadSafe(
 			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
 			{
-				sortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });
+				SortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });
 			});
 
-		for (auto& SortedMeshe : sortedMeshes)
+		for (auto& SortedMeshe : SortedMeshes)
 		{
-			Emitter << YAML::BeginMap;
+			YAMLScopedMap(Emitter);
+			Emitter << YAML::Key << "Mesh" << YAML::Value
+					<< std::filesystem::relative(SortedMeshe.second->Metadata.Path, Application::ExecutableDirectory)
+						   .string();
+			Emitter << YAML::Key << "Metadata";
 			{
-				Emitter << YAML::Key << "Mesh" << YAML::Value
-						<< std::filesystem::relative(
-							   SortedMeshe.second->Metadata.Path,
-							   Application::ExecutableDirectory)
-							   .string();
-				Emitter << YAML::Key << "Metadata";
-				Emitter << YAML::BeginMap;
-				{
-					Emitter << YAML::Key << "KeepGeometryInRAM" << SortedMeshe.second->Metadata.KeepGeometryInRAM;
-				}
-				Emitter << YAML::EndMap;
+				YAMLScopedMap(Emitter);
+				Emitter << YAML::Key << "KeepGeometryInRAM" << SortedMeshe.second->Metadata.KeepGeometryInRAM;
 			}
-			Emitter << YAML::EndMap;
 		}
 	}
 	Emitter << YAML::EndSeq;
 }
 
-template<is_component T>
-void SerializeComponent(YAML::Emitter& Emitter, Entity Entity)
-{
-	if (Entity.HasComponent<T>())
-	{
-		auto& Component = Entity.GetComponent<T>();
-
-		Emitter << Component;
-	}
-}
-
 static void SerializeEntity(YAML::Emitter& Emitter, Entity Entity)
 {
-	Emitter << YAML::BeginMap;
-	{
-		Emitter << YAML::Key << "Entity" << YAML::Value << std::to_string(typeid(Entity).hash_code());
+	YAMLScopedMap(Emitter);
+	Emitter << YAML::Key << "Entity" << YAML::Value << std::to_string(typeid(Entity).hash_code());
 
-		SerializeComponent<Tag>(Emitter, Entity);
-		SerializeComponent<Transform>(Emitter, Entity);
-		SerializeComponent<Camera>(Emitter, Entity);
-		SerializeComponent<Light>(Emitter, Entity);
-		SerializeComponent<MeshFilter>(Emitter, Entity);
-		SerializeComponent<MeshRenderer>(Emitter, Entity);
-		// SerializeComponent<CharacterController>(Emitter, Entity);
-		// SerializeComponent<NativeScript>(Emitter, Entity);
-		// SerializeComponent<StaticRigidBody>(Emitter, Entity);
-		// SerializeComponent<DynamicRigidBody>(Emitter, Entity);
-		SerializeComponent<BoxCollider>(Emitter, Entity);
-		SerializeComponent<CapsuleCollider>(Emitter, Entity);
-		// SerializeComponent<MeshCollider>(Emitter, Entity);
-	}
-	Emitter << YAML::EndMap;
+	ComponentSerializer<Tag>(Emitter, Entity);
+	ComponentSerializer<Transform>(Emitter, Entity);
+	ComponentSerializer<Camera>(Emitter, Entity);
+	ComponentSerializer<Light>(Emitter, Entity);
+
+	ComponentSerializer<MeshFilter>(Emitter, Entity);
+	ComponentSerializer<MeshRenderer>(Emitter, Entity);
+
+	ComponentSerializer<BoxCollider>(Emitter, Entity);
+	ComponentSerializer<CapsuleCollider>(Emitter, Entity);
+
+	// ComponentSerializer<CharacterController>(Emitter, Entity);
+	// ComponentSerializer<NativeScript>(Emitter, Entity);
+	// ComponentSerializer<StaticRigidBody>(Emitter, Entity);
+	// ComponentSerializer<DynamicRigidBody>(Emitter, Entity);
+	//
+	// ComponentSerializer<MeshCollider>(Emitter, Entity);
 }
 
 void SceneParser::Save(const std::filesystem::path& Path, World* pWorld)
 {
 	YAML::Emitter Emitter;
-	Emitter << YAML::BeginMap;
 	{
+		YAMLScopedMap(Emitter);
 		Emitter << YAML::Key << "Version" << YAML::Value << Version::String;
-		Emitter << YAML::Key << "Scene" << YAML::Value << Path.filename().string();
+		Emitter << YAML::Key << "World" << YAML::Value << Path.filename().string();
 
 		SerializeImages(Emitter);
 		SerializeMeshes(Emitter);
@@ -397,17 +283,11 @@ void SceneParser::Save(const std::filesystem::path& Path, World* pWorld)
 				[&](auto Handle)
 				{
 					Entity Entity(Handle, pWorld);
-					if (!Entity)
-					{
-						return;
-					}
-
 					SerializeEntity(Emitter, Entity);
 				});
 		}
 		Emitter << YAML::EndSeq;
 	}
-	Emitter << YAML::EndMap;
 
 	std::ofstream fout(Path);
 	fout << Emitter.c_str();
@@ -486,7 +366,7 @@ static void DeserializeEntity(const YAML::Node& Node, World* pWorld)
 		&Entity,
 		[](auto& Node, auto& Light)
 		{
-			Light.Type	 = static_cast<ELightType>(Node["Type"].as<int>());
+			Light.Type	 = static_cast<ELightTypes>(Node["Type"].as<int>());
 			Light.I		 = Node["I"].as<DirectX::XMFLOAT3>();
 			Light.Width	 = Node["Width"].as<float>();
 			Light.Height = Node["Height"].as<float>();
@@ -530,16 +410,12 @@ static void DeserializeEntity(const YAML::Node& Node, World* pWorld)
 			MeshRenderer.Material.etaA = Material["etaA"].as<float>();
 			MeshRenderer.Material.etaB = Material["etaB"].as<float>();
 
-			const char* TextureTypes[ETextureTypes::NumTextureTypes] = { "Albedo", "Normal", "Roughness", "Metallic" };
-			for (int i = 0; i < ETextureTypes::NumTextureTypes; ++i)
+			auto String = Material["Albedo"].as<std::string>();
+			if (String != "NULL")
 			{
-				auto String = Material[TextureTypes[i]].as<std::string>();
-				if (String != "NULL")
-				{
-					String = (Application::ExecutableDirectory / String).string();
+				String = (Application::ExecutableDirectory / String).string();
 
-					MeshRenderer.Material.TextureKeys[i] = CityHash64(String.data(), String.size());
-				}
+				MeshRenderer.Material.Albedo.Key = CityHash64(String.data(), String.size());
 			}
 		});
 
@@ -608,6 +484,12 @@ void SceneParser::Load(const std::filesystem::path& Path, World* pWorld)
 	{
 		for (auto Entity : YAMLWorld)
 		{
+			auto Name = Entity["Tag"]["Name"].as<std::string>();
+			if (Name == "Main Camera")
+			{
+				continue;
+			}
+
 			DeserializeEntity(Entity, pWorld);
 		}
 	}

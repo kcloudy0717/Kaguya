@@ -12,3 +12,8 @@ struct CapsuleCollider : Component
 	float Radius;
 	float Height;
 };
+
+REGISTER_CLASS_ATTRIBUTES(
+	CapsuleCollider,
+	CLASS_ATTRIBUTE(CapsuleCollider, Radius),
+	CLASS_ATTRIBUTE(CapsuleCollider, Height))
