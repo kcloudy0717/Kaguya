@@ -123,6 +123,7 @@ include_directories("${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt")
 include_directories("${CMAKE_SOURCE_DIR}/ext/imgui")
 include_directories("${CMAKE_SOURCE_DIR}/ext/ImGuizmo")
 include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/include")
+include_directories("${CMAKE_SOURCE_DIR}/ext/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/wil/include")
@@ -133,6 +134,7 @@ target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/assimp/lib/Release/
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/DirectXTex/lib/Debug/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} optimized ${CMAKE_SOURCE_DIR}/ext/DirectXTex/lib/Release/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.lib)
+target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.lib)
 
@@ -144,6 +146,8 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${CMAKE_SOURCE_DIR}/ext/assimp/bin/release/assimp-vc142-mt.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxcompiler.dll
 	${CMAKE_SOURCE_DIR}/ext/dxc/dxil.dll
+	${CMAKE_SOURCE_DIR}/ext/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
+	${CMAKE_SOURCE_DIR}/ext/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
 	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
 	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
 	${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
