@@ -98,6 +98,15 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 
 	D3D12Device.As(&D3D12InfoQueue1);
 
+	D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+										   D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+										   D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+										   D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
+	for (int i = 0; i < ARRAYSIZE(Types); ++i)
+	{
+		DescriptorHandleIncrementSizeCache[i] = D3D12Device->GetDescriptorHandleIncrementSize(Types[i]);
+	}
+
 	ComPtr<ID3D12InfoQueue> InfoQueue;
 	if (SUCCEEDED(D3D12Device.As(&InfoQueue)))
 	{
@@ -127,15 +136,15 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	{
 		// DRED
 		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
-		HRESULT hr = D3D12Device->CreateFence(
+		ASSERTD3D12APISUCCEEDED(D3D12Device->CreateFence(
 			0,
 			D3D12_FENCE_FLAG_NONE,
-			IID_PPV_ARGS(DeviceRemovedFence.ReleaseAndGetAddressOf()));
+			IID_PPV_ARGS(DeviceRemovedFence.ReleaseAndGetAddressOf())));
 
 		DeviceRemovedEvent.create();
 		// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior to
 		// what happened.
-		hr = DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get());
+		ASSERTD3D12APISUCCEEDED(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
 
 		RegisterWaitForSingleObject(
 			&DeviceRemovedWaitHandle,
@@ -200,21 +209,6 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	}
 
 	Device.Initialize();
-}
-
-IDXGIAdapter4* Adapter::GetAdapter4() const
-{
-	return Adapter4.Get();
-}
-
-ID3D12Device* Adapter::GetD3D12Device() const
-{
-	return D3D12Device.Get();
-}
-
-ID3D12Device5* Adapter::GetD3D12Device5() const
-{
-	return D3D12Device5.Get();
 }
 
 void Adapter::OnDeviceRemoved(PVOID Context, BOOLEAN)

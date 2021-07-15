@@ -4,10 +4,6 @@
 #include "RootSignature.h"
 #include "PipelineState.h"
 
-#ifdef _DEBUG
-#define DEBUG_RESOURCE_STATES
-#endif
-
 class CommandQueue;
 
 class CommandAllocator
@@ -103,7 +99,7 @@ private:
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> GraphicsCommandList4;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> GraphicsCommandList6;
 
-#ifdef DEBUG_RESOURCE_STATES
+#ifdef D3D12_DEBUG_RESOURCE_STATES
 		Microsoft::WRL::ComPtr<ID3D12DebugCommandList> DebugCommandList;
 #endif
 

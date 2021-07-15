@@ -82,7 +82,7 @@ void CommandListHandle::FlushResourceBarriers()
 
 bool CommandListHandle::AssertResourceState(Resource* pResource, D3D12_RESOURCE_STATES State, UINT Subresource)
 {
-#ifdef DEBUG_RESOURCE_STATES
+#ifdef D3D12_DEBUG_RESOURCE_STATES
 	// The check here is needed as GraphicsCommandList.As(&DebugCommandList); seems to fail under GPU capture
 	if (pCommandList->DebugCommandList)
 	{
@@ -112,7 +112,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 	GraphicsCommandList.As(&GraphicsCommandList4);
 	GraphicsCommandList.As(&GraphicsCommandList6);
 
-#ifdef DEBUG_RESOURCE_STATES
+#ifdef D3D12_DEBUG_RESOURCE_STATES
 	GraphicsCommandList.As(&DebugCommandList);
 #endif
 }

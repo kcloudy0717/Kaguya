@@ -113,7 +113,7 @@ public:
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
 
 	// Can this resource be promoted to State from common
-	bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const;
+	bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept;
 
 	// Can this resource decay back to common
 	// NOTE: There are 4 cases
@@ -122,7 +122,7 @@ public:
 	// 2. Buffer resources on any queue type, or
 	// 3. Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set, or
 	// 4. Any resource implicitly promoted to a read-only state.
-	bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const;
+	bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept;
 
 protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;

@@ -149,10 +149,13 @@ public:
 		return Table;
 	}
 
+	// Call this after shader tables are added
 	void Generate(Device* Device);
 
+	// Call this after shader records for the tables have been filled out
 	void Write();
 
+	// Call this to upload the records to GPU table
 	void CopyToGPU(CommandContext& Context) const;
 
 	D3D12_DISPATCH_RAYS_DESC GetDispatchRaysDesc(UINT RayGenerationShaderIndex, UINT BaseMissShaderIndex) const;

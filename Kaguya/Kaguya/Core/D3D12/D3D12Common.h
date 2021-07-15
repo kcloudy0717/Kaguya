@@ -3,7 +3,25 @@
 #include "d3dx12.h"
 #include "D3D12Utility.h"
 
-#define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES 8
+#define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES (8)
+
+// Root signature entry cost: https://docs.microsoft.com/en-us/windows/win32/direct3d12/root-signature-limits
+// Local root descriptor table cost:
+// https://microsoft.github.io/DirectX-Specs/d3d/Raytracing.html#shader-table-memory-initialization
+#define D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_COST		   (1)
+#define D3D12_LOCAL_ROOT_DESCRIPTOR_TABLE_COST		   (2)
+#define D3D12_ROOT_CONSTANT_COST					   (1)
+#define D3D12_ROOT_DESCRIPTOR_COST					   (2)
+
+#define D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT	   ((D3D12_MAX_ROOT_COST) / (D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_COST))
+
+#ifdef _DEBUG
+#define D3D12_DEBUG_RESOURCE_STATES
+#endif
+
+#ifdef _DEBUG
+#define D3D12_USE_NSIGHT_AFTERMATH
+#endif
 
 enum class ECommandQueueType
 {

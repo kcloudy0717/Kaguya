@@ -32,12 +32,17 @@ public:
 	void Initialize(const DeviceOptions& Options);
 	void InitializeDevice(const DeviceFeatures& Features);
 
-	IDXGIFactory6* GetFactory6() const { return Factory6.Get(); }
+	IDXGIFactory6* GetFactory6() const noexcept { return Factory6.Get(); }
 
-	IDXGIAdapter4* GetAdapter4() const;
+	IDXGIAdapter4* GetAdapter4() const noexcept { return Adapter4.Get(); }
 
-	ID3D12Device*  GetD3D12Device() const;
-	ID3D12Device5* GetD3D12Device5() const;
+	ID3D12Device*  GetD3D12Device() const noexcept { return D3D12Device.Get(); }
+	ID3D12Device5* GetD3D12Device5() const noexcept { return D3D12Device5.Get(); }
+
+	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
+	{
+		return DescriptorHandleIncrementSizeCache[Type];
+	}
 
 	void RegisterMessageCallback(D3D12MessageFunc CallbackFunc)
 	{
@@ -59,7 +64,7 @@ public:
 		}
 	}
 
-	Device* GetDevice() { return &Device; }
+	Device* GetDevice() noexcept { return &Device; }
 
 private:
 	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
@@ -74,6 +79,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Device>  D3D12Device;
 	Microsoft::WRL::ComPtr<ID3D12Device5> D3D12Device5;
+
+	UINT DescriptorHandleIncrementSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> D3D12InfoQueue1;
 	DWORD									 CallbackCookie = 0;

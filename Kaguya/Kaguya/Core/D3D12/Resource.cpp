@@ -62,7 +62,7 @@ struct ResourceStateDeterminer
 	const bool ReadbackResource;
 };
 
-bool Resource::ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const
+bool Resource::ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept
 {
 	// All buffer resources as well as textures with the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set are
 	// implicitly promoted from D3D12_RESOURCE_STATE_COMMON to the relevant state on first GPU access, including
@@ -116,7 +116,7 @@ bool Resource::ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const
 	}
 }
 
-bool Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const
+bool Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept
 {
 	// 1. Resources being accessed on a Copy queue
 	if (AccessedQueueType == D3D12_COMMAND_LIST_TYPE_COPY)

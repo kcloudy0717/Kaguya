@@ -87,7 +87,7 @@ void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
 	Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 }
 
-RootSignature::RootSignature(_In_ ID3D12Device* pDevice, _In_ RootSignatureBuilder& Builder)
+RootSignature::RootSignature(ID3D12Device* pDevice, RootSignatureBuilder& Builder)
 {
 	Desc = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = Builder.Build() };
 
@@ -105,4 +105,33 @@ RootSignature::RootSignature(_In_ ID3D12Device* pDevice, _In_ RootSignatureBuild
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),
 		IID_PPV_ARGS(pRootSignature.ReleaseAndGetAddressOf())));
+
+	for (UINT i = 0; i < Desc.Desc_1_1.NumParameters; ++i)
+	{
+		const D3D12_ROOT_PARAMETER1& RootParameter = Desc.Desc_1_1.pParameters[i];
+
+		if (RootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+		{
+			const D3D12_ROOT_DESCRIPTOR_TABLE1& DescriptorTable1 = RootParameter.DescriptorTable;
+
+			// Don't care about the rest, just the first range is enough
+			switch (DescriptorTable1.pDescriptorRanges[0].RangeType)
+			{
+			case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+			case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+			case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+				ResourceDescriptorTableBitMask.set(i, true);
+				break;
+			case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+				SamplerTableBitMask.set(i, true);
+				break;
+			}
+
+			// Calculate total number of descriptors in the descriptor table.
+			for (UINT j = 0; j < DescriptorTable1.NumDescriptorRanges; ++j)
+			{
+				NumDescriptorsPerTable[i] += DescriptorTable1.pDescriptorRanges[j].NumDescriptors;
+			}
+		}
+	}
 }
