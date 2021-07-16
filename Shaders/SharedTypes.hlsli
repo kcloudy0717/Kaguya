@@ -58,16 +58,19 @@ struct Mesh
 // ==================== Camera ====================
 struct Camera
 {
+	float FoVY; // Degrees
+	float AspectRatio;
 	float NearZ;
 	float FarZ;
+
 	float FocalLength;
 	float RelativeAperture;
+	float __Padding0;
+	float __Padding1;
 
 	float4 Position;
-	float4 U;
-	float4 V;
-	float4 W;
 
+	matrix World;
 	matrix View;
 	matrix Projection;
 	matrix ViewProjection;
@@ -75,24 +78,21 @@ struct Camera
 	matrix InvProjection;
 	matrix InvViewProjection;
 
-	RayDesc GenerateCameraRay(in float2 ndc, inout uint seed)
+	RayDesc GenerateCameraRay(float2 ndc, inout uint seed)
 	{
-		float3 direction = ndc.x * U.xyz + ndc.y * V.xyz + W.xyz;
+		// Setup the ray
+		RayDesc ray;
+		ray.Origin = World[3].xyz;
+		ray.TMin   = 0.0f;
+		ray.TMax   = FLT_MAX;
 
-		// Find the focal point for this pixel
-		direction /= length(W); // Make ray have length 1 along the camera's w-axis.
-		float3 focalPoint =
-			Position.xyz + FocalLength * direction; // Select point on ray a distance FocalLength along the w-axis
+		// Extract the aspect ratio and field of view from the projection matrix
+		float tanHalfFoVY = tan(radians(FoVY) * 0.5f);
 
-		// Get random numbers (in polar coordinates), convert to random cartesian uv on the lens
-		float2 rnd = float2(g_2PI * RandomFloat01(seed), RelativeAperture * RandomFloat01(seed));
-		float2 uv  = float2(cos(rnd.x) * rnd.y, sin(rnd.x) * rnd.y);
+		// Compute the ray direction for this pixel
+		ray.Direction = normalize(
+			(ndc.x * World[0].xyz * tanHalfFoVY * AspectRatio) + (ndc.y * World[1].xyz * tanHalfFoVY) + World[2].xyz);
 
-		// Use uv coordinate to compute a random origin on the camera lens
-		float3 origin = Position.xyz + uv.x * normalize(U.xyz) + uv.y * normalize(V.xyz);
-		direction	  = normalize(focalPoint - origin);
-
-		RayDesc ray = { origin, NearZ, direction, FarZ };
 		return ray;
 	}
 };

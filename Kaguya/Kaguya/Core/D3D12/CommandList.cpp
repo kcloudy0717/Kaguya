@@ -37,7 +37,7 @@ void CommandListHandle::TransitionBarrier(
 	{
 		// If we are applying transition to all subresources and we are in different tracking mode
 		// transition each subresource individually
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && !ResourceState.AreAllSubresourcesSame())
+		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && !ResourceState.IsUniformResourceState())
 		{
 			// First transition all of the subresources if they are different than the StateAfter
 			int i = 0;

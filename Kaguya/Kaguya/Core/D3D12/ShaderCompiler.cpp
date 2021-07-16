@@ -137,6 +137,7 @@ void ShaderCompiler::Compile(
 							// This allows for the compiler to do a better job at optimizing texture accesses. We have
 							// seen frame rate improvements of > 1 % when toggling this flag on.
 							L"-all_resources_bound",
+							L"-enable-16bit-types",
 #ifdef _DEBUG
 							L"-WX",			  // Warnings as errors
 							L"-Zi",			  // Debug info

@@ -71,4 +71,110 @@ Frame InitFrameFromXY(float3 x, float3 y)
 	return frame;
 }
 
+// float SignNotZero(float v)
+//{
+//	return (v < 0.0f) ? -1.0f : 1.0f;
+//}
+
+// struct OctahedralVector
+//{
+//	uint16_t x, y;
+
+//	float3 Decode()
+//	{
+//		float3 v;
+//		v.x = -1.0f + 2.0f * (x / 65535.0f);
+//		v.y = -1.0f + 2.0f * (y / 65535.0f);
+//		v.z = 1.0f - (abs(v.x) + abs(v.y));
+//		// Reparameterize directions in the $z<0$ portion of the octahedron
+//		if (v.z < 0.0f)
+//		{
+//			float xo = v.x;
+//			v.x		 = (1.0f - abs(v.y)) * SignNotZero(xo);
+//			v.y		 = (1.0f - abs(xo)) * SignNotZero(v.y);
+//		}
+
+//		return normalize(v);
+//	}
+//};
+
+// uint16_t Encode(float f)
+//{
+//	return (uint16_t)round(clamp((f + 1.0f) / 2.0f, 0.0f, 1.0f) * 65535.0f);
+//}
+
+// OctahedralVector InitOctahedralVector(float3 v)
+//{
+//	OctahedralVector ov;
+
+//	v /= abs(v.x) + abs(v.y) + abs(v.z);
+//	if (v.z >= 0.0f)
+//	{
+//		ov.x = Encode(v.x);
+//		ov.y = Encode(v.y);
+//	}
+//	else
+//	{
+//		// Encode octahedral vector with $z < 0$
+//		ov.x = Encode((1.0f - abs(v.y)) * SignNotZero(v.x));
+//		ov.y = Encode((1.0f - abs(v.x)) * SignNotZero(v.y));
+//	}
+
+//	return ov;
+//}
+
+float2 octWrap(float2 v)
+{
+	return float2((1.0f - abs(v.y)) * (v.x >= 0.0f ? 1.0f : -1.0f), (1.0f - abs(v.x)) * (v.y >= 0.0f ? 1.0f : -1.0f));
+}
+
+struct OctahedralVector
+{
+	float x, y;
+
+	float3 Decode()
+	{
+		float3 v = float3(x, y, 1.0f - abs(x) - abs(y));
+		float2 tmp = (v.z < 0.0f) ? octWrap(float2(v.x, v.y)) : float2(v.x, v.y);
+		v.x = tmp.x;
+		v.y = tmp.y;
+		return normalize(v);
+	}
+};
+
+OctahedralVector InitOctahedralVector(float3 v)
+{
+	OctahedralVector ov;
+	
+	float2 p = float2(v.x, v.y) * (1.0f / (abs(v.x) + abs(v.y) + abs(v.z)));
+	p = (v.z < 0.0f) ? octWrap(p) : p;
+
+	ov.x = p.x;
+	ov.y = p.y;
+
+	return ov;
+}
+
+// Ray tracing gems chapter 06: A fast and robust method for avoiding self-intersection
+// Offsets the ray origin from current position p, along normal n (which must be geometric normal)
+// so that no self-intersection can occur.
+float3 OffsetRay(float3 p, float3 ng)
+{
+	static const float origin	   = 1.0f / 32.0f;
+	static const float float_scale = 1.0f / 65536.0f;
+	static const float int_scale   = 256.0f;
+
+	int3 of_i = int3(int_scale * ng.x, int_scale * ng.y, int_scale * ng.z);
+
+	float3 p_i = float3(
+		asfloat(asint(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)),
+		asfloat(asint(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)),
+		asfloat(asint(p.z) + ((p.z < 0) ? -of_i.z : of_i.z)));
+
+	return float3(
+		abs(p.x) < origin ? p.x + float_scale * ng.x : p_i.x,
+		abs(p.y) < origin ? p.y + float_scale * ng.y : p_i.y,
+		abs(p.z) < origin ? p.z + float_scale * ng.z : p_i.z);
+}
+
 #endif // MATH_HLSLI

@@ -52,9 +52,9 @@ void Renderer::OnInitialize()
 	Shaders::Compile(ShaderCompiler);
 	Libraries::Compile(ShaderCompiler);
 
-	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator::NumHitGroups);
+	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator_DXR_1_0::NumHitGroups);
 
-	m_PathIntegrator = PathIntegrator(RenderDevice::Instance());
+	m_PathIntegrator = PathIntegrator_DXR_1_0(RenderDevice::Instance());
 	m_ToneMapper	 = ToneMapper(RenderDevice::Instance());
 
 	Materials = Buffer(

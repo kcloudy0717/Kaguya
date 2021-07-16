@@ -4,17 +4,17 @@ using namespace DirectX;
 
 DirectX::XMVECTOR Camera::GetUVector() const
 {
-	return pTransform->Right() * FocalLength * tanf(XMConvertToRadians(FoVY) * 0.5f) * AspectRatio;
+	return pTransform->Right() * tanf(XMConvertToRadians(FoVY) * 0.5f) * AspectRatio;
 }
 
 DirectX::XMVECTOR Camera::GetVVector() const
 {
-	return pTransform->Up() * FocalLength * tanf(XMConvertToRadians(FoVY) * 0.5f);
+	return pTransform->Up() * tanf(XMConvertToRadians(FoVY) * 0.5f);
 }
 
 DirectX::XMVECTOR Camera::GetWVector() const
 {
-	return pTransform->Forward() * FocalLength;
+	return pTransform->Forward();
 }
 
 void Camera::SetLookAt(DirectX::XMVECTOR EyePosition, DirectX::XMVECTOR FocusPosition, DirectX::XMVECTOR UpDirection)

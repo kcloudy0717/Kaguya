@@ -17,14 +17,13 @@ public:
 	};
 
 	CResourceState()
+		: TrackingMode(ETrackingMode::PerResource)
+		, ResourceState(D3D12_RESOURCE_STATE_UNINITIALIZED)
 	{
-		TrackingMode  = ETrackingMode::PerResource;
-		ResourceState = D3D12_RESOURCE_STATE_UNINITIALIZED;
 	}
 	CResourceState(UINT NumSubresources)
+		: CResourceState()
 	{
-		TrackingMode  = ETrackingMode::PerResource;
-		ResourceState = D3D12_RESOURCE_STATE_UNINITIALIZED;
 		SubresourceState.resize(NumSubresources);
 	}
 
@@ -35,11 +34,7 @@ public:
 	bool IsResourceStateUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
 
 	// Returns true if all subresources have the same state
-	bool AreAllSubresourcesSame() const noexcept
-	{
-		// If TrackingMode is PerResource, then all subresources have the same state
-		return TrackingMode == ETrackingMode::PerResource;
-	}
+	bool IsUniformResourceState() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
 
 	D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const
 	{
@@ -56,8 +51,7 @@ public:
 		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
 		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceState.size() == 1)
 		{
-			TrackingMode = ETrackingMode::PerResource;
-
+			TrackingMode  = ETrackingMode::PerResource;
 			ResourceState = State;
 		}
 		else
@@ -67,13 +61,11 @@ public:
 			if (TrackingMode == ETrackingMode::PerResource)
 			{
 				TrackingMode = ETrackingMode::PerSubresource;
-
 				for (auto& State : SubresourceState)
 				{
 					State = ResourceState;
 				}
 			}
-
 			SubresourceState[Subresource] = State;
 		}
 	}
@@ -111,7 +103,7 @@ public:
 	CResourceState& GetResourceState() { return ResourceState; }
 
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
-
+	// https://devblogs.microsoft.com/directx/a-look-inside-d3d12-resource-state-barriers/
 	// Can this resource be promoted to State from common
 	bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept;
 

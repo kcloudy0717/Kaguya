@@ -106,16 +106,19 @@ struct Mesh
 
 struct Camera
 {
+	float FoVY; // Degrees
+	float AspectRatio;
 	float NearZ;
 	float FarZ;
+
 	float FocalLength;
 	float RelativeAperture;
+	float __Padding0;
+	float __Padding1;
 
 	DirectX::XMFLOAT4 Position;
-	DirectX::XMFLOAT4 U;
-	DirectX::XMFLOAT4 V;
-	DirectX::XMFLOAT4 W;
 
+	DirectX::XMFLOAT4X4 World;
 	DirectX::XMFLOAT4X4 View;
 	DirectX::XMFLOAT4X4 Projection;
 	DirectX::XMFLOAT4X4 ViewProjection;
@@ -189,13 +192,9 @@ inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
 							Camera.pTransform->Position.y,
 							Camera.pTransform->Position.z,
 							1.0f };
-	XMFLOAT4   U, V, W;
-	XMFLOAT4X4 View, Projection, ViewProjection, InvView, InvProjection, InvViewProjection;
+	XMFLOAT4X4 World, View, Projection, ViewProjection, InvView, InvProjection, InvViewProjection;
 
-	XMStoreFloat4(&U, Camera.GetUVector());
-	XMStoreFloat4(&V, Camera.GetVVector());
-	XMStoreFloat4(&W, Camera.GetWVector());
-
+	XMStoreFloat4x4(&World, XMMatrixTranspose(Camera.pTransform->Matrix()));
 	XMStoreFloat4x4(&View, XMMatrixTranspose(Camera.ViewMatrix));
 	XMStoreFloat4x4(&Projection, XMMatrixTranspose(Camera.ProjectionMatrix));
 	XMStoreFloat4x4(&ViewProjection, XMMatrixTranspose(Camera.ViewProjectionMatrix));
@@ -203,16 +202,19 @@ inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
 	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix));
 	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix));
 
-	return { .NearZ			   = Camera.NearZ,
-			 .FarZ			   = Camera.FarZ,
+	return { .FoVY		  = Camera.FoVY,
+			 .AspectRatio = Camera.AspectRatio,
+			 .NearZ		  = Camera.NearZ,
+			 .FarZ		  = Camera.FarZ,
+
 			 .FocalLength	   = Camera.FocalLength,
 			 .RelativeAperture = Camera.RelativeAperture,
+			 .__Padding0	   = (float)0xDEADBEEF,
+			 .__Padding1	   = (float)0xDEADBEEF,
 
 			 .Position = Position,
-			 .U		   = U,
-			 .V		   = V,
-			 .W		   = W,
 
+			 .World				= World,
 			 .View				= View,
 			 .Projection		= Projection,
 			 .ViewProjection	= ViewProjection,

@@ -31,7 +31,7 @@ private:
 	D3D12_RECT	   ScissorRect;
 
 	RaytracingAccelerationStructure AccelerationStructure;
-	PathIntegrator					m_PathIntegrator;
+	PathIntegrator_DXR_1_0					m_PathIntegrator;
 	ToneMapper						m_ToneMapper;
 
 	Buffer			Materials;

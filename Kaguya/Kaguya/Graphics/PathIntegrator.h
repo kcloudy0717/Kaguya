@@ -2,7 +2,7 @@
 #include "RenderDevice.h"
 #include "RaytracingAccelerationStructure.h"
 
-class PathIntegrator
+class PathIntegrator_DXR_1_0
 {
 public:
 	struct Settings
@@ -10,8 +10,8 @@ public:
 		static constexpr UINT MinimumDepth = 1;
 		static constexpr UINT MaximumDepth = 32;
 
-		inline static UINT MaxDepth;
-		inline static UINT NumAccumulatedSamples;
+		inline static UINT MaxDepth = 16;
+		inline static UINT NumAccumulatedSamples = 0;
 
 		static void RestoreDefaults()
 		{
@@ -24,9 +24,9 @@ public:
 
 	static constexpr UINT NumHitGroups = 1;
 
-	PathIntegrator() noexcept = default;
+	PathIntegrator_DXR_1_0() noexcept = default;
 
-	PathIntegrator(RenderDevice& RenderDevice);
+	PathIntegrator_DXR_1_0(RenderDevice& RenderDevice);
 
 	void SetResolution(UINT Width, UINT Height);
 
@@ -70,4 +70,8 @@ private:
 	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
 	RaytracingShaderTable<void>*		 MissShaderTable;
 	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
+};
+
+class PathIntegrator_DXR_1_1
+{
 };

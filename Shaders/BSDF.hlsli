@@ -251,13 +251,13 @@ struct Interaction
 {
 	RayDesc SpawnRayTo(Interaction Interaction)
 	{
-		const float ShadowEpsilon = 0.0001f;
+		float3 d = Interaction.p - p;
 
-		float3 d	= Interaction.p - p;
-		float  tmax = length(d);
-		d			= normalize(d);
-
-		RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
+		RayDesc ray	  = (RayDesc)0;
+		ray.Origin	  = OffsetRay(p, n);
+		ray.TMin	  = 0.0f;
+		ray.Direction = normalize(d);
+		ray.TMax	  = length(d);
 		return ray;
 	}
 
@@ -275,6 +275,16 @@ struct SurfaceInteraction
 	Frame  GeometryFrame;
 	Frame  ShadingFrame;
 	BSDF   BSDF;
+	
+	RayDesc SpawnRay(float3 d)
+	{
+		RayDesc ray = (RayDesc) 0;
+		ray.Origin = OffsetRay(p, n);
+		ray.TMin = 0.0f;
+		ray.Direction = normalize(d);
+		ray.TMax = 10000.0f;
+		return ray;
+	}
 };
 
 struct VisibilityTester

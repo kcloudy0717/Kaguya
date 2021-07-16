@@ -19,7 +19,7 @@ ShaderIdentifier g_ShadowMissSID;
 ShaderIdentifier g_DefaultSID;
 } // namespace
 
-void PathIntegrator::Settings::RenderGui()
+void PathIntegrator_DXR_1_0::Settings::RenderGui()
 {
 	if (ImGui::TreeNode("Path Integrator"))
 	{
@@ -41,7 +41,7 @@ void PathIntegrator::Settings::RenderGui()
 	}
 }
 
-PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
+PathIntegrator_DXR_1_0::PathIntegrator_DXR_1_0(_In_ RenderDevice& RenderDevice)
 	: UAV(RenderDevice.GetDevice())
 	, SRV(RenderDevice.GetDevice())
 {
@@ -109,12 +109,15 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 
 			Builder.SetGlobalRootSignature(GlobalRS);
 
-			Builder.SetRaytracingShaderConfig(
-				12 * sizeof(float) + 2 * sizeof(unsigned int),
-				D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES);
+			constexpr UINT PayloadSize = 12	  // p
+										 + 4  // materialID
+										 + 8  // uv
+										 + 8  // Ng
+										 + 8; // Ns
+			Builder.SetRaytracingShaderConfig(PayloadSize, D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES);
 
-			// +1 for Primary, +1 for Shadow
-			Builder.SetRaytracingPipelineConfig(2);
+			// +1 for Primary
+			Builder.SetRaytracingPipelineConfig(1);
 		});
 
 	g_RayGenerationSID = RTPSO.GetShaderIdentifier(L"RayGeneration");
@@ -134,7 +137,7 @@ PathIntegrator::PathIntegrator(_In_ RenderDevice& RenderDevice)
 	ShaderBindingTable.Generate(RenderDevice.GetDevice());
 }
 
-void PathIntegrator::SetResolution(UINT Width, UINT Height)
+void PathIntegrator_DXR_1_0::SetResolution(UINT Width, UINT Height)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
@@ -159,12 +162,12 @@ void PathIntegrator::SetResolution(UINT Width, UINT Height)
 	Reset();
 }
 
-void PathIntegrator::Reset()
+void PathIntegrator_DXR_1_0::Reset()
 {
 	Settings::NumAccumulatedSamples = 0;
 }
 
-void PathIntegrator::UpdateShaderTable(
+void PathIntegrator_DXR_1_0::UpdateShaderTable(
 	const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
 	CommandContext&						   Context)
 {
@@ -190,7 +193,7 @@ void PathIntegrator::UpdateShaderTable(
 	ShaderBindingTable.CopyToGPU(Context);
 }
 
-void PathIntegrator::Render(
+void PathIntegrator_DXR_1_0::Render(
 	D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
 	const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
 	D3D12_GPU_VIRTUAL_ADDRESS			   Materials,
