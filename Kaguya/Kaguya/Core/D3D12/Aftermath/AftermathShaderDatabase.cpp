@@ -21,32 +21,22 @@
 //  DEALINGS IN THE SOFTWARE.
 //
 //*********************************************************
-#include "NsightAftermathShaderDatabase.h"
+#include "AftermathShaderDatabase.h"
 
-NsightAftermathShaderDatabase::NsightAftermathShaderDatabase()
-{
-}
-
-NsightAftermathShaderDatabase::~NsightAftermathShaderDatabase()
-{
-}
-
-void NsightAftermathShaderDatabase::AddShader(
-	Microsoft::WRL::ComPtr<IDxcBlob> Blob,
-	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob)
+void AftermathShaderDatabase::AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob)
 {
 	// Create shader hashes for the shader bytecode
-	D3D12_SHADER_BYTECODE shader = { Blob->GetBufferPointer(), Blob->GetBufferSize() };
+	D3D12_SHADER_BYTECODE Bytecode = { Blob->GetBufferPointer(), Blob->GetBufferSize() };
 
-	GFSDK_Aftermath_ShaderHash			   shaderHash;
-	GFSDK_Aftermath_ShaderInstructionsHash shaderInstructionsHash;
+	GFSDK_Aftermath_ShaderHash			   ShaderHash			  = {};
+	GFSDK_Aftermath_ShaderInstructionsHash ShaderInstructionsHash = {};
 	AFTERMATH_CHECK_ERROR(
-		GFSDK_Aftermath_GetShaderHash(GFSDK_Aftermath_Version_API, &shader, &shaderHash, &shaderInstructionsHash));
+		GFSDK_Aftermath_GetShaderHash(GFSDK_Aftermath_Version_API, &Bytecode, &ShaderHash, &ShaderInstructionsHash));
 
 	// Store the data for shader instruction address mapping when decoding GPU crash dumps.
 	// cf. FindShaderBinary()
-	m_shaderBinaries[shaderHash].Swap(Blob);
-	m_shaderInstructionsToShaderHash[shaderInstructionsHash] = shaderHash;
+	ShaderBinaries[ShaderHash].Swap(Blob);
+	ShaderInstructionsToShaderHash[ShaderInstructionsHash] = ShaderHash;
 
 	// Populate shader debug name.
 	// The shaders used in this sample are compiled with compiler-generated debug data
@@ -58,46 +48,39 @@ void NsightAftermathShaderDatabase::AddShader(
 	// containing the corresponding debug data.
 	// Please see the documentation of GFSDK_Aftermath_GpuCrashDump_GenerateJSON() for
 	// additional information.
-	GFSDK_Aftermath_ShaderDebugName debugName;
-	GFSDK_Aftermath_GetShaderDebugName(GFSDK_Aftermath_Version_API, &shader, &debugName);
+	GFSDK_Aftermath_ShaderDebugName ShaderDebugName;
+	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_GetShaderDebugName(GFSDK_Aftermath_Version_API, &Bytecode, &ShaderDebugName));
 
 	// Store the data for shader instruction address mapping when decoding GPU crash dumps.
 	// cf. FindSourceShaderDebugData()
-	m_sourceShaderDebugData[debugName].Swap(PDBBlob);
+	ShaderPDBs[ShaderDebugName].Swap(PDBBlob);
 }
 
-IDxcBlob* NsightAftermathShaderDatabase::FindShaderBinary(const GFSDK_Aftermath_ShaderHash& ShaderHash) const
+IDxcBlob* AftermathShaderDatabase::FindShaderBinary(const GFSDK_Aftermath_ShaderHash& ShaderHash)
 {
-	// Find shader binary data for the shader hash
-	if (auto iter = m_shaderBinaries.find(ShaderHash); iter != m_shaderBinaries.end())
+	if (auto iter = ShaderBinaries.find(ShaderHash); iter != ShaderBinaries.end())
 	{
-		// Nothing found.
 		return iter->second.Get();
 	}
 
 	return nullptr;
 }
 
-IDxcBlob* NsightAftermathShaderDatabase::FindShaderBinary(
-	const GFSDK_Aftermath_ShaderInstructionsHash& ShaderInstructionsHash) const
+IDxcBlob* AftermathShaderDatabase::FindShaderBinary(
+	const GFSDK_Aftermath_ShaderInstructionsHash& ShaderInstructionsHash)
 {
-	// First, find shader hash corresponding to shader instruction hash.
-	if (auto iter = m_shaderInstructionsToShaderHash.find(ShaderInstructionsHash);
-		iter != m_shaderInstructionsToShaderHash.end())
+	if (auto iter = ShaderInstructionsToShaderHash.find(ShaderInstructionsHash);
+		iter != ShaderInstructionsToShaderHash.end())
 	{
-		// Find shader binary data
-		const GFSDK_Aftermath_ShaderHash& shaderHash = iter->second;
-		return FindShaderBinary(shaderHash);
+		return FindShaderBinary(iter->second);
 	}
 
 	return nullptr;
 }
 
-IDxcBlob* NsightAftermathShaderDatabase::FindSourceShaderDebugData(
-	const GFSDK_Aftermath_ShaderDebugName& ShaderDebugName) const
+IDxcBlob* AftermathShaderDatabase::FindSourceShaderDebugData(const GFSDK_Aftermath_ShaderDebugName& ShaderDebugName)
 {
-	// Find shader debug data for the shader debug name.
-	if (auto iter = m_sourceShaderDebugData.find(ShaderDebugName); iter != m_sourceShaderDebugData.end())
+	if (auto iter = ShaderPDBs.find(ShaderDebugName); iter != ShaderPDBs.end())
 	{
 		return iter->second.Get();
 	}

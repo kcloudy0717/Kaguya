@@ -43,12 +43,22 @@ Adapter::~Adapter()
 	}
 }
 
-void Adapter::Initialize(const DeviceOptions& Options)
+void Adapter::Initialize(DeviceOptions Options)
 {
 #ifdef _DEBUG
 	InitializeDXGIObjects(true);
 #else
 	InitializeDXGIObjects(false);
+#endif
+
+	// The D3D debug layer (as well as Microsoft PIX and other graphics debugger
+	// tools using an injection library) is not compatible with Nsight Aftermath!
+	// If Aftermath detects that any of these tools are present it will fail
+	// initialization.
+#ifdef D3D12_NSIGHT_AFTERMATH
+	Options.EnableDebugLayer		 = false;
+	Options.EnableGpuBasedValidation = false;
+	AftermathCrashTracker.Initialize();
 #endif
 
 	// Enable the D3D12 debug layer
@@ -94,6 +104,10 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	ASSERTD3D12APISUCCEEDED(
 		::D3D12CreateDevice(Adapter4.Get(), Features.FeatureLevel, IID_PPV_ARGS(D3D12Device.ReleaseAndGetAddressOf())));
 
+#ifdef D3D12_NSIGHT_AFTERMATH
+	AftermathCrashTracker.RegisterDevice(D3D12Device.Get());
+#endif
+
 	D3D12Device.As(&D3D12Device5);
 
 	D3D12Device.As(&D3D12InfoQueue1);
@@ -102,7 +116,7 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 										   D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 										   D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 										   D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
-	for (int i = 0; i < ARRAYSIZE(Types); ++i)
+	for (size_t i = 0; i < std::size(Types); ++i)
 	{
 		DescriptorHandleIncrementSizeCache[i] = D3D12Device->GetDescriptorHandleIncrementSize(Types[i]);
 	}
@@ -217,12 +231,12 @@ void Adapter::OnDeviceRemoved(PVOID Context, BOOLEAN)
 	HRESULT		  RemovedReason = D3D12Device->GetDeviceRemovedReason();
 	if (FAILED(RemovedReason))
 	{
-		ComPtr<ID3D12DeviceRemovedExtendedData> Dred;
-		ASSERTD3D12APISUCCEEDED(D3D12Device->QueryInterface(IID_PPV_ARGS(&Dred)));
-		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
-		D3D12_DRED_PAGE_FAULT_OUTPUT	   DredPageFaultOutput		 = {};
-		ASSERTD3D12APISUCCEEDED(Dred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
-		ASSERTD3D12APISUCCEEDED(Dred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
+		ComPtr<ID3D12DeviceRemovedExtendedData> DRED;
+		ASSERTD3D12APISUCCEEDED(D3D12Device->QueryInterface(IID_PPV_ARGS(&DRED)));
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT AutoBreadcrumbsOutput = {};
+		D3D12_DRED_PAGE_FAULT_OUTPUT	   PageFaultOutput		 = {};
+		ASSERTD3D12APISUCCEEDED(DRED->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput));
+		ASSERTD3D12APISUCCEEDED(DRED->GetPageFaultAllocationOutput(&PageFaultOutput));
 
 		// TODO: Log breadcrumbs and page fault
 		// Haven't experienced TDR yet, so when I do, fill this out

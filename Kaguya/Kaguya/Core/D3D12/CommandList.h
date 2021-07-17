@@ -48,6 +48,10 @@ public:
 	ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const { return pCommandList->GraphicsCommandList4.Get(); }
 	ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const { return pCommandList->GraphicsCommandList6.Get(); }
 
+#ifdef D3D12_NSIGHT_AFTERMATH
+	GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return pCommandList->AftermathContextHandle; }
+#endif
+
 	ID3D12GraphicsCommandList* operator->() const { return GetGraphicsCommandList(); }
 
 	operator bool() const { return pCommandList != nullptr; }
@@ -86,6 +90,7 @@ private:
 	{
 	public:
 		CommandList(Device* Device, D3D12_COMMAND_LIST_TYPE Type);
+		~CommandList();
 
 		void Close();
 
@@ -101,6 +106,9 @@ private:
 
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 		Microsoft::WRL::ComPtr<ID3D12DebugCommandList> DebugCommandList;
+#endif
+#ifdef D3D12_NSIGHT_AFTERMATH
+		GFSDK_Aftermath_ContextHandle AftermathContextHandle = nullptr;
 #endif
 
 		CommandAllocator* pCommandAllocator;

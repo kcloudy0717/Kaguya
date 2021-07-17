@@ -29,7 +29,7 @@ public:
 	Adapter();
 	~Adapter();
 
-	void Initialize(const DeviceOptions& Options);
+	void Initialize(DeviceOptions Options);
 	void InitializeDevice(const DeviceFeatures& Features);
 
 	IDXGIFactory6* GetFactory6() const noexcept { return Factory6.Get(); }
@@ -73,6 +73,8 @@ private:
 
 private:
 	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
+
+	AftermathCrashTracker AftermathCrashTracker;
 
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> Adapter4;
 	DXGI_ADAPTER_DESC3					  AdapterDesc = {};

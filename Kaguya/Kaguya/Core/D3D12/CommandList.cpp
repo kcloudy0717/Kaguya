@@ -6,7 +6,8 @@ using Microsoft::WRL::ComPtr;
 
 CommandAllocator::CommandAllocator(ID3D12Device* pDevice, D3D12_COMMAND_LIST_TYPE Type)
 {
-	ASSERTD3D12APISUCCEEDED(pDevice->CreateCommandAllocator(Type, IID_PPV_ARGS(pCommandAllocator.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(
+		pDevice->CreateCommandAllocator(Type, IID_PPV_ARGS(pCommandAllocator.ReleaseAndGetAddressOf())));
 }
 
 CommandListHandle::CommandListHandle(Device* Device, D3D12_COMMAND_LIST_TYPE Type, CommandQueue* CommandQueue)
@@ -103,17 +104,44 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 	, pCommandAllocator(nullptr)
 	, IsClosed(true)
 {
+#ifdef D3D12_NSIGHT_AFTERMATH
+	// GFSDK_Aftermath_DX12_CreateContextHandle fails if I used CreateCommandList1 with type thats not
+	// D3D12_COMMAND_LIST_TYPE_DIRECT
+	ComPtr<ID3D12CommandAllocator> Temp;
+	ASSERTD3D12APISUCCEEDED(
+		Device->GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(Temp.ReleaseAndGetAddressOf())));
+	ASSERTD3D12APISUCCEEDED(Device->GetDevice()->CreateCommandList(
+		1,
+		Type,
+		Temp.Get(),
+		nullptr,
+		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
+#else
 	ASSERTD3D12APISUCCEEDED(Device->GetDevice5()->CreateCommandList1(
 		1,
 		Type,
 		D3D12_COMMAND_LIST_FLAG_NONE,
 		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
+#endif
 
 	GraphicsCommandList.As(&GraphicsCommandList4);
 	GraphicsCommandList.As(&GraphicsCommandList6);
 
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 	GraphicsCommandList.As(&DebugCommandList);
+#endif
+#ifdef D3D12_NSIGHT_AFTERMATH
+	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
+	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle));
+	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
+	ASSERTD3D12APISUCCEEDED(GraphicsCommandList->Close());
+#endif
+}
+
+CommandListHandle::CommandList::~CommandList()
+{
+#ifdef D3D12_NSIGHT_AFTERMATH
+	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_ReleaseContextHandle(AftermathContextHandle));
 #endif
 }
 

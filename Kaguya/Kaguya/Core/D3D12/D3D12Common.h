@@ -2,7 +2,7 @@
 #include <d3d12.h>
 #include "d3dx12.h"
 #include "D3D12Utility.h"
-#include "Aftermath/NsightAftermathGpuCrashTracker.h"
+#include "Aftermath/AftermathCrashTracker.h"
 
 #define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES (8)
 
@@ -20,9 +20,7 @@
 #define D3D12_DEBUG_RESOURCE_STATES
 #endif
 
-#ifdef _DEBUG
-#define D3D12_USE_NSIGHT_AFTERMATH
-#endif
+#define D3D12_NSIGHT_AFTERMATH
 
 enum class ECommandQueueType
 {
@@ -50,7 +48,7 @@ public:
 	std::string GetError() const override;
 
 private:
-	HRESULT ErrorCode;
+	const HRESULT ErrorCode;
 };
 
 #define ASSERTD3D12APISUCCEEDED(expr)                                                                                  \

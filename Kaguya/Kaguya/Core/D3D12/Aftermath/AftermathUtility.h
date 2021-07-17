@@ -137,15 +137,12 @@ private:
 	const GFSDK_Aftermath_Result m_result;
 };
 
-// Helper macro for checking Nsight Aftermath results and throwing exception
-// in case of a failure.
-#define AFTERMATH_CHECK_ERROR(FC)                                                                                      \
-	[&]()                                                                                                              \
+#define AFTERMATH_CHECK_ERROR(expr)                                                                                    \
 	{                                                                                                                  \
-		GFSDK_Aftermath_Result _result = FC;                                                                           \
+		GFSDK_Aftermath_Result _result = expr;                                                                         \
 		if (!GFSDK_Aftermath_SUCCEED(_result))                                                                         \
 		{                                                                                                              \
 			MessageBoxA(0, AftermathException::GetErrorMessage(_result).c_str(), "Aftermath Error", MB_OK);            \
 			throw AftermathException(_result);                                                                         \
 		}                                                                                                              \
-	}()
+	}
