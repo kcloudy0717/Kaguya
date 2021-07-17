@@ -176,7 +176,7 @@ struct BSDF
 			BxDF.T	  = Material.T;
 			BxDF.etaA = Material.etaA;
 			BxDF.etaB = Material.etaB;
-
+			
 			success = BxDF.Samplef(wo, Xi, bsdfSample);
 		}
 
@@ -275,14 +275,14 @@ struct SurfaceInteraction
 	Frame  GeometryFrame;
 	Frame  ShadingFrame;
 	BSDF   BSDF;
-	
+
 	RayDesc SpawnRay(float3 d)
 	{
-		RayDesc ray = (RayDesc) 0;
-		ray.Origin = OffsetRay(p, n);
-		ray.TMin = 0.0f;
+		RayDesc ray	  = (RayDesc)0;
+		ray.Origin	  = OffsetRay(p, n);
+		ray.TMin	  = 0.0f;
 		ray.Direction = normalize(d);
-		ray.TMax = 10000.0f;
+		ray.TMax	  = 10000.0f;
 		return ray;
 	}
 };

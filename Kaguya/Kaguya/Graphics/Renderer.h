@@ -2,6 +2,7 @@
 #include "RaytracingAccelerationStructure.h"
 #include "PathIntegrator.h"
 #include "ToneMapper.h"
+#include "FSRFilter.h"
 
 class Renderer
 {
@@ -12,7 +13,7 @@ public:
 
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
-	const ShaderResourceView& GetViewportDescriptor() { return m_ToneMapper.GetSRV(); }
+	const ShaderResourceView& GetViewportDescriptor() { return m_FSRFilter.GetSRV(); }
 
 	void OnInitialize();
 
@@ -25,14 +26,17 @@ public:
 	void RequestCapture();
 
 private:
-	float		   ViewportMouseX, ViewportMouseY;
-	uint32_t	   ViewportWidth, ViewportHeight;
+	float ViewportMouseX, ViewportMouseY;
+	UINT  ViewportWidth, ViewportHeight;
+	UINT  RenderWidth, RenderHeight;
+
 	D3D12_VIEWPORT Viewport;
 	D3D12_RECT	   ScissorRect;
 
 	RaytracingAccelerationStructure AccelerationStructure;
-	PathIntegrator_DXR_1_0					m_PathIntegrator;
+	PathIntegrator_DXR_1_0			m_PathIntegrator;
 	ToneMapper						m_ToneMapper;
+	FSRFilter						m_FSRFilter;
 
 	Buffer			Materials;
 	HLSL::Material* pMaterials = nullptr;

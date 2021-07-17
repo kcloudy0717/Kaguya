@@ -2,6 +2,7 @@
 #include <d3d12.h>
 #include "d3dx12.h"
 #include "D3D12Utility.h"
+#include "Aftermath/NsightAftermathGpuCrashTracker.h"
 
 #define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES (8)
 

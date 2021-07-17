@@ -85,6 +85,16 @@ public:
 		std::function<void(RootSignatureBuilder&)> Configurator,
 		bool									   AddDescriptorTableRootParameters = true);
 
+	[[nodiscard]] PipelineState CreateGraphicsPipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+	{
+		return PipelineState(Adapter.GetD3D12Device(), &Desc);
+	}
+
+	[[nodiscard]] PipelineState CreateComputePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+	{
+		return PipelineState(Adapter.GetD3D12Device(), &Desc);
+	}
+
 	template<typename PipelineStateStream>
 	[[nodiscard]] PipelineState CreatePipelineState(PipelineStateStream& Stream)
 	{

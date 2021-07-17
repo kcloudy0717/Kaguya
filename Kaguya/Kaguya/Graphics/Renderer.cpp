@@ -37,8 +37,31 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	ViewportWidth  = Width;
 	ViewportHeight = Height;
 
-	m_PathIntegrator.SetResolution(ViewportWidth, ViewportHeight);
-	m_ToneMapper.SetResolution(ViewportWidth, ViewportHeight);
+	constexpr int	m_nUpscaleRatio = 3;
+	constexpr float m_fUpscaleRatio = 1.5f;
+	float			r				= m_fUpscaleRatio;
+	switch (m_nUpscaleRatio)
+	{
+	case 0:
+		r = 1.3f;
+		break;
+	case 1:
+		r = 1.5f;
+		break;
+	case 2:
+		r = 1.7f;
+		break;
+	case 3:
+		r = 2.0f;
+		break;
+	}
+
+	RenderWidth	 = UINT(ViewportWidth / r);
+	RenderHeight = UINT(ViewportHeight / r);
+
+	m_PathIntegrator.SetResolution(RenderWidth, RenderHeight);
+	m_ToneMapper.SetResolution(RenderWidth, RenderHeight);
+	m_FSRFilter.SetResolution(ViewportWidth, ViewportHeight);
 }
 
 void Renderer::OnInitialize()
@@ -54,8 +77,9 @@ void Renderer::OnInitialize()
 
 	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator_DXR_1_0::NumHitGroups);
 
-	m_PathIntegrator = PathIntegrator_DXR_1_0(RenderDevice::Instance());
-	m_ToneMapper	 = ToneMapper(RenderDevice::Instance());
+	m_PathIntegrator = PathIntegrator_DXR_1_0(RenderDevice);
+	m_ToneMapper	 = ToneMapper(RenderDevice);
+	m_FSRFilter		 = FSRFilter(RenderDevice);
 
 	Materials = Buffer(
 		RenderDevice.GetDevice(),
@@ -222,6 +246,11 @@ void Renderer::OnRender(World& World)
 	}
 
 	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
+
+	FSRState State;
+	State.RenderWidth  = RenderWidth;
+	State.RenderHeight = RenderHeight;
+	m_FSRFilter.Upscale(State, m_ToneMapper.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 

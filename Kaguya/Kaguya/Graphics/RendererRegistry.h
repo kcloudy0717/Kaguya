@@ -28,6 +28,8 @@ struct Shaders
 	// Compute Shaders
 	struct CS
 	{
+		inline static Shader EASU;
+		inline static Shader RCAS;
 	};
 
 	static void Compile(const ShaderCompiler& ShaderCompiler)
@@ -50,6 +52,31 @@ struct Shaders
 				ExecutableDirectory / L"Shaders/PostProcess/ToneMap.hlsl",
 				g_PSEntryPoint,
 				{});
+		}
+
+		// CS
+		{
+			CS::EASU = ShaderCompiler.CompileShader(
+				EShaderType::Compute,
+				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
+				g_CSEntryPoint,
+				{
+					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
+					{ L"SAMPLE_BILINEAR", L"0" },
+					{ L"SAMPLE_EASU", L"1" },
+					{ L"SAMPLE_RCAS", L"0" },
+				});
+
+			CS::RCAS = ShaderCompiler.CompileShader(
+				EShaderType::Compute,
+				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
+				g_CSEntryPoint,
+				{
+					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
+					{ L"SAMPLE_BILINEAR", L"0" },
+					{ L"SAMPLE_EASU", L"0" },
+					{ L"SAMPLE_RCAS", L"1" },
+				});
 		}
 	}
 };

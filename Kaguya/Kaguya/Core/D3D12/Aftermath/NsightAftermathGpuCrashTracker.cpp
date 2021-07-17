@@ -26,22 +26,22 @@
 #include <iomanip>
 #include <string>
 
-NsightAftermathGpuCrashTracker::NsightAftermathGpuCrashTracker()
-	: m_initialized(false)
+AftermathCrashTracker::AftermathCrashTracker()
+	: Initialized(false)
 {
 }
 
-NsightAftermathGpuCrashTracker::~NsightAftermathGpuCrashTracker()
+AftermathCrashTracker::~AftermathCrashTracker()
 {
 	// If initialized, disable GPU crash dumps
-	if (m_initialized)
+	if (Initialized)
 	{
 		GFSDK_Aftermath_DisableGpuCrashDumps();
 	}
 }
 
 // Initialize the GPU Crash Dump Tracker
-void NsightAftermathGpuCrashTracker::Initialize()
+void AftermathCrashTracker::Initialize()
 {
 	// Enable GPU crash dumps and set up the callbacks for crash dump notifications,
 	// shader debug information notifications, and providing additional crash
@@ -62,10 +62,10 @@ void NsightAftermathGpuCrashTracker::Initialize()
 		CrashDumpDescriptionCallback, // Register callback for GPU crash dump description.
 		this);						  // Set the GpuCrashTracker object as user data for the above callbacks.
 
-	m_initialized = true;
+	Initialized = true;
 }
 
-void NsightAftermathGpuCrashTracker::RegisterDevice(ID3D12Device* pDevice)
+void AftermathCrashTracker::RegisterDevice(ID3D12Device* pDevice)
 {
 	// Initialize Nsight Aftermath for this device.
 	//
@@ -104,7 +104,7 @@ void NsightAftermathGpuCrashTracker::RegisterDevice(ID3D12Device* pDevice)
 }
 
 // Handler for GPU crash dump callbacks from Nsight Aftermath
-void NsightAftermathGpuCrashTracker::OnCrashDump(const void* pGpuCrashDump, const uint32_t gpuCrashDumpSize)
+void AftermathCrashTracker::OnCrashDump(const void* pGpuCrashDump, const uint32_t gpuCrashDumpSize)
 {
 	std::lock_guard _(Mutex);
 
@@ -113,7 +113,7 @@ void NsightAftermathGpuCrashTracker::OnCrashDump(const void* pGpuCrashDump, cons
 }
 
 // Handler for shader debug information callbacks
-void NsightAftermathGpuCrashTracker::OnShaderDebugInfo(const void* pShaderDebugInfo, const uint32_t shaderDebugInfoSize)
+void AftermathCrashTracker::OnShaderDebugInfo(const void* pShaderDebugInfo, const uint32_t shaderDebugInfoSize)
 {
 	std::lock_guard _(Mutex);
 
@@ -135,7 +135,7 @@ void NsightAftermathGpuCrashTracker::OnShaderDebugInfo(const void* pShaderDebugI
 }
 
 // Handler for GPU crash dump description callbacks
-void NsightAftermathGpuCrashTracker::OnDescription(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription)
+void AftermathCrashTracker::OnDescription(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription)
 {
 	// Add some basic description about the crash. This is called after the GPU crash happens, but before
 	// the actual GPU crash dump callback. The provided data is included in the crash dump and can be
@@ -148,7 +148,7 @@ void NsightAftermathGpuCrashTracker::OnDescription(PFN_GFSDK_Aftermath_AddGpuCra
 }
 
 // Helper for writing a GPU crash dump to a file
-void NsightAftermathGpuCrashTracker::WriteGpuCrashDumpToFile(const void* pGpuCrashDump, const uint32_t gpuCrashDumpSize)
+void AftermathCrashTracker::WriteGpuCrashDumpToFile(const void* pGpuCrashDump, const uint32_t gpuCrashDumpSize)
 {
 	// Create a GPU crash dump decoder object for the GPU crash dump.
 	GFSDK_Aftermath_GpuCrashDump_Decoder decoder = {};
@@ -228,7 +228,7 @@ void NsightAftermathGpuCrashTracker::WriteGpuCrashDumpToFile(const void* pGpuCra
 }
 
 // Helper for writing shader debug information to a file
-void NsightAftermathGpuCrashTracker::WriteShaderDebugInformationToFile(
+void AftermathCrashTracker::WriteShaderDebugInformationToFile(
 	GFSDK_Aftermath_ShaderDebugInfoIdentifier identifier,
 	const void*								  pShaderDebugInfo,
 	const uint32_t							  shaderDebugInfoSize)
@@ -246,7 +246,7 @@ void NsightAftermathGpuCrashTracker::WriteShaderDebugInformationToFile(
 // Handler for shader debug information lookup callbacks.
 // This is used by the JSON decoder for mapping shader instruction
 // addresses to DXIL lines or HLSl source lines.
-void NsightAftermathGpuCrashTracker::OnShaderDebugInfoLookup(
+void AftermathCrashTracker::OnShaderDebugInfoLookup(
 	const GFSDK_Aftermath_ShaderDebugInfoIdentifier& identifier,
 	PFN_GFSDK_Aftermath_SetData						 setShaderDebugInfo) const
 {
@@ -269,7 +269,7 @@ void NsightAftermathGpuCrashTracker::OnShaderDebugInfoLookup(
 // NOTE: If the application loads stripped shader binaries (-Qstrip_debug),
 // Aftermath will require access to both the stripped and the not stripped
 // shader binaries.
-void NsightAftermathGpuCrashTracker::OnShaderLookup(
+void AftermathCrashTracker::OnShaderLookup(
 	const GFSDK_Aftermath_ShaderHash& ShaderHash,
 	PFN_GFSDK_Aftermath_SetData		  PFNSetData) const
 {
@@ -289,7 +289,7 @@ void NsightAftermathGpuCrashTracker::OnShaderLookup(
 // NOTE: If the application loads stripped shader binaries (-Qstrip_debug),
 // Aftermath will require access to both the stripped and the not stripped
 // shader binaries.
-void NsightAftermathGpuCrashTracker::OnShaderInstructionsLookup(
+void AftermathCrashTracker::OnShaderInstructionsLookup(
 	const GFSDK_Aftermath_ShaderInstructionsHash& ShaderInstructionsHash,
 	PFN_GFSDK_Aftermath_SetData					  PFNSetData) const
 {
@@ -307,7 +307,7 @@ void NsightAftermathGpuCrashTracker::OnShaderInstructionsLookup(
 // This is used by the JSON decoder for mapping shader instruction addresses to
 // HLSL source lines, if the shaders used by the application were compiled with
 // separate debug info data files.
-void NsightAftermathGpuCrashTracker::OnShaderSourceDebugInfoLookup(
+void AftermathCrashTracker::OnShaderSourceDebugInfoLookup(
 	const GFSDK_Aftermath_ShaderDebugName& ShaderDebugName,
 	PFN_GFSDK_Aftermath_SetData			   PFNSetData) const
 {
@@ -322,70 +322,70 @@ void NsightAftermathGpuCrashTracker::OnShaderSourceDebugInfoLookup(
 }
 
 // Static callback wrapper for OnCrashDump
-void NsightAftermathGpuCrashTracker::GpuCrashDumpCallback(
+void AftermathCrashTracker::GpuCrashDumpCallback(
 	const void*	   pGpuCrashDump,
 	const uint32_t gpuCrashDumpSize,
 	void*		   pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnCrashDump(pGpuCrashDump, gpuCrashDumpSize);
 }
 
 // Static callback wrapper for OnShaderDebugInfo
-void NsightAftermathGpuCrashTracker::ShaderDebugInfoCallback(
+void AftermathCrashTracker::ShaderDebugInfoCallback(
 	const void*	   pShaderDebugInfo,
 	const uint32_t shaderDebugInfoSize,
 	void*		   pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnShaderDebugInfo(pShaderDebugInfo, shaderDebugInfoSize);
 }
 
 // Static callback wrapper for OnDescription
-void NsightAftermathGpuCrashTracker::CrashDumpDescriptionCallback(
+void AftermathCrashTracker::CrashDumpDescriptionCallback(
 	PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription,
 	void*										   pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnDescription(addDescription);
 }
 
 // Static callback wrapper for OnShaderDebugInfoLookup
-void NsightAftermathGpuCrashTracker::ShaderDebugInfoLookupCallback(
+void AftermathCrashTracker::ShaderDebugInfoLookupCallback(
 	const GFSDK_Aftermath_ShaderDebugInfoIdentifier* pIdentifier,
 	PFN_GFSDK_Aftermath_SetData						 setShaderDebugInfo,
 	void*											 pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnShaderDebugInfoLookup(*pIdentifier, setShaderDebugInfo);
 }
 
 // Static callback wrapper for OnShaderLookup
-void NsightAftermathGpuCrashTracker::ShaderLookupCallback(
+void AftermathCrashTracker::ShaderLookupCallback(
 	const GFSDK_Aftermath_ShaderHash* pShaderHash,
 	PFN_GFSDK_Aftermath_SetData		  setShaderBinary,
 	void*							  pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnShaderLookup(*pShaderHash, setShaderBinary);
 }
 
 // Static callback wrapper for OnShaderInstructionsLookup
-void NsightAftermathGpuCrashTracker::ShaderInstructionsLookupCallback(
+void AftermathCrashTracker::ShaderInstructionsLookupCallback(
 	const GFSDK_Aftermath_ShaderInstructionsHash* pShaderInstructionsHash,
 	PFN_GFSDK_Aftermath_SetData					  setShaderBinary,
 	void*										  pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnShaderInstructionsLookup(*pShaderInstructionsHash, setShaderBinary);
 }
 
 // Static callback wrapper for OnShaderSourceDebugInfoLookup
-void NsightAftermathGpuCrashTracker::ShaderSourceDebugInfoLookupCallback(
+void AftermathCrashTracker::ShaderSourceDebugInfoLookupCallback(
 	const GFSDK_Aftermath_ShaderDebugName* pShaderDebugName,
 	PFN_GFSDK_Aftermath_SetData			   setShaderBinary,
 	void*								   pUserData)
 {
-	auto pGpuCrashTracker = reinterpret_cast<NsightAftermathGpuCrashTracker*>(pUserData);
+	auto pGpuCrashTracker = reinterpret_cast<AftermathCrashTracker*>(pUserData);
 	pGpuCrashTracker->OnShaderSourceDebugInfoLookup(*pShaderDebugName, setShaderBinary);
 }

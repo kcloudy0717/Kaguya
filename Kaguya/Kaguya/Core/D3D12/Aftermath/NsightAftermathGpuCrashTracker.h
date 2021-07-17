@@ -33,11 +33,11 @@
 // Implements GPU crash dump tracking using the Nsight
 // Aftermath API.
 //
-class NsightAftermathGpuCrashTracker
+class AftermathCrashTracker
 {
 public:
-	NsightAftermathGpuCrashTracker();
-	~NsightAftermathGpuCrashTracker();
+	AftermathCrashTracker();
+	~AftermathCrashTracker();
 
 	// Initialize the GPU crash dump tracker.
 	void Initialize();
@@ -46,10 +46,6 @@ public:
 	void RegisterDevice(ID3D12Device* pDevice);
 
 private:
-	//*********************************************************
-	// Callback handlers for GPU crash dumps and related data.
-	//
-
 	// Handler for GPU crash dump callbacks.
 	void OnCrashDump(const void* pGpuCrashDump, const uint32_t gpuCrashDumpSize);
 
@@ -139,19 +135,11 @@ private:
 		void*								   pUserData);
 
 private:
-	//*********************************************************
-	// GPU crash tracker state.
-	//
-
-	// Is the GPU crash dump tracker initialized?
-	bool m_initialized;
-
-	// For thread-safe access of GPU crash tracker state.
-	mutable std::mutex Mutex;
-
+	bool Initialized;
 	// List of Shader Debug Information by ShaderDebugInfoIdentifier.
 	std::map<GFSDK_Aftermath_ShaderDebugInfoIdentifier, std::vector<uint8_t>> ShaderDebugInfo;
 
 	// The mock shader database.
 	NsightAftermathShaderDatabase ShaderDatabase;
+	mutable std::mutex			  Mutex;
 };

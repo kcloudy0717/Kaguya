@@ -3,8 +3,8 @@
 
 std::optional<Allocation> LinearAllocatorPage::Suballocate(UINT64 Size, UINT Alignment)
 {
-	UINT64 NewOffset = AlignUp(Offset, static_cast<UINT64>(Alignment));
-	if (NewOffset + Size > this->PageSize)
+	UINT64 AlignedSize = AlignUp(Size, static_cast<UINT64>(Alignment));
+	if (Offset + AlignedSize > this->PageSize)
 	{
 		return {};
 	}
@@ -12,10 +12,10 @@ std::optional<Allocation> LinearAllocatorPage::Suballocate(UINT64 Size, UINT Ali
 	Allocation Allocation = { .pResource		 = pResource.Get(),
 							  .Offset			 = Offset,
 							  .Size				 = Size,
-							  .CPUVirtualAddress = CPUVirtualAddress + NewOffset,
-							  .GPUVirtualAddress = GPUVirtualAddress + NewOffset };
+							  .CPUVirtualAddress = CPUVirtualAddress + Offset,
+							  .GPUVirtualAddress = GPUVirtualAddress + Offset };
 
-	Offset = NewOffset + Size;
+	Offset += AlignedSize;
 
 	return Allocation;
 }
