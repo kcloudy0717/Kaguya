@@ -107,3 +107,30 @@ public:
 
 	LinearAllocator CpuConstantAllocator;
 };
+
+class D3D12ScopedEventObject
+{
+public:
+	D3D12ScopedEventObject(CommandContext& CommandContext, std::string_view Name)
+		: CommandContext(CommandContext)
+		, PIXEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
+		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
+	{
+#ifdef D3D12_NSIGHT_AFTERMATH
+		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_SetEventMarker(
+			CommandContext.CommandListHandle.GetAftermathContextHandle(),
+			Name.data(),
+			Name.size()));
+#endif
+	}
+
+private:
+	CommandContext&									CommandContext;
+	PIXScopedEventObject<ID3D12GraphicsCommandList> PIXEvent;
+	ProfileBlock									ProfileBlock;
+};
+
+#define D3D12Concatenate(a, b)				  a##b
+#define D3D12GetScopedEventVariableName(a, b) D3D12Concatenate(a, b)
+#define D3D12ScopedEvent(context, name)                                                                                \
+	D3D12ScopedEventObject D3D12GetScopedEventVariableName(d3d12Event, __LINE__)(context, name)

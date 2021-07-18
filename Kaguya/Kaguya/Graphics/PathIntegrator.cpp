@@ -200,6 +200,8 @@ void PathIntegrator_DXR_1_0::Render(
 	D3D12_GPU_VIRTUAL_ADDRESS			   Lights,
 	CommandContext&						   Context)
 {
+	D3D12ScopedEvent(Context, "Path Trace");
+
 	auto& RenderDevice = RenderDevice::Instance();
 
 	struct RenderPassData

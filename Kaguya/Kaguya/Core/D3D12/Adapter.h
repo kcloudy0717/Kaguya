@@ -32,6 +32,9 @@ public:
 	void Initialize(DeviceOptions Options);
 	void InitializeDevice(const DeviceFeatures& Features);
 
+	void OnBeginFrame() { Profiler::OnBeginFrame(Device.GetGraphicsQueue()->GetFrequency()); }
+	void OnEndFrame() { Profiler::OnEndFrame(); }
+
 	IDXGIFactory6* GetFactory6() const noexcept { return Factory6.Get(); }
 
 	IDXGIAdapter4* GetAdapter4() const noexcept { return Adapter4.Get(); }

@@ -5,6 +5,7 @@ struct FSRState
 {
 	int RenderWidth;
 	int RenderHeight;
+	float RCASAttenuation = 0.25f;
 };
 
 class FSRFilter
@@ -28,11 +29,13 @@ private:
 	void ApplyEdgeAdaptiveSpatialUpsampling(
 		UINT					  ThreadGroupCountX,
 		UINT					  ThreadGroupCountY,
+		const FSRState&			  State,
 		const ShaderResourceView& ShaderResourceView,
 		CommandContext&			  Context);
 	void ApplyRobustContrastAdaptiveSharpening(
 		UINT					  ThreadGroupCountX,
 		UINT					  ThreadGroupCountY,
+		const FSRState&			  State,
 		const ShaderResourceView& ShaderResourceView,
 		CommandContext&			  Context);
 

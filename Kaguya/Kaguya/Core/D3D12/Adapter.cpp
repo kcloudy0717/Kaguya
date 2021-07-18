@@ -34,6 +34,7 @@ Adapter::Adapter()
 
 Adapter::~Adapter()
 {
+	Profiler::Shutdown();
 	if (CVar_DRED && DeviceRemovedFence)
 	{
 		// Need to gracefully exit the event
@@ -221,6 +222,8 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 			}
 		}
 	}
+
+	Profiler::Initialize(D3D12Device.Get(), 1);
 
 	Device.Initialize();
 }

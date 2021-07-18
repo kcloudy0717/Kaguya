@@ -78,7 +78,7 @@ void ToneMapper::SetResolution(UINT Width, UINT Height)
 
 void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandContext& Context)
 {
-	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"Tonemapping");
+	D3D12ScopedEvent(Context, "Tonemap");
 
 	Context.TransitionBarrier(&RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 

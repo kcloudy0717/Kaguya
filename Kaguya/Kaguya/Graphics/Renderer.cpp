@@ -100,6 +100,25 @@ void Renderer::OnInitialize()
 
 void Renderer::OnRender(World& World)
 {
+	RenderDevice::Instance().GetAdapter()->OnBeginFrame();
+
+	if (ImGui::Begin("GPU Timing"))
+	{
+		for (const auto& iter : Profiler::Span)
+		{
+			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AvgTime, iter.MaxTime);
+		}
+	}
+	ImGui::End();
+
+	State.RenderWidth  = RenderWidth;
+	State.RenderHeight = RenderHeight;
+	if (ImGui::Begin("FSR"))
+	{
+		ImGui::SliderFloat("Sharpening attenuation", &State.RCASAttenuation, 0.0f, 2.0f);
+	}
+	ImGui::End();
+
 	World.ActiveCamera->AspectRatio = float(ViewportWidth) / float(ViewportHeight);
 	auto& RenderDevice				= RenderDevice::Instance();
 
@@ -247,9 +266,6 @@ void Renderer::OnRender(World& World)
 
 	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
 
-	FSRState State;
-	State.RenderWidth  = RenderWidth;
-	State.RenderHeight = RenderHeight;
 	m_FSRFilter.Upscale(State, m_ToneMapper.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
@@ -288,6 +304,8 @@ void Renderer::OnRender(World& World)
 	CommandSyncPoint MainSyncPoint = Context.Execute(false);
 
 	RenderDevice.Present(false);
+
+	RenderDevice::Instance().GetAdapter()->OnEndFrame();
 
 	MainSyncPoint.WaitForCompletion();
 }

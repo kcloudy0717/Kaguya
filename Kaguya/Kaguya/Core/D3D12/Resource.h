@@ -236,38 +236,3 @@ public:
 		std::optional<UINT> OptMipSlice	  = {},
 		std::optional<UINT> OptArraySize  = {});
 };
-
-class ReadbackBuffer
-{
-public:
-	ReadbackBuffer() noexcept = default;
-	ReadbackBuffer(_In_ ID3D12Device* Device, _In_ UINT64 Size)
-	{
-		auto hp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-		auto rd = CD3DX12_RESOURCE_DESC::Buffer(Size);
-		ASSERTD3D12APISUCCEEDED(Device->CreateCommittedResource(
-			&hp,
-			D3D12_HEAP_FLAG_NONE,
-			&rd,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&Resource)));
-	}
-
-	const void* Map() const
-	{
-		void* data = nullptr;
-		Resource->Map(0, nullptr, &data);
-		return data;
-	}
-
-	template<typename T>
-	const T* Map() const
-	{
-		return reinterpret_cast<const T*>(Map());
-	};
-
-	void Unmap() const { Resource->Unmap(0, nullptr); }
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
-};

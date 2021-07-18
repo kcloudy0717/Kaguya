@@ -1,13 +1,18 @@
 #include "D3D12Common.h"
+#include "CommandContext.h"
 
 LPCWSTR GetCommandQueueTypeString(ECommandQueueType CommandQueueType)
 {
 	switch (CommandQueueType)
 	{
-	case ECommandQueueType::Direct: return L"3D";
-	case ECommandQueueType::AsyncCompute: return L"Async Compute";
-	case ECommandQueueType::Copy1: return L"Copy 1";
-	case ECommandQueueType::Copy2: return L"Copy 2";
+	case ECommandQueueType::Direct:
+		return L"3D";
+	case ECommandQueueType::AsyncCompute:
+		return L"Async Compute";
+	case ECommandQueueType::Copy1:
+		return L"Copy 1";
+	case ECommandQueueType::Copy2:
+		return L"Copy 2";
 	}
 
 	return nullptr;

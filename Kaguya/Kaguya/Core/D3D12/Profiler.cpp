@@ -9,138 +9,123 @@
 //
 //=================================================================================================
 
-std::pair<double, double> ProfileData::Update(UINT64 Index, UINT64 GpuFrequency, const UINT64* pFrameQueryData)
+void ProfileData::Update(UINT64 Index, UINT64 GpuFrequency, const UINT64* pFrameQueryData)
 {
 	QueryFinished = false;
 
-	double time = 0.0f;
+	double Time = 0.0f;
 	if (pFrameQueryData)
 	{
 		// Get the query data
-		UINT64 startTime = pFrameQueryData[Index * 2 + 0];
-		UINT64 endTime	 = pFrameQueryData[Index * 2 + 1];
+		UINT64 StartTime = pFrameQueryData[Index * 2 + 0];
+		UINT64 EndTime	 = pFrameQueryData[Index * 2 + 1];
 
-		if (endTime > startTime)
+		if (EndTime > StartTime)
 		{
-			UINT64 delta = endTime - startTime;
-			time		 = (delta / double(GpuFrequency)) * 1000.0;
+			UINT64 delta = EndTime - StartTime;
+			Time		 = (delta / double(GpuFrequency)) * 1000.0;
 		}
 	}
 
-	TimeSamples[CurrSample] = time;
+	TimeSamples[CurrSample] = Time;
 	CurrSample				= (CurrSample + 1) % ProfileData::FilterSize;
 
-	double maxTime		  = 0.0;
-	double avgTime		  = 0.0;
-	UINT64 avgTimeSamples = 0;
-	for (UINT i = 0; i < ProfileData::FilterSize; ++i)
+	UINT64 AvgTimeSamples = 0;
+	for (double TimeSample : TimeSamples)
 	{
-		if (TimeSamples[i] <= 0.0)
+		if (TimeSample <= 0.0)
 			continue;
-		maxTime = std::max(TimeSamples[i], maxTime);
-		avgTime += TimeSamples[i];
-		++avgTimeSamples;
+		MaxTime = std::max(TimeSample, MaxTime);
+		AvgTime += TimeSample;
+		++AvgTimeSamples;
 	}
 
-	if (avgTimeSamples > 0)
-		avgTime /= double(avgTimeSamples);
-
-	return std::make_pair(avgTime, maxTime);
+	if (AvgTimeSamples > 0)
+	{
+		AvgTime /= double(AvgTimeSamples);
+	}
 }
 
 void Profiler::Initialize(ID3D12Device* pDevice, UINT FrameLatency)
 {
-	GpuProfiling = true;
+	FrameIndex			   = 0;
+	Profiler::FrameLatency = FrameLatency;
 
-	m_FrameIndex   = 0;
-	m_FrameLatency = FrameLatency;
+	D3D12_QUERY_HEAP_DESC QueryHeapDesc = { .Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
+											.Count	  = MaxProfiles * 2,
+											.NodeMask = 0 };
+	pDevice->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap));
 
-	D3D12_QUERY_HEAP_DESC heapDesc = { .Type	 = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
-									   .Count	 = MaxProfiles * 2,
-									   .NodeMask = 0 };
-	pDevice->CreateQueryHeap(&heapDesc, IID_PPV_ARGS(&m_QueryHeap));
+	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+	D3D12_RESOURCE_DESC	  ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
+	ASSERTD3D12APISUCCEEDED(pDevice->CreateCommittedResource(
+		&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(QueryReadback.ReleaseAndGetAddressOf())));
 
-	m_ReadbackBuffer = ReadbackBuffer(pDevice, MaxProfiles * m_FrameLatency * 2 * sizeof(UINT64));
-	m_ReadbackBuffer.Resource->SetName(L"Query Readback Buffer");
+	QueryReadback->SetName(L"Timestamp Query Readback");
 
 	Profiles.resize(MaxProfiles);
 }
 
 void Profiler::Shutdown()
 {
-	m_ReadbackBuffer.Resource.Reset();
-	m_QueryHeap.Reset();
+	QueryReadback.Reset();
+	QueryHeap.Reset();
 }
 
 void Profiler::Update(UINT FrameIndex)
 {
-	m_FrameIndex = FrameIndex;
+	Profiler::FrameIndex = FrameIndex;
 }
 
 UINT64 Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name)
 {
-	if (GpuProfiling == false)
-		return UINT64_MAX;
+	assert(NumProfiles < MaxProfiles);
+	UINT64 ProfileIdx		  = NumProfiles++;
+	Profiles[ProfileIdx].Name = Name;
 
-	UINT64 profileIdx = UINT64_MAX;
-	for (UINT64 i = 0; i < NumProfiles; ++i)
-	{
-		if (Profiles[i].Name == Name)
-		{
-			profileIdx = i;
-			break;
-		}
-	}
-
-	if (profileIdx == UINT64_MAX)
-	{
-		assert(NumProfiles < MaxProfiles);
-		profileIdx				  = NumProfiles++;
-		Profiles[profileIdx].Name = Name;
-	}
-
-	ProfileData& profileData = Profiles[profileIdx];
-	assert(profileData.QueryStarted == false);
-	assert(profileData.QueryFinished == false);
-	profileData.Active = true;
+	ProfileData& ProfileData = Profiles[ProfileIdx];
+	assert(ProfileData.QueryStarted == false);
+	assert(ProfileData.QueryFinished == false);
 
 	// Insert the start timestamp
-	const UINT32 startQueryIdx = UINT32(profileIdx * 2);
-	CommandList->EndQuery(m_QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, startQueryIdx);
+	const UINT32 StartQueryIdx = UINT32(ProfileIdx * 2);
+	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartQueryIdx);
 
-	profileData.QueryStarted = true;
+	ProfileData.QueryStarted = true;
 
-	return profileIdx;
+	return ProfileIdx;
 }
 
 void Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT64 Index)
 {
-	if (GpuProfiling == false)
-		return;
-
 	assert(Index < NumProfiles);
 
-	ProfileData& profileData = Profiles[Index];
-	assert(profileData.QueryStarted == true);
-	assert(profileData.QueryFinished == false);
+	ProfileData& ProfileData = Profiles[Index];
+	assert(ProfileData.QueryStarted == true);
+	assert(ProfileData.QueryFinished == false);
 
 	// Insert the end timestamp
-	const UINT32 startQueryIdx = UINT32(Index * 2);
-	const UINT32 endQueryIdx   = startQueryIdx + 1;
-	CommandList->EndQuery(m_QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, endQueryIdx);
+	const UINT32 StartQueryIdx = UINT32(Index * 2);
+	const UINT32 EndQueryIdx   = StartQueryIdx + 1;
+	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndQueryIdx);
 
 	// Resolve the data
-	const UINT64 dstOffset = ((m_FrameIndex * MaxProfiles * 2) + startQueryIdx) * sizeof(UINT64);
+	const UINT64 AlignedDestinationBufferOffset = ((FrameIndex * MaxProfiles * 2) + StartQueryIdx) * sizeof(UINT64);
 	CommandList->ResolveQueryData(
-		m_QueryHeap.Get(),
+		QueryHeap.Get(),
 		D3D12_QUERY_TYPE_TIMESTAMP,
-		startQueryIdx,
+		StartQueryIdx,
 		2,
-		m_ReadbackBuffer.Resource.Get(),
-		dstOffset);
+		QueryReadback.Get(),
+		AlignedDestinationBufferOffset);
 
-	profileData.QueryStarted  = false;
-	profileData.QueryFinished = true;
+	ProfileData.QueryStarted  = false;
+	ProfileData.QueryFinished = true;
 }
 
 ProfileBlock::ProfileBlock(ID3D12GraphicsCommandList* CommandList, const char* Name)

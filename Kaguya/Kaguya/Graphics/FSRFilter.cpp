@@ -13,6 +13,15 @@ struct RootConstants
 	unsigned int OutputTID;
 };
 
+_declspec(align(256)) struct FSRConstants
+{
+	DirectX::XMUINT4 Const0;
+	DirectX::XMUINT4 Const1;
+	DirectX::XMUINT4 Const2;
+	DirectX::XMUINT4 Const3;
+	DirectX::XMUINT4 Sample;
+};
+
 FSRFilter::FSRFilter(RenderDevice& RenderDevice)
 {
 	FSR_RS = RenderDevice.CreateRootSignature(
@@ -85,34 +94,9 @@ void FSRFilter::SetResolution(UINT Width, UINT Height)
 
 void FSRFilter::Upscale(const FSRState& State, const ShaderResourceView& ShaderResourceView, CommandContext& Context)
 {
-	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"FSR");
-
-	_declspec(align(256)) struct FSRConstants
-	{
-		DirectX::XMUINT4 Const0;
-		DirectX::XMUINT4 Const1;
-		DirectX::XMUINT4 Const2;
-		DirectX::XMUINT4 Const3;
-		DirectX::XMUINT4 Sample;
-	} cb;
-
-	FsrEasuCon(
-		reinterpret_cast<AU1*>(&cb.Const0),
-		reinterpret_cast<AU1*>(&cb.Const1),
-		reinterpret_cast<AU1*>(&cb.Const2),
-		reinterpret_cast<AU1*>(&cb.Const3),
-		static_cast<AF1>(State.RenderWidth),
-		static_cast<AF1>(State.RenderHeight),
-		static_cast<AF1>(State.RenderWidth),
-		static_cast<AF1>(State.RenderHeight),
-		(AF1)Width,
-		(AF1)Height);
-
-	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
-	std::memcpy(Allocation.CPUVirtualAddress, &cb, sizeof(FSRConstants));
+	D3D12ScopedEvent(Context, "FSR");
 
 	Context->SetComputeRootSignature(FSR_RS);
-	Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
 
 	// This value is the image region dimension that each thread group of the FSR shader operates on
 	constexpr UINT ThreadSize		 = 16;
@@ -121,12 +105,12 @@ void FSRFilter::Upscale(const FSRState& State, const ShaderResourceView& ShaderR
 
 	Context.TransitionBarrier(&RenderTargets[0], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	ApplyEdgeAdaptiveSpatialUpsampling(ThreadGroupCountX, ThreadGroupCountY, ShaderResourceView, Context);
+	ApplyEdgeAdaptiveSpatialUpsampling(ThreadGroupCountX, ThreadGroupCountY, State, ShaderResourceView, Context);
 
 	Context.TransitionBarrier(&RenderTargets[0], D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	Context.TransitionBarrier(&RenderTargets[1], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	ApplyRobustContrastAdaptiveSharpening(ThreadGroupCountX, ThreadGroupCountY, SRVs[0], Context);
+	ApplyRobustContrastAdaptiveSharpening(ThreadGroupCountX, ThreadGroupCountY, State, SRVs[0], Context);
 
 	Context.TransitionBarrier(&RenderTargets[1], D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	Context.FlushResourceBarriers();
@@ -135,15 +119,34 @@ void FSRFilter::Upscale(const FSRState& State, const ShaderResourceView& ShaderR
 void FSRFilter::ApplyEdgeAdaptiveSpatialUpsampling(
 	UINT					  ThreadGroupCountX,
 	UINT					  ThreadGroupCountY,
+	const FSRState&			  State,
 	const ShaderResourceView& ShaderResourceView,
 	CommandContext&			  Context)
 {
-	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"Edge Adaptive Spatial Upsampling");
+	D3D12ScopedEvent(Context, "Edge Adaptive Spatial Upsampling");
 
 	Context->SetPipelineState(EASU_PSO);
 
-	RootConstants RC = { ShaderResourceView.GetIndex(), UAVs[0].GetIndex() };
+	RootConstants RC	  = { ShaderResourceView.GetIndex(), UAVs[0].GetIndex() };
+	FSRConstants  FsrEasu = {};
+	FsrEasuCon(
+		reinterpret_cast<AU1*>(&FsrEasu.Const0),
+		reinterpret_cast<AU1*>(&FsrEasu.Const1),
+		reinterpret_cast<AU1*>(&FsrEasu.Const2),
+		reinterpret_cast<AU1*>(&FsrEasu.Const3),
+		static_cast<AF1>(State.RenderWidth),
+		static_cast<AF1>(State.RenderHeight),
+		static_cast<AF1>(State.RenderWidth),
+		static_cast<AF1>(State.RenderHeight),
+		(AF1)Width,
+		(AF1)Height);
+	FsrEasu.Sample.x = 0;
+
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
+	std::memcpy(Allocation.CPUVirtualAddress, &FsrEasu, sizeof(FSRConstants));
+
 	Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+	Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
 
 	Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 }
@@ -151,15 +154,24 @@ void FSRFilter::ApplyEdgeAdaptiveSpatialUpsampling(
 void FSRFilter::ApplyRobustContrastAdaptiveSharpening(
 	UINT					  ThreadGroupCountX,
 	UINT					  ThreadGroupCountY,
+	const FSRState&			  State,
 	const ShaderResourceView& ShaderResourceView,
 	CommandContext&			  Context)
 {
-	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"Robust Contrast Adaptive Sharpening");
+	D3D12ScopedEvent(Context, "Robust Contrast Adaptive Sharpening");
 
 	Context->SetPipelineState(RCAS_PSO);
 
-	RootConstants RC = { ShaderResourceView.GetIndex(), UAVs[1].GetIndex() };
+	RootConstants RC	  = { ShaderResourceView.GetIndex(), UAVs[1].GetIndex() };
+	FSRConstants  FsrRcas = {};
+	FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), State.RCASAttenuation);
+	FsrRcas.Sample.x = 0;
+
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
+	std::memcpy(Allocation.CPUVirtualAddress, &FsrRcas, sizeof(FSRConstants));
+
 	Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+	Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
 
 	Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 }

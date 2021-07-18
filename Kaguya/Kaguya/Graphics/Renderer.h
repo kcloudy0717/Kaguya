@@ -38,6 +38,8 @@ private:
 	ToneMapper						m_ToneMapper;
 	FSRFilter						m_FSRFilter;
 
+	FSRState State;
+
 	Buffer			Materials;
 	HLSL::Material* pMaterials = nullptr;
 	Buffer			Lights;

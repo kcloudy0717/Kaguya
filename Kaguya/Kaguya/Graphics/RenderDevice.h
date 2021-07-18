@@ -106,7 +106,8 @@ public:
 
 	auto GetCurrentBackBufferResource() const { return m_SwapChain.GetCurrentBackBufferResource(); }
 
-	Device* GetDevice() noexcept { return Adapter.GetDevice(); }
+	Adapter* GetAdapter() noexcept { return &Adapter; }
+	Device*	 GetDevice() noexcept { return Adapter.GetDevice(); }
 
 private:
 	RenderDevice();

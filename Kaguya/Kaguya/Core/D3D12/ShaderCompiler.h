@@ -88,9 +88,11 @@ public:
 	Library CompileLibrary(const std::filesystem::path& Path) const;
 
 private:
-	std::wstring ShaderProfileString(EShaderType ShaderType, D3D_SHADER_MODEL ShaderModel) const;
+	std::wstring GetShaderModelString() const;
 
-	std::wstring LibraryProfileString(D3D_SHADER_MODEL ShaderModel) const;
+	std::wstring ShaderProfileString(EShaderType ShaderType) const;
+
+	std::wstring LibraryProfileString() const;
 
 	void Compile(
 		const std::filesystem::path&  Path,

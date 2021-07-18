@@ -26,7 +26,7 @@ Shader ShaderCompiler::CompileShader(
 	std::wstring_view			  EntryPoint,
 	const std::vector<DxcDefine>& ShaderDefines) const
 {
-	std::wstring ProfileString = ShaderProfileString(ShaderType, ShaderModel);
+	std::wstring ProfileString = ShaderProfileString(ShaderType);
 
 	IDxcBlob*	 Blob	 = nullptr;
 	IDxcBlob*	 PDBBlob = nullptr;
@@ -38,7 +38,7 @@ Shader ShaderCompiler::CompileShader(
 
 Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 {
-	std::wstring ProfileString = LibraryProfileString(ShaderModel);
+	std::wstring ProfileString = LibraryProfileString();
 
 	IDxcBlob*	 Blob	 = nullptr;
 	IDxcBlob*	 PDBBlob = nullptr;
@@ -48,7 +48,29 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	return Library(Blob, PDBBlob, std::move(PDBName));
 }
 
-std::wstring ShaderCompiler::ShaderProfileString(EShaderType ShaderType, D3D_SHADER_MODEL ShaderModel) const
+std::wstring ShaderCompiler::GetShaderModelString() const
+{
+	std::wstring ShaderModelString;
+	switch (ShaderModel)
+	{
+	case D3D_SHADER_MODEL_6_3:
+		ShaderModelString = L"6_3";
+		break;
+	case D3D_SHADER_MODEL_6_4:
+		ShaderModelString = L"6_4";
+		break;
+	case D3D_SHADER_MODEL_6_5:
+		ShaderModelString = L"6_5";
+		break;
+	case D3D_SHADER_MODEL_6_6:
+		ShaderModelString = L"6_6";
+		break;
+	}
+
+	return ShaderModelString;
+}
+
+std::wstring ShaderCompiler::ShaderProfileString(EShaderType ShaderType) const
 {
 	std::wstring ProfileString;
 	switch (ShaderType)
@@ -79,45 +101,12 @@ std::wstring ShaderCompiler::ShaderProfileString(EShaderType ShaderType, D3D_SHA
 		break;
 	}
 
-	switch (ShaderModel)
-	{
-	case D3D_SHADER_MODEL_6_3:
-		ProfileString += L"6_3";
-		break;
-	case D3D_SHADER_MODEL_6_4:
-		ProfileString += L"6_4";
-		break;
-	case D3D_SHADER_MODEL_6_5:
-		ProfileString += L"6_5";
-		break;
-	case D3D_SHADER_MODEL_6_6:
-		ProfileString += L"6_6";
-		break;
-	}
-
-	return ProfileString;
+	return ProfileString + GetShaderModelString();
 }
 
-std::wstring ShaderCompiler::LibraryProfileString(D3D_SHADER_MODEL ShaderModel) const
+std::wstring ShaderCompiler::LibraryProfileString() const
 {
-	std::wstring ProfileString = L"lib_";
-	switch (ShaderModel)
-	{
-	case D3D_SHADER_MODEL_6_3:
-		ProfileString += L"6_3";
-		break;
-	case D3D_SHADER_MODEL_6_4:
-		ProfileString += L"6_4";
-		break;
-	case D3D_SHADER_MODEL_6_5:
-		ProfileString += L"6_5";
-		break;
-	case D3D_SHADER_MODEL_6_6:
-		ProfileString += L"6_6";
-		break;
-	}
-
-	return ProfileString;
+	return L"lib_" + GetShaderModelString();
 }
 
 void ShaderCompiler::Compile(
