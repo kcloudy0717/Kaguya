@@ -32,8 +32,8 @@ public:
 	void Initialize(DeviceOptions Options);
 	void InitializeDevice(const DeviceFeatures& Features);
 
-	void OnBeginFrame() { Profiler::OnBeginFrame(Device.GetGraphicsQueue()->GetFrequency()); }
-	void OnEndFrame() { Profiler::OnEndFrame(); }
+	void OnBeginFrame() { Profiler.OnBeginFrame(); }
+	void OnEndFrame() { Profiler.OnEndFrame(); }
 
 	IDXGIFactory6* GetFactory6() const noexcept { return Factory6.Get(); }
 
@@ -95,4 +95,6 @@ private:
 	wil::unique_event					DeviceRemovedEvent;
 
 	Device Device;
+
+	Profiler Profiler;
 };

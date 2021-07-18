@@ -123,7 +123,7 @@ void FSRFilter::ApplyEdgeAdaptiveSpatialUpsampling(
 	const ShaderResourceView& ShaderResourceView,
 	CommandContext&			  Context)
 {
-	D3D12ScopedEvent(Context, "Edge Adaptive Spatial Upsampling");
+	D3D12ScopedEvent(Context, "EASU");
 
 	Context->SetPipelineState(EASU_PSO);
 
@@ -158,7 +158,7 @@ void FSRFilter::ApplyRobustContrastAdaptiveSharpening(
 	const ShaderResourceView& ShaderResourceView,
 	CommandContext&			  Context)
 {
-	D3D12ScopedEvent(Context, "Robust Contrast Adaptive Sharpening");
+	D3D12ScopedEvent(Context, "RCAS");
 
 	Context->SetPipelineState(RCAS_PSO);
 

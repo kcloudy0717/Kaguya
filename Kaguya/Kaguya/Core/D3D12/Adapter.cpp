@@ -28,13 +28,13 @@ void Adapter::ReportLiveObjects()
 }
 
 Adapter::Adapter()
-	: Device(this)
+	: Profiler(1)
+	, Device(this)
 {
 }
 
 Adapter::~Adapter()
 {
-	Profiler::Shutdown();
 	if (CVar_DRED && DeviceRemovedFence)
 	{
 		// Need to gracefully exit the event
@@ -223,9 +223,9 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 		}
 	}
 
-	Profiler::Initialize(D3D12Device.Get(), 1);
-
 	Device.Initialize();
+
+	Profiler.Initialize(D3D12Device.Get(), Device.GetGraphicsQueue()->GetFrequency());
 }
 
 void Adapter::OnDeviceRemoved(PVOID Context, BOOLEAN)

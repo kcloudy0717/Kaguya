@@ -21,7 +21,13 @@
 #define D3D12_DEBUG_RESOURCE_STATES
 #endif
 
-#define D3D12_NSIGHT_AFTERMATH
+// The D3D debug layer (as well as Microsoft PIX and other graphics debugger
+// tools using an injection library) is not compatible with Nsight Aftermath!
+// If Aftermath detects that any of these tools are present it will fail
+// initialization.
+
+// Feel free to comment this out
+//#define D3D12_NSIGHT_AFTERMATH
 
 enum class ECommandQueueType
 {

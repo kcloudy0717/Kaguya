@@ -104,9 +104,16 @@ void Renderer::OnRender(World& World)
 
 	if (ImGui::Begin("GPU Timing"))
 	{
-		for (const auto& iter : Profiler::Span)
+		for (const auto& iter : Profiler::Data)
 		{
+			for (INT i = 0; i < iter.Depth; ++i)
+			{
+				ImGui::Text("    ");
+				ImGui::SameLine();
+			}
 			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AvgTime, iter.MaxTime);
+			ImGui::SameLine();
+			ImGui::NewLine();
 		}
 	}
 	ImGui::End();
