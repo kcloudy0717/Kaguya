@@ -27,7 +27,7 @@
 // initialization.
 
 // Feel free to comment this out
-//#define D3D12_NSIGHT_AFTERMATH
+#define D3D12_NSIGHT_AFTERMATH
 
 enum class ECommandQueueType
 {

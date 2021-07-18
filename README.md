@@ -48,6 +48,8 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Implement more light types (spot, directional, spherical)
 - Implement denoising
 - Implement compaction to DXR acceleration structures
+- Implement custom memory allocator for D3D12 based on resource usage
+- Implement D3D12 resource residency management
 - SM6.6 Dynamic resource binding
 - Add environment lights ([Portal-masked environment map sampling](https://cs.dartmouth.edu/wjarosz/publications/bitterli15portal.html)) and geometry area lights ([Spherical triangle sampling](https://www.graphics.cornell.edu/pubs/1995/Arv95c.pdf))
 - Upgrade from DXR 1.0 to DXR 1.1 (inline raytracing)
@@ -61,7 +63,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - CMake Version 3.15
 - C++ 20
 
-1. Initialize submodules after you have cloned, use CMake GUI to configure and generate visual studio solution. (I ran [bfg-repo cleaner](https://rtyley.github.io/bfg-repo-cleaner/) on this repo because I was comitting all my assets, the repo is way smaller now with the downside of unable to see old commit file changes)
+1. Initialize submodules after you have cloned, use CMake GUI to configure and generate visual studio solution. (I ran [bfg-repo cleaner](https://rtyley.github.io/bfg-repo-cleaner/) on this repo because I was committing all my assets, the repo is way smaller now with the downside of unable to see old commit file changes)
 
 2. Download assets from [Releases](https://github.com/KaiH0717/Kaguya/releases/tag/v1.0) and extract the contents into a directory named assets in the root directory of the repo. (There's a build event that'll copy contents from asset to the executable directory)
 
@@ -71,6 +73,7 @@ Let me know if you have any trouble setting up the project and getting it up and
 
 # Acknowledgements
 
+- [FidelityFX Super Resolution 1.0 (FSR)](https://github.com/GPUOpen-Effects/FidelityFX-FSR)
 - [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
 - [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler)
 - [DirectXTex](https://github.com/microsoft/DirectXTex)

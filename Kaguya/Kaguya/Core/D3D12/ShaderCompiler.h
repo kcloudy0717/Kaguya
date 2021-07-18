@@ -56,6 +56,7 @@ public:
 		, PDBBlob(PDBBlob)
 		, PDBName(std::move(PDBName))
 	{
+		AftermathShaderDatabase::AddShader(Blob, PDBBlob);
 	}
 
 	operator D3D12_SHADER_BYTECODE() const

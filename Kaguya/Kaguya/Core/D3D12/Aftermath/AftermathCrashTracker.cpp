@@ -48,16 +48,17 @@ void AftermathCrashTracker::Initialize()
 	// in memory. If the flag is set, ShaderDebugInfoCallback will be called only
 	// in the event of a crash, right before GpuCrashDumpCallback. If the flag is not set,
 	// ShaderDebugInfoCallback will be called for every shader that is compiled.
-	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_EnableGpuCrashDumps(
-		GFSDK_Aftermath_Version_API,
-		GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_DX,
-		GFSDK_Aftermath_GpuCrashDumpFeatureFlags_DeferDebugInfoCallbacks,
-		CrashDumpCallback,
-		ShaderDebugInfoCallback,
-		CrashDumpDescriptionCallback,
-		this));
-
-	Initialized = true;
+	if (GFSDK_Aftermath_SUCCEED(GFSDK_Aftermath_EnableGpuCrashDumps(
+			GFSDK_Aftermath_Version_API,
+			GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_DX,
+			GFSDK_Aftermath_GpuCrashDumpFeatureFlags_DeferDebugInfoCallbacks,
+			CrashDumpCallback,
+			ShaderDebugInfoCallback,
+			CrashDumpDescriptionCallback,
+			this)))
+	{
+		Initialized = true;
+	}
 }
 
 void AftermathCrashTracker::RegisterDevice(ID3D12Device* pDevice)
@@ -87,14 +88,17 @@ void AftermathCrashTracker::RegisterDevice(ID3D12Device* pDevice)
 	//   overhead and additional overhead for handling the corresponding shader debug
 	//   information callbacks.
 	//
-	constexpr uint32_t AftermathFlags =
-		GFSDK_Aftermath_FeatureFlags_EnableMarkers |		  // Enable event marker tracking.
-		GFSDK_Aftermath_FeatureFlags_EnableResourceTracking | // Enable tracking of resources.
-		GFSDK_Aftermath_FeatureFlags_CallStackCapturing | // Capture call stacks for all draw calls, compute dispatches,
-														  // and resource copies.
-		GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo; // Generate debug information for shaders.
+	if (Initialized)
+	{
+		constexpr uint32_t AftermathFlags =
+			GFSDK_Aftermath_FeatureFlags_EnableMarkers |		  // Enable event marker tracking.
+			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking | // Enable tracking of resources.
+			GFSDK_Aftermath_FeatureFlags_CallStackCapturing |	  // Capture call stacks for all draw calls, compute
+															  // dispatches, and resource copies.
+			GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo; // Generate debug information for shaders.
 
-	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, AftermathFlags, pDevice));
+		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, AftermathFlags, pDevice));
+	}
 }
 
 void AftermathCrashTracker::CrashDumpCallback(const void* pCrashDump, const uint32_t SizeInBytes, void* pUserData)

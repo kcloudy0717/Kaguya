@@ -132,7 +132,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 #endif
 #ifdef D3D12_NSIGHT_AFTERMATH
 	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
-	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle));
+	GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle);
 	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
 	ASSERTD3D12APISUCCEEDED(GraphicsCommandList->Close());
 #endif
@@ -141,7 +141,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 CommandListHandle::CommandList::~CommandList()
 {
 #ifdef D3D12_NSIGHT_AFTERMATH
-	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_ReleaseContextHandle(AftermathContextHandle));
+	GFSDK_Aftermath_ReleaseContextHandle(AftermathContextHandle);
 #endif
 }
 

@@ -25,35 +25,46 @@
 
 void AftermathShaderDatabase::AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob)
 {
+#ifdef D3D12_NSIGHT_AFTERMATH
 	// Create shader hashes for the shader bytecode
 	D3D12_SHADER_BYTECODE Bytecode = { Blob->GetBufferPointer(), Blob->GetBufferSize() };
 
 	GFSDK_Aftermath_ShaderHash			   ShaderHash			  = {};
 	GFSDK_Aftermath_ShaderInstructionsHash ShaderInstructionsHash = {};
-	AFTERMATH_CHECK_ERROR(
-		GFSDK_Aftermath_GetShaderHash(GFSDK_Aftermath_Version_API, &Bytecode, &ShaderHash, &ShaderInstructionsHash));
+	if (GFSDK_Aftermath_SUCCEED(GFSDK_Aftermath_GetShaderHash(
+			GFSDK_Aftermath_Version_API,
+			&Bytecode,
+			&ShaderHash,
+			&ShaderInstructionsHash)))
+	{
+		// Store the data for shader instruction address mapping when decoding GPU crash dumps.
+		// cf. FindShaderBinary()
+		ShaderBinaries[ShaderHash].Swap(Blob);
+		ShaderInstructionsToShaderHash[ShaderInstructionsHash] = ShaderHash;
 
-	// Store the data for shader instruction address mapping when decoding GPU crash dumps.
-	// cf. FindShaderBinary()
-	ShaderBinaries[ShaderHash].Swap(Blob);
-	ShaderInstructionsToShaderHash[ShaderInstructionsHash] = ShaderHash;
-
-	// Populate shader debug name.
-	// The shaders used in this sample are compiled with compiler-generated debug data
-	// file names. That means the debug data file's name matches the corresponding
-	// shader's DebugName.
-	// If shaders are built with user-defined debug data file names, the shader database
-	// must maintain a mapping between the shader DebugName (queried from the shader
-	// binary with GFSDK_Aftermath_GetShaderDebugName()) and the name of the file
-	// containing the corresponding debug data.
-	// Please see the documentation of GFSDK_Aftermath_GpuCrashDump_GenerateJSON() for
-	// additional information.
-	GFSDK_Aftermath_ShaderDebugName ShaderDebugName;
-	AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_GetShaderDebugName(GFSDK_Aftermath_Version_API, &Bytecode, &ShaderDebugName));
-
-	// Store the data for shader instruction address mapping when decoding GPU crash dumps.
-	// cf. FindSourceShaderDebugData()
-	ShaderPDBs[ShaderDebugName].Swap(PDBBlob);
+		// Populate shader debug name.
+		// The shaders used in this sample are compiled with compiler-generated debug data
+		// file names. That means the debug data file's name matches the corresponding
+		// shader's DebugName.
+		// If shaders are built with user-defined debug data file names, the shader database
+		// must maintain a mapping between the shader DebugName (queried from the shader
+		// binary with GFSDK_Aftermath_GetShaderDebugName()) and the name of the file
+		// containing the corresponding debug data.
+		// Please see the documentation of GFSDK_Aftermath_GpuCrashDump_GenerateJSON() for
+		// additional information.
+		GFSDK_Aftermath_ShaderDebugName ShaderDebugName;
+		if (GFSDK_Aftermath_SUCCEED(
+				GFSDK_Aftermath_GetShaderDebugName(GFSDK_Aftermath_Version_API, &Bytecode, &ShaderDebugName)))
+		{
+			// Store the data for shader instruction address mapping when decoding GPU crash dumps.
+			// cf. FindSourceShaderDebugData()
+			ShaderPDBs[ShaderDebugName].Swap(PDBBlob);
+		}
+	}
+#else
+	UNREFERENCED_PARAMETER(Blob);
+	UNREFERENCED_PARAMETER(PDBBlob);
+#endif
 }
 
 IDxcBlob* AftermathShaderDatabase::FindShaderBinary(const GFSDK_Aftermath_ShaderHash& ShaderHash)

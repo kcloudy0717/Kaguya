@@ -191,10 +191,10 @@ float3 Li(RayDesc ray, inout uint Seed)
 		
 		float3 wo = -ray.Direction;
 
-		if (dot(Ng, wo) < 0.0f)
-			Ng = -Ng;
-		if (dot(Ns, wo) < 0.0f)
-			Ns = -Ns;
+		//if (dot(Ng, wo) < 0.0f)
+		//	Ng = -Ng;
+		//if (dot(Ns, wo) < 0.0f)
+		//	Ns = -Ns;
 
 		SurfaceInteraction si;
 		si.p  = payload.p;

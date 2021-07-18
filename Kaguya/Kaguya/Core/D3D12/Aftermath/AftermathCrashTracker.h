@@ -71,7 +71,7 @@ private:
 
 	void OnShaderDebugInfo(const void* pShaderDebugInfo, const uint32_t SizeInBytes);
 
-	void OnDescription(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription);
+	void OnDescription(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription AddGpuCrashDumpDescription);
 
 	void WriteCrashDumpToFile(const void* pCrashDump, const uint32_t SizeInBytes);
 

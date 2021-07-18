@@ -255,7 +255,7 @@ struct Interaction
 
 		RayDesc ray	  = (RayDesc)0;
 		ray.Origin	  = OffsetRay(p, n);
-		ray.TMin	  = 0.0f;
+		ray.TMin	  = 0.01f;
 		ray.Direction = normalize(d);
 		ray.TMax	  = length(d);
 		return ray;
@@ -280,7 +280,7 @@ struct SurfaceInteraction
 	{
 		RayDesc ray	  = (RayDesc)0;
 		ray.Origin	  = OffsetRay(p, n);
-		ray.TMin	  = 0.0f;
+		ray.TMin	  = 0.01f;
 		ray.Direction = normalize(d);
 		ray.TMax	  = 10000.0f;
 		return ray;
