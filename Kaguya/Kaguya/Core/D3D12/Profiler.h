@@ -86,8 +86,7 @@ public:
 private:
 	inline static GPUEventNode RootNode = GPUEventNode(-1, "", nullptr);
 
-	inline static GPUEventNode* CurrentNode	  = &RootNode;
-	inline static GPUEventNode* SelectedScope = &RootNode;
+	inline static GPUEventNode* CurrentNode = &RootNode;
 };
 
 class Profiler
