@@ -120,7 +120,7 @@ public:
 		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_SetEventMarker(
 			CommandContext.CommandListHandle.GetAftermathContextHandle(),
 			Name.data(),
-			Name.size()));
+			static_cast<uint32_t>(Name.size())));
 #endif
 	}
 

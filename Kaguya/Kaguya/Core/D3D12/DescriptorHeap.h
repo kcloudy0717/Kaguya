@@ -265,7 +265,7 @@ public:
 		{
 			if (DescriptorTableBitMask.test(i))
 			{
-				RootParameterIndex = i;
+				RootParameterIndex = static_cast<UINT>(i);
 				if (RootParameterIndex < RootSignature.GetDesc().NumParameters)
 				{
 					UINT NumDescriptors = RootSignature.GetNumDescriptors(RootParameterIndex);

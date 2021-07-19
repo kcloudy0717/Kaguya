@@ -26,7 +26,7 @@ struct ProfileData
 
 struct GPUEventNode
 {
-	GPUEventNode(INT Depth, std::string Name, GPUEventNode* Parent)
+	GPUEventNode(INT Depth, const std::string& Name, GPUEventNode* Parent)
 		: Depth(Depth)
 		, Name(Name)
 		, Parent(Parent)
