@@ -18,8 +18,6 @@ public:
 			MaxDepth			  = 16;
 			NumAccumulatedSamples = 0;
 		}
-
-		static void RenderGui();
 	};
 
 	static constexpr UINT NumHitGroups = 1;

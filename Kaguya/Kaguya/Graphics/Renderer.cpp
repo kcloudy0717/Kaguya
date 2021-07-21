@@ -37,27 +37,33 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	ViewportWidth  = Width;
 	ViewportHeight = Height;
 
-	constexpr int	m_nUpscaleRatio = 3;
-	constexpr float m_fUpscaleRatio = 1.5f;
-	float			r				= m_fUpscaleRatio;
-	switch (m_nUpscaleRatio)
+	float r = 1.5f;
+	switch (State.QualityMode)
 	{
-	case 0:
+	case EFSRQualityMode::Ultra:
 		r = 1.3f;
 		break;
-	case 1:
+	case EFSRQualityMode::Standard:
 		r = 1.5f;
 		break;
-	case 2:
+	case EFSRQualityMode::Balanced:
 		r = 1.7f;
 		break;
-	case 3:
+	case EFSRQualityMode::Performance:
 		r = 2.0f;
 		break;
 	}
 
-	RenderWidth	 = UINT(ViewportWidth / r);
-	RenderHeight = UINT(ViewportHeight / r);
+	if (State.Enable)
+	{
+		RenderWidth	 = UINT(ViewportWidth / r);
+		RenderHeight = UINT(ViewportHeight / r);
+	}
+	else
+	{
+		RenderWidth	 = ViewportWidth;
+		RenderHeight = ViewportHeight;
+	}
 
 	m_PathIntegrator.SetResolution(RenderWidth, RenderHeight);
 	m_ToneMapper.SetResolution(RenderWidth, RenderHeight);
@@ -120,9 +126,42 @@ void Renderer::OnRender(World& World)
 
 	State.RenderWidth  = RenderWidth;
 	State.RenderHeight = RenderHeight;
+	State.ViewportWidth = ViewportWidth;
+	State.ViewportHeight = ViewportHeight;
 	if (ImGui::Begin("FSR"))
 	{
+		ImGui::Checkbox("Enable", &State.Enable);
+
+		const char* QualityModes[] = { "Ultra Quality (1.3x)",
+									   "Quality (1.5x)",
+									   "Balanced (1.7x)",
+									   "Performance (2x)" };
+		ImGui::Combo("Quality", (int*)&State.QualityMode, QualityModes, std::size(QualityModes));
+
 		ImGui::SliderFloat("Sharpening attenuation", &State.RCASAttenuation, 0.0f, 2.0f);
+
+		ImGui::Text("Render resolution: %dx%d", RenderWidth, RenderHeight);
+		ImGui::Text("Viewport resolution: %dx%d", ViewportWidth, ViewportHeight);
+	}
+	ImGui::End();
+
+	if (ImGui::Begin("Path Integrator"))
+	{
+		if (ImGui::Button("Restore Defaults"))
+		{
+			PathIntegrator_DXR_1_0::Settings::RestoreDefaults();
+		}
+
+		if (ImGui::SliderScalar(
+				"Max Depth",
+				ImGuiDataType_U32,
+				&PathIntegrator_DXR_1_0::Settings::MaxDepth,
+				&PathIntegrator_DXR_1_0::Settings::MinimumDepth,
+				&PathIntegrator_DXR_1_0::Settings::MaximumDepth))
+		{
+			PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples = 0;
+		}
+		ImGui::Text("Num Samples Accumulated: %u", PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples);
 	}
 	ImGui::End();
 

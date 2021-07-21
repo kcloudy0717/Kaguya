@@ -19,29 +19,7 @@ ShaderIdentifier g_ShadowMissSID;
 ShaderIdentifier g_DefaultSID;
 } // namespace
 
-void PathIntegrator_DXR_1_0::Settings::RenderGui()
-{
-	if (ImGui::TreeNode("Path Integrator"))
-	{
-		if (ImGui::Button("Restore Defaults"))
-		{
-			Settings::RestoreDefaults();
-		}
-
-		bool dirty = false;
-		dirty |= ImGui::SliderScalar("Max Depth", ImGuiDataType_U32, &MaxDepth, &MinimumDepth, &MaximumDepth);
-		ImGui::Text("Num Samples Accumulated: %u", NumAccumulatedSamples);
-
-		if (dirty)
-		{
-			NumAccumulatedSamples = 0;
-		}
-
-		ImGui::TreePop();
-	}
-}
-
-PathIntegrator_DXR_1_0::PathIntegrator_DXR_1_0(_In_ RenderDevice& RenderDevice)
+PathIntegrator_DXR_1_0::PathIntegrator_DXR_1_0(RenderDevice& RenderDevice)
 	: UAV(RenderDevice.GetDevice())
 	, SRV(RenderDevice.GetDevice())
 {

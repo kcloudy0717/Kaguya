@@ -1,10 +1,25 @@
 #pragma once
 #include "RenderDevice.h"
 
+enum class EFSRQualityMode
+{
+	Ultra,
+	Standard,
+	Balanced,
+	Performance
+};
+
 struct FSRState
 {
-	int RenderWidth;
-	int RenderHeight;
+	bool Enable = true;
+
+	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
+
+	int ViewportWidth;
+	int ViewportHeight;
+
+	int	  RenderWidth;
+	int	  RenderHeight;
 	float RCASAttenuation = 0.25f;
 };
 

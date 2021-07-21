@@ -100,8 +100,8 @@ void FSRFilter::Upscale(const FSRState& State, const ShaderResourceView& ShaderR
 
 	// This value is the image region dimension that each thread group of the FSR shader operates on
 	constexpr UINT ThreadSize		 = 16;
-	UINT		   ThreadGroupCountX = (Width + (ThreadSize - 1)) / ThreadSize;
-	UINT		   ThreadGroupCountY = (Height + (ThreadSize - 1)) / ThreadSize;
+	UINT		   ThreadGroupCountX = (State.ViewportWidth + (ThreadSize - 1)) / ThreadSize;
+	UINT		   ThreadGroupCountY = (State.ViewportHeight + (ThreadSize - 1)) / ThreadSize;
 
 	Context.TransitionBarrier(&RenderTargets[0], D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 

@@ -13,7 +13,10 @@ public:
 
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
-	const ShaderResourceView& GetViewportDescriptor() { return m_FSRFilter.GetSRV(); }
+	const ShaderResourceView& GetViewportDescriptor()
+	{
+		return State.Enable ? m_FSRFilter.GetSRV() : m_ToneMapper.GetSRV();
+	}
 
 	void OnInitialize();
 
