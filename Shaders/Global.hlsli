@@ -24,6 +24,8 @@ struct RenderPassData
 	uint NumAccumulatedSamples;
 
 	uint RenderTarget;
+
+	float SkyIntensity;
 };
 
 ConstantBuffer<SystemConstants> g_SystemConstants : register(b0, space0);

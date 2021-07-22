@@ -23,8 +23,6 @@ PathIntegrator_DXR_1_0::PathIntegrator_DXR_1_0(RenderDevice& RenderDevice)
 	: UAV(RenderDevice.GetDevice())
 	, SRV(RenderDevice.GetDevice())
 {
-	Settings::RestoreDefaults();
-
 	GlobalRS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
@@ -172,6 +170,7 @@ void PathIntegrator_DXR_1_0::UpdateShaderTable(
 }
 
 void PathIntegrator_DXR_1_0::Render(
+	const PathIntegratorState&			   State,
 	D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
 	const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
 	D3D12_GPU_VIRTUAL_ADDRESS			   Materials,
@@ -188,11 +187,14 @@ void PathIntegrator_DXR_1_0::Render(
 		unsigned int NumAccumulatedSamples;
 
 		unsigned int RenderTarget;
+
+		float SkyIntensity;
 	} g_RenderPassData = {};
 
-	g_RenderPassData.MaxDepth			   = Settings::MaxDepth;
+	g_RenderPassData.MaxDepth			   = State.MaxDepth;
 	g_RenderPassData.NumAccumulatedSamples = Settings::NumAccumulatedSamples++;
 	g_RenderPassData.RenderTarget		   = UAV.GetIndex();
+	g_RenderPassData.SkyIntensity		   = State.SkyIntensity;
 
 	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(RenderPassData));
 	std::memcpy(Allocation.CPUVirtualAddress, &g_RenderPassData, sizeof(RenderPassData));

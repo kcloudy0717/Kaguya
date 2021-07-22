@@ -15,7 +15,7 @@ public:
 
 	const ShaderResourceView& GetViewportDescriptor()
 	{
-		return State.Enable ? m_FSRFilter.GetSRV() : m_ToneMapper.GetSRV();
+		return FSRState.Enable ? m_FSRFilter.GetSRV() : m_ToneMapper.GetSRV();
 	}
 
 	void OnInitialize();
@@ -41,7 +41,10 @@ private:
 	ToneMapper						m_ToneMapper;
 	FSRFilter						m_FSRFilter;
 
-	FSRState State;
+	RaytracingAccelerationStructureManager Manager;
+
+	PathIntegratorState PathIntegratorState;
+	FSRState			FSRState;
 
 	Buffer			Materials;
 	HLSL::Material* pMaterials = nullptr;

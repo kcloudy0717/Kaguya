@@ -56,7 +56,7 @@ void Adapter::Initialize(DeviceOptions Options)
 	// tools using an injection library) is not compatible with Nsight Aftermath!
 	// If Aftermath detects that any of these tools are present it will fail
 	// initialization.
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	Options.EnableDebugLayer		 = false;
 	Options.EnableGpuBasedValidation = false;
 	AftermathCrashTracker.Initialize();
@@ -105,7 +105,7 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	ASSERTD3D12APISUCCEEDED(
 		::D3D12CreateDevice(Adapter4.Get(), Features.FeatureLevel, IID_PPV_ARGS(D3D12Device.ReleaseAndGetAddressOf())));
 
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	AftermathCrashTracker.RegisterDevice(D3D12Device.Get());
 #endif
 

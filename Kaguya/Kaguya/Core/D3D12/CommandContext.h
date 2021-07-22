@@ -116,7 +116,7 @@ public:
 		, PIXEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
 		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
 	{
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_SetEventMarker(
 			CommandContext.CommandListHandle.GetAftermathContextHandle(),
 			Name.data(),

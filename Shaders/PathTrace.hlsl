@@ -181,7 +181,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 		if (!payload.IsValid() || bounce >= g_RenderPassData.MaxDepth)
 		{
 			float t = 0.5f * (ray.Direction.y + 1.0f);
-			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * 5.0f;
+			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_RenderPassData.SkyIntensity;
 			break;
 		}
 

@@ -31,8 +31,10 @@ struct Mesh
 
 	Buffer							 VertexResource;
 	Buffer							 IndexResource;
-	ASBuffer						 AccelerationStructure;
+	D3D12_GPU_VIRTUAL_ADDRESS		 AccelerationStructure;
 	BottomLevelAccelerationStructure BLAS;
-	bool							 BLASValid = false;
+	UINT64							 BLASIndex	   = UINT64_MAX;
+	bool							 BLASValid	   = false;
+	bool							 BLASCompacted = false;
 };
 } // namespace Asset

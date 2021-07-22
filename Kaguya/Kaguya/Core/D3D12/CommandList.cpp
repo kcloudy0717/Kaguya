@@ -104,7 +104,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 	, pCommandAllocator(nullptr)
 	, IsClosed(true)
 {
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	// GFSDK_Aftermath_DX12_CreateContextHandle fails if I used CreateCommandList1 with type thats not
 	// D3D12_COMMAND_LIST_TYPE_DIRECT
 	ComPtr<ID3D12CommandAllocator> Temp;
@@ -130,7 +130,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 	GraphicsCommandList.As(&DebugCommandList);
 #endif
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
 	GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle);
 	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
@@ -140,7 +140,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 
 CommandListHandle::CommandList::~CommandList()
 {
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	GFSDK_Aftermath_ReleaseContextHandle(AftermathContextHandle);
 #endif
 }

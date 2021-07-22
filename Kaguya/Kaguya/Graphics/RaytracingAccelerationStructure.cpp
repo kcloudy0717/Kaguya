@@ -44,9 +44,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	{
 		MeshRenderer* pMeshRenderer = MeshRenderers[i];
 
-		const ASBuffer& AccelerationStructure = pMeshRenderer->pMeshFilter->Mesh->AccelerationStructure;
-
-		Instance.AccelerationStructure = AccelerationStructure.GetGPUVirtualAddress();
+		Instance.AccelerationStructure = pMeshRenderer->pMeshFilter->Mesh->AccelerationStructure;
 	}
 
 	UINT64 ScratchSize, ResultSize;

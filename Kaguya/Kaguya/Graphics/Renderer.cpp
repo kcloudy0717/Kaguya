@@ -38,7 +38,7 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	ViewportHeight = Height;
 
 	float r = 1.5f;
-	switch (State.QualityMode)
+	switch (FSRState.QualityMode)
 	{
 	case EFSRQualityMode::Ultra:
 		r = 1.3f;
@@ -54,7 +54,7 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 		break;
 	}
 
-	if (State.Enable)
+	if (FSRState.Enable)
 	{
 		RenderWidth	 = UINT(ViewportWidth / r);
 		RenderHeight = UINT(ViewportHeight / r);
@@ -128,44 +128,49 @@ void Renderer::OnRender(World& World)
 	}
 	ImGui::End();
 
-	State.RenderWidth	 = RenderWidth;
-	State.RenderHeight	 = RenderHeight;
-	State.ViewportWidth	 = ViewportWidth;
-	State.ViewportHeight = ViewportHeight;
+	if (ImGui::Begin("Path Integrator"))
+	{
+		if (ImGui::Button("Restore Defaults"))
+		{
+			PathIntegratorState = {};
+		}
+
+		bool Dirty = false;
+		Dirty |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
+
+		Dirty |= ImGui::SliderScalar(
+			"Max Depth",
+			ImGuiDataType_U32,
+			&PathIntegratorState.MaxDepth,
+			&PathIntegratorState.MinimumDepth,
+			&PathIntegratorState.MaximumDepth);
+
+		if (Dirty)
+		{
+			PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples = 0;
+		}
+		ImGui::Text("Num Samples Accumulated: %u", PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples);
+	}
+	ImGui::End();
+
+	FSRState.RenderWidth	= RenderWidth;
+	FSRState.RenderHeight	= RenderHeight;
+	FSRState.ViewportWidth	= ViewportWidth;
+	FSRState.ViewportHeight = ViewportHeight;
 	if (ImGui::Begin("FSR"))
 	{
-		ImGui::Checkbox("Enable", &State.Enable);
+		ImGui::Checkbox("Enable", &FSRState.Enable);
 
 		const char* QualityModes[] = { "Ultra Quality (1.3x)",
 									   "Quality (1.5x)",
 									   "Balanced (1.7x)",
 									   "Performance (2x)" };
-		ImGui::Combo("Quality", (int*)&State.QualityMode, QualityModes, std::size(QualityModes));
+		ImGui::Combo("Quality", (int*)&FSRState.QualityMode, QualityModes, std::size(QualityModes));
 
-		ImGui::SliderFloat("Sharpening attenuation", &State.RCASAttenuation, 0.0f, 2.0f);
+		ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
 
 		ImGui::Text("Render resolution: %dx%d", RenderWidth, RenderHeight);
 		ImGui::Text("Viewport resolution: %dx%d", ViewportWidth, ViewportHeight);
-	}
-	ImGui::End();
-
-	if (ImGui::Begin("Path Integrator"))
-	{
-		if (ImGui::Button("Restore Defaults"))
-		{
-			PathIntegrator_DXR_1_0::Settings::RestoreDefaults();
-		}
-
-		if (ImGui::SliderScalar(
-				"Max Depth",
-				ImGuiDataType_U32,
-				&PathIntegrator_DXR_1_0::Settings::MaxDepth,
-				&PathIntegrator_DXR_1_0::Settings::MinimumDepth,
-				&PathIntegrator_DXR_1_0::Settings::MaximumDepth))
-		{
-			PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples = 0;
-		}
-		ImGui::Text("Num Samples Accumulated: %u", PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples);
 	}
 	ImGui::End();
 
@@ -204,16 +209,14 @@ void Renderer::OnRender(World& World)
 		CopySyncPoint = Copy.Execute(false);
 	}
 
-	// TODO: remove this, create a dedicated scratch buffer memory allocator
-	std::vector<Buffer> TrackedScratchBuffers;
-
 	CommandSyncPoint ASBuildSyncPoint;
 	if (!AccelerationStructure.empty())
 	{
 		CommandContext& AsyncCompute = RenderDevice.GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
-		std::vector<UINT64> Indices;
+		bool AnyBuild = false;
+
 		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
 		{
 			MeshFilter*						  meshFilter = meshRenderer->pMeshFilter;
@@ -225,39 +228,33 @@ void Renderer::OnRender(World& World)
 			}
 
 			meshFilter->Mesh->BLASValid = true;
-
-			ID3D12Resource* vertexBuffer = meshFilter->Mesh->VertexResource.GetResource();
-			ID3D12Resource* indexBuffer	 = meshFilter->Mesh->IndexResource.GetResource();
+			AnyBuild |= meshFilter->Mesh->BLASValid;
 
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = BLAS.GetInputsDesc();
-
-			Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), 1, &Inputs, Indices);
-
-			UINT64 scratchSize, resultSize;
-			BLAS.ComputeMemoryRequirements(RenderDevice.GetDevice()->GetDevice5(), &scratchSize, &resultSize);
-
-			// TODO: add a memory allocation scheme here, RTAS alignment is only 256, we can suballocate from a buffer
-			// dedicated to build AS
-			Buffer scratch = Buffer(
-				RenderDevice.GetDevice(),
-				scratchSize,
-				0,
-				D3D12_HEAP_TYPE_DEFAULT,
-				D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-			meshFilter->Mesh->AccelerationStructure = ASBuffer(RenderDevice.GetDevice(), resultSize);
-
-			BLAS.Generate(
-				AsyncCompute.CommandListHandle.GetGraphicsCommandList6(),
-				scratch,
-				meshFilter->Mesh->AccelerationStructure);
-
-			TrackedScratchBuffers.push_back(std::move(scratch));
+			meshFilter->Mesh->BLASIndex =
+				Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
 		}
 
-		if (!TrackedScratchBuffers.empty())
+		if (AnyBuild)
 		{
 			AsyncCompute.UAVBarrier(nullptr);
 			AsyncCompute.FlushResourceBarriers();
+			Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
+		}
+
+		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		{
+			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
+
+			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), meshFilter->Mesh->BLASIndex);
+		}
+
+		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		{
+			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
+
+			meshFilter->Mesh->AccelerationStructure =
+				Manager.GetAccelerationStructureGPUVA(meshFilter->Mesh->BLASIndex);
 		}
 
 		AccelerationStructure.Build(AsyncCompute);
@@ -265,6 +262,16 @@ void Renderer::OnRender(World& World)
 		AsyncCompute.CloseCommandList();
 
 		ASBuildSyncPoint = AsyncCompute.Execute(false);
+
+		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		{
+			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
+
+			if (meshFilter->Mesh->BLASIndex != UINT64_MAX)
+			{
+				Manager.SetSyncPoint(meshFilter->Mesh->BLASIndex, ASBuildSyncPoint);
+			}
+		}
 	}
 
 	if (World.WorldState & EWorldState::EWorldState_Update)
@@ -312,6 +319,7 @@ void Renderer::OnRender(World& World)
 	{
 		// Enqueue ray tracing commands
 		m_PathIntegrator.Render(
+			PathIntegratorState,
 			Allocation.GPUVirtualAddress,
 			AccelerationStructure,
 			Materials.GetGPUVirtualAddress(),
@@ -321,7 +329,7 @@ void Renderer::OnRender(World& World)
 
 	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
 
-	m_FSRFilter.Upscale(State, m_ToneMapper.GetSRV(), Context);
+	m_FSRFilter.Upscale(FSRState, m_ToneMapper.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 
@@ -343,7 +351,7 @@ void Renderer::OnRender(World& World)
 
 		// ImGui Render
 		{
-			PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"ImGui Render");
+			D3D12ScopedEvent(Context, "ImGui Render");
 
 			ImGui::Render();
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.CommandListHandle.GetGraphicsCommandList());

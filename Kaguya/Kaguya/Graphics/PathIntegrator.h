@@ -2,22 +2,21 @@
 #include "RenderDevice.h"
 #include "RaytracingAccelerationStructure.h"
 
+struct PathIntegratorState
+{
+	static constexpr UINT MinimumDepth = 1;
+	static constexpr UINT MaximumDepth = 32;
+
+	float SkyIntensity = 1.0f;
+	UINT  MaxDepth	   = 16;
+};
+
 class PathIntegrator_DXR_1_0
 {
 public:
 	struct Settings
 	{
-		static constexpr UINT MinimumDepth = 1;
-		static constexpr UINT MaximumDepth = 32;
-
-		inline static UINT MaxDepth = 16;
 		inline static UINT NumAccumulatedSamples = 0;
-
-		static void RestoreDefaults()
-		{
-			MaxDepth			  = 16;
-			NumAccumulatedSamples = 0;
-		}
 	};
 
 	static constexpr UINT NumHitGroups = 1;
@@ -35,6 +34,7 @@ public:
 		CommandContext&						   Context);
 
 	void Render(
+		const PathIntegratorState&			   State,
 		D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
 		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
 		D3D12_GPU_VIRTUAL_ADDRESS			   Materials,

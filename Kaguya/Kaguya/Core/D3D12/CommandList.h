@@ -48,7 +48,7 @@ public:
 	ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const { return pCommandList->GraphicsCommandList4.Get(); }
 	ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const { return pCommandList->GraphicsCommandList6.Get(); }
 
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return pCommandList->AftermathContextHandle; }
 #endif
 
@@ -107,7 +107,7 @@ private:
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 		Microsoft::WRL::ComPtr<ID3D12DebugCommandList> DebugCommandList;
 #endif
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 		GFSDK_Aftermath_ContextHandle AftermathContextHandle = nullptr;
 #endif
 

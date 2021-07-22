@@ -25,7 +25,7 @@
 
 void AftermathShaderDatabase::AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob)
 {
-#ifdef D3D12_NSIGHT_AFTERMATH
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	// Create shader hashes for the shader bytecode
 	D3D12_SHADER_BYTECODE Bytecode = { Blob->GetBufferPointer(), Blob->GetBufferSize() };
 

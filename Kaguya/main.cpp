@@ -102,7 +102,7 @@ private:
 	AssetWindow		AssetWindow;
 	ConsoleWindow	ConsoleWindow;
 
-	World	 World;
+	World					  World;
 	std::unique_ptr<Renderer> pRenderer;
 };
 
@@ -112,18 +112,18 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents();
 
-		ApplicationOptions AppOptions = { .Name		= L"Kaguya",
-										  .Width	= 1280,
-										  .Height	= 720,
-										  .Maximize = true,
-										  .Icon		= Application::ExecutableDirectory / "Assets/Kaguya.ico" };
+		const ApplicationOptions AppOptions = { .Name	  = L"Kaguya",
+												.Width	  = 1280,
+												.Height	  = 720,
+												.Maximize = true,
+												.Icon	  = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
 
 		Editor App;
 		Application::Run(App, AppOptions);
 	}
-	catch (std::exception& e)
+	catch (std::exception& Exception)
 	{
-		MessageBoxA(nullptr, e.what(), "Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+		MessageBoxA(nullptr, Exception.what(), "Error", MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
 		return 1;
 	}
 
