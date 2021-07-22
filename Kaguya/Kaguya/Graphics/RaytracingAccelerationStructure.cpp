@@ -13,6 +13,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
+	InstanceDescs.Initialize();
 
 	pInstanceDescs = InstanceDescs.GetCPUVirtualAddress<D3D12_RAYTRACING_INSTANCE_DESC>();
 }

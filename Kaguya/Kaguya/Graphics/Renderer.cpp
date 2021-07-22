@@ -83,6 +83,8 @@ void Renderer::OnInitialize()
 
 	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator_DXR_1_0::NumHitGroups);
 
+	Manager = RaytracingAccelerationStructureManager(RenderDevice.GetDevice(), 6_MiB);
+
 	m_PathIntegrator = PathIntegrator_DXR_1_0(RenderDevice);
 	m_ToneMapper	 = ToneMapper(RenderDevice);
 	m_FSRFilter		 = FSRFilter(RenderDevice);
@@ -93,7 +95,8 @@ void Renderer::OnInitialize()
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	Materials.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pMaterials));
+	Materials.Initialize();
+	pMaterials = Materials.GetCPUVirtualAddress<HLSL::Material>();
 
 	Lights = Buffer(
 		RenderDevice.GetDevice(),
@@ -101,7 +104,8 @@ void Renderer::OnInitialize()
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	Lights.GetResource()->Map(0, nullptr, reinterpret_cast<void**>(&pLights));
+	Lights.Initialize();
+	pLights = Lights.GetCPUVirtualAddress<HLSL::Light>();
 }
 
 void Renderer::OnRender(World& World)
@@ -124,9 +128,9 @@ void Renderer::OnRender(World& World)
 	}
 	ImGui::End();
 
-	State.RenderWidth  = RenderWidth;
-	State.RenderHeight = RenderHeight;
-	State.ViewportWidth = ViewportWidth;
+	State.RenderWidth	 = RenderWidth;
+	State.RenderHeight	 = RenderHeight;
+	State.ViewportWidth	 = ViewportWidth;
 	State.ViewportHeight = ViewportHeight;
 	if (ImGui::Begin("FSR"))
 	{
@@ -209,6 +213,7 @@ void Renderer::OnRender(World& World)
 		CommandContext& AsyncCompute = RenderDevice.GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
+		std::vector<UINT64> Indices;
 		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
 		{
 			MeshFilter*						  meshFilter = meshRenderer->pMeshFilter;
@@ -223,6 +228,10 @@ void Renderer::OnRender(World& World)
 
 			ID3D12Resource* vertexBuffer = meshFilter->Mesh->VertexResource.GetResource();
 			ID3D12Resource* indexBuffer	 = meshFilter->Mesh->IndexResource.GetResource();
+
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = BLAS.GetInputsDesc();
+
+			Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), 1, &Inputs, Indices);
 
 			UINT64 scratchSize, resultSize;
 			BLAS.ComputeMemoryRequirements(RenderDevice.GetDevice()->GetDevice5(), &scratchSize, &resultSize);

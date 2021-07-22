@@ -28,8 +28,8 @@ void Adapter::ReportLiveObjects()
 }
 
 Adapter::Adapter()
-	: Profiler(1)
-	, Device(this)
+	: Device(this)
+	, Profiler(1)
 {
 }
 

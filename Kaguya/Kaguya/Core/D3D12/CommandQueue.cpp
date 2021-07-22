@@ -163,7 +163,9 @@ bool CommandQueue::ResolveResourceBarrierCommandList(
 	}
 
 	UINT NumBarriers = static_cast<UINT>(ResourceBarriers.size());
-	if (NumBarriers > 0)
+
+	bool AnyResolved = NumBarriers > 0;
+	if (AnyResolved)
 	{
 		if (!ResourceBarrierCommandAllocator)
 		{
@@ -175,7 +177,7 @@ bool CommandQueue::ResolveResourceBarrierCommandList(
 		hResourceBarrierCmdList->ResourceBarrier(NumBarriers, ResourceBarriers.data());
 	}
 
-	return NumBarriers > 0;
+	return AnyResolved;
 }
 
 void CommandQueue::ExecuteCommandLists(
@@ -224,6 +226,13 @@ void CommandQueue::ExecuteCommandLists(
 		hCmdList.SetSyncPoint(SyncPoint);
 
 		DiscardCommandList(hCmdList);
+	}
+
+	if (NumBarrierCommandList > 0)
+	{
+		ResourceBarrierCommandAllocator->SetSyncPoint(SyncPoint);
+		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(ResourceBarrierCommandAllocator);
+		ResourceBarrierCommandAllocator = nullptr;
 	}
 
 	if (WaitForCompletion)

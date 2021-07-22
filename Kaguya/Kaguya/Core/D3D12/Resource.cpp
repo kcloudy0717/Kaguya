@@ -377,6 +377,7 @@ Buffer::Buffer(
 	D3D12_RESOURCE_FLAGS ResourceFlags)
 	: Resource(Device, CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, ResourceFlags), std::nullopt, 1)
 	, Stride(Stride)
+	, HeapType(HeapType)
 {
 	const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
 
@@ -392,21 +393,24 @@ Buffer::Buffer(
 
 	ResourceState = CResourceState(NumSubresources);
 	ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
+}
 
+Buffer::~Buffer()
+{
+	if (CPUVirtualAddress)
+	{
+		pResource->Unmap(0, nullptr);
+		CPUVirtualAddress = nullptr;
+	}
+}
+
+void Buffer::Initialize()
+{
 	if (HeapType == D3D12_HEAP_TYPE_UPLOAD)
 	{
 		ASSERTD3D12APISUCCEEDED(pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress)));
 
 		// We do not need to unmap until we are done with the resource.  However, we must not write to
 		// the resource while it is in use by the GPU (so we must use synchronization techniques).
-	}
-}
-
-Buffer::~Buffer()
-{
-	if (pResource && CPUVirtualAddress)
-	{
-		pResource->Unmap(0, nullptr);
-		CPUVirtualAddress = nullptr;
 	}
 }

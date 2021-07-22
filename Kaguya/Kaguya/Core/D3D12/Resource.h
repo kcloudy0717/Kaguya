@@ -92,9 +92,6 @@ public:
 	{
 	}
 
-	Resource(Resource&&) noexcept = default;
-	Resource& operator=(Resource&&) noexcept = default;
-
 					operator ID3D12Resource*() const { return pResource.Get(); }
 	ID3D12Resource* GetResource() const { return pResource.Get(); }
 
@@ -130,9 +127,6 @@ public:
 	ASBuffer() noexcept = default;
 	ASBuffer(Device* Device, UINT64 SizeInBytes);
 
-	ASBuffer(ASBuffer&&) noexcept = default;
-	ASBuffer& operator=(ASBuffer&&) noexcept = default;
-
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
 };
 
@@ -148,8 +142,7 @@ public:
 		D3D12_RESOURCE_FLAGS ResourceFlags);
 	~Buffer();
 
-	Buffer(Buffer&&) noexcept = default;
-	Buffer& operator=(Buffer&&) noexcept = default;
+	void Initialize();
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress(int Index) const
@@ -172,8 +165,9 @@ public:
 	}
 
 private:
-	UINT  Stride			= 0;
-	BYTE* CPUVirtualAddress = nullptr;
+	D3D12_HEAP_TYPE HeapType		  = D3D12_HEAP_TYPE(-1);
+	UINT			Stride			  = 0;
+	BYTE*			CPUVirtualAddress = nullptr;
 };
 
 template<typename T>
@@ -185,9 +179,6 @@ public:
 		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_NONE)
 	{
 	}
-
-	StructuredBuffer(StructuredBuffer&&) noexcept = default;
-	StructuredBuffer& operator=(StructuredBuffer&&) noexcept = default;
 };
 
 template<typename T>
@@ -199,9 +190,6 @@ public:
 		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
 	}
-
-	RWStructuredBuffer(RWStructuredBuffer&&) noexcept = default;
-	RWStructuredBuffer& operator=(RWStructuredBuffer&&) noexcept = default;
 };
 
 class Texture : public Resource
@@ -209,9 +197,6 @@ class Texture : public Resource
 public:
 	Texture() noexcept = default;
 	Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<D3D12_CLEAR_VALUE> ClearValue);
-
-	Texture(Texture&&) noexcept = default;
-	Texture& operator=(Texture&&) noexcept = default;
 
 	void CreateShaderResourceView(
 		ShaderResourceView& ShaderResourceView,

@@ -20,7 +20,7 @@ struct FSRState
 
 	int	  RenderWidth;
 	int	  RenderHeight;
-	float RCASAttenuation = 0.25f;
+	float RCASAttenuation = 0.0f;
 };
 
 class FSRFilter

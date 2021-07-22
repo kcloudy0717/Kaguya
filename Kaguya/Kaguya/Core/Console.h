@@ -29,20 +29,20 @@ class AutoConsoleVariable
 {
 public:
 	AutoConsoleVariable(IConsoleVariable* ConsoleVariable)
-		: pCVar(ConsoleVariable)
+		: ConsoleVariable(ConsoleVariable)
 	{
 	}
 	AutoConsoleVariable(std::string_view Name, std::string_view Description, const T& DefaultValue) {}
 
 	operator T();
 
-	IConsoleVariable&		operator*() { return *pCVar; }
-	const IConsoleVariable& operator*() const { return *pCVar; }
-	IConsoleVariable*		operator->() { return pCVar; }
-	const IConsoleVariable* operator->() const { return pCVar; }
+	IConsoleVariable&		operator*() { return *ConsoleVariable; }
+	const IConsoleVariable& operator*() const { return *ConsoleVariable; }
+	IConsoleVariable*		operator->() { return ConsoleVariable; }
+	const IConsoleVariable* operator->() const { return ConsoleVariable; }
 
 private:
-	IConsoleVariable* pCVar;
+	IConsoleVariable* ConsoleVariable;
 };
 
 class IConsole
@@ -81,13 +81,13 @@ inline AutoConsoleVariable<bool>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const bool&		 DefaultValue)
-	: pCVar(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
 {
 }
 template<>
 inline AutoConsoleVariable<bool>::operator bool()
 {
-	return pCVar->GetBool();
+	return ConsoleVariable->GetBool();
 }
 
 template<>
@@ -95,13 +95,13 @@ inline AutoConsoleVariable<int>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const int&		 DefaultValue)
-	: pCVar(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
 {
 }
 template<>
 inline AutoConsoleVariable<int>::operator int()
 {
-	return pCVar->GetInt();
+	return ConsoleVariable->GetInt();
 }
 
 template<>
@@ -109,13 +109,13 @@ inline AutoConsoleVariable<float>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const float&	 DefaultValue)
-	: pCVar(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
 {
 }
 template<>
 inline AutoConsoleVariable<float>::operator float()
 {
-	return pCVar->GetFloat();
+	return ConsoleVariable->GetFloat();
 }
 
 template<>
@@ -123,11 +123,11 @@ inline AutoConsoleVariable<std::string>::AutoConsoleVariable(
 	std::string_view   Name,
 	std::string_view   Description,
 	const std::string& DefaultValue)
-	: pCVar(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
 {
 }
 template<>
 inline AutoConsoleVariable<std::string>::operator std::string()
 {
-	return pCVar->GetString();
+	return ConsoleVariable->GetString();
 }

@@ -165,6 +165,7 @@ void CommandListHandle::CommandList::Reset(CommandAllocator* CommandAllocator)
 
 	// Reset resource state tracking and resource barriers
 	ResourceStateTracker.Reset();
+	ResourceBarrierBatch.Reset();
 }
 
 void CommandListHandle::CommandList::FlushResourceBarriers()
