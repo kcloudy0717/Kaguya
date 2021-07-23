@@ -56,12 +56,6 @@ private:
 	UINT64										ResultSizeInBytes  = 0;
 };
 
-class RaytracingGeometry
-{
-public:
-private:
-};
-
 class RaytracingMemoryPage;
 
 struct RaytracingMemorySection
@@ -355,7 +349,7 @@ public:
 			  D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 			  PageSize,
 			  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
-		, CompactionPool(
+		, ResultCompactedPool(
 			  Parent,
 			  D3D12_HEAP_TYPE_DEFAULT,
 			  D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
@@ -393,10 +387,10 @@ public:
 	// Returns GPUVA of the acceleration structure
 	D3D12_GPU_VIRTUAL_ADDRESS GetAccelerationStructureGPUVA(UINT64 AccelerationStructureIndex)
 	{
-		AccelerationStructure* accelStruct = AccelerationStructures[AccelerationStructureIndex].get();
+		AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
 
-		return accelStruct->IsCompacted ? accelStruct->CompactionMemory.GPUVirtualAddress
-										: accelStruct->ResultMemory.GPUVirtualAddress;
+		return AccelerationStructure->IsCompacted ? AccelerationStructure->CompactionMemory.GPUVirtualAddress
+												  : AccelerationStructure->ResultMemory.GPUVirtualAddress;
 	}
 
 private:
@@ -438,7 +432,7 @@ private:
 
 	RaytracingMemoryAllocator ScratchPool;
 	RaytracingMemoryAllocator ResultPool;
-	RaytracingMemoryAllocator CompactionPool;
+	RaytracingMemoryAllocator ResultCompactedPool;
 	RaytracingMemoryAllocator CompactedSizeCPUPool;
 	RaytracingMemoryAllocator CompactedSizeGPUPool;
 };

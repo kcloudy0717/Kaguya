@@ -1,7 +1,7 @@
 #include "Raytracing.h"
 #include "Device.h"
 
-void BottomLevelAccelerationStructure::AddGeometry(_In_ const D3D12_RAYTRACING_GEOMETRY_DESC& Desc)
+void BottomLevelAccelerationStructure::AddGeometry(const D3D12_RAYTRACING_GEOMETRY_DESC& Desc)
 {
 	RaytracingGeometryDescs.push_back(Desc);
 }
@@ -241,7 +241,7 @@ void RaytracingAccelerationStructureManager::Compact(
 				AccelerationStructure->CompactedSizeCpuMemory.Parent->pResource->Unmap(0, &Range);
 
 				// Suballocate the gpu memory needed for compaction copy
-				AccelerationStructure->CompactionMemory = CompactionPool.Allocate(Desc.CompactedSizeInBytes);
+				AccelerationStructure->CompactionMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
 
 				AccelerationStructure->CompactedSizeInBytes = AccelerationStructure->CompactionMemory.Size;
 				TotalCompactedMemory += AccelerationStructure->CompactionMemory.Size;

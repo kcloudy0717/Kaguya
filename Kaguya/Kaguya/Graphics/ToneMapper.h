@@ -1,14 +1,20 @@
 #pragma once
 #include "RenderDevice.h"
 
+// TODO: Add more
+enum class ETonemapOperator
+{
+	ACES
+};
+
+struct ToneMapperState
+{
+	ETonemapOperator TonemapOperator;
+};
+
 class ToneMapper
 {
 public:
-	enum Operator
-	{
-		ACES
-	};
-
 	ToneMapper() noexcept = default;
 
 	ToneMapper(RenderDevice& RenderDevice);
