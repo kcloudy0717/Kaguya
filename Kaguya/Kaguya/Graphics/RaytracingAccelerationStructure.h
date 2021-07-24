@@ -22,6 +22,7 @@ public:
 	{
 		TopLevelAccelerationStructure.clear();
 		MeshRenderers.clear();
+		ReferencedGeometries.clear();
 		InstanceContributionToHitGroupIndex = 0;
 	}
 
@@ -31,9 +32,10 @@ public:
 
 	UINT NumHitGroups = 0;
 
-	TopLevelAccelerationStructure TopLevelAccelerationStructure;
-	std::vector<MeshRenderer*>	  MeshRenderers;
-	UINT						  InstanceContributionToHitGroupIndex = 0;
+	TopLevelAccelerationStructure	   TopLevelAccelerationStructure;
+	std::vector<MeshRenderer*>		   MeshRenderers;
+	std::set<AssetHandle<Asset::Mesh>> ReferencedGeometries;
+	UINT							   InstanceContributionToHitGroupIndex = 0;
 
 	Buffer							TLASScratch;
 	ASBuffer						TLASResult;

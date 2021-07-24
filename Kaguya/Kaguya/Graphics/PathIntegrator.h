@@ -23,7 +23,7 @@ public:
 
 	PathIntegrator_DXR_1_0() noexcept = default;
 
-	PathIntegrator_DXR_1_0(RenderDevice& RenderDevice);
+	void Initialize(RenderDevice& RenderDevice);
 
 	void SetResolution(UINT Width, UINT Height);
 

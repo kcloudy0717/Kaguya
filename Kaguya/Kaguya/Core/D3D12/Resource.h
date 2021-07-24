@@ -95,7 +95,8 @@ public:
 					operator ID3D12Resource*() const { return pResource.Get(); }
 	ID3D12Resource* GetResource() const { return pResource.Get(); }
 
-	const D3D12_RESOURCE_DESC& GetDesc() const { return Desc; }
+	const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }
+	UINT					   GetNumSubresources() const noexcept { return NumSubresources; }
 
 	CResourceState& GetResourceState() { return ResourceState; }
 
@@ -142,6 +143,7 @@ public:
 		D3D12_RESOURCE_FLAGS ResourceFlags);
 	~Buffer();
 
+	// Call this for upload heap to map a cpu pointer
 	void Initialize();
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }

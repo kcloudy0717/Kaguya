@@ -19,10 +19,11 @@ ShaderIdentifier g_ShadowMissSID;
 ShaderIdentifier g_DefaultSID;
 } // namespace
 
-PathIntegrator_DXR_1_0::PathIntegrator_DXR_1_0(RenderDevice& RenderDevice)
-	: UAV(RenderDevice.GetDevice())
-	, SRV(RenderDevice.GetDevice())
+void PathIntegrator_DXR_1_0::Initialize(RenderDevice& RenderDevice)
 {
+	UAV = UnorderedAccessView(RenderDevice.GetDevice());
+	SRV = ShaderResourceView(RenderDevice.GetDevice());
+
 	GlobalRS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{

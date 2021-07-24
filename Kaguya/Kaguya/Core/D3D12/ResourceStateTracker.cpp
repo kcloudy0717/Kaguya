@@ -8,7 +8,12 @@ std::vector<PendingResourceBarrier>& ResourceStateTracker::GetPendingResourceBar
 CResourceState& ResourceStateTracker::GetResourceState(Resource* Resource)
 {
 	CResourceState& ResourceState = ResourceStates[Resource];
-	ConditionalInitialize(ResourceState);
+	// If ResourceState was just created, its state is uninitialized
+	if (ResourceState.IsResourceStateUninitialized())
+	{
+		ResourceState = CResourceState(Resource->GetNumSubresources());
+		ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_UNKNOWN);
+	}
 	return ResourceState;
 }
 

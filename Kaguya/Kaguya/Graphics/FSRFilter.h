@@ -28,10 +28,7 @@ class FSRFilter
 public:
 	FSRFilter() noexcept = default;
 
-	FSRFilter(RenderDevice& RenderDevice);
-
-	FSRFilter(FSRFilter&&) noexcept = default;
-	FSRFilter& operator=(FSRFilter&&) noexcept = default;
+	void Initialize(RenderDevice& RenderDevice);
 
 	void SetResolution(UINT Width, UINT Height);
 
@@ -57,8 +54,7 @@ private:
 private:
 	UINT Width = 0, Height = 0;
 
-	RootSignature FSR_RS;
-
+	RootSignature RS;
 	PipelineState EASU_PSO;
 	PipelineState RCAS_PSO;
 

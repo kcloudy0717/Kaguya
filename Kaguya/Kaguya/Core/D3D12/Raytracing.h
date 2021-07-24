@@ -242,8 +242,7 @@ public:
 private:
 	void CreatePage(UINT64 PageSize)
 	{
-		std::unique_ptr<RaytracingMemoryPage> Page =
-			std::make_unique<RaytracingMemoryPage>(GetParentDevice(), PageSize);
+		auto Page = std::make_unique<RaytracingMemoryPage>(GetParentDevice(), PageSize);
 		Page->Initialize(HeapType, InitialResourceState);
 		Pages.push_back(std::move(Page));
 	}
@@ -322,7 +321,7 @@ struct AccelerationStructure
 	bool					ReadyToFree			 = false;
 	RaytracingMemorySection ScratchMemory;
 	RaytracingMemorySection ResultMemory;
-	RaytracingMemorySection CompactionMemory;
+	RaytracingMemorySection ResultCompactedMemory;
 	RaytracingMemorySection CompactedSizeCpuMemory;
 	RaytracingMemorySection CompactedSizeGpuMemory;
 
@@ -389,7 +388,7 @@ public:
 	{
 		AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
 
-		return AccelerationStructure->IsCompacted ? AccelerationStructure->CompactionMemory.GPUVirtualAddress
+		return AccelerationStructure->IsCompacted ? AccelerationStructure->ResultCompactedMemory.GPUVirtualAddress
 												  : AccelerationStructure->ResultMemory.GPUVirtualAddress;
 	}
 

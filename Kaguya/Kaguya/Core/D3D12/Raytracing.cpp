@@ -241,14 +241,14 @@ void RaytracingAccelerationStructureManager::Compact(
 				AccelerationStructure->CompactedSizeCpuMemory.Parent->pResource->Unmap(0, &Range);
 
 				// Suballocate the gpu memory needed for compaction copy
-				AccelerationStructure->CompactionMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
+				AccelerationStructure->ResultCompactedMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
 
-				AccelerationStructure->CompactedSizeInBytes = AccelerationStructure->CompactionMemory.Size;
-				TotalCompactedMemory += AccelerationStructure->CompactionMemory.Size;
+				AccelerationStructure->CompactedSizeInBytes = AccelerationStructure->ResultCompactedMemory.Size;
+				TotalCompactedMemory += AccelerationStructure->ResultCompactedMemory.Size;
 
 				// Copy the result buffer into the compacted buffer
 				CommandList->CopyRaytracingAccelerationStructure(
-					AccelerationStructure->CompactionMemory.GPUVirtualAddress,
+					AccelerationStructure->ResultCompactedMemory.GPUVirtualAddress,
 					AccelerationStructure->ResultMemory.GPUVirtualAddress,
 					D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
 

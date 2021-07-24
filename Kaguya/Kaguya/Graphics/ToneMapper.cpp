@@ -2,11 +2,12 @@
 
 #include "RendererRegistry.h"
 
-ToneMapper::ToneMapper(RenderDevice& RenderDevice)
-	: RTV(RenderDevice.GetDevice())
-	, SRV(RenderDevice.GetDevice())
+void ToneMapper::Initialize(RenderDevice& RenderDevice)
 {
-	m_RS = RenderDevice.CreateRootSignature(
+	RTV = RenderTargetView(RenderDevice.GetDevice());
+	SRV = ShaderResourceView(RenderDevice.GetDevice());
+
+	RS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
@@ -34,27 +35,27 @@ ToneMapper::ToneMapper(RenderDevice& RenderDevice)
 		CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
 	} stream;
 
-	stream.pRootSignature		 = m_RS;
+	stream.pRootSignature		 = RS;
 	stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	stream.VS					 = Shaders::VS::FullScreenTriangle;
 	stream.PS					 = Shaders::PS::ToneMap;
 	stream.DepthStencilState	 = depthStencilState;
 	stream.RTVFormats			 = formats;
 
-	m_PSO = RenderDevice.CreatePipelineState(stream);
+	PSO = RenderDevice.CreatePipelineState(stream);
 }
 
 void ToneMapper::SetResolution(UINT Width, UINT Height)
 {
 	auto& RenderDevice = RenderDevice::Instance();
 
-	if (m_Width == Width && m_Height == Height)
+	if (this->Width == Width && this->Height == Height)
 	{
 		return;
 	}
 
-	m_Width	 = Width;
-	m_Height = Height;
+	this->Width	 = Width;
+	this->Height = Height;
 
 	FLOAT Color[]	 = { 1, 1, 1, 1 };
 	auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
@@ -82,11 +83,11 @@ void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandCont
 
 	Context.TransitionBarrier(&RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	Context->SetPipelineState(m_PSO);
-	Context->SetGraphicsRootSignature(m_RS);
+	Context->SetPipelineState(PSO);
+	Context->SetGraphicsRootSignature(RS);
 
-	D3D12_VIEWPORT Viewport	   = CD3DX12_VIEWPORT(0.0f, 0.0f, m_Width, m_Height);
-	D3D12_RECT	   ScissorRect = CD3DX12_RECT(0, 0, m_Width, m_Height);
+	D3D12_VIEWPORT Viewport	   = CD3DX12_VIEWPORT(0.0f, 0.0f, Width, Height);
+	D3D12_RECT	   ScissorRect = CD3DX12_RECT(0, 0, Width, Height);
 
 	Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	Context->RSSetViewports(1, &Viewport);

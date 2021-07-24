@@ -22,9 +22,9 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-FSRFilter::FSRFilter(RenderDevice& RenderDevice)
+void FSRFilter::Initialize(RenderDevice& RenderDevice)
 {
-	FSR_RS = RenderDevice.CreateRootSignature(
+	RS = RenderDevice.CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 0>(2);
@@ -39,13 +39,13 @@ FSRFilter::FSRFilter(RenderDevice& RenderDevice)
 
 	{
 		D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-		PSODesc.pRootSignature					  = FSR_RS;
+		PSODesc.pRootSignature					  = RS;
 		PSODesc.CS								  = Shaders::CS::EASU;
 		EASU_PSO								  = RenderDevice.CreateComputePipelineState(PSODesc);
 	}
 	{
 		D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-		PSODesc.pRootSignature					  = FSR_RS;
+		PSODesc.pRootSignature					  = RS;
 		PSODesc.CS								  = Shaders::CS::RCAS;
 		RCAS_PSO								  = RenderDevice.CreateComputePipelineState(PSODesc);
 	}
@@ -96,7 +96,7 @@ void FSRFilter::Upscale(const FSRState& State, const ShaderResourceView& ShaderR
 {
 	D3D12ScopedEvent(Context, "FSR");
 
-	Context->SetComputeRootSignature(FSR_RS);
+	Context->SetComputeRootSignature(RS);
 
 	// This value is the image region dimension that each thread group of the FSR shader operates on
 	constexpr UINT ThreadSize		 = 16;

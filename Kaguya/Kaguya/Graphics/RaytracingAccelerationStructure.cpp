@@ -30,6 +30,7 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 
 	TopLevelAccelerationStructure.AddInstance(RaytracingInstanceDesc);
 	MeshRenderers.push_back(pMeshRenderer);
+	ReferencedGeometries.insert(pMeshRenderer->pMeshFilter->Mesh);
 
 	InstanceContributionToHitGroupIndex += pMeshRenderer->pMeshFilter->Mesh->BLAS.size() * NumHitGroups;
 }

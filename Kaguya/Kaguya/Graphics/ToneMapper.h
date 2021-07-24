@@ -17,10 +17,7 @@ class ToneMapper
 public:
 	ToneMapper() noexcept = default;
 
-	ToneMapper(RenderDevice& RenderDevice);
-
-	ToneMapper(ToneMapper&&) noexcept = default;
-	ToneMapper& operator=(ToneMapper&&) noexcept = default;
+	void Initialize(RenderDevice& RenderDevice);
 
 	void SetResolution(UINT Width, UINT Height);
 
@@ -30,10 +27,10 @@ public:
 	Texture*				  GetRenderTarget() { return &RenderTarget; }
 
 private:
-	UINT m_Width = 0, m_Height = 0;
+	UINT Width = 0, Height = 0;
 
-	RootSignature m_RS;
-	PipelineState m_PSO;
+	RootSignature RS;
+	PipelineState PSO;
 
 	Texture			   RenderTarget;
 	RenderTargetView   RTV;

@@ -3,10 +3,6 @@
 
 class Log
 {
-	friend class ConsoleWindow;
-	template<typename>
-	friend struct imgui_sink;
-
 public:
 	static void Initialize();
 
@@ -83,6 +79,10 @@ public:
 	}
 
 private:
+	friend class ConsoleWindow;
+	template<typename>
+	friend struct imgui_sink;
+
 	inline static std::shared_ptr<spdlog::logger> s_Logger;
 
 	inline static ImGuiTextBuffer Buf;

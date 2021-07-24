@@ -65,9 +65,9 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 		RenderHeight = ViewportHeight;
 	}
 
-	m_PathIntegrator.SetResolution(RenderWidth, RenderHeight);
-	m_ToneMapper.SetResolution(RenderWidth, RenderHeight);
-	m_FSRFilter.SetResolution(ViewportWidth, ViewportHeight);
+	PathIntegrator.SetResolution(RenderWidth, RenderHeight);
+	ToneMapper.SetResolution(RenderWidth, RenderHeight);
+	FSRFilter.SetResolution(ViewportWidth, ViewportHeight);
 }
 
 void Renderer::OnInitialize()
@@ -85,9 +85,9 @@ void Renderer::OnInitialize()
 
 	Manager = RaytracingAccelerationStructureManager(RenderDevice.GetDevice(), 6_MiB);
 
-	m_PathIntegrator = PathIntegrator_DXR_1_0(RenderDevice);
-	m_ToneMapper	 = ToneMapper(RenderDevice);
-	m_FSRFilter		 = FSRFilter(RenderDevice);
+	PathIntegrator.Initialize(RenderDevice);
+	ToneMapper.Initialize(RenderDevice);
+	FSRFilter.Initialize(RenderDevice);
 
 	Materials = Buffer(
 		RenderDevice.GetDevice(),
@@ -202,7 +202,7 @@ void Renderer::OnRender(World& World)
 		Copy.OpenCommandList();
 
 		// Update shader table
-		m_PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
+		PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
 
 		Copy.CloseCommandList();
 
@@ -217,22 +217,18 @@ void Renderer::OnRender(World& World)
 
 		bool AnyBuild = false;
 
-		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			MeshFilter*						  meshFilter = meshRenderer->pMeshFilter;
-			BottomLevelAccelerationStructure& BLAS		 = meshFilter->Mesh->BLAS;
-
-			if (meshFilter->Mesh->BLASValid)
+			if (Geometry->BLASValid)
 			{
 				continue;
 			}
 
-			meshFilter->Mesh->BLASValid = true;
-			AnyBuild |= meshFilter->Mesh->BLASValid;
+			Geometry->BLASValid = true;
+			AnyBuild |= Geometry->BLASValid;
 
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = BLAS.GetInputsDesc();
-			meshFilter->Mesh->BLASIndex =
-				Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->BLAS.GetInputsDesc();
+			Geometry->BLASIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
 		}
 
 		if (AnyBuild)
@@ -242,19 +238,14 @@ void Renderer::OnRender(World& World)
 			Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
 		}
 
-		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
-
-			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), meshFilter->Mesh->BLASIndex);
+			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BLASIndex);
 		}
 
-		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
-
-			meshFilter->Mesh->AccelerationStructure =
-				Manager.GetAccelerationStructureGPUVA(meshFilter->Mesh->BLASIndex);
+			Geometry->AccelerationStructure = Manager.GetAccelerationStructureGPUVA(Geometry->BLASIndex);
 		}
 
 		AccelerationStructure.Build(AsyncCompute);
@@ -263,13 +254,11 @@ void Renderer::OnRender(World& World)
 
 		ASBuildSyncPoint = AsyncCompute.Execute(false);
 
-		for (auto [i, meshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			MeshFilter* meshFilter = meshRenderer->pMeshFilter;
-
-			if (meshFilter->Mesh->BLASIndex != UINT64_MAX)
+			if (Geometry->BLASIndex != UINT64_MAX)
 			{
-				Manager.SetSyncPoint(meshFilter->Mesh->BLASIndex, ASBuildSyncPoint);
+				Manager.SetSyncPoint(Geometry->BLASIndex, ASBuildSyncPoint);
 			}
 		}
 	}
@@ -277,7 +266,7 @@ void Renderer::OnRender(World& World)
 	if (World.WorldState & EWorldState::EWorldState_Update)
 	{
 		World.WorldState = EWorldState_Render;
-		m_PathIntegrator.Reset();
+		PathIntegrator.Reset();
 	}
 
 	// Begin recording graphics command
@@ -318,7 +307,7 @@ void Renderer::OnRender(World& World)
 	if (!AccelerationStructure.empty())
 	{
 		// Enqueue ray tracing commands
-		m_PathIntegrator.Render(
+		PathIntegrator.Render(
 			PathIntegratorState,
 			Allocation.GPUVirtualAddress,
 			AccelerationStructure,
@@ -327,9 +316,9 @@ void Renderer::OnRender(World& World)
 			Context);
 	}
 
-	m_ToneMapper.Apply(m_PathIntegrator.GetSRV(), Context);
+	ToneMapper.Apply(PathIntegrator.GetSRV(), Context);
 
-	m_FSRFilter.Upscale(FSRState, m_ToneMapper.GetSRV(), Context);
+	FSRFilter.Upscale(FSRState, ToneMapper.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();
 

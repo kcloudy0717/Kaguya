@@ -80,16 +80,6 @@ public:
 	}
 
 private:
-	void ConditionalInitialize(CResourceState& ResourceState)
-	{
-		// If ResourceState was just created, its state is uninitialized
-		if (ResourceState.IsResourceStateUninitialized())
-		{
-			ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_UNKNOWN);
-		}
-	}
-
-private:
 	std::unordered_map<Resource*, CResourceState> ResourceStates;
 
 	// Pending resource transitions are committed to a separate commandlist before this commandlist

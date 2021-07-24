@@ -15,7 +15,7 @@ public:
 
 	const ShaderResourceView& GetViewportDescriptor()
 	{
-		return FSRState.Enable ? m_FSRFilter.GetSRV() : m_ToneMapper.GetSRV();
+		return FSRState.Enable ? FSRFilter.GetSRV() : ToneMapper.GetSRV();
 	}
 
 	void OnInitialize();
@@ -37,9 +37,9 @@ private:
 	D3D12_RECT	   ScissorRect;
 
 	RaytracingAccelerationStructure AccelerationStructure;
-	PathIntegrator_DXR_1_0			m_PathIntegrator;
-	ToneMapper						m_ToneMapper;
-	FSRFilter						m_FSRFilter;
+	PathIntegrator_DXR_1_0			PathIntegrator;
+	ToneMapper						ToneMapper;
+	FSRFilter						FSRFilter;
 
 	RaytracingAccelerationStructureManager Manager;
 
