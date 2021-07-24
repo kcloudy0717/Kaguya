@@ -29,7 +29,7 @@ public:
 	Adapter();
 	~Adapter();
 
-	void Initialize(DeviceOptions Options);
+	void Initialize(const DeviceOptions& Options);
 	void InitializeDevice(const DeviceFeatures& Features);
 
 	void OnBeginFrame() { Profiler.OnBeginFrame(); }

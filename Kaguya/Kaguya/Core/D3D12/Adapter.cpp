@@ -44,7 +44,7 @@ Adapter::~Adapter()
 	}
 }
 
-void Adapter::Initialize(DeviceOptions Options)
+void Adapter::Initialize(const DeviceOptions& Options)
 {
 #ifdef _DEBUG
 	InitializeDXGIObjects(true);
@@ -57,20 +57,22 @@ void Adapter::Initialize(DeviceOptions Options)
 	// If Aftermath detects that any of these tools are present it will fail
 	// initialization.
 #ifdef NVIDIA_NSIGHT_AFTERMATH
-	Options.EnableDebugLayer		 = false;
-	Options.EnableGpuBasedValidation = false;
+	DeviceOptions OverrideOptions = Options;
+
+	OverrideOptions.EnableDebugLayer		 = false;
+	OverrideOptions.EnableGpuBasedValidation = false;
 	AftermathCrashTracker.Initialize();
 #endif
 
 	// Enable the D3D12 debug layer
-	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
+	if (OverrideOptions.EnableDebugLayer || OverrideOptions.EnableGpuBasedValidation)
 	{
 		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the
 		// device.
 		ComPtr<ID3D12Debug> Debug;
 		if (SUCCEEDED(::D3D12GetDebugInterface(IID_PPV_ARGS(Debug.ReleaseAndGetAddressOf()))))
 		{
-			if (Options.EnableDebugLayer)
+			if (OverrideOptions.EnableDebugLayer)
 			{
 				Debug->EnableDebugLayer();
 			}
@@ -79,13 +81,13 @@ void Adapter::Initialize(DeviceOptions Options)
 		ComPtr<ID3D12Debug3> Debug3;
 		if (SUCCEEDED(Debug.As(&Debug3)))
 		{
-			Debug3->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
+			Debug3->SetEnableGPUBasedValidation(OverrideOptions.EnableGpuBasedValidation);
 		}
 
 		ComPtr<ID3D12Debug5> Debug5;
 		if (SUCCEEDED(Debug.As(&Debug5)))
 		{
-			Debug5->SetEnableAutoName(Options.EnableAutoDebugName);
+			Debug5->SetEnableAutoName(OverrideOptions.EnableAutoDebugName);
 		}
 	}
 
