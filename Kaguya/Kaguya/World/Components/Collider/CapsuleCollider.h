@@ -9,8 +9,8 @@ struct CapsuleCollider : Component
 	{
 	}
 
-	float Radius;
-	float Height;
+	float Radius = 0.5f;
+	float Height = 1.0f;
 };
 
 REGISTER_CLASS_ATTRIBUTES(

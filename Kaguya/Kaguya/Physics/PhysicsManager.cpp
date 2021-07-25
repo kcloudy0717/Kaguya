@@ -42,8 +42,8 @@ void PhysicsManager::Initialize()
 	}
 
 	// Gpu
-	PxCudaContextManagerDesc cudaContextManagerDesc;
-	CudaContextManager = PxCreateCudaContextManager(*Foundation, cudaContextManagerDesc, PxGetProfilerCallback());
+	PxCudaContextManagerDesc CudaContextManagerDesc;
+	CudaContextManager = PxCreateCudaContextManager(*Foundation, CudaContextManagerDesc, PxGetProfilerCallback());
 	if (!CudaContextManager)
 	{
 		throw std::runtime_error("PxCreateCudaContextManager");
@@ -160,18 +160,19 @@ bool PhysicsManager::Simulate(float dt)
 
 physx::PxRigidStatic* PhysicsManager::AddStaticActorEntity(Entity Entity, const BoxCollider& BoxCollider)
 {
-	const auto&	  transform = Entity.GetComponent<Transform>();
-	PxTransform	  pxTransform(ToPxVec3(transform.Position), ToPxQuat(transform.Orientation));
-	PxBoxGeometry pxBoxGeometry(ToPxVec3(BoxCollider.Extents));
-	PxShape*	  shape = Physics->createShape(pxBoxGeometry, *Material);
+	const auto& TransformComponent = Entity.GetComponent<Transform>();
 
-	PxRigidStatic* body = Physics->createRigidStatic(pxTransform);
-	body->attachShape(*shape);
+	PxTransform	  Transform(ToPxVec3(TransformComponent.Position), ToPxQuat(TransformComponent.Orientation));
+	PxBoxGeometry BoxGeometry(ToPxVec3(BoxCollider.Extents));
+	PxShape*	  Shape = Physics->createShape(BoxGeometry, *Material);
 
-	EntityActors[body] = Entity;
+	PxRigidStatic* RigidStatic = Physics->createRigidStatic(Transform);
+	RigidStatic->attachShape(*Shape);
+
+	EntityActors[RigidStatic] = Entity;
 	PxSceneWriteLock _(*Scene);
-	Scene->addActor(*body);
-	return body;
+	Scene->addActor(*RigidStatic);
+	return RigidStatic;
 }
 
 physx::PxRigidStatic* PhysicsManager::AddStaticActorEntity(Entity Entity, const CapsuleCollider& CapsuleCollider)
@@ -182,19 +183,20 @@ physx::PxRigidStatic* PhysicsManager::AddStaticActorEntity(Entity Entity, const 
 
 physx::PxRigidDynamic* PhysicsManager::AddDynamicActorEntity(Entity Entity, const BoxCollider& BoxCollider)
 {
-	const auto&	  transform = Entity.GetComponent<Transform>();
-	PxTransform	  pxTransform(ToPxVec3(transform.Position), ToPxQuat(transform.Orientation));
-	PxBoxGeometry pxBoxGeometry(ToPxVec3(BoxCollider.Extents));
-	PxShape*	  shape = Physics->createShape(pxBoxGeometry, *Material);
+	const auto& TransformComponent = Entity.GetComponent<Transform>();
 
-	PxRigidDynamic* body = Physics->createRigidDynamic(pxTransform);
-	body->attachShape(*shape);
-	PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
+	PxTransform	  Transform(ToPxVec3(TransformComponent.Position), ToPxQuat(TransformComponent.Orientation));
+	PxBoxGeometry BoxGeometry(ToPxVec3(BoxCollider.Extents));
+	PxShape*	  Shape = Physics->createShape(BoxGeometry, *Material);
 
-	EntityActors[body] = Entity;
+	PxRigidDynamic* RigidDynamic = Physics->createRigidDynamic(Transform);
+	RigidDynamic->attachShape(*Shape);
+	PxRigidBodyExt::updateMassAndInertia(*RigidDynamic, 10.0f);
+
+	EntityActors[RigidDynamic] = Entity;
 	PxSceneWriteLock _(*Scene);
-	Scene->addActor(*body);
-	return body;
+	Scene->addActor(*RigidDynamic);
+	return RigidDynamic;
 }
 
 physx::PxRigidDynamic* PhysicsManager::AddDynamicActorEntity(Entity Entity, const CapsuleCollider& CapsuleCollider)
@@ -205,73 +207,76 @@ physx::PxRigidDynamic* PhysicsManager::AddDynamicActorEntity(Entity Entity, cons
 
 physx::PxController* PhysicsManager::AddControllerForEntity(Entity Entity, const BoxCollider& BoxCollider)
 {
-	PxBoxControllerDesc desc = {};
-	desc.halfHeight			 = BoxCollider.Extents.y;
-	desc.halfSideExtent		 = BoxCollider.Extents.z;
-	desc.halfForwardExtent	 = BoxCollider.Extents.x;
+	const auto& TransformComponent = Entity.GetComponent<Transform>();
 
-	PxController* controller = ControllerManager->createController(desc);
-	const auto&	  position	 = Entity.GetComponent<Transform>().Position;
-	controller->setPosition({ position.x, position.y, position.z });
+	PxBoxControllerDesc Desc = {};
+	Desc.halfHeight			 = BoxCollider.Extents.y;
+	Desc.halfSideExtent		 = BoxCollider.Extents.z;
+	Desc.halfForwardExtent	 = BoxCollider.Extents.x;
 
-	EntityControllers[controller] = Entity;
+	PxController* Controller = ControllerManager->createController(Desc);
+	Controller->setPosition(ToPxExtendedVec3(TransformComponent.Position));
 
-	return controller;
+	EntityControllers[Controller] = Entity;
+
+	return Controller;
 }
 
 physx::PxController* PhysicsManager::AddControllerForEntity(Entity Entity, const CapsuleCollider& CapsuleCollider)
 {
-	PxCapsuleControllerDesc desc = {};
-	desc.material				 = Material;
+	const auto& TransformComponent = Entity.GetComponent<Transform>();
 
-	desc.radius = CapsuleCollider.Radius;
-	desc.height = CapsuleCollider.Height;
+	PxCapsuleControllerDesc Desc = {};
+	Desc.material				 = Material;
+	Desc.radius					 = CapsuleCollider.Radius;
+	Desc.height					 = CapsuleCollider.Height;
 
-	PxController* controller = ControllerManager->createController(desc);
-	const auto&	  position	 = Entity.GetComponent<Transform>().Position;
-	controller->setPosition({ position.x, position.y, position.z });
+	PxController* Controller = ControllerManager->createController(Desc);
+	Controller->setPosition(ToPxExtendedVec3(TransformComponent.Position));
 
-	EntityControllers[controller] = Entity;
+	EntityControllers[Controller] = Entity;
 
-	return controller;
+	return Controller;
 }
 
-physx::PxRigidStatic* PhysicsManager::AddGenericActor(const Transform& Transform, const MeshCollider& MeshCollider)
+physx::PxRigidStatic* PhysicsManager::AddGenericActor(Entity Entity, const MeshCollider& MeshCollider)
 {
 	assert(!MeshCollider.Vertices.empty() && !MeshCollider.Indices.empty());
 	assert(MeshCollider.Indices.size() % 3 == 0);
 
-	PxTransform pxTransform(ToPxVec3(Transform.Position), ToPxQuat(Transform.Orientation));
+	const auto& TransformComponent = Entity.GetComponent<Transform>();
 
-	PxCookingParams params(Scale);
-	params.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
-	params.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_ACTIVE_EDGES_PRECOMPUTE;
+	PxTransform Transform(ToPxVec3(TransformComponent.Position), ToPxQuat(TransformComponent.Orientation));
 
-	Cooking->setParams(params);
+	PxCookingParams CookingParams(Scale);
+	CookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
+	CookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_ACTIVE_EDGES_PRECOMPUTE;
 
-	PxTriangleMeshDesc meshDesc = {};
-	meshDesc.points.count		= static_cast<PxU32>(MeshCollider.Vertices.size());
-	meshDesc.points.stride		= sizeof(Vertex);
-	meshDesc.points.data		= MeshCollider.Vertices.data();
+	Cooking->setParams(CookingParams);
 
-	meshDesc.triangles.count  = static_cast<PxU32>(MeshCollider.Indices.size() / 3);
-	meshDesc.triangles.stride = 3 * sizeof(uint32_t);
-	meshDesc.triangles.data	  = MeshCollider.Indices.data();
+	PxTriangleMeshDesc Desc = {};
+	Desc.points.count		= static_cast<PxU32>(MeshCollider.Vertices.size());
+	Desc.points.stride		= sizeof(Vertex);
+	Desc.points.data		= MeshCollider.Vertices.data();
 
-	PxTriangleMesh*		   triangleMesh = Cooking->createTriangleMesh(meshDesc, Physics->getPhysicsInsertionCallback());
-	PxTriangleMeshGeometry geom(triangleMesh);
-	PxRigidStatic*		   pStatic = PxCreateStatic(*Physics, pxTransform, geom, *Material);
+	Desc.triangles.count  = static_cast<PxU32>(MeshCollider.Indices.size() / 3);
+	Desc.triangles.stride = 3 * sizeof(uint32_t);
+	Desc.triangles.data	  = MeshCollider.Indices.data();
+
+	PxTriangleMesh*		   TriangleMesh = Cooking->createTriangleMesh(Desc, Physics->getPhysicsInsertionCallback());
+	PxTriangleMeshGeometry TriangleMeshGeometry(TriangleMesh, PxMeshScale(ToPxVec3(TransformComponent.Scale)));
+	PxRigidStatic*		   RigidStatic = PxCreateStatic(*Physics, Transform, TriangleMeshGeometry, *Material);
 
 	{
 		std::scoped_lock _(GenericActorsMutex);
-		GenericActors.insert(pStatic);
+		GenericActors.insert(RigidStatic);
 	}
 	{
 		PxSceneWriteLock _(*Scene);
-		Scene->addActor(*pStatic);
-		triangleMesh->release();
+		Scene->addActor(*RigidStatic);
+		TriangleMesh->release();
 	}
-	return pStatic;
+	return RigidStatic;
 }
 
 void PhysicsManager::RemoveGenericActor(physx::PxRigidStatic* pActor)

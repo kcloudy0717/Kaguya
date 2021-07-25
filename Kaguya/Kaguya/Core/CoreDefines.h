@@ -1,12 +1,20 @@
 #pragma once
 
+#define DEFAULTCOPYABLE(TypeName)                                                                                      \
+	TypeName(const TypeName&) = default;                                                                               \
+	TypeName& operator=(const TypeName&) = default;
+
+#define DEFAULTMOVABLE(TypeName)                                                                                       \
+	TypeName(TypeName&&) noexcept = default;                                                                           \
+	TypeName& operator=(TypeName&&) noexcept = default;
+
 #define NONCOPYABLE(TypeName)                                                                                          \
 	TypeName(const TypeName&) = delete;                                                                                \
 	TypeName& operator=(const TypeName&) = delete;
 
 #define NONMOVABLE(TypeName)                                                                                           \
-	TypeName(TypeName&&) = delete;                                                                                     \
-	TypeName& operator=(TypeName&&) = delete;
+	TypeName(TypeName&&) noexcept = delete;                                                                            \
+	TypeName& operator=(TypeName&&) noexcept = delete;
 
 template<typename T>
 constexpr inline T AlignUp(T Size, T Alignment)

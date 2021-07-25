@@ -5,9 +5,9 @@ template<typename ViewDesc>
 class Descriptor : public DeviceChild
 {
 	template<typename ViewDesc>
-	struct CreateViewMap;
+	struct CreateViewTraits;
 	template<>
-	struct CreateViewMap<D3D12_SHADER_RESOURCE_VIEW_DESC>
+	struct CreateViewTraits<D3D12_SHADER_RESOURCE_VIEW_DESC>
 	{
 		static decltype(&ID3D12Device::CreateShaderResourceView) Create()
 		{
@@ -15,7 +15,7 @@ class Descriptor : public DeviceChild
 		}
 	};
 	template<>
-	struct CreateViewMap<D3D12_RENDER_TARGET_VIEW_DESC>
+	struct CreateViewTraits<D3D12_RENDER_TARGET_VIEW_DESC>
 	{
 		static decltype(&ID3D12Device::CreateRenderTargetView) Create()
 		{
@@ -23,7 +23,7 @@ class Descriptor : public DeviceChild
 		}
 	};
 	template<>
-	struct CreateViewMap<D3D12_DEPTH_STENCIL_VIEW_DESC>
+	struct CreateViewTraits<D3D12_DEPTH_STENCIL_VIEW_DESC>
 	{
 		static decltype(&ID3D12Device::CreateDepthStencilView) Create()
 		{
@@ -31,7 +31,7 @@ class Descriptor : public DeviceChild
 		}
 	};
 	template<>
-	struct CreateViewMap<D3D12_UNORDERED_ACCESS_VIEW_DESC>
+	struct CreateViewTraits<D3D12_UNORDERED_ACCESS_VIEW_DESC>
 	{
 		static decltype(&ID3D12Device::CreateUnorderedAccessView) Create()
 		{
@@ -54,7 +54,7 @@ public:
 		: DeviceChild(std::exchange(rvalue.Parent, {}))
 		, CPUHandle(std::exchange(rvalue.CPUHandle, {}))
 		, GPUHandle(std::exchange(rvalue.GPUHandle, {}))
-		, Index(std::exchange(rvalue.Index, {}))
+		, Index(std::exchange(rvalue.Index, UINT_MAX))
 	{
 	}
 
@@ -65,7 +65,7 @@ public:
 			Parent	  = std::exchange(rvalue.Parent, {});
 			CPUHandle = std::exchange(rvalue.CPUHandle, {});
 			GPUHandle = std::exchange(rvalue.GPUHandle, {});
-			Index	  = std::exchange(rvalue.Index, {});
+			Index	  = std::exchange(rvalue.Index, UINT_MAX);
 		}
 		return *this;
 	}
@@ -90,24 +90,24 @@ public:
 
 	void CreateDefaultView(ID3D12Resource* Resource)
 	{
-		(GetParentDevice()->GetDevice()->*CreateViewMap<ViewDesc>::Create())(Resource, nullptr, CPUHandle);
+		(GetParentDevice()->GetDevice()->*CreateViewTraits<ViewDesc>::Create())(Resource, nullptr, CPUHandle);
 	}
 
 	void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 	{
 		(GetParentDevice()->GetDevice()
-			 ->*CreateViewMap<ViewDesc>::Create())(Resource, CounterResource, nullptr, CPUHandle);
+			 ->*CreateViewTraits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CPUHandle);
 	}
 
 	void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
 	{
-		(GetParentDevice()->GetDevice()->*CreateViewMap<ViewDesc>::Create())(Resource, &Desc, CPUHandle);
+		(GetParentDevice()->GetDevice()->*CreateViewTraits<ViewDesc>::Create())(Resource, &Desc, CPUHandle);
 	}
 
 	void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 	{
 		(GetParentDevice()->GetDevice()
-			 ->*CreateViewMap<ViewDesc>::Create())(Resource, CounterResource, &Desc, CPUHandle);
+			 ->*CreateViewTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CPUHandle);
 	}
 
 protected:
@@ -138,8 +138,7 @@ public:
 	{
 	}
 
-	View(View&&) noexcept = default;
-	View& operator=(View&&) noexcept = default;
+	DEFAULTMOVABLE(View);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept { return Descriptor.GetCPUHandle(); }
 	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept { return Descriptor.GetGPUHandle(); }
@@ -164,8 +163,7 @@ public:
 
 	ShaderResourceView(Device* Device, const D3D12_SHADER_RESOURCE_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
-	ShaderResourceView(ShaderResourceView&&) noexcept = default;
-	ShaderResourceView& operator=(ShaderResourceView&&) noexcept = default;
+	DEFAULTMOVABLE(ShaderResourceView);
 };
 
 class UnorderedAccessView : public View<D3D12_UNORDERED_ACCESS_VIEW_DESC>
@@ -186,8 +184,7 @@ public:
 		ID3D12Resource*							Resource,
 		ID3D12Resource*							CounterResource = nullptr);
 
-	UnorderedAccessView(UnorderedAccessView&&) noexcept = default;
-	UnorderedAccessView& operator=(UnorderedAccessView&&) noexcept = default;
+	DEFAULTMOVABLE(UnorderedAccessView);
 };
 
 class RenderTargetView : public View<D3D12_RENDER_TARGET_VIEW_DESC>
@@ -204,8 +201,7 @@ public:
 
 	RenderTargetView(Device* Device, const D3D12_RENDER_TARGET_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
-	RenderTargetView(RenderTargetView&&) noexcept = default;
-	RenderTargetView& operator=(RenderTargetView&&) noexcept = default;
+	DEFAULTMOVABLE(RenderTargetView);
 };
 
 class DepthStencilView : public View<D3D12_DEPTH_STENCIL_VIEW_DESC>
@@ -222,6 +218,5 @@ public:
 
 	DepthStencilView(Device* Device, const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
-	DepthStencilView(DepthStencilView&&) noexcept = default;
-	DepthStencilView& operator=(DepthStencilView&&) noexcept = default;
+	DEFAULTMOVABLE(DepthStencilView);
 };

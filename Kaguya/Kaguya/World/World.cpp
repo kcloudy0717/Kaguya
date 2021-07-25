@@ -248,6 +248,15 @@ void World::OnComponentAdded<CapsuleCollider>(Entity Entity, CapsuleCollider& Co
 template<>
 void World::OnComponentAdded<MeshCollider>(Entity Entity, MeshCollider& Component)
 {
+	if (Entity.HasComponent<MeshFilter>())
+	{
+		MeshFilter& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
+		if (MeshFilterComponent.Mesh)
+		{
+			Component.Vertices = MeshFilterComponent.Mesh->Vertices;
+			Component.Indices  = MeshFilterComponent.Mesh->Indices;
+		}
+	}
 }
 
 template<>
@@ -260,6 +269,10 @@ void World::OnComponentAdded<StaticRigidBody>(Entity Entity, StaticRigidBody& Co
 	else if (Entity.HasComponent<CapsuleCollider>())
 	{
 		Component.Actor = PhysicsManager::AddStaticActorEntity(Entity, Entity.GetComponent<CapsuleCollider>());
+	}
+	else if (Entity.HasComponent<MeshCollider>())
+	{
+		Component.Actor = PhysicsManager::AddGenericActor(Entity, Entity.GetComponent<MeshCollider>());
 	}
 }
 

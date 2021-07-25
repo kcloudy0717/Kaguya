@@ -558,26 +558,6 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<StaticRigidBody, false>(
-			"Static Rigid Body",
-			SelectedEntity,
-			[&](StaticRigidBody& Component)
-			{
-				bool IsEdited = false;
-
-				return IsEdited;
-			});
-
-		RenderComponent<DynamicRigidBody, false>(
-			"Dynamic Rigid Body",
-			SelectedEntity,
-			[&](DynamicRigidBody& Component)
-			{
-				bool IsEdited = false;
-
-				return IsEdited;
-			});
-
 		RenderComponent<BoxCollider, false>(
 			"Box Collider",
 			SelectedEntity,
@@ -603,6 +583,34 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
+		RenderComponent<MeshCollider, false>(
+			"Mesh Collider",
+			SelectedEntity,
+			[&](MeshCollider& Component)
+			{
+				return false;
+			});
+
+		RenderComponent<StaticRigidBody, false>(
+			"Static Rigid Body",
+			SelectedEntity,
+			[&](StaticRigidBody& Component)
+			{
+				bool IsEdited = false;
+
+				return IsEdited;
+			});
+
+		RenderComponent<DynamicRigidBody, false>(
+			"Dynamic Rigid Body",
+			SelectedEntity,
+			[&](DynamicRigidBody& Component)
+			{
+				bool IsEdited = false;
+
+				return IsEdited;
+			});
+
 		if (ImGui::Button("Add Component"))
 		{
 			ImGui::OpenPopup("Component List");
@@ -616,6 +624,7 @@ void InspectorWindow::OnRender()
 
 			AddNewComponent<BoxCollider>("Box Collider", SelectedEntity);
 			AddNewComponent<CapsuleCollider>("Capsule Collider", SelectedEntity);
+			AddNewComponent<MeshCollider>("Mesh Collider", SelectedEntity);
 
 			AddNewComponent<StaticRigidBody>("Static Rigid Body", SelectedEntity);
 			AddNewComponent<DynamicRigidBody>("Dynamic Rigid Body", SelectedEntity);

@@ -29,7 +29,7 @@ public:
 	static physx::PxController* AddControllerForEntity(Entity Entity, const BoxCollider& BoxCollider);
 	static physx::PxController* AddControllerForEntity(Entity Entity, const CapsuleCollider& CapsuleCollider);
 
-	static physx::PxRigidStatic* AddGenericActor(const Transform& Transform, const MeshCollider& MeshCollider);
+	static physx::PxRigidStatic* AddGenericActor(Entity Entity, const MeshCollider& MeshCollider);
 	static void					 RemoveGenericActor(physx::PxRigidStatic* pActor);
 
 	static void RemoveActor(physx::PxRigidActor* pActor);
