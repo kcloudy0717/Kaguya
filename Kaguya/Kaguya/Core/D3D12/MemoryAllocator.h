@@ -56,6 +56,14 @@ public:
 
 	Allocation Allocate(UINT64 Size, UINT Alignment = DefaultAlignment);
 
+	template<typename T>
+	Allocation Allocate(const T& Data, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
+	{
+		Allocation Allocation = Allocate(sizeof(T), Alignment);
+		std::memcpy(Allocation.CPUVirtualAddress, &Data, sizeof(T));
+		return Allocation;
+	}
+
 private:
 	LinearAllocatorPage* RequestPage(UINT64 CompletedFenceValue);
 

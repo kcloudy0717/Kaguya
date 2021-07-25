@@ -13,6 +13,6 @@
 [submodule "ext/wil"]
 	path = ext/wil
 	url = https://github.com/microsoft/wil.git
-[submodule "ext/yaml-cpp"]
-	path = ext/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "ext/json"]
+	path = ext/json
+	url = https://github.com/nlohmann/json.git

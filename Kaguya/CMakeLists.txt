@@ -44,11 +44,10 @@ set(IMGUIZMO
 	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.cpp
 	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImSequencer.h
 	${CMAKE_SOURCE_DIR}/ext/ImGuizmo/ImZoomSlider.h)
+set(JSON
+	${CMAKE_SOURCE_DIR}/ext/json/single_include/nlohmann/json.hpp)
 set(SPDLOG
 	${CMAKE_SOURCE_DIR}/ext/spdlog/include/spdlog/spdlog.h)
-file(GLOB_RECURSE yaml_cpp
-	${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include/yaml-cpp/*.h
-	${CMAKE_SOURCE_DIR}/ext/yaml-cpp/src/*.cpp)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
@@ -57,8 +56,8 @@ source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${DXC})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${IMGUI})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${IMGUIZMO})
+source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${JSON})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${SPDLOG})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${yaml_cpp})
 
 if (MSVC)
     add_compile_options(/W3) # warning level 3
@@ -75,8 +74,8 @@ add_executable(
 	${DXC}
 	${IMGUI}
 	${IMGUIZMO}
-	${SPDLOG}
-	${yaml_cpp})
+	${JSON}
+	${SPDLOG})
 
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
@@ -122,13 +121,13 @@ include_directories("${CMAKE_SOURCE_DIR}/ext/dxc")
 include_directories("${CMAKE_SOURCE_DIR}/ext/entt/single_include/entt")
 include_directories("${CMAKE_SOURCE_DIR}/ext/imgui")
 include_directories("${CMAKE_SOURCE_DIR}/ext/ImGuizmo")
+include_directories("${CMAKE_SOURCE_DIR}/ext/json/single_include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/PhysX-4.0.1/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/spdlog/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/wil/include")
 include_directories("${CMAKE_SOURCE_DIR}/ext/winpixeventruntime.1.0.210209001/Include/WinPixEventRuntime")
-include_directories("${CMAKE_SOURCE_DIR}/ext/yaml-cpp/include")
 
 target_link_libraries(${PROJECTNAME} ${CMAKE_SOURCE_DIR}/ext/assimp/lib/Release/assimp-vc142-mt.lib)
 target_link_libraries(${PROJECTNAME} debug ${CMAKE_SOURCE_DIR}/ext/DirectXTex/lib/Debug/DirectXTex.lib)

@@ -8,19 +8,19 @@ void AssetManager::Initialize()
 	AsyncImageLoader.SetDelegate(
 		[&](auto pImage)
 		{
-			std::scoped_lock _(m_Mutex);
+			std::scoped_lock _(Mutex);
 
-			m_ImageUploadQueue.push(std::move(pImage));
-			m_ConditionVariable.notify_all();
+			ImageUploadQueue.push(std::move(pImage));
+			ConditionVariable.notify_all();
 		});
 
 	AsyncMeshLoader.SetDelegate(
 		[&](auto pMesh)
 		{
-			std::scoped_lock _(m_Mutex);
+			std::scoped_lock _(Mutex);
 
-			m_MeshUploadQueue.push(std::move(pMesh));
-			m_ConditionVariable.notify_all();
+			MeshUploadQueue.push(std::move(pMesh));
+			ConditionVariable.notify_all();
 		});
 
 	struct threadwrapper
@@ -33,8 +33,8 @@ void AssetManager::Initialize()
 
 			while (true)
 			{
-				std::unique_lock _(m_Mutex);
-				m_ConditionVariable.wait(_);
+				std::unique_lock _(Mutex);
+				ConditionVariable.wait(_);
 
 				if (Quit)
 				{
@@ -51,10 +51,10 @@ void AssetManager::Initialize()
 
 				// Process Image
 				{
-					while (!m_ImageUploadQueue.empty())
+					while (!ImageUploadQueue.empty())
 					{
-						std::shared_ptr<Asset::Image> assetImage = m_ImageUploadQueue.front();
-						m_ImageUploadQueue.pop();
+						std::shared_ptr<Asset::Image> assetImage = ImageUploadQueue.front();
+						ImageUploadQueue.pop();
 
 						const auto& Image	 = assetImage->Image;
 						const auto& Metadata = Image.GetMetadata();
@@ -112,10 +112,10 @@ void AssetManager::Initialize()
 
 				// Process Mesh
 				{
-					while (!m_MeshUploadQueue.empty())
+					while (!MeshUploadQueue.empty())
 					{
-						std::shared_ptr<Asset::Mesh> assetMesh = m_MeshUploadQueue.front();
-						m_MeshUploadQueue.pop();
+						std::shared_ptr<Asset::Mesh> assetMesh = MeshUploadQueue.front();
+						MeshUploadQueue.pop();
 
 						UINT64 vertexBufferSizeInBytes = assetMesh->Vertices.size() * sizeof(Vertex);
 						UINT64 indexBufferSizeInBytes  = assetMesh->Indices.size() * sizeof(unsigned int);
@@ -213,7 +213,7 @@ void AssetManager::Initialize()
 void AssetManager::Shutdown()
 {
 	Quit = true;
-	m_ConditionVariable.notify_all();
+	ConditionVariable.notify_all();
 
 	::WaitForSingleObject(Thread.get(), INFINITE);
 

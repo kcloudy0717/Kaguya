@@ -26,10 +26,10 @@ private:
 	inline static AssetCache<Asset::Mesh>  MeshCache;
 
 	// Upload stuff to the GPU
-	inline static std::mutex								m_Mutex;
-	inline static std::condition_variable					m_ConditionVariable;
-	inline static std::queue<std::shared_ptr<Asset::Image>> m_ImageUploadQueue;
-	inline static std::queue<std::shared_ptr<Asset::Mesh>>	m_MeshUploadQueue;
+	inline static std::mutex								Mutex;
+	inline static std::condition_variable					ConditionVariable;
+	inline static std::queue<std::shared_ptr<Asset::Image>> ImageUploadQueue;
+	inline static std::queue<std::shared_ptr<Asset::Mesh>>	MeshUploadQueue;
 
 	inline static wil::unique_handle Thread;
 	inline static std::atomic<bool>	 Quit = false;

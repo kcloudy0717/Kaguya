@@ -299,8 +299,7 @@ void Renderer::OnRender(World& World)
 	g_GlobalConstants.NumLights		  = NumLights;
 	g_GlobalConstants.TotalFrameCount = Counter++;
 
-	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(GlobalConstants));
-	std::memcpy(Allocation.CPUVirtualAddress, &g_GlobalConstants, sizeof(GlobalConstants));
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_GlobalConstants);
 
 	Context.BindResourceViewHeaps();
 

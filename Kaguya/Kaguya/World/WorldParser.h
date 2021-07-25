@@ -3,7 +3,7 @@
 
 class World;
 
-class SceneParser
+class WorldParser
 {
 public:
 	static void Save(const std::filesystem::path& Path, World* pWorld);

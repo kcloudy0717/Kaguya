@@ -1,6 +1,7 @@
 #include "HierarchyWindow.h"
 
 #include <World/SceneParser.h>
+#include <World/WorldParser.h>
 
 void HierarchyWindow::RenderGui()
 {
@@ -66,19 +67,14 @@ void HierarchyWindow::RenderGui()
 			SelectedEntity = {};
 		}
 
-		COMDLG_FILTERSPEC ComDlgFS[] = { { L"Scene File", L"*.yaml" }, { L"All Files (*.*)", L"*.*" } };
+		COMDLG_FILTERSPEC ComDlgFS[] = { { L"Scene File", L"*.yaml;*.json" }, { L"All Files (*.*)", L"*.*" } };
 
 		if (ImGui::MenuItem("Save"))
 		{
 			std::filesystem::path Path = Application::SaveDialog(2, ComDlgFS);
 			if (!Path.empty())
 			{
-				if (!Path.has_extension())
-				{
-					Path += ".yaml";
-				}
-
-				SceneParser::Save(Path, pWorld);
+				WorldParser::Save(Path.replace_extension(".json"), pWorld);
 			}
 		}
 
@@ -87,7 +83,8 @@ void HierarchyWindow::RenderGui()
 			std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
 			if (!Path.empty())
 			{
-				SceneParser::Load(Path, pWorld);
+				//SceneParser::Load(Path, pWorld);
+				WorldParser::Load(Path, pWorld);
 			}
 		}
 
