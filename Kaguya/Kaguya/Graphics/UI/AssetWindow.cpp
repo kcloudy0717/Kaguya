@@ -10,12 +10,8 @@ enum AssetColumnID
 	AssetColumnID_ReferenceCount,
 };
 
-void AssetWindow::RenderGui()
+void AssetWindow::OnRender()
 {
-	ImGui::Begin("Asset");
-
-	UIWindow::Update();
-
 	bool AddAllMeshToHierarchy = false;
 
 	if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
@@ -129,14 +125,15 @@ void AssetWindow::RenderGui()
 
 		// Demonstrate using clipper for large vertical lists
 		ImGuiListClipper ListClipper;
-		ListClipper.Begin(ImageCache.size());
+		ListClipper.Begin(static_cast<int>(ImageCache.size()));
 
 		auto iter = ImageCache.Cache.begin();
+		int ID = 0;
 		while (ListClipper.Step())
 		{
 			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
 			{
-				ImGui::PushID(iter->first);
+				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
@@ -198,14 +195,15 @@ void AssetWindow::RenderGui()
 
 		// Demonstrate using clipper for large vertical lists
 		ImGuiListClipper ListClipper;
-		ListClipper.Begin(MeshCache.size());
+		ListClipper.Begin(static_cast<int>(MeshCache.size()));
 
 		auto iter = MeshCache.Cache.begin();
+		int ID = 0;
 		while (ListClipper.Step())
 		{
 			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
 			{
-				ImGui::PushID(iter->first);
+				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
@@ -235,5 +233,4 @@ void AssetWindow::RenderGui()
 		}
 		ImGui::EndTable();
 	}
-	ImGui::End();
 }

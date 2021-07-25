@@ -6,17 +6,23 @@
 class HierarchyWindow : public UIWindow
 {
 public:
+	HierarchyWindow()
+		: UIWindow("Hierarchy", 0)
+	{
+	}
+
 	void SetContext(World* pWorld)
 	{
 		this->pWorld   = pWorld;
 		SelectedEntity = {};
 	}
 
-	void RenderGui();
-
 	Entity GetSelectedEntity() const { return SelectedEntity; }
 
 	void SetSelectedEntity(Entity Entity) { SelectedEntity = Entity; }
+
+protected:
+	void OnRender() override;
 
 private:
 	World* pWorld		  = nullptr;

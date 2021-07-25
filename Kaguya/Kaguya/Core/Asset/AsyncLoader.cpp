@@ -46,7 +46,7 @@ AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMet
 
 	auto Image		  = std::make_shared<Asset::Image>();
 	Image->Metadata	  = Metadata;
-	Image->Resolution = Vector2i(TexMetadata.width, TexMetadata.height);
+	Image->Resolution = Vector2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
 	Image->Name		  = Path.filename().string();
 	Image->Image	  = std::move(OutImage);
 
@@ -120,9 +120,9 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 
 		// Parse submesh indices
 		Asset::Submesh& Submesh	   = Mesh->Submeshes.emplace_back();
-		Submesh.IndexCount		   = indices.size();
+		Submesh.IndexCount		   = static_cast<uint32_t>(indices.size());
 		Submesh.StartIndexLocation = NumIndices;
-		Submesh.VertexCount		   = vertices.size();
+		Submesh.VertexCount		   = static_cast<uint32_t>(vertices.size());
 		Submesh.BaseVertexLocation = NumVertices;
 
 		Mesh->Vertices.insert(
@@ -134,8 +134,8 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 			std::make_move_iterator(indices.begin()),
 			std::make_move_iterator(indices.end()));
 
-		NumIndices += indices.size();
-		NumVertices += vertices.size();
+		NumIndices += static_cast<uint32_t>(indices.size());
+		NumVertices += static_cast<uint32_t>(vertices.size());
 	}
 
 	const auto stop		= std::chrono::high_resolution_clock::now();

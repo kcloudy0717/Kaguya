@@ -293,8 +293,6 @@ static bool EditTransform(Transform& Transform, const float* pCameraView, float*
 	static float		  s_Snap[3]				= { 1, 1, 1 };
 	static ImGuizmo::MODE s_CurrentGizmoMode	= ImGuizmo::WORLD;
 
-	bool isEdited = false;
-
 	ImGui::Text("Operation");
 
 	if (ImGui::RadioButton("Translate", CurrentGizmoOperation == ImGuizmo::TRANSLATE))
@@ -330,7 +328,7 @@ static bool EditTransform(Transform& Transform, const float* pCameraView, float*
 		break;
 	}
 
-	isEdited |= ImGuizmo::Manipulate(
+	return ImGuizmo::Manipulate(
 		pCameraView,
 		pCameraProjection,
 		(ImGuizmo::OPERATION)CurrentGizmoOperation,
@@ -338,16 +336,10 @@ static bool EditTransform(Transform& Transform, const float* pCameraView, float*
 		pMatrix,
 		nullptr,
 		UseSnap ? s_Snap : nullptr);
-
-	return isEdited;
 }
 
-void InspectorWindow::RenderGui()
+void InspectorWindow::OnRender()
 {
-	ImGui::Begin("Inspector");
-
-	UIWindow::Update();
-
 	if (SelectedEntity)
 	{
 		RenderComponent<Tag, true>(
@@ -355,11 +347,11 @@ void InspectorWindow::RenderGui()
 			SelectedEntity,
 			[&](Tag& Component)
 			{
-				char buffer[MAX_PATH] = {};
-				memcpy(buffer, Component.Name.data(), Component.Name.size());
-				if (ImGui::InputText("Tag", buffer, MAX_PATH))
+				char Buffer[MAX_PATH] = {};
+				std::memcpy(Buffer, Component.Name.data(), Component.Name.size());
+				if (ImGui::InputText("Tag", Buffer, MAX_PATH))
 				{
-					Component.Name = buffer;
+					Component.Name = Buffer;
 				}
 
 				return false;
@@ -631,5 +623,4 @@ void InspectorWindow::RenderGui()
 			ImGui::EndPopup();
 		}
 	}
-	ImGui::End();
 }

@@ -1,13 +1,7 @@
 #include "ConsoleWindow.h"
 
-void ConsoleWindow::RenderGui()
+void ConsoleWindow::OnRender()
 {
-	if (!ImGui::Begin("Console", nullptr))
-	{
-		ImGui::End();
-		return;
-	}
-
 	// Options menu
 	if (ImGui::BeginPopup("Options"))
 	{
@@ -87,7 +81,6 @@ void ConsoleWindow::RenderGui()
 		ImGui::SetScrollHereY(1.0f);
 
 	ImGui::EndChild();
-	ImGui::End();
 }
 
 void ConsoleWindow::Clear()

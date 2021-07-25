@@ -129,7 +129,7 @@ public:
 
 	bool IsValid() const noexcept { return Parent != nullptr; }
 
-	D3D12_CPU_DESCRIPTOR_HANDLE operator[](INT Index) const noexcept;
+	D3D12_CPU_DESCRIPTOR_HANDLE operator[](UINT Index) const noexcept;
 
 	UINT GetOffset() const noexcept { return Offset; }
 	UINT GetNumDescriptors() const noexcept { return NumDescriptors; }

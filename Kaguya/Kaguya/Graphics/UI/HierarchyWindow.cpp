@@ -1,14 +1,9 @@
 #include "HierarchyWindow.h"
 
-#include <World/SceneParser.h>
 #include <World/WorldParser.h>
 
-void HierarchyWindow::RenderGui()
+void HierarchyWindow::OnRender()
 {
-	ImGui::Begin("Hierarchy");
-
-	UIWindow::Update();
-
 	pWorld->Registry.each(
 		[&](auto Handle)
 		{
@@ -18,29 +13,29 @@ void HierarchyWindow::RenderGui()
 
 			ImGuiTreeNodeFlags TreeNodeFlags =
 				((SelectedEntity == Entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth;
-			bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
+			bool bOpened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
 			if (ImGui::IsItemClicked())
 			{
 				SelectedEntity = Entity;
 			}
 
-			bool Delete = false;
+			bool bDelete = false;
 			if (ImGui::BeginPopupContextItem())
 			{
 				if (ImGui::MenuItem("Delete"))
 				{
-					Delete = true;
+					bDelete = true;
 				}
 
 				ImGui::EndPopup();
 			}
 
-			if (opened)
+			if (bOpened)
 			{
 				ImGui::TreePop();
 			}
 
-			if (Delete)
+			if (bDelete)
 			{
 				pWorld->DestroyEntity(Entity);
 				if (SelectedEntity == Entity)
@@ -57,8 +52,8 @@ void HierarchyWindow::RenderGui()
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity entity  = pWorld->CreateEntity("GameObject");
-			SelectedEntity = entity;
+			Entity NewEntity  = pWorld->CreateEntity("");
+			SelectedEntity = NewEntity;
 		}
 
 		if (ImGui::MenuItem("Clear"))
@@ -67,7 +62,7 @@ void HierarchyWindow::RenderGui()
 			SelectedEntity = {};
 		}
 
-		COMDLG_FILTERSPEC ComDlgFS[] = { { L"Scene File", L"*.yaml;*.json" }, { L"All Files (*.*)", L"*.*" } };
+		COMDLG_FILTERSPEC ComDlgFS[] = { { L"Scene File", L"*.json" }, { L"All Files (*.*)", L"*.*" } };
 
 		if (ImGui::MenuItem("Save"))
 		{
@@ -83,14 +78,12 @@ void HierarchyWindow::RenderGui()
 			std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
 			if (!Path.empty())
 			{
-				//SceneParser::Load(Path, pWorld);
 				WorldParser::Load(Path, pWorld);
 			}
 		}
 
 		ImGui::EndPopup();
 	}
-	ImGui::End();
 
 	// Reset entity is nothing is clicked
 	if (ImGui::IsItemClicked())

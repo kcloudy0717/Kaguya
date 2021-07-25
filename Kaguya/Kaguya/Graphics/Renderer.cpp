@@ -165,7 +165,7 @@ void Renderer::OnRender(World& World)
 									   "Quality (1.5x)",
 									   "Balanced (1.7x)",
 									   "Performance (2x)" };
-		ImGui::Combo("Quality", (int*)&FSRState.QualityMode, QualityModes, std::size(QualityModes));
+		ImGui::Combo("Quality", (int*)&FSRState.QualityMode, QualityModes, static_cast<int>(std::size(QualityModes)));
 
 		ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
 

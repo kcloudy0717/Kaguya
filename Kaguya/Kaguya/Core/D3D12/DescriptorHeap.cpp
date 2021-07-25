@@ -193,7 +193,7 @@ DescriptorArray::~DescriptorArray()
 	}
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DescriptorArray::operator[](INT Index) const noexcept
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorArray::operator[](UINT Index) const noexcept
 {
 	assert(Index >= 0 && Index < NumDescriptors);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE Handle(CPUDescriptorHandle);
@@ -266,7 +266,7 @@ UINT DescriptorHandleCache::CommitDescriptors(
 	{
 		if (StaleDescriptorTableBitMask.test(i))
 		{
-			RootIndices[i] = i;
+			RootIndices[i] = static_cast<UINT>(i);
 
 			NumStaleDescriptorTables++;
 		}

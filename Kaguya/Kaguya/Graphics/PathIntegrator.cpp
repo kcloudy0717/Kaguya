@@ -158,7 +158,7 @@ void PathIntegrator_DXR_1_0::UpdateShaderTable(
 
 		RaytracingShaderTable<RootArgument>::Record Record = {};
 		Record.ShaderIdentifier							   = g_DefaultSID;
-		Record.RootArguments							   = { .MaterialIndex = (UINT)i,
+		Record.RootArguments							   = { .MaterialIndex = static_cast<UINT>(i),
 								   .Padding		  = 0,
 								   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
 								   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
@@ -197,8 +197,7 @@ void PathIntegrator_DXR_1_0::Render(
 	g_RenderPassData.RenderTarget		   = UAV.GetIndex();
 	g_RenderPassData.SkyIntensity		   = State.SkyIntensity;
 
-	Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(RenderPassData));
-	std::memcpy(Allocation.CPUVirtualAddress, &g_RenderPassData, sizeof(RenderPassData));
+	Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_RenderPassData);
 
 	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RTPSO);
 	Context->SetComputeRootSignature(GlobalRS);

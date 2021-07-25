@@ -94,7 +94,7 @@ void AftermathCrashTracker::RegisterDevice(ID3D12Device* pDevice)
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |		  // Enable event marker tracking.
 			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking | // Enable tracking of resources.
 			GFSDK_Aftermath_FeatureFlags_CallStackCapturing |	  // Capture call stacks for all draw calls, compute
-															  // dispatches, and resource copies.
+																  // dispatches, and resource copies.
 			GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo; // Generate debug information for shaders.
 
 		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, AftermathFlags, pDevice));
@@ -152,7 +152,7 @@ void AftermathCrashTracker::JSONShaderHashLookupCallback(
 	IDxcBlob* Blob = AftermathShaderDatabase::FindShaderBinary(*pShaderHash);
 	if (Blob)
 	{
-		PFNSetData(Blob->GetBufferPointer(), Blob->GetBufferSize());
+		PFNSetData(Blob->GetBufferPointer(), static_cast<uint32_t>(Blob->GetBufferSize()));
 	}
 }
 
@@ -171,7 +171,7 @@ void AftermathCrashTracker::JSONShaderInstructionsHashLookupCallback(
 	IDxcBlob* Blob = AftermathShaderDatabase::FindShaderBinary(*pShaderInstructionsHash);
 	if (Blob)
 	{
-		PFNSetData(Blob->GetBufferPointer(), Blob->GetBufferSize());
+		PFNSetData(Blob->GetBufferPointer(), static_cast<uint32_t>(Blob->GetBufferSize()));
 	}
 }
 
@@ -188,7 +188,7 @@ void AftermathCrashTracker::JSONShaderDebugNameLookupCallback(
 	IDxcBlob* Blob = AftermathShaderDatabase::FindSourceShaderDebugData(*pShaderDebugName);
 	if (Blob)
 	{
-		PFNSetData(Blob->GetBufferPointer(), Blob->GetBufferSize());
+		PFNSetData(Blob->GetBufferPointer(), static_cast<uint32_t>(Blob->GetBufferSize()));
 	}
 }
 

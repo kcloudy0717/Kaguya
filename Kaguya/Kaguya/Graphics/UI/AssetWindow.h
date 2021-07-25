@@ -7,9 +7,16 @@
 class AssetWindow : public UIWindow
 {
 public:
+	AssetWindow()
+		: UIWindow("Asset", 0)
+	{
+
+	}
+
 	void SetContext(World* pWorld) { this->pWorld = pWorld; }
 
-	void RenderGui();
+protected:
+	void OnRender() override;
 
 private:
 	World* pWorld = nullptr;

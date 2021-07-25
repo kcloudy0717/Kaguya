@@ -32,7 +32,8 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 	MeshRenderers.push_back(pMeshRenderer);
 	ReferencedGeometries.insert(pMeshRenderer->pMeshFilter->Mesh);
 
-	InstanceContributionToHitGroupIndex += pMeshRenderer->pMeshFilter->Mesh->BLAS.size() * NumHitGroups;
+	InstanceContributionToHitGroupIndex +=
+		static_cast<UINT>(pMeshRenderer->pMeshFilter->Mesh->BLAS.size()) * NumHitGroups;
 }
 
 void RaytracingAccelerationStructure::Build(CommandContext& Context)

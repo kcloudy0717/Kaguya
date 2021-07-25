@@ -86,7 +86,7 @@ void ToneMapper::Apply(const ShaderResourceView& ShaderResourceView, CommandCont
 	Context->SetPipelineState(PSO);
 	Context->SetGraphicsRootSignature(RS);
 
-	D3D12_VIEWPORT Viewport	   = CD3DX12_VIEWPORT(0.0f, 0.0f, Width, Height);
+	D3D12_VIEWPORT Viewport	   = CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height));
 	D3D12_RECT	   ScissorRect = CD3DX12_RECT(0, 0, Width, Height);
 
 	Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);

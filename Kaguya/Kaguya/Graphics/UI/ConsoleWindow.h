@@ -1,12 +1,17 @@
 #pragma once
 #include "UIWindow.h"
 
-class ConsoleWindow : UIWindow
+class ConsoleWindow : public UIWindow
 {
 public:
-	ConsoleWindow() { Clear(); }
+	ConsoleWindow()
+		: UIWindow("Console", 0)
+	{
+		Clear();
+	}
 
-	void RenderGui();
+protected:
+	void OnRender() override;
 
 private:
 	void Clear();

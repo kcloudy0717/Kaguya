@@ -4,16 +4,22 @@
 class ViewportWindow : public UIWindow
 {
 public:
-	void SetContext(void* pImage) { m_pImage = pImage; }
+	ViewportWindow()
+		: UIWindow("Viewport", ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse)
+	{
+	}
+
+	void SetContext(void* pImage) { this->pImage = pImage; }
 
 	std::pair<float, float> GetMousePosition() const;
 
-	void RenderGui();
+protected:
+	void OnRender() override;
 
 public:
 	Vector2i Resolution = {};
 	RECT	 Rect		= {};
 
 private:
-	void* m_pImage = nullptr;
+	void* pImage = nullptr;
 };

@@ -56,14 +56,15 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		HierarchyWindow.RenderGui();
 		ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
-		ViewportWindow.RenderGui();
-		AssetWindow.RenderGui();
-		ConsoleWindow.RenderGui();
 		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
 		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
-		InspectorWindow.RenderGui();
+
+		HierarchyWindow.Render();
+		ViewportWindow.Render();
+		AssetWindow.Render();
+		ConsoleWindow.Render();
+		InspectorWindow.Render();
 
 		auto [vpx, vpy] = ViewportWindow.GetMousePosition();
 #if RENDER_AT_1920x1080
