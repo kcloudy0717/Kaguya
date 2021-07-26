@@ -82,9 +82,9 @@ public:
 	{
 	}
 
-	Adapter* GetParentAdapter() const { return Parent; }
+	Adapter* GetParentAdapter() const noexcept { return Parent; }
 
-	void SetParentAdapter(Adapter* Parent)
+	void SetParentAdapter(Adapter* Parent) noexcept
 	{
 		assert(this->Parent == nullptr);
 		this->Parent = Parent;
@@ -109,9 +109,9 @@ public:
 	{
 	}
 
-	Device* GetParentDevice() const { return Parent; }
+	Device* GetParentDevice() const noexcept { return Parent; }
 
-	void SetParentDevice(Device* Parent)
+	void SetParentDevice(Device* Parent) noexcept
 	{
 		assert(this->Parent == nullptr);
 		this->Parent = Parent;
@@ -126,19 +126,19 @@ protected:
 class CommandSyncPoint
 {
 public:
-	CommandSyncPoint()
+	CommandSyncPoint() noexcept
 		: Fence(nullptr)
 		, Value(0)
 	{
 	}
-	CommandSyncPoint(ID3D12Fence* Fence, UINT64 Value)
+	CommandSyncPoint(ID3D12Fence* Fence, UINT64 Value) noexcept
 		: Fence(Fence)
 		, Value(Value)
 	{
 	}
 
-	bool   IsValid() const;
-	UINT64 GetValue() const;
+	bool   IsValid() const noexcept;
+	UINT64 GetValue() const noexcept;
 	bool   IsComplete() const;
 	void   WaitForCompletion() const;
 
@@ -184,5 +184,5 @@ struct D3D12Feature
 
 	Type FeatureSupportData;
 
-	const Type* operator->() const { return &FeatureSupportData; }
+	constexpr const Type* operator->() const noexcept { return &FeatureSupportData; }
 };

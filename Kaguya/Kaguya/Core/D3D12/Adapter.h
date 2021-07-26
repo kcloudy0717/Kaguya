@@ -11,7 +11,6 @@ struct DeviceOptions
 	bool EnableAutoDebugName;
 };
 
-// Can't use DeviceCapabilities, it conflicts with a macro
 // Specify whether or not you want to require the device to have these features
 struct DeviceFeatures
 {

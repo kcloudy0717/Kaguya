@@ -121,7 +121,7 @@ static void SerializeMeshes(json& json)
 	}
 }
 
-template<typename T>
+template<is_component T>
 struct ComponentSerializer
 {
 	ComponentSerializer(json& json, Entity Entity)
@@ -130,11 +130,11 @@ struct ComponentSerializer
 		{
 			auto& Component = Entity.GetComponent<T>();
 
-			auto& Attributes = json[GetClass<T>()];
+			auto& JsonAttributes = json[GetClass<T>()];
 			ForEachAttribute<T>(
 				[&](auto&& Attribute)
 				{
-					Attributes[Attribute.GetName()] = Attribute.Get(Component);
+					JsonAttributes[Attribute.GetName()] = Attribute.Get(Component);
 				});
 		}
 	}
@@ -181,7 +181,7 @@ void WorldParser::Save(const std::filesystem::path& Path, World* pWorld)
 	ofs << std::setw(4) << json << std::endl;
 }
 
-template<typename T>
+template<is_component T>
 struct ComponentDeserializer
 {
 	ComponentDeserializer(const json& json, Entity* pEntity)

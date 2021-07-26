@@ -58,16 +58,14 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI)
 			ImGui::TreePop();
 		}
 
-		if (IsEdited)
-		{
-			Entity.pWorld->WorldState |= EWorldState::EWorldState_Update;
-		}
-
 		if (RemoveComponent)
 		{
 			Entity.RemoveComponent<T>();
+		}
 
-			Entity.pWorld->WorldState |= EWorldState::EWorldState_Update;
+		if (IsEdited || RemoveComponent)
+		{
+			Entity.OnComponentModified();
 		}
 	}
 }

@@ -76,7 +76,7 @@ class ShaderCompiler
 public:
 	ShaderCompiler();
 
-	void SetShaderModel(D3D_SHADER_MODEL ShaderModel);
+	void SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept;
 
 	void SetIncludeDirectory(const std::filesystem::path& Path);
 

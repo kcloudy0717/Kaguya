@@ -3,7 +3,7 @@
 #include <string_view>
 #include "Components.h"
 
-struct Entity;
+class Entity;
 
 enum EWorldState
 {

@@ -50,9 +50,7 @@ public:
 
 	LinearAllocator(ID3D12Device* Device);
 
-	void Begin(UINT64 CompletedFenceValue);
-
-	void End(UINT64 FenceValue);
+	void End(CommandSyncPoint SyncPoint);
 
 	Allocation Allocate(UINT64 Size, UINT Alignment = DefaultAlignment);
 
@@ -65,7 +63,7 @@ public:
 	}
 
 private:
-	LinearAllocatorPage* RequestPage(UINT64 CompletedFenceValue);
+	LinearAllocatorPage* RequestPage();
 
 	LinearAllocatorPage* CreateNewPage(UINT64 PageSize);
 
@@ -79,7 +77,7 @@ private:
 	std::queue<LinearAllocatorPage*>					AvailablePages;
 	CriticalSection										CriticalSection;
 
-	UINT64							  CompletedFenceValue;
+	CommandSyncPoint				  SyncPoint;
 	LinearAllocatorPage*			  CurrentPage;
 	std::vector<LinearAllocatorPage*> RetiredPageList;
 };

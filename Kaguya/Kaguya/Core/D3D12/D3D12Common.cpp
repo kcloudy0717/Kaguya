@@ -83,12 +83,12 @@ std::string D3D12Exception::GetError() const
 	return Error;
 }
 
-bool CommandSyncPoint::IsValid() const
+bool CommandSyncPoint::IsValid() const noexcept
 {
 	return Fence != nullptr;
 }
 
-UINT64 CommandSyncPoint::GetValue() const
+UINT64 CommandSyncPoint::GetValue() const noexcept
 {
 	assert(IsValid());
 	return Value;
@@ -103,5 +103,5 @@ bool CommandSyncPoint::IsComplete() const
 void CommandSyncPoint::WaitForCompletion() const
 {
 	assert(IsValid());
-	Fence->SetEventOnCompletion(Value, nullptr);
+	ASSERTD3D12APISUCCEEDED(Fence->SetEventOnCompletion(Value, nullptr));
 }

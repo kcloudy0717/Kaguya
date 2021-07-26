@@ -28,7 +28,7 @@ CommandSyncPoint CommandContext::Execute(bool WaitForCompletion)
 	CommandAllocatorPool.DiscardCommandAllocator(CommandAllocator);
 	CommandAllocator = nullptr;
 
-	CpuConstantAllocator.End(SyncPoint.GetValue());
+	CpuConstantAllocator.End(SyncPoint);
 	return SyncPoint;
 }
 

@@ -23,7 +23,9 @@
 //*********************************************************
 #include "AftermathShaderDatabase.h"
 
-void AftermathShaderDatabase::AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob)
+void AftermathShaderDatabase::AddShader(
+	Microsoft::WRL::ComPtr<IDxcBlob> Blob,
+	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob) noexcept
 {
 #ifdef NVIDIA_NSIGHT_AFTERMATH
 	// Create shader hashes for the shader bytecode

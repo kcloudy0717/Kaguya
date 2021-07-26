@@ -315,8 +315,10 @@ void Renderer::OnRender(World& World)
 			Context);
 	}
 
+	// Apply tonemapping to path tracing output
 	ToneMapper.Apply(PathIntegrator.GetSRV(), Context);
 
+	// Apply FSR to tonemapper output
 	FSRFilter.Upscale(FSRState, ToneMapper.GetSRV(), Context);
 
 	auto [pRenderTarget, RenderTargetView] = RenderDevice.GetCurrentBackBufferResource();

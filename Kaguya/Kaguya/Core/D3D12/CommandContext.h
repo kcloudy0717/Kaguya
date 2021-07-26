@@ -21,8 +21,6 @@ public:
 		}
 
 		CommandListHandle = GetCommandQueue()->RequestCommandList(CommandAllocator);
-
-		CpuConstantAllocator.Begin(GetCommandQueue()->GetCompletedValue());
 	}
 
 	void CloseCommandList() { CommandListHandle.Close(); }

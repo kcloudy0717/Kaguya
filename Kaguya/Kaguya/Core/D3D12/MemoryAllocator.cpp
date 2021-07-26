@@ -27,27 +27,23 @@ void LinearAllocatorPage::Reset()
 
 LinearAllocator::LinearAllocator(ID3D12Device* Device)
 	: Device(Device)
-	, CompletedFenceValue(0)
 	, CurrentPage(nullptr)
 {
 }
 
-void LinearAllocator::Begin(UINT64 CompletedFenceValue)
-{
-	this->CompletedFenceValue = CompletedFenceValue;
-}
-
-void LinearAllocator::End(UINT64 FenceValue)
+void LinearAllocator::End(CommandSyncPoint SyncPoint)
 {
 	if (!CurrentPage)
 	{
 		return;
 	}
 
+	this->SyncPoint = SyncPoint;
+
 	RetiredPageList.push_back(CurrentPage);
 	CurrentPage = nullptr;
 
-	DiscardPages(FenceValue, RetiredPageList);
+	DiscardPages(SyncPoint.GetValue(), RetiredPageList);
 	RetiredPageList.clear();
 }
 
@@ -55,7 +51,7 @@ Allocation LinearAllocator::Allocate(UINT64 Size, UINT Alignment /*= DefaultAlig
 {
 	if (!CurrentPage)
 	{
-		CurrentPage = RequestPage(CompletedFenceValue);
+		CurrentPage = RequestPage();
 	}
 
 	std::optional<Allocation> OptAllocation = CurrentPage->Suballocate(Size, Alignment);
@@ -64,7 +60,7 @@ Allocation LinearAllocator::Allocate(UINT64 Size, UINT Alignment /*= DefaultAlig
 	{
 		RetiredPageList.push_back(CurrentPage);
 
-		CurrentPage	  = RequestPage(CompletedFenceValue);
+		CurrentPage	  = RequestPage();
 		OptAllocation = CurrentPage->Suballocate(Size, Alignment);
 		assert(OptAllocation.has_value());
 	}
@@ -72,11 +68,11 @@ Allocation LinearAllocator::Allocate(UINT64 Size, UINT Alignment /*= DefaultAlig
 	return OptAllocation.value();
 }
 
-LinearAllocatorPage* LinearAllocator::RequestPage(UINT64 CompletedFenceValue)
+LinearAllocatorPage* LinearAllocator::RequestPage()
 {
 	std::scoped_lock _(CriticalSection);
 
-	while (!RetiredPages.empty() && RetiredPages.front().first <= CompletedFenceValue)
+	while (SyncPoint.IsValid() && !RetiredPages.empty() && RetiredPages.front().first <= SyncPoint.GetValue())
 	{
 		AvailablePages.push(RetiredPages.front().second);
 		RetiredPages.pop();

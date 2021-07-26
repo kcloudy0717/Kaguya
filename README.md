@@ -8,8 +8,6 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Importance sampling of BSDFs and multiple importance sampling of lights
 - Lambertian, Mirror, Glass, and Disney BSDFs
 - Point and quad lights
-- Bindless resource
-- Utilization of graphics and asynchronous compute queues
 - ECS with the following implemented components:
   - Tag: used to identify a game object
   - Transform: controls position, scale, orientation of GameObject
@@ -34,8 +32,11 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
   - Rigid Body: Adds rigidbody physics to the entity and can be applied forces and velocities
     - Static Rigid Body
     - Dynamic Rigid Body
-- Custom scene parser using yaml
+- Custom scene serialization using json
 - Asynchronous resource loading
+- Bindless resource
+- Utilization of graphics and asynchronous compute queues
+- Acceleration structure compaction
 
 # Goals
 
@@ -47,7 +48,6 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Implement more materials
 - Implement more light types (spot, directional, spherical)
 - Implement denoising
-- Implement compaction to DXR acceleration structures
 - Implement custom memory allocator for D3D12 based on resource usage
 - Implement D3D12 resource residency management
 - SM6.6 Dynamic resource binding
@@ -83,7 +83,7 @@ Let me know if you have any trouble setting up the project and getting it up and
 - [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
 - [spdlog](https://github.com/gabime/spdlog)
 - [wil](https://github.com/microsoft/wil)
-- [yaml-cpp](https://github.com/jbeder/yaml-cpp)
+- [json](https://github.com/nlohmann/json.git)
 - [assimp](https://github.com/assimp/assimp)
 - [NVIDIA PhysX](https://github.com/NVIDIAGameWorks/PhysX)
 
@@ -99,6 +99,15 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
 - [Ray Tracing book series (In One Weekend, The Next Week, The Rest of Your Life)](https://github.com/RayTracing/raytracing.github.io) by Peter Shirley
 - Real-Time Rendering, Fourth Edition by Eric Haines, Naty Hoffman, and Tomas Möller
 - [Casual Shadertoy Path Tracing series](https://blog.demofox.org/) by Alan Wolfe
+
+## Implementation details
+
+- ## BSDF
+  - Disney
+    - https://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf
+    - http://simon-kallweit.me/rendercompo2015/report/#disneybrdf
+- Light Sampling
+  - Solid angle quadrilateral light sampling: https://www.arnoldrenderer.com/research/egsr2013_spherical_rectangle.pdf
 
 # Showcase
 

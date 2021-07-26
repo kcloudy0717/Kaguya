@@ -2,8 +2,9 @@
 #include <entt.hpp>
 #include "World.h"
 
-struct Entity
+class Entity
 {
+public:
 	Entity() noexcept = default;
 	Entity(entt::entity Handle, World* pWorld)
 		: Handle(Handle)
@@ -56,14 +57,17 @@ struct Entity
 		pWorld->Registry.remove<T>(Handle);
 	}
 
-	operator bool() const { return Handle != entt::null; }
+	void OnComponentModified() { pWorld->WorldState |= EWorldState_Update; }
 
-	operator entt::entity() const { return Handle; }
+	operator bool() const noexcept { return Handle != entt::null; }
 
-	bool operator==(const Entity& other) const { return Handle == other.Handle && pWorld == other.pWorld; }
+	operator entt::entity() const noexcept { return Handle; }
 
-	bool operator!=(const Entity& other) const { return !(*this == other); }
+	bool operator==(const Entity& other) const noexcept { return Handle == other.Handle && pWorld == other.pWorld; }
 
+	bool operator!=(const Entity& other) const noexcept { return !(*this == other); }
+
+private:
 	entt::entity Handle = entt::null;
 	World*		 pWorld = nullptr;
 };

@@ -10,7 +10,7 @@ ShaderCompiler::ShaderCompiler()
 	ShaderModel = D3D_SHADER_MODEL_6_5;
 }
 
-void ShaderCompiler::SetShaderModel(D3D_SHADER_MODEL ShaderModel)
+void ShaderCompiler::SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept
 {
 	this->ShaderModel = ShaderModel;
 }

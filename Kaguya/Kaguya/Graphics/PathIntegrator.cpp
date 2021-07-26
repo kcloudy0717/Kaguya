@@ -151,15 +151,13 @@ void PathIntegrator_DXR_1_0::UpdateShaderTable(
 	HitGroupShaderTable->Reset();
 	for (auto [i, MeshRenderer] : enumerate(RaytracingAccelerationStructure.MeshRenderers))
 	{
-		auto MeshFilter = MeshRenderer->pMeshFilter;
-
-		ID3D12Resource* VertexBuffer = MeshFilter->Mesh->VertexResource.GetResource();
-		ID3D12Resource* IndexBuffer	 = MeshFilter->Mesh->IndexResource.GetResource();
+		ID3D12Resource* VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource.GetResource();
+		ID3D12Resource* IndexBuffer	 = MeshRenderer->pMeshFilter->Mesh->IndexResource.GetResource();
 
 		RaytracingShaderTable<RootArgument>::Record Record = {};
 		Record.ShaderIdentifier							   = g_DefaultSID;
 		Record.RootArguments							   = { .MaterialIndex = static_cast<UINT>(i),
-								   .Padding		  = 0,
+								   .Padding		  = 0xDEADBEEF,
 								   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
 								   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
 

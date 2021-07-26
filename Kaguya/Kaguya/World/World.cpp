@@ -1,4 +1,4 @@
-﻿#include "World.h"
+#include "World.h"
 
 #include "Entity.h"
 #include "Physics/PhysicsManager.h"
@@ -101,8 +101,6 @@ void World::ResolveComponentDependencies()
 	Registry.view<MeshFilter, MeshRenderer>().each(
 		[](auto&& MeshFilter, auto&& MeshRenderer)
 		{
-			// I have to manually update the mesh filters here because I keep on getting
-			// access violation when I add new mesh filter to entt, need to investigate
 			MeshRenderer.pMeshFilter = &MeshFilter;
 
 			auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.Albedo.Key);
@@ -207,6 +205,17 @@ void World::OnComponentAdded<MeshFilter>(Entity Entity, MeshFilter& Component)
 		MeshRendererComponent.pMeshFilter	= &Component;
 
 		WorldState |= EWorldState_Update;
+	}
+
+	if (Entity.HasComponent<MeshCollider>())
+	{
+		MeshCollider& MeshColliderComponent = Entity.GetComponent<MeshCollider>();
+
+		if (Component.Mesh)
+		{
+			MeshColliderComponent.Vertices = Component.Mesh->Vertices;
+			MeshColliderComponent.Indices  = Component.Mesh->Indices;
+		}
 	}
 }
 
