@@ -77,12 +77,19 @@ enum class ERGResourceType : UINT64
 	RaytracingPipelineState
 };
 
+enum class ERGHandleState : UINT64
+{
+	Dirty,
+	Ready
+};
+
 struct RenderResourceHandle
 {
 	auto operator<=>(const RenderResourceHandle&) const = default;
 
-	ERGResourceType Type : 32;
-	UINT64			Id	 : 32;
+	ERGResourceType Type  : 16;
+	ERGHandleState	State : 16;
+	UINT64			Id	  : 32;
 };
 
 static_assert(sizeof(RenderResourceHandle) == sizeof(UINT64));
@@ -122,11 +129,11 @@ struct RGBufferDesc
 	UINT64		 SizeInBytes = 0;
 };
 
-enum class RGTextureSize
+enum class ETextureResolution
 {
-	Static,	 // Texture size is fixed
-	Render,	 // Texture size is based on render
-	Viewport // Texture size is based on viewport
+	Static,	 // Texture resolution is fixed
+	Render,	 // Texture resolution is based on render resolution
+	Viewport // Texture resolution is based on viewport resolution
 };
 
 enum class ETextureType
@@ -206,21 +213,21 @@ struct RGTextureDesc
 	}
 
 	static RGTextureDesc Texture2D(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+		DXGI_FORMAT						 Format,
+		UINT							 Width,
+		UINT							 Height,
+		UINT16							 MipLevels			 = 1,
+		ETextureFlags					 Flags				 = TextureFlag_None,
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt)
 	{
-		return {
-			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture2D,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = 1,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags,
-		};
+		return { .Format			  = Format,
+				 .TextureType		  = ETextureType::Texture2D,
+				 .Width				  = Width,
+				 .Height			  = Height,
+				 .DepthOrArraySize	  = 1,
+				 .MipLevels			  = MipLevels,
+				 .Flags				  = Flags,
+				 .OptimizedClearValue = OptimizedClearValue };
 	}
 
 	static RGTextureDesc Texture2DArray(
@@ -277,6 +284,8 @@ struct RGTextureDesc
 			.Flags			  = Flags,
 		};
 	}
+
+	ETextureResolution TextureResolution = ETextureResolution::Static;
 
 	DXGI_FORMAT						 Format			  = DXGI_FORMAT_UNKNOWN;
 	ETextureType					 TextureType	  = ETextureType::Texture2D;

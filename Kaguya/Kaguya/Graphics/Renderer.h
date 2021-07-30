@@ -17,7 +17,7 @@ public:
 
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
-	const ShaderResourceView& GetViewportDescriptor();
+	void* GetViewportDescriptor();
 
 	void OnInitialize();
 

@@ -12,8 +12,6 @@
 #include <Graphics/UI/AssetWindow.h>
 #include <Graphics/UI/ConsoleWindow.h>
 
-#include <RenderGraph/RenderGraph.h>
-
 #define RENDER_AT_1920x1080 0
 
 class Editor : public Application
@@ -59,7 +57,7 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		ViewportWindow.SetContext((void*)pRenderer->GetViewportDescriptor().GetGPUHandle().ptr);
+		ViewportWindow.SetContext(pRenderer->GetViewportDescriptor());
 		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
 		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
 
@@ -110,79 +108,6 @@ private:
 
 int main(int argc, char* argv[])
 {
-	/*RenderGraph RenderGraph;
-
-	RenderResourceHandle PathTraceOutput;
-	RenderGraph.AddRenderPass(
-		"Path Trace",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			PathTraceOutput = Scheduler.CreateTexture(RGTextureSize::Dynamic, RGTextureDesc());
-
-			return [](RenderGraphRegistry& Registry, CommandContext& Context)
-			{
-
-			};
-		});
-
-	struct Tonemap
-	{
-		RootSignature RS;
-		PipelineState PSO;
-
-		RenderTargetView   RTV;
-		ShaderResourceView SRV;
-	};
-	RenderResourceHandle TonemapOutput;
-	RenderGraph.AddRenderPass(
-		"Tonemap",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			auto& Parameter = Scope.Get<Tonemap>();
-
-			TonemapOutput = Scheduler.CreateTexture(RGTextureSize::Dynamic, RGTextureDesc());
-
-			Scheduler.Read(PathTraceOutput);
-
-			return [](RenderGraphRegistry& Registry, CommandContext& Context)
-			{
-
-			};
-		});
-
-	RenderResourceHandle FSREASUOutput;
-	RenderGraph.AddRenderPass(
-		"FSR EASU",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			FSREASUOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
-
-			Scheduler.Read(TonemapOutput);
-
-			return [](RenderGraphRegistry& Registry, CommandContext& Context)
-			{
-
-			};
-		});
-
-	RenderResourceHandle FSRRCASOutput;
-	RenderGraph.AddRenderPass(
-		"FSR RCAS",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			FSRRCASOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
-
-			Scheduler.Read(FSREASUOutput);
-
-			return [](RenderGraphRegistry& Registry, CommandContext& Context)
-			{
-
-			};
-		});
-
-	RenderGraph.Setup();
-	RenderGraph.Compile();*/
-
 	try
 	{
 		Application::InitializeComponents();

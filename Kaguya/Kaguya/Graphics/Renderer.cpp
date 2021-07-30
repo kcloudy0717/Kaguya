@@ -51,8 +51,6 @@ struct PathTrace
 struct Tonemap
 {
 	RenderResourceHandle Output;
-
-	RenderTargetView RTV;
 };
 
 struct FSR
@@ -106,19 +104,25 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	}
 
 	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight);
+	RenderGraph.GetRegistry().CreateResources();
 
 	// PathIntegrator.SetResolution(RenderWidth, RenderHeight);
 	// ToneMapper.SetResolution(RenderWidth, RenderHeight);
 	// FSRFilter.SetResolution(ViewportWidth, ViewportHeight);
 }
 
-const ShaderResourceView& Renderer::GetViewportDescriptor()
+void* Renderer::GetViewportDescriptor()
 {
-	RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
-	RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
+	if (RenderGraph.ValidViewport)
+	{
+		RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
+		RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
 
-	return FSRState.Enable ? RenderGraph.GetRegistry().GetTextureSRV(FSROutput)
-						   : RenderGraph.GetRegistry().GetTextureSRV(TonemapOutput);
+		return FSRState.Enable ? (void*)RenderGraph.GetRegistry().GetTextureSRV(FSROutput).GetGPUHandle().ptr
+							   : (void*)RenderGraph.GetRegistry().GetTextureSRV(TonemapOutput).GetGPUHandle().ptr;
+	}
+
+	return nullptr;
 }
 
 void Renderer::OnInitialize()
@@ -162,7 +166,9 @@ void Renderer::OnInitialize()
 			auto&		Parameter = Scope.Get<PathTrace>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
-			Parameter.Output = Scheduler.CreateTexture(RGTextureSize::Render, RGTextureDesc());
+			Parameter.Output = Scheduler.CreateTexture(
+				ETextureResolution::Render,
+				RGTextureDesc::RWTexture2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
 
 			Parameter.RayGenerationShaderTable = Parameter.ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 			Parameter.RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
@@ -246,9 +252,12 @@ void Renderer::OnInitialize()
 		{
 			auto& PathTraceData = Scheduler.GetParentRenderGraph()->GetScope("Path Trace").Get<PathTrace>();
 
+			FLOAT Color[]	 = { 1, 1, 1, 1 };
+			auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
 			auto& Parameter	 = Scope.Get<Tonemap>();
-			Parameter.Output = Scheduler.CreateTexture(RGTextureSize::Render, RGTextureDesc());
-			Parameter.RTV	 = RenderTargetView(RenderCore::pAdapter->GetDevice());
+			Parameter.Output = Scheduler.CreateTexture(
+				ETextureResolution::Render,
+				RGTextureDesc::Texture2D(SwapChain::Format_sRGB, 0, 0, 1, TextureFlag_AllowRenderTarget, ClearValue));
 
 			const auto& ViewData = Scope.Get<RenderGraphViewData>();
 
@@ -265,10 +274,10 @@ void Renderer::OnInitialize()
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				Context->RSSetViewports(ViewData.NumViewports, ViewData.Viewports);
 				Context->RSSetScissorRects(ViewData.NumScissorRects, ViewData.ScissorRects);
-				Context->OMSetRenderTargets(1, &Parameter.RTV.GetCPUHandle(), TRUE, nullptr);
+				// Context->OMSetRenderTargets(1, &Parameter.RTV.GetCPUHandle(), TRUE, nullptr);
 
 				FLOAT white[] = { 1, 1, 1, 1 };
-				Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
+				// Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
 
 				struct Settings
 				{
@@ -295,8 +304,12 @@ void Renderer::OnInitialize()
 			auto& TonemapScope = Scheduler.GetParentRenderGraph()->GetScope("Tonemap");
 
 			auto& Parameter		 = Scope.Get<FSR>();
-			Parameter.EASUOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
-			Parameter.RCASOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
+			Parameter.EASUOutput = Scheduler.CreateTexture(
+				ETextureResolution::Viewport,
+				RGTextureDesc::RWTexture2D(SwapChain::Format, 0, 0, 1));
+			Parameter.RCASOutput = Scheduler.CreateTexture(
+				ETextureResolution::Viewport,
+				RGTextureDesc::RWTexture2D(SwapChain::Format, 0, 0, 1));
 
 			const auto& ViewData = Scope.Get<RenderGraphViewData>();
 

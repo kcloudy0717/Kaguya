@@ -13,7 +13,7 @@ public:
 
 	RenderResourceHandle CreateBuffer(const RGBufferDesc& Desc);
 
-	RenderResourceHandle CreateTexture(RGTextureSize TextureSize, const RGTextureDesc& Desc);
+	RenderResourceHandle CreateTexture(ETextureResolution TextureResolution, const RGTextureDesc& Desc);
 
 	RenderResourceHandle Read(RenderResourceHandle Resource);
 
@@ -27,11 +27,11 @@ private:
 
 	RenderPass* CurrentRenderPass;
 
-	UINT64					  BufferId = 0;
-	std::vector<RGBufferDesc> BufferDescs;
+	UINT64							  BufferId = 0;
+	std::vector<RenderResourceHandle> BufferHandles;
+	std::vector<RGBufferDesc>		  BufferDescs;
 
-	UINT64					   TextureId = 0;
-	std::vector<RGTextureDesc> TextureDescs;
-
-	std::vector<RenderResourceHandle> SwapChainTextureSizedResources;
+	UINT64							  TextureId = 0;
+	std::vector<RenderResourceHandle> TextureHandles;
+	std::vector<RGTextureDesc>		  TextureDescs;
 };

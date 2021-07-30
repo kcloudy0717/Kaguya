@@ -3,16 +3,32 @@
 
 RenderResourceHandle RenderGraphScheduler::CreateBuffer(const RGBufferDesc& Desc)
 {
+	RenderResourceHandle& Handle = BufferHandles.emplace_back();
+	Handle.Type					 = ERGResourceType::Buffer;
+	Handle.State				 = ERGHandleState::Dirty;
+	Handle.Id					 = BufferId++;
 	BufferDescs.push_back(Desc);
-	RenderResourceHandle Handle = { .Type = ERGResourceType::Buffer, .Id = BufferId++ };
 	CurrentRenderPass->Write(Handle);
 	return Handle;
 }
 
-RenderResourceHandle RenderGraphScheduler::CreateTexture(RGTextureSize TextureSize, const RGTextureDesc& Desc)
+RenderResourceHandle RenderGraphScheduler::CreateTexture(
+	ETextureResolution	 TextureResolution,
+	const RGTextureDesc& Desc)
 {
-	TextureDescs.push_back(Desc);
-	RenderResourceHandle Handle = { .Type = ERGResourceType::Texture, .Id = TextureId++ };
+	if (TextureResolution == ETextureResolution::Render || TextureResolution == ETextureResolution::Viewport)
+	{
+		assert(Desc.TextureType == ETextureType::Texture2D);
+	}
+
+	RenderResourceHandle& Handle = TextureHandles.emplace_back();
+	Handle.Type					 = ERGResourceType::Texture;
+	Handle.State				 = ERGHandleState::Dirty;
+	Handle.Id					 = TextureId++;
+
+	RGTextureDesc& TextureDesc	  = TextureDescs.emplace_back(Desc);
+	TextureDesc.TextureResolution = TextureResolution;
+
 	CurrentRenderPass->Write(Handle);
 	return Handle;
 }

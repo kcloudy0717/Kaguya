@@ -1,4 +1,5 @@
 #include "RenderGraphRegistry.h"
+#include "RenderGraph.h"
 #include <RenderCore/RenderCore.h>
 
 void RenderGraphRegistry::CreateResources()
@@ -7,8 +8,28 @@ void RenderGraphRegistry::CreateResources()
 	//{
 	//}
 
-	for (const auto& Desc : Scheduler.TextureDescs)
+	for (size_t i = 0; i < Scheduler.TextureHandles.size(); ++i)
 	{
+		if (Scheduler.TextureHandles[i].State == ERGHandleState::Ready)
+		{
+			continue;
+		}
+		Scheduler.TextureHandles[i].State = ERGHandleState::Ready;
+
+		RGTextureDesc& Desc = Scheduler.TextureDescs[i];
+		if (Desc.TextureResolution == ETextureResolution::Render)
+		{
+			auto [w, h] = Scheduler.GetParentRenderGraph()->GetRenderResolution();
+			Desc.Width = w;
+			Desc.Height = h;
+		}
+		else if (Desc.TextureResolution == ETextureResolution::Viewport)
+		{
+			auto [w, h] = Scheduler.GetParentRenderGraph()->GetViewportResolution();
+			Desc.Width = w;
+			Desc.Height = h;
+		}
+
 		D3D12_RESOURCE_DESC	 ResourceDesc  = {};
 		D3D12_RESOURCE_FLAGS ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
 

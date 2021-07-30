@@ -58,6 +58,9 @@ public:
 
 	RenderGraphRegistry& GetRegistry() { return Registry; }
 
+	std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
+	std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
+
 	void Setup();
 	void Compile();
 	void Execute(CommandContext& Context);
@@ -94,6 +97,9 @@ private:
 
 		Stack.push(n);
 	}
+
+public:
+	bool ValidViewport = false;
 
 private:
 	std::vector<std::unique_ptr<RenderPass>>	 RenderPasses;
