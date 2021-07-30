@@ -1,5 +1,4 @@
 #pragma once
-#include "RenderDevice.h"
 
 enum class EFSRQualityMode
 {
@@ -28,7 +27,7 @@ class FSRFilter
 public:
 	FSRFilter() noexcept = default;
 
-	void Initialize(RenderDevice& RenderDevice);
+	void Initialize();
 
 	void SetResolution(UINT Width, UINT Height);
 

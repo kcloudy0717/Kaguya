@@ -1,6 +1,9 @@
 #pragma once
 #include "D3D12Common.h"
 #include "Device.h"
+#include "RootSignature.h"
+#include "PipelineState.h"
+#include "RaytracingPipelineState.h"
 
 class Device;
 
@@ -18,6 +21,20 @@ struct DeviceFeatures
 	bool			  WaveOperation;
 	bool			  Raytracing;
 	bool			  DynamicResources;
+};
+
+struct RootParameters
+{
+	struct DescriptorTable
+	{
+		enum
+		{
+			ShaderResourceDescriptorTable,
+			UnorderedAccessDescriptorTable,
+			SamplerDescriptorTable,
+			NumRootParameters
+		};
+	};
 };
 
 class Adapter
@@ -68,10 +85,71 @@ public:
 
 	Device* GetDevice() noexcept { return &Device; }
 
+	[[nodiscard]] RootSignature CreateRootSignature(
+		std::function<void(RootSignatureBuilder&)> Configurator,
+		bool									   AddDescriptorTableRootParameters = true);
+
+	[[nodiscard]] PipelineState CreateGraphicsPipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
+	{
+		return PipelineState(GetD3D12Device(), &Desc);
+	}
+
+	[[nodiscard]] PipelineState CreateComputePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
+	{
+		return PipelineState(GetD3D12Device(), &Desc);
+	}
+
+	template<typename PipelineStateStream>
+	[[nodiscard]] PipelineState CreatePipelineState(PipelineStateStream& Stream)
+	{
+		return PipelineState(GetD3D12Device5(), Stream);
+	}
+
+	[[nodiscard]] RaytracingPipelineState CreateRaytracingPipelineState(
+		std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
+
+	void BindGraphicsDescriptorTable(const RootSignature& RootSignature, CommandContext& Context)
+	{
+		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
+		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = GetDevice()->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
+
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetGraphicsRootDescriptorTable(
+			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+			SamplerDescriptor);
+	}
+
+	void BindComputeDescriptorTable(const RootSignature& RootSignature, CommandContext& Context)
+	{
+		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
+		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = GetDevice()->GetResourceDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
+
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+			ResourceDescriptor);
+		Context->SetComputeRootDescriptorTable(
+			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+			SamplerDescriptor);
+	}
+
 private:
 	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
 
 	void InitializeDXGIObjects(bool Debug);
+
+	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
 private:
 	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;

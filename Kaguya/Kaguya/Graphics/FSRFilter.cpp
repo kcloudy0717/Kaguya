@@ -22,9 +22,9 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-void FSRFilter::Initialize(RenderDevice& RenderDevice)
+void FSRFilter::Initialize()
 {
-	RS = RenderDevice.CreateRootSignature(
+	RS = RenderCore::pAdapter->CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 0>(2);
@@ -41,26 +41,24 @@ void FSRFilter::Initialize(RenderDevice& RenderDevice)
 		D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
 		PSODesc.pRootSignature					  = RS;
 		PSODesc.CS								  = Shaders::CS::EASU;
-		EASU_PSO								  = RenderDevice.CreateComputePipelineState(PSODesc);
+		EASU_PSO								  = RenderCore::pAdapter->CreateComputePipelineState(PSODesc);
 	}
 	{
 		D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
 		PSODesc.pRootSignature					  = RS;
 		PSODesc.CS								  = Shaders::CS::RCAS;
-		RCAS_PSO								  = RenderDevice.CreateComputePipelineState(PSODesc);
+		RCAS_PSO								  = RenderCore::pAdapter->CreateComputePipelineState(PSODesc);
 	}
 
-	UAVs[0] = UnorderedAccessView(RenderDevice.GetDevice());
-	UAVs[1] = UnorderedAccessView(RenderDevice.GetDevice());
+	UAVs[0] = UnorderedAccessView(RenderCore::pAdapter->GetDevice());
+	UAVs[1] = UnorderedAccessView(RenderCore::pAdapter->GetDevice());
 
-	SRVs[0] = ShaderResourceView(RenderDevice.GetDevice());
-	SRVs[1] = ShaderResourceView(RenderDevice.GetDevice());
+	SRVs[0] = ShaderResourceView(RenderCore::pAdapter->GetDevice());
+	SRVs[1] = ShaderResourceView(RenderCore::pAdapter->GetDevice());
 }
 
 void FSRFilter::SetResolution(UINT Width, UINT Height)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	if (this->Width == Width && this->Height == Height)
 	{
 		return;
@@ -79,13 +77,13 @@ void FSRFilter::SetResolution(UINT Width, UINT Height)
 		0,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-	RenderTargets[0] = Texture(RenderDevice.GetDevice(), TextureDesc, {});
+	RenderTargets[0] = Texture(RenderCore::pAdapter->GetDevice(), TextureDesc, {});
 	RenderTargets[0].GetResource()->SetName(L"EASU Output");
 
 	RenderTargets[0].CreateUnorderedAccessView(UAVs[0]);
 	RenderTargets[0].CreateShaderResourceView(SRVs[0]);
 
-	RenderTargets[1] = Texture(RenderDevice.GetDevice(), TextureDesc, {});
+	RenderTargets[1] = Texture(RenderCore::pAdapter->GetDevice(), TextureDesc, {});
 	RenderTargets[1].GetResource()->SetName(L"RCAS Output");
 
 	RenderTargets[1].CreateUnorderedAccessView(UAVs[1]);

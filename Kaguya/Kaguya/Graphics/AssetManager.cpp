@@ -27,9 +27,8 @@ void AssetManager::Initialize()
 	{
 		static unsigned int WINAPI thunk(LPVOID lpParameter)
 		{
-			auto& RenderDevice = RenderDevice::Instance();
-
-			ResourceUploader uploader(RenderDevice.GetDevice());
+			Device*			 Device = RenderCore::pAdapter->GetDevice();
+			ResourceUploader uploader(Device);
 
 			while (true)
 			{
@@ -91,8 +90,8 @@ void AssetManager::Initialize()
 							break;
 						}
 
-						assetImage->Texture = Texture(RenderDevice.GetDevice(), resourceDesc, {});
-						assetImage->SRV		= ShaderResourceView(RenderDevice.GetDevice());
+						assetImage->Texture = Texture(RenderCore::pAdapter->GetDevice(), resourceDesc, {});
+						assetImage->SRV		= ShaderResourceView(RenderCore::pAdapter->GetDevice());
 						assetImage->Texture.CreateShaderResourceView(assetImage->SRV);
 
 						std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());
@@ -121,13 +120,13 @@ void AssetManager::Initialize()
 						UINT64 indexBufferSizeInBytes  = assetMesh->Indices.size() * sizeof(unsigned int);
 
 						Buffer vertexBuffer = Buffer(
-							RenderDevice.GetDevice(),
+							Device,
 							vertexBufferSizeInBytes,
 							sizeof(Vertex),
 							D3D12_HEAP_TYPE_DEFAULT,
 							D3D12_RESOURCE_FLAG_NONE);
 						Buffer indexBuffer = Buffer(
-							RenderDevice.GetDevice(),
+							Device,
 							indexBufferSizeInBytes,
 							sizeof(unsigned int),
 							D3D12_HEAP_TYPE_DEFAULT,

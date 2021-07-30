@@ -198,28 +198,43 @@ class Texture : public Resource
 {
 public:
 	Texture() noexcept = default;
-	Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<D3D12_CLEAR_VALUE> ClearValue);
+	Texture(
+		Device*							 Device,
+		const D3D12_RESOURCE_DESC&		 Desc,
+		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt);
+
+	UINT GetSubresourceIndex(
+		std::optional<UINT> OptArraySlice = std::nullopt,
+		std::optional<UINT> OptMipSlice	  = std::nullopt,
+		std::optional<UINT> OptPlaneSlice = std::nullopt) const
+	{
+		UINT ArraySlice = OptMipSlice.value_or(0);
+		UINT MipSlice	= OptMipSlice.value_or(0);
+		UINT PlaneSlice = OptPlaneSlice.value_or(0);
+
+		return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, Desc.MipLevels, Desc.DepthOrArraySize);
+	}
 
 	void CreateShaderResourceView(
 		ShaderResourceView& ShaderResourceView,
-		std::optional<UINT> OptMostDetailedMip = {},
-		std::optional<UINT> OptMipLevels	   = {});
+		std::optional<UINT> OptMostDetailedMip = std::nullopt,
+		std::optional<UINT> OptMipLevels	   = std::nullopt);
 
 	void CreateUnorderedAccessView(
 		UnorderedAccessView& UnorderedAccessView,
-		std::optional<UINT>	 OptArraySlice = {},
-		std::optional<UINT>	 OptMipSlice   = {});
+		std::optional<UINT>	 OptArraySlice = std::nullopt,
+		std::optional<UINT>	 OptMipSlice   = std::nullopt);
 
 	void CreateRenderTargetView(
 		RenderTargetView&	RenderTargetView,
-		std::optional<UINT> OptArraySlice = {},
-		std::optional<UINT> OptMipSlice	  = {},
-		std::optional<UINT> OptArraySize  = {},
+		std::optional<UINT> OptArraySlice = std::nullopt,
+		std::optional<UINT> OptMipSlice	  = std::nullopt,
+		std::optional<UINT> OptArraySize  = std::nullopt,
 		bool				sRGB		  = false);
 
 	void CreateDepthStencilView(
 		DepthStencilView&	DepthStencilView,
-		std::optional<UINT> OptArraySlice = {},
-		std::optional<UINT> OptMipSlice	  = {},
-		std::optional<UINT> OptArraySize  = {});
+		std::optional<UINT> OptArraySlice = std::nullopt,
+		std::optional<UINT> OptMipSlice	  = std::nullopt,
+		std::optional<UINT> OptArraySize  = std::nullopt);
 };

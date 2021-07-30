@@ -2,7 +2,8 @@
 //
 #include <Core/Application.h>
 #include <Physics/PhysicsManager.h>
-#include <Graphics/RenderDevice.h>
+#include <RenderCore/RenderCore.h>
+
 #include <Graphics/AssetManager.h>
 #include <Graphics/Renderer.h>
 #include <Graphics/UI/HierarchyWindow.h>
@@ -10,6 +11,8 @@
 #include <Graphics/UI/InspectorWindow.h>
 #include <Graphics/UI/AssetWindow.h>
 #include <Graphics/UI/ConsoleWindow.h>
+
+#include <RenderGraph/RenderGraph.h>
 
 #define RENDER_AT_1920x1080 0
 
@@ -24,7 +27,7 @@ public:
 	{
 		atexit(Adapter::ReportLiveObjects);
 		PhysicsManager::Initialize();
-		RenderDevice::Initialize();
+		RenderCore::Initialize();
 		AssetManager::Initialize();
 
 		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
@@ -35,7 +38,7 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		pRenderer = std::make_unique<Renderer>();
+		pRenderer = std::make_unique<Renderer>(World);
 		pRenderer->OnInitialize();
 
 		return true;
@@ -79,7 +82,7 @@ public:
 		pRenderer->SetViewportMousePosition(vpx, vpy);
 		pRenderer->SetViewportResolution(viewportWidth, viewportHeight);
 
-		pRenderer->OnRender(World);
+		pRenderer->OnRender();
 	}
 
 	void Shutdown() override
@@ -88,7 +91,7 @@ public:
 		pRenderer.reset();
 		World.Clear();
 		AssetManager::Shutdown();
-		RenderDevice::Shutdown();
+		RenderCore::Shutdown();
 		PhysicsManager::Shutdown();
 	}
 
@@ -107,6 +110,79 @@ private:
 
 int main(int argc, char* argv[])
 {
+	/*RenderGraph RenderGraph;
+
+	RenderResourceHandle PathTraceOutput;
+	RenderGraph.AddRenderPass(
+		"Path Trace",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			PathTraceOutput = Scheduler.CreateTexture(RGTextureSize::Dynamic, RGTextureDesc());
+
+			return [](RenderGraphRegistry& Registry, CommandContext& Context)
+			{
+
+			};
+		});
+
+	struct Tonemap
+	{
+		RootSignature RS;
+		PipelineState PSO;
+
+		RenderTargetView   RTV;
+		ShaderResourceView SRV;
+	};
+	RenderResourceHandle TonemapOutput;
+	RenderGraph.AddRenderPass(
+		"Tonemap",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			auto& Parameter = Scope.Get<Tonemap>();
+
+			TonemapOutput = Scheduler.CreateTexture(RGTextureSize::Dynamic, RGTextureDesc());
+
+			Scheduler.Read(PathTraceOutput);
+
+			return [](RenderGraphRegistry& Registry, CommandContext& Context)
+			{
+
+			};
+		});
+
+	RenderResourceHandle FSREASUOutput;
+	RenderGraph.AddRenderPass(
+		"FSR EASU",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			FSREASUOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
+
+			Scheduler.Read(TonemapOutput);
+
+			return [](RenderGraphRegistry& Registry, CommandContext& Context)
+			{
+
+			};
+		});
+
+	RenderResourceHandle FSRRCASOutput;
+	RenderGraph.AddRenderPass(
+		"FSR RCAS",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			FSRRCASOutput = Scheduler.CreateTexture(RGTextureSize::Viewport, RGTextureDesc());
+
+			Scheduler.Read(FSREASUOutput);
+
+			return [](RenderGraphRegistry& Registry, CommandContext& Context)
+			{
+
+			};
+		});
+
+	RenderGraph.Setup();
+	RenderGraph.Compile();*/
+
 	try
 	{
 		Application::InitializeComponents();

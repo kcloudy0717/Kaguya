@@ -178,10 +178,10 @@ float3 Li(RayDesc ray, inout uint Seed)
 		TraceRay(g_Scene, RAY_FLAG_NONE, 0xffffffff, RayTypePrimary, NumRayTypes, 0, ray, payload);
 
 		// Ray missed
-		if (!payload.IsValid() || bounce >= g_RenderPassData.MaxDepth)
+		if (!payload.IsValid() || bounce >= g_SystemConstants.MaxDepth)
 		{
 			float t = 0.5f * (ray.Direction.y + 1.0f);
-			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_RenderPassData.SkyIntensity;
+			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_SystemConstants.SkyIntensity;
 			break;
 		}
 
@@ -290,13 +290,13 @@ void RayGeneration()
 	L.g = isnan(L.g) ? 0.0f : L.g;
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
-	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_RenderPassData.RenderTarget];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_RenderPassData.RenderTarget];
+	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_SystemConstants.RenderTarget];
+	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_SystemConstants.RenderTarget];
 
 	// Progressive accumulation
-	if (g_RenderPassData.NumAccumulatedSamples > 0)
+	if (g_SystemConstants.NumAccumulatedSamples > 0)
 	{
-		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_RenderPassData.NumAccumulatedSamples));
+		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_SystemConstants.NumAccumulatedSamples));
 	}
 
 	RenderTarget[launchIndex] = float4(L, 1);

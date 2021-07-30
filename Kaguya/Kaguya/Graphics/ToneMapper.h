@@ -1,5 +1,4 @@
 #pragma once
-#include "RenderDevice.h"
 
 // TODO: Add more
 enum class ETonemapOperator
@@ -17,7 +16,7 @@ class ToneMapper
 public:
 	ToneMapper() noexcept = default;
 
-	void Initialize(RenderDevice& RenderDevice);
+	void Initialize();
 
 	void SetResolution(UINT Width, UINT Height);
 

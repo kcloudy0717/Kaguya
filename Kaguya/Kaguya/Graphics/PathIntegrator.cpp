@@ -19,12 +19,12 @@ ShaderIdentifier g_ShadowMissSID;
 ShaderIdentifier g_DefaultSID;
 } // namespace
 
-void PathIntegrator_DXR_1_0::Initialize(RenderDevice& RenderDevice)
+void PathIntegrator_DXR_1_0::Initialize()
 {
-	UAV = UnorderedAccessView(RenderDevice.GetDevice());
-	SRV = ShaderResourceView(RenderDevice.GetDevice());
+	UAV = UnorderedAccessView(RenderCore::pAdapter->GetDevice());
+	SRV = ShaderResourceView(RenderCore::pAdapter->GetDevice());
 
-	GlobalRS = RenderDevice.CreateRootSignature(
+	GlobalRS = RenderCore::pAdapter->CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
@@ -63,7 +63,7 @@ void PathIntegrator_DXR_1_0::Initialize(RenderDevice& RenderDevice)
 				16); // g_SamplerAnisotropicClamp	s5 | space0;
 		});
 
-	LocalHitGroupRS = RenderDevice::Instance().CreateRootSignature(
+	LocalHitGroupRS = RenderCore::pAdapter->CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 1>(1); // RootConstants	b0 | space1
@@ -75,7 +75,7 @@ void PathIntegrator_DXR_1_0::Initialize(RenderDevice& RenderDevice)
 		},
 		false);
 
-	RTPSO = RenderDevice.CreateRaytracingPipelineState(
+	RTPSO = RenderCore::pAdapter->CreateRaytracingPipelineState(
 		[&](RaytracingPipelineStateBuilder& Builder)
 		{
 			Builder.AddLibrary(Libraries::PathTrace, { g_RayGeneration, g_Miss, g_ShadowMiss, g_ClosestHit });
@@ -111,13 +111,11 @@ void PathIntegrator_DXR_1_0::Initialize(RenderDevice& RenderDevice)
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
 
-	ShaderBindingTable.Generate(RenderDevice.GetDevice());
+	ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
 }
 
 void PathIntegrator_DXR_1_0::SetResolution(UINT Width, UINT Height)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	if ((this->Width == Width && this->Height == Height))
 	{
 		return;
@@ -130,7 +128,7 @@ void PathIntegrator_DXR_1_0::SetResolution(UINT Width, UINT Height)
 	ResourceDesc.MipLevels = 1;
 	ResourceDesc.Flags	   = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
-	RenderTarget = Texture(RenderDevice.GetDevice(), ResourceDesc, {});
+	RenderTarget = Texture(RenderCore::pAdapter->GetDevice(), ResourceDesc, {});
 	RenderTarget.GetResource()->SetName(L"PathIntegrator Output");
 
 	RenderTarget.CreateUnorderedAccessView(UAV);
@@ -178,8 +176,6 @@ void PathIntegrator_DXR_1_0::Render(
 {
 	D3D12ScopedEvent(Context, "Path Trace");
 
-	auto& RenderDevice = RenderDevice::Instance();
-
 	struct RenderPassData
 	{
 		unsigned int MaxDepth;
@@ -205,7 +201,7 @@ void PathIntegrator_DXR_1_0::Render(
 	Context->SetComputeRootShaderResourceView(3, Materials);
 	Context->SetComputeRootShaderResourceView(4, Lights);
 
-	RenderDevice.BindComputeDescriptorTable(GlobalRS, Context);
+	RenderCore::pAdapter->BindComputeDescriptorTable(GlobalRS, Context);
 
 	D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDispatchRaysDesc(0, 0);
 	Desc.Width					  = Width;

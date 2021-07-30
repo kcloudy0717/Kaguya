@@ -56,9 +56,8 @@ void Adapter::Initialize(const DeviceOptions& Options)
 	// tools using an injection library) is not compatible with Nsight Aftermath!
 	// If Aftermath detects that any of these tools are present it will fail
 	// initialization.
-#ifdef NVIDIA_NSIGHT_AFTERMATH
 	DeviceOptions OverrideOptions = Options;
-
+#ifdef NVIDIA_NSIGHT_AFTERMATH
 	OverrideOptions.EnableDebugLayer		 = false;
 	OverrideOptions.EnableGpuBasedValidation = false;
 	AftermathCrashTracker.Initialize();
@@ -230,6 +229,29 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(D3D12Device.Get(), Device.GetGraphicsQueue()->GetFrequency());
 }
 
+RootSignature Adapter::CreateRootSignature(
+	std::function<void(RootSignatureBuilder&)> Configurator,
+	bool									   AddDescriptorTableRootParameters)
+{
+	RootSignatureBuilder Builder = {};
+	Configurator(Builder);
+	if (AddDescriptorTableRootParameters)
+	{
+		AddDescriptorTableRootParameterToBuilder(Builder);
+	}
+
+	return RootSignature(GetD3D12Device(), Builder);
+}
+
+RaytracingPipelineState Adapter::CreateRaytracingPipelineState(
+	std::function<void(RaytracingPipelineStateBuilder&)> Configurator)
+{
+	RaytracingPipelineStateBuilder Builder = {};
+	Configurator(Builder);
+
+	return RaytracingPipelineState(GetD3D12Device5(), Builder);
+}
+
 void Adapter::OnDeviceRemoved(PVOID Context, BOOLEAN)
 {
 	ID3D12Device* D3D12Device	= static_cast<ID3D12Device*>(Context);
@@ -279,4 +301,49 @@ void Adapter::InitializeDXGIObjects(bool Debug)
 
 		AdapterID++;
 	}
+}
+
+void Adapter::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder)
+{
+	// TODO: Maybe consider this as a fallback options when SM6.6 dynamic resource binding is integrated
+	/* Descriptor Tables */
+
+	// ShaderResource
+	DescriptorTable SRVTable;
+	{
+		// constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
+		// D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
+			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+
+		SRVTable.AddSRVRange<0, 100>(UINT_MAX, Flags, 0); // g_Texture2DTable
+		SRVTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DUINT4Table
+		SRVTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
+		SRVTable.AddSRVRange<0, 103>(UINT_MAX, Flags, 0); // g_TextureCubeTable
+		SRVTable.AddSRVRange<0, 104>(UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
+	}
+	RootSignatureBuilder.AddDescriptorTable(SRVTable);
+
+	// UnorderedAccess
+	DescriptorTable UAVTable;
+	{
+		// constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
+		// D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
+			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+
+		UAVTable.AddUAVRange<0, 100>(UINT_MAX, Flags, 0); // g_RWTexture2DTable
+		UAVTable.AddUAVRange<0, 101>(UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
+		UAVTable.AddUAVRange<0, 102>(UINT_MAX, Flags, 0); // g_RWByteAddressBufferTable
+	}
+	RootSignatureBuilder.AddDescriptorTable(UAVTable);
+
+	// Sampler
+	DescriptorTable SamplerTable;
+	{
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
+
+		SamplerTable.AddSamplerRange<0, 100>(UINT_MAX, Flags, 0); // g_SamplerTable
+	}
+	RootSignatureBuilder.AddDescriptorTable(SamplerTable);
 }

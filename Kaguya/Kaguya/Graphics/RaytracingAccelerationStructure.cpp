@@ -1,14 +1,15 @@
 #include "RaytracingAccelerationStructure.h"
-
-#include "RenderDevice.h"
+#include <RenderCore/RenderCore.h>
 
 RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGroups)
 	: NumHitGroups(NumHitGroups)
 {
-	auto& RenderDevice = RenderDevice::Instance();
+}
 
+void RaytracingAccelerationStructure::Initialize()
+{
 	InstanceDescs = Buffer(
-		RenderDevice.GetDevice(),
+		RenderCore::pAdapter->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -38,8 +39,6 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 
 void RaytracingAccelerationStructure::Build(CommandContext& Context)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"TLAS");
 
 	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
@@ -51,7 +50,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 
 	UINT64 ScratchSize, ResultSize;
 	TopLevelAccelerationStructure.ComputeMemoryRequirements(
-		RenderDevice.GetDevice()->GetDevice5(),
+		RenderCore::pAdapter->GetD3D12Device5(),
 		&ScratchSize,
 		&ResultSize);
 
@@ -59,7 +58,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	{
 		// TLAS Scratch
 		TLASScratch = Buffer(
-			RenderDevice.GetDevice(),
+			RenderCore::pAdapter->GetDevice(),
 			ScratchSize,
 			0,
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -69,7 +68,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	if (!TLASResult || TLASResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TLASResult = ASBuffer(RenderDevice.GetDevice(), ResultSize);
+		TLASResult = ASBuffer(RenderCore::pAdapter->GetDevice(), ResultSize);
 	}
 
 	// Create the description for each instance

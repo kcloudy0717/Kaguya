@@ -238,7 +238,7 @@ void RaytracingAccelerationStructureManager::Compact(
 					AccelerationStructure->CompactedSizeCpuMemory.Parent->pResource->Map(0, &Range, (void**)&pData)))
 			{
 				memcpy(&Desc, &pData[Offset], sizeof(Desc));
-				AccelerationStructure->CompactedSizeCpuMemory.Parent->pResource->Unmap(0, &Range);
+				AccelerationStructure->CompactedSizeCpuMemory.Parent->pResource->Unmap(0, nullptr);
 
 				// Suballocate the gpu memory needed for compaction copy
 				AccelerationStructure->ResultCompactedMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);

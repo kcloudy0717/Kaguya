@@ -2,12 +2,11 @@
 
 using Microsoft::WRL::ComPtr;
 
-ShaderCompiler::ShaderCompiler()
+void ShaderCompiler::Initialize()
 {
 	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
 	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
 	ASSERTD3D12APISUCCEEDED(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
-	ShaderModel = D3D_SHADER_MODEL_6_5;
 }
 
 void ShaderCompiler::SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept

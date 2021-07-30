@@ -1,5 +1,4 @@
 #pragma once
-#include "RenderDevice.h"
 #include "RaytracingAccelerationStructure.h"
 
 struct PathIntegratorState
@@ -23,7 +22,7 @@ public:
 
 	PathIntegrator_DXR_1_0() noexcept = default;
 
-	void Initialize(RenderDevice& RenderDevice);
+	void Initialize();
 
 	void SetResolution(UINT Width, UINT Height);
 

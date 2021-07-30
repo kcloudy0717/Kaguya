@@ -26,7 +26,7 @@
 // initialization.
 
 // Feel free to comment this out
-#define NVIDIA_NSIGHT_AFTERMATH
+//#define NVIDIA_NSIGHT_AFTERMATH
 #endif
 
 enum class ECommandQueueType

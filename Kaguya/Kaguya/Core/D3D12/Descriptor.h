@@ -70,6 +70,8 @@ public:
 		return *this;
 	}
 
+	NONCOPYABLE(Descriptor);
+
 	bool IsValid() const noexcept { return Index != UINT_MAX; }
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept
@@ -139,6 +141,7 @@ public:
 	}
 
 	DEFAULTMOVABLE(View);
+	NONCOPYABLE(View);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept { return Descriptor.GetCPUHandle(); }
 	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept { return Descriptor.GetGPUHandle(); }
@@ -164,6 +167,7 @@ public:
 	ShaderResourceView(Device* Device, const D3D12_SHADER_RESOURCE_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
 	DEFAULTMOVABLE(ShaderResourceView);
+	NONCOPYABLE(ShaderResourceView);
 };
 
 class UnorderedAccessView : public View<D3D12_UNORDERED_ACCESS_VIEW_DESC>
@@ -185,6 +189,7 @@ public:
 		ID3D12Resource*							CounterResource = nullptr);
 
 	DEFAULTMOVABLE(UnorderedAccessView);
+	NONCOPYABLE(UnorderedAccessView);
 };
 
 class RenderTargetView : public View<D3D12_RENDER_TARGET_VIEW_DESC>
@@ -202,6 +207,7 @@ public:
 	RenderTargetView(Device* Device, const D3D12_RENDER_TARGET_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
 	DEFAULTMOVABLE(RenderTargetView);
+	NONCOPYABLE(RenderTargetView);
 };
 
 class DepthStencilView : public View<D3D12_DEPTH_STENCIL_VIEW_DESC>
@@ -219,4 +225,5 @@ public:
 	DepthStencilView(Device* Device, const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc, ID3D12Resource* Resource);
 
 	DEFAULTMOVABLE(DepthStencilView);
+	NONCOPYABLE(DepthStencilView);
 };

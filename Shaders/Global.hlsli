@@ -4,7 +4,7 @@
 
 #include <HLSLCommon.hlsli>
 
-struct SystemConstants
+struct GlobalConstants
 {
 	Camera Camera;
 
@@ -16,10 +16,7 @@ struct SystemConstants
 
 	uint NumLights;
 	uint TotalFrameCount;
-};
 
-struct RenderPassData
-{
 	uint MaxDepth;
 	uint NumAccumulatedSamples;
 
@@ -28,8 +25,7 @@ struct RenderPassData
 	float SkyIntensity;
 };
 
-ConstantBuffer<SystemConstants> g_SystemConstants : register(b0, space0);
-ConstantBuffer<RenderPassData>	g_RenderPassData : register(b1, space0);
+ConstantBuffer<GlobalConstants> g_SystemConstants : register(b0, space0);
 
 RaytracingAccelerationStructure g_Scene : register(t0, space0);
 StructuredBuffer<Material>		g_Materials : register(t1, space0);

@@ -74,7 +74,12 @@ private:
 class ShaderCompiler
 {
 public:
-	ShaderCompiler();
+	ShaderCompiler()
+		: ShaderModel(D3D_SHADER_MODEL_6_5)
+	{
+	}
+
+	void Initialize();
 
 	void SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept;
 

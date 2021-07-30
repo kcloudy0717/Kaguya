@@ -148,7 +148,10 @@ bool Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIS
 	return false;
 }
 
-Texture::Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<D3D12_CLEAR_VALUE> ClearValue)
+Texture::Texture(
+	Device*							 Device,
+	const D3D12_RESOURCE_DESC&		 Desc,
+	std::optional<D3D12_CLEAR_VALUE> ClearValue /*= std::nullopt*/)
 	: Resource(Device, Desc, ClearValue, 0)
 {
 	const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -173,8 +176,8 @@ Texture::Texture(Device* Device, const D3D12_RESOURCE_DESC& Desc, std::optional<
 
 void Texture::CreateShaderResourceView(
 	ShaderResourceView& ShaderResourceView,
-	std::optional<UINT> OptMostDetailedMip /*= {}*/,
-	std::optional<UINT> OptMipLevels /*= {}*/)
+	std::optional<UINT> OptMostDetailedMip /*= std::nullopt*/,
+	std::optional<UINT> OptMipLevels /*= std::nullopt*/)
 {
 	if (!(Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
 	{
@@ -218,8 +221,8 @@ void Texture::CreateShaderResourceView(
 
 void Texture::CreateUnorderedAccessView(
 	UnorderedAccessView& UnorderedAccessView,
-	std::optional<UINT>	 OptArraySlice /*= {}*/,
-	std::optional<UINT>	 OptMipSlice /*= {}*/)
+	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
+	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/)
 {
 	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
@@ -258,9 +261,9 @@ void Texture::CreateUnorderedAccessView(
 
 void Texture::CreateRenderTargetView(
 	RenderTargetView&	RenderTargetView,
-	std::optional<UINT> OptArraySlice /*= {}*/,
-	std::optional<UINT> OptMipSlice /*= {}*/,
-	std::optional<UINT> OptArraySize /*= {}*/,
+	std::optional<UINT> OptArraySlice /*= std::nullopt*/,
+	std::optional<UINT> OptMipSlice /*= std::nullopt*/,
+	std::optional<UINT> OptArraySize /*= std::nullopt*/,
 	bool				sRGB /*= false*/)
 {
 	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
@@ -302,9 +305,9 @@ void Texture::CreateRenderTargetView(
 
 void Texture::CreateDepthStencilView(
 	DepthStencilView&	DepthStencilView,
-	std::optional<UINT> OptArraySlice /*= {}*/,
-	std::optional<UINT> OptMipSlice /*= {}*/,
-	std::optional<UINT> OptArraySize /*= {}*/)
+	std::optional<UINT> OptArraySlice /*= std::nullopt*/,
+	std::optional<UINT> OptMipSlice /*= std::nullopt*/,
+	std::optional<UINT> OptArraySize /*= std::nullopt*/)
 {
 	assert(DepthStencilView.Descriptor.IsValid());
 

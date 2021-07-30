@@ -2,12 +2,12 @@
 
 #include "RendererRegistry.h"
 
-void ToneMapper::Initialize(RenderDevice& RenderDevice)
+void ToneMapper::Initialize()
 {
-	RTV = RenderTargetView(RenderDevice.GetDevice());
-	SRV = ShaderResourceView(RenderDevice.GetDevice());
+	RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
+	SRV = ShaderResourceView(RenderCore::pAdapter->GetDevice());
 
-	RS = RenderDevice.CreateRootSignature(
+	RS = RenderCore::pAdapter->CreateRootSignature(
 		[](RootSignatureBuilder& Builder)
 		{
 			Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
@@ -42,13 +42,11 @@ void ToneMapper::Initialize(RenderDevice& RenderDevice)
 	stream.DepthStencilState	 = depthStencilState;
 	stream.RTVFormats			 = formats;
 
-	PSO = RenderDevice.CreatePipelineState(stream);
+	PSO = RenderCore::pAdapter->CreatePipelineState(stream);
 }
 
 void ToneMapper::SetResolution(UINT Width, UINT Height)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	if (this->Width == Width && this->Height == Height)
 	{
 		return;
@@ -70,7 +68,7 @@ void ToneMapper::SetResolution(UINT Width, UINT Height)
 		0,
 		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-	RenderTarget = Texture(RenderDevice.GetDevice(), TextureDesc, ClearValue);
+	RenderTarget = Texture(RenderCore::pAdapter->GetDevice(), TextureDesc, ClearValue);
 	RenderTarget.GetResource()->SetName(L"Tonemap Output");
 
 	RenderTarget.CreateRenderTargetView(RTV, {}, {}, {}, true);

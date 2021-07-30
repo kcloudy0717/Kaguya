@@ -12,6 +12,8 @@ public:
 	RaytracingAccelerationStructure() noexcept = default;
 	RaytracingAccelerationStructure(UINT NumHitGroups);
 
+	void Initialize();
+
 	operator auto() const { return TLASResult.GetGPUVirtualAddress(); }
 
 	auto size() const { return TopLevelAccelerationStructure.size(); }
