@@ -58,9 +58,8 @@ public:
 private:
 	World& World;
 
-	float ViewportMouseX = 0.0f, ViewportMouseY = 0.0f;
-	UINT  ViewportWidth = 0, ViewportHeight = 0;
-	UINT  RenderWidth = 0, RenderHeight = 0;
+	UINT ViewportWidth = 0, ViewportHeight = 0;
+	UINT RenderWidth = 0, RenderHeight = 0;
 
 	D3D12_VIEWPORT Viewport	   = {};
 	D3D12_RECT	   ScissorRect = {};
@@ -86,4 +85,18 @@ private:
 	UINT			NumMaterials = 0, NumLights = 0;
 
 	RenderGraph RenderGraph;
+
+	// Pad local root arguments explicitly
+	struct RootArgument
+	{
+		UINT64					  MaterialIndex : 32;
+		UINT64					  Padding		: 32;
+		D3D12_GPU_VIRTUAL_ADDRESS VertexBuffer;
+		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
+	};
+
+	RaytracingShaderBindingTable		 ShaderBindingTable;
+	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
+	RaytracingShaderTable<void>*		 MissShaderTable;
+	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };

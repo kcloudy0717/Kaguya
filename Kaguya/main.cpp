@@ -66,7 +66,6 @@ public:
 		ConsoleWindow.Render();
 		InspectorWindow.Render();
 
-		auto [vpx, vpy] = ViewportWindow.GetMousePosition();
 #if RENDER_AT_1920x1080
 		const uint32_t viewportWidth = 1920, viewportHeight = 1080;
 #else
@@ -76,7 +75,6 @@ public:
 		World.Update(DeltaTime);
 
 		// Render
-		pRenderer->SetViewportMousePosition(vpx, vpy);
 		pRenderer->SetViewportResolution(viewportWidth, viewportHeight);
 
 		pRenderer->OnRender();

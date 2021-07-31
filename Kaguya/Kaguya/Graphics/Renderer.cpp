@@ -29,23 +29,9 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-// Pad local root arguments explicitly
-struct RootArgument
-{
-	UINT64					  MaterialIndex : 32;
-	UINT64					  Padding		: 32;
-	D3D12_GPU_VIRTUAL_ADDRESS VertexBuffer;
-	D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
-};
-
 struct PathTrace
 {
 	RenderResourceHandle Output;
-
-	RaytracingShaderBindingTable		 ShaderBindingTable;
-	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
-	RaytracingShaderTable<void>*		 MissShaderTable;
-	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };
 
 struct Tonemap
@@ -60,12 +46,6 @@ struct FSR
 	RenderResourceHandle EASUOutput;
 	RenderResourceHandle RCASOutput;
 };
-
-void Renderer::SetViewportMousePosition(float MouseX, float MouseY)
-{
-	ViewportMouseX = MouseX;
-	ViewportMouseY = MouseY;
-}
 
 void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
@@ -173,18 +153,6 @@ void Renderer::OnInitialize()
 				ETextureResolution::Render,
 				RGTextureDesc::RWTexture2D(DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
 
-			Parameter.RayGenerationShaderTable = Parameter.ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
-			Parameter.RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
-
-			Parameter.MissShaderTable = Parameter.ShaderBindingTable.AddMissShaderTable<void>(2);
-			Parameter.MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_MissSID);
-			Parameter.MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_ShadowMissSID);
-
-			Parameter.HitGroupShaderTable =
-				Parameter.ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
-
-			Parameter.ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
-
 			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
@@ -220,7 +188,7 @@ void Renderer::OnInitialize()
 													float(ViewportHeight),
 													1.0f / float(ViewportWidth),
 													1.0f / float(ViewportHeight) };
-				g_GlobalConstants.MousePosition			= { ViewportMouseX, ViewportMouseY };
+				g_GlobalConstants.MousePosition			= { 0.0f, 0.0f };
 				g_GlobalConstants.NumLights				= NumLights;
 				g_GlobalConstants.TotalFrameCount		= Counter++;
 				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
@@ -239,7 +207,7 @@ void Renderer::OnInitialize()
 
 				RenderCore::pAdapter->BindComputeDescriptorTable(RaytracingPipelineStates::GlobalRS, Context);
 
-				D3D12_DISPATCH_RAYS_DESC Desc = Parameter.ShaderBindingTable.GetDispatchRaysDesc(0, 0);
+				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDispatchRaysDesc(0, 0);
 				Desc.Width					  = ViewData.RenderWidth;
 				Desc.Height					  = ViewData.RenderHeight;
 				Desc.Depth					  = 1;
@@ -260,7 +228,7 @@ void Renderer::OnInitialize()
 			auto& Parameter	 = Scope.Get<Tonemap>();
 			Parameter.Output = Scheduler.CreateTexture(
 				ETextureResolution::Render,
-				RGTextureDesc::Texture2D(SwapChain::Format_sRGB, 0, 0, 1, TextureFlag_AllowRenderTarget, ClearValue));
+				RGTextureDesc::Texture2D(SwapChain::Format, 0, 0, 1, TextureFlag_AllowRenderTarget, ClearValue));
 			Parameter.RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
 
 			const auto& ViewData = Scope.Get<RenderGraphViewData>();
@@ -409,6 +377,17 @@ void Renderer::OnInitialize()
 
 	RenderGraph.Setup();
 	RenderGraph.Compile();
+
+	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
+	RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
+
+	MissShaderTable = ShaderBindingTable.AddMissShaderTable<void>(2);
+	MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_MissSID);
+	MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_ShadowMissSID);
+
+	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
+
+	ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
 }
 
 void Renderer::OnRender()
@@ -504,8 +483,7 @@ void Renderer::OnRender()
 
 		// Update shader table
 		// PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
-		auto& Data = RenderGraph.GetScope("Path Trace").Get<PathTrace>();
-		Data.HitGroupShaderTable->Reset();
+		HitGroupShaderTable->Reset();
 		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
 		{
 			ID3D12Resource* VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource.GetResource();
@@ -518,11 +496,11 @@ void Renderer::OnRender()
 									   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
 									   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
 
-			Data.HitGroupShaderTable->AddShaderRecord(Record);
+			HitGroupShaderTable->AddShaderRecord(Record);
 		}
 
-		Data.ShaderBindingTable.Write();
-		Data.ShaderBindingTable.CopyToGPU(Copy);
+		ShaderBindingTable.Write();
+		ShaderBindingTable.CopyToGPU(Copy);
 
 		Copy.CloseCommandList();
 
