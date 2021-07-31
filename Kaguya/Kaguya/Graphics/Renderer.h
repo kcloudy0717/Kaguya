@@ -1,9 +1,37 @@
 #pragma once
 #include "RaytracingAccelerationStructure.h"
-#include "PathIntegrator.h"
-#include "ToneMapper.h"
-#include "FSRFilter.h"
 #include "RenderGraph/RenderGraph.h"
+
+struct PathIntegratorState
+{
+	static constexpr UINT MinimumDepth = 1;
+	static constexpr UINT MaximumDepth = 32;
+
+	float SkyIntensity = 1.0f;
+	UINT  MaxDepth	   = 16;
+};
+
+enum class EFSRQualityMode
+{
+	Ultra,
+	Standard,
+	Balanced,
+	Performance
+};
+
+struct FSRState
+{
+	bool Enable = true;
+
+	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
+
+	int ViewportWidth;
+	int ViewportHeight;
+
+	int	  RenderWidth;
+	int	  RenderHeight;
+	float RCASAttenuation = 0.0f;
+};
 
 class Renderer
 {

@@ -23,7 +23,6 @@ public:
 
 	bool Initialize() override
 	{
-		atexit(Adapter::ReportLiveObjects);
 		PhysicsManager::Initialize();
 		RenderCore::Initialize();
 		AssetManager::Initialize();

@@ -7,14 +7,8 @@ class RenderGraph;
 
 struct RenderGraphViewData
 {
-	UINT		   NumViewports = 0;
-	D3D12_VIEWPORT Viewports[8];
-	UINT		   NumScissorRects = 0;
-	D3D12_RECT	   ScissorRects[8];
-
-	UINT Width	= 0;
-	UINT Height = 0;
-	UINT Depth	= 0;
+	UINT RenderWidth, RenderHeight;
+	UINT ViewportWidth, ViewportHeight;
 };
 
 class RenderScope
@@ -34,7 +28,7 @@ public:
 		{
 			DataTable[typeid(T)] = std::make_unique<BYTE[]>(sizeof(T));
 			T& Data				 = *reinterpret_cast<T*>(DataTable[typeid(T)].get());
-			Data				 = {}; // Explicit initialization
+			Data				 = T(); // Explicit initialization
 			return Data;
 		}
 	}
@@ -106,12 +100,6 @@ struct hash<RenderResourceHandle>
 };
 } // namespace std
 
-struct RGSubresources
-{
-	UINT FirstSubresource;
-	UINT NumSubresources;
-};
-
 enum EBufferFlags
 {
 	BufferFlag_None = 0,
@@ -149,8 +137,7 @@ enum ETextureFlags
 	TextureFlag_None				 = 0,
 	TextureFlag_AllowRenderTarget	 = 1 << 0,
 	TextureFlag_AllowDepthStencil	 = 1 << 1,
-	TextureFlag_AllowUnorderedAccess = 1 << 2,
-	TextureFlag_SRGB				 = 1 << 3
+	TextureFlag_AllowUnorderedAccess = 1 << 2
 };
 DEFINE_ENUM_FLAG_OPERATORS(ETextureFlags);
 

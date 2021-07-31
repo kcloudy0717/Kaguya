@@ -103,11 +103,33 @@ void RenderGraph::Setup()
 
 void RenderGraph::Compile()
 {
+	Registry.Initialize();
 }
 
 void RenderGraph::Execute(CommandContext& Context)
 {
-	Registry.CreateResources();
+	for (RHITexture& Texture : Scheduler.Textures)
+	{
+		if ((RenderResolutionResized && Texture.Desc.TextureResolution == ETextureResolution::Render) ||
+			(ViewportResolutionResized && Texture.Desc.TextureResolution == ETextureResolution::Viewport))
+		{
+			Texture.Handle.State = ERGHandleState::Dirty;
+		}
+	}
+
+	RenderResolutionResized = ViewportResolutionResized = false;
+
+	Registry.ScheduleResources();
+	for (auto& RenderPass : RenderPasses)
+	{
+		auto& ViewData			= RenderPass->Scope.Get<RenderGraphViewData>();
+		ViewData.RenderWidth	= RenderWidth;
+		ViewData.RenderHeight	= RenderHeight;
+		ViewData.ViewportWidth	= ViewportWidth;
+		ViewData.ViewportHeight = ViewportHeight;
+	}
+
+	D3D12ScopedEvent(Context, "Render Graph");
 	for (auto& Executable : Executables)
 	{
 		Executable(Registry, Context);

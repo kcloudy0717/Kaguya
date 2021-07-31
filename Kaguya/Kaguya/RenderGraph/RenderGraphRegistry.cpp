@@ -2,31 +2,37 @@
 #include "RenderGraph.h"
 #include <RenderCore/RenderCore.h>
 
-void RenderGraphRegistry::CreateResources()
+void RenderGraphRegistry::Initialize()
 {
-	// for (const auto& Desc : Scheduler.BufferDescs)
-	//{
-	//}
+	Textures.resize(Scheduler.Textures.size());
+	TextureShaderViews.resize(Scheduler.Textures.size());
+}
 
-	for (size_t i = 0; i < Scheduler.TextureHandles.size(); ++i)
+void RenderGraphRegistry::ScheduleResources()
+{
+	for (size_t i = 0; i < Scheduler.Textures.size(); ++i)
 	{
-		if (Scheduler.TextureHandles[i].State == ERGHandleState::Ready)
+		auto& RHITexture = Scheduler.Textures[i];
+
+		RenderResourceHandle& Handle = RHITexture.Handle;
+		RGTextureDesc&		  Desc	 = RHITexture.Desc;
+
+		if (Handle.State == ERGHandleState::Ready)
 		{
 			continue;
 		}
-		Scheduler.TextureHandles[i].State = ERGHandleState::Ready;
+		Handle.State = ERGHandleState::Ready;
 
-		RGTextureDesc& Desc = Scheduler.TextureDescs[i];
 		if (Desc.TextureResolution == ETextureResolution::Render)
 		{
 			auto [w, h] = Scheduler.GetParentRenderGraph()->GetRenderResolution();
-			Desc.Width = w;
+			Desc.Width	= w;
 			Desc.Height = h;
 		}
 		else if (Desc.TextureResolution == ETextureResolution::Viewport)
 		{
 			auto [w, h] = Scheduler.GetParentRenderGraph()->GetViewportResolution();
-			Desc.Width = w;
+			Desc.Width	= w;
 			Desc.Height = h;
 		}
 
@@ -94,13 +100,36 @@ void RenderGraphRegistry::CreateResources()
 			break;
 		}
 
-		Texture& Texture =
-			Textures.emplace_back(RenderCore::pAdapter->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
-		ShaderViews& ShaderViews = TextureShaderViews.emplace_back();
-		ShaderViews.SRVs.resize(Texture.GetNumSubresources());
+		Textures[i]				 = Texture(RenderCore::pAdapter->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		ShaderViews& ShaderViews = TextureShaderViews[i];
+
+		if (ShaderViews.SRVs.empty())
+		{
+			ShaderViews.SRVs.resize(Textures[i].GetNumSubresources());
+		}
+
 		if (Desc.Flags & TextureFlag_AllowUnorderedAccess)
 		{
-			ShaderViews.UAVs.resize(Texture.GetNumSubresources());
+			if (ShaderViews.UAVs.empty())
+			{
+				ShaderViews.UAVs.resize(Textures[i].GetNumSubresources());
+			}
+		}
+
+		for (auto& SRV : ShaderViews.SRVs)
+		{
+			if (SRV.Descriptor.IsValid())
+			{
+				SRV.Descriptor.CreateView(SRV.Desc, Textures[i]);
+			}
+		}
+
+		for (auto& UAV : ShaderViews.UAVs)
+		{
+			if (UAV.Descriptor.IsValid())
+			{
+				UAV.Descriptor.CreateView(UAV.Desc, Textures[i], nullptr);
+			}
 		}
 	}
 }
@@ -111,6 +140,8 @@ const ShaderResourceView& RenderGraphRegistry::GetTextureSRV(
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
 {
+	RenderResourceHandle& HandleRef = Scheduler.Textures[Handle.Id].Handle;
+
 	Texture& Texture = GetTexture(Handle);
 
 	UINT SubresourceIndex = Texture.GetSubresourceIndex(OptArraySlice, OptMipSlice, OptPlaneSlice);
@@ -118,10 +149,8 @@ const ShaderResourceView& RenderGraphRegistry::GetTextureSRV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.SRVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		auto SRV = ShaderResourceView(RenderCore::pAdapter->GetDevice());
-		Texture.CreateShaderResourceView(SRV);
-
-		ShaderViews.SRVs[SubresourceIndex] = std::move(SRV);
+		ShaderViews.SRVs[SubresourceIndex] = ShaderResourceView(RenderCore::pAdapter->GetDevice());
+		Texture.CreateShaderResourceView(ShaderViews.SRVs[SubresourceIndex]);
 	}
 
 	return ShaderViews.SRVs[SubresourceIndex];
@@ -134,7 +163,7 @@ const UnorderedAccessView& RenderGraphRegistry::GetTextureUAV(
 	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
 {
 	Texture& Texture = GetTexture(Handle);
-	assert(Scheduler.TextureDescs[Handle.Id].Flags & TextureFlag_AllowUnorderedAccess);
+	assert(Scheduler.Textures[Handle.Id].Desc.Flags & TextureFlag_AllowUnorderedAccess);
 
 	UINT SubresourceIndex = Texture.GetSubresourceIndex(OptArraySlice, OptMipSlice, OptPlaneSlice);
 

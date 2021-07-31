@@ -3,6 +3,12 @@
 
 class RenderPass;
 
+struct RHITexture
+{
+	RenderResourceHandle Handle;
+	RGTextureDesc		 Desc;
+};
+
 class RenderGraphScheduler : public RenderGraphChild
 {
 public:
@@ -10,8 +16,6 @@ public:
 		: RenderGraphChild(Parent)
 	{
 	}
-
-	RenderResourceHandle CreateBuffer(const RGBufferDesc& Desc);
 
 	RenderResourceHandle CreateTexture(ETextureResolution TextureResolution, const RGTextureDesc& Desc);
 
@@ -31,7 +35,6 @@ private:
 	std::vector<RenderResourceHandle> BufferHandles;
 	std::vector<RGBufferDesc>		  BufferDescs;
 
-	UINT64							  TextureId = 0;
-	std::vector<RenderResourceHandle> TextureHandles;
-	std::vector<RGTextureDesc>		  TextureDescs;
+	UINT64					TextureId = 0;
+	std::vector<RHITexture> Textures;
 };

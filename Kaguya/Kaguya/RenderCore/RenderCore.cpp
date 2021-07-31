@@ -45,7 +45,7 @@ void Initialize()
 		   LPCSTR				  pDescription,
 		   void*				  pContext)
 		{
-			LOG_INFO("Severity: %s\n%s", GetD3D12MessageSeverity(Severity), pDescription);
+			LOG_INFO("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
 		});
 
 	pSwapChain = new SwapChain(
@@ -85,6 +85,8 @@ void Shutdown()
 	delete pShaderCompiler;
 	delete pSwapChain;
 	delete pAdapter;
+
+	Adapter::ReportLiveObjects();
 }
 
 } // namespace RenderCore

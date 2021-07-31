@@ -1,17 +1,6 @@
 #include "RenderGraphScheduler.h"
 #include "RenderPass.h"
 
-RenderResourceHandle RenderGraphScheduler::CreateBuffer(const RGBufferDesc& Desc)
-{
-	RenderResourceHandle& Handle = BufferHandles.emplace_back();
-	Handle.Type					 = ERGResourceType::Buffer;
-	Handle.State				 = ERGHandleState::Dirty;
-	Handle.Id					 = BufferId++;
-	BufferDescs.push_back(Desc);
-	CurrentRenderPass->Write(Handle);
-	return Handle;
-}
-
 RenderResourceHandle RenderGraphScheduler::CreateTexture(
 	ETextureResolution	 TextureResolution,
 	const RGTextureDesc& Desc)
@@ -21,16 +10,15 @@ RenderResourceHandle RenderGraphScheduler::CreateTexture(
 		assert(Desc.TextureType == ETextureType::Texture2D);
 	}
 
-	RenderResourceHandle& Handle = TextureHandles.emplace_back();
-	Handle.Type					 = ERGResourceType::Texture;
-	Handle.State				 = ERGHandleState::Dirty;
-	Handle.Id					 = TextureId++;
+	RHITexture& Texture			   = Textures.emplace_back();
+	Texture.Handle.Type			   = ERGResourceType::Texture;
+	Texture.Handle.State		   = ERGHandleState::Dirty;
+	Texture.Handle.Id			   = TextureId++;
+	Texture.Desc				   = Desc;
+	Texture.Desc.TextureResolution = TextureResolution;
 
-	RGTextureDesc& TextureDesc	  = TextureDescs.emplace_back(Desc);
-	TextureDesc.TextureResolution = TextureResolution;
-
-	CurrentRenderPass->Write(Handle);
-	return Handle;
+	CurrentRenderPass->Write(Texture.Handle);
+	return Texture.Handle;
 }
 
 RenderResourceHandle RenderGraphScheduler::Read(RenderResourceHandle Resource)

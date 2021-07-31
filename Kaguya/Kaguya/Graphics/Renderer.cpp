@@ -51,6 +51,8 @@ struct PathTrace
 struct Tonemap
 {
 	RenderResourceHandle Output;
+
+	RenderTargetView RTV;
 };
 
 struct FSR
@@ -104,7 +106,8 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	}
 
 	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight);
-	RenderGraph.GetRegistry().CreateResources();
+	RenderGraph.GetRegistry().ScheduleResources();
+	RenderGraph.ValidViewport = false;
 
 	// PathIntegrator.SetResolution(RenderWidth, RenderHeight);
 	// ToneMapper.SetResolution(RenderWidth, RenderHeight);
@@ -132,7 +135,7 @@ void Renderer::OnInitialize()
 	PipelineStates::Compile();
 	RaytracingPipelineStates::Compile();
 
-	AccelerationStructure = RaytracingAccelerationStructure(PathIntegrator_DXR_1_0::NumHitGroups);
+	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
 
 	Manager = RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
@@ -237,8 +240,8 @@ void Renderer::OnInitialize()
 				RenderCore::pAdapter->BindComputeDescriptorTable(RaytracingPipelineStates::GlobalRS, Context);
 
 				D3D12_DISPATCH_RAYS_DESC Desc = Parameter.ShaderBindingTable.GetDispatchRaysDesc(0, 0);
-				Desc.Width					  = ViewData.Width;
-				Desc.Height					  = ViewData.Height;
+				Desc.Width					  = ViewData.RenderWidth;
+				Desc.Height					  = ViewData.RenderHeight;
 				Desc.Depth					  = 1;
 
 				Context.DispatchRays(&Desc);
@@ -258,6 +261,7 @@ void Renderer::OnInitialize()
 			Parameter.Output = Scheduler.CreateTexture(
 				ETextureResolution::Render,
 				RGTextureDesc::Texture2D(SwapChain::Format_sRGB, 0, 0, 1, TextureFlag_AllowRenderTarget, ClearValue));
+			Parameter.RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
 
 			const auto& ViewData = Scope.Get<RenderGraphViewData>();
 
@@ -266,18 +270,28 @@ void Renderer::OnInitialize()
 			{
 				D3D12ScopedEvent(Context, "Tonemap");
 
+				Registry.GetTexture(Parameter.Output)
+					.CreateRenderTargetView(Parameter.RTV, std::nullopt, std::nullopt, std::nullopt, true);
+
 				Context.TransitionBarrier(&Registry.GetTexture(Parameter.Output), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 				Context->SetPipelineState(PipelineStates::PSOs[ShaderPipelineStateId::Tonemap]);
 				Context->SetGraphicsRootSignature(PipelineStates::RSs[RootSignatureId::Tonemap]);
 
+				D3D12_VIEWPORT Viewport = CD3DX12_VIEWPORT(
+					0.0f,
+					0.0f,
+					static_cast<FLOAT>(ViewData.RenderWidth),
+					static_cast<FLOAT>(ViewData.RenderHeight));
+				D3D12_RECT ScissorRect = CD3DX12_RECT(0, 0, ViewData.RenderWidth, ViewData.RenderHeight);
+
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				Context->RSSetViewports(ViewData.NumViewports, ViewData.Viewports);
-				Context->RSSetScissorRects(ViewData.NumScissorRects, ViewData.ScissorRects);
-				// Context->OMSetRenderTargets(1, &Parameter.RTV.GetCPUHandle(), TRUE, nullptr);
+				Context->RSSetViewports(1, &Viewport);
+				Context->RSSetScissorRects(1, &ScissorRect);
+				Context->OMSetRenderTargets(1, &Parameter.RTV.GetCPUHandle(), TRUE, nullptr);
 
 				FLOAT white[] = { 1, 1, 1, 1 };
-				// Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
+				Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
 
 				struct Settings
 				{
@@ -322,8 +336,8 @@ void Renderer::OnInitialize()
 
 				// This value is the image region dimension that each thread group of the FSR shader operates on
 				constexpr UINT ThreadSize		 = 16;
-				UINT		   ThreadGroupCountX = (ViewData.Width + (ThreadSize - 1)) / ThreadSize;
-				UINT		   ThreadGroupCountY = (ViewData.Height + (ThreadSize - 1)) / ThreadSize;
+				UINT		   ThreadGroupCountX = (ViewData.ViewportWidth + (ThreadSize - 1)) / ThreadSize;
+				UINT		   ThreadGroupCountY = (ViewData.ViewportHeight + (ThreadSize - 1)) / ThreadSize;
 
 				Context.TransitionBarrier(
 					&Registry.GetTexture(Parameter.EASUOutput),
@@ -346,8 +360,8 @@ void Renderer::OnInitialize()
 						static_cast<AF1>(FSRState.RenderHeight),
 						static_cast<AF1>(FSRState.RenderWidth),
 						static_cast<AF1>(FSRState.RenderHeight),
-						(AF1)ViewData.Width,
-						(AF1)ViewData.Height);
+						(AF1)ViewData.ViewportWidth,
+						(AF1)ViewData.ViewportHeight);
 					FsrEasu.Sample.x = 0;
 
 					Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
@@ -436,9 +450,9 @@ void Renderer::OnRender()
 
 		if (Dirty)
 		{
-			PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples = 0;
+			Settings::NumAccumulatedSamples = 0;
 		}
-		ImGui::Text("Num Samples Accumulated: %u", PathIntegrator_DXR_1_0::Settings::NumAccumulatedSamples);
+		ImGui::Text("Num Samples Accumulated: %u", Settings::NumAccumulatedSamples);
 	}
 	ImGui::End();
 
@@ -490,6 +504,25 @@ void Renderer::OnRender()
 
 		// Update shader table
 		// PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
+		auto& Data = RenderGraph.GetScope("Path Trace").Get<PathTrace>();
+		Data.HitGroupShaderTable->Reset();
+		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		{
+			ID3D12Resource* VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource.GetResource();
+			ID3D12Resource* IndexBuffer	 = MeshRenderer->pMeshFilter->Mesh->IndexResource.GetResource();
+
+			RaytracingShaderTable<RootArgument>::Record Record = {};
+			Record.ShaderIdentifier							   = RaytracingPipelineStates::g_DefaultSID;
+			Record.RootArguments							   = { .MaterialIndex = static_cast<UINT>(i),
+									   .Padding		  = 0xDEADBEEF,
+									   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
+									   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
+
+			Data.HitGroupShaderTable->AddShaderRecord(Record);
+		}
+
+		Data.ShaderBindingTable.Write();
+		Data.ShaderBindingTable.CopyToGPU(Copy);
 
 		Copy.CloseCommandList();
 
@@ -552,7 +585,8 @@ void Renderer::OnRender()
 
 	if (World.WorldState & EWorldState::EWorldState_Update)
 	{
-		World.WorldState = EWorldState_Render;
+		World.WorldState				= EWorldState_Render;
+		Settings::NumAccumulatedSamples = 0;
 		// PathIntegrator.Reset();
 	}
 
@@ -560,10 +594,10 @@ void Renderer::OnRender()
 	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
 	Context.GetCommandQueue()->WaitForSyncPoint(ASBuildSyncPoint);
 	Context.OpenCommandList();
-
 	Context.BindResourceViewHeaps();
 
 	RenderGraph.Execute(Context);
+	RenderGraph.ValidViewport = true;
 
 	auto [pRenderTarget, RenderTargetView] = RenderCore::pSwapChain->GetCurrentBackBufferResource();
 
@@ -615,4 +649,6 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 
 void Renderer::OnDestroy()
 {
+	PipelineStates::Destroy();
+	RaytracingPipelineStates::Destroy();
 }

@@ -16,14 +16,9 @@ public:
 	{
 	}
 
-	void CreateResources();
+	void Initialize();
 
-	// Buffer& GetBuffer(RenderResourceHandle Handle)
-	//{
-	//	assert(Handle.Type == ERGResourceType::Buffer);
-	//	assert(Handle.Id >= 0 && Handle.Id < Buffers.size());
-	//	return Buffers[Handle.Id];
-	//}
+	void ScheduleResources();
 
 	Texture& GetTexture(RenderResourceHandle Handle)
 	{

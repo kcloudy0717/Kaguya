@@ -40,6 +40,7 @@ public:
 		RenderPass* NewRenderPass = new RenderPass(this, Name);
 		Scheduler.SetCurrentRenderPass(NewRenderPass);
 		Executables.push_back(Callback(Scheduler, NewRenderPass->Scope));
+		Scheduler.SetCurrentRenderPass(nullptr);
 
 		RenderPasses.emplace_back(NewRenderPass);
 		LUT[Name] = NewRenderPass;

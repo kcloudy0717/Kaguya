@@ -215,6 +215,7 @@ void Texture::CreateShaderResourceView(
 			break;
 		}
 
+		ShaderResourceView.Desc = SRVDesc;
 		ShaderResourceView.Descriptor.CreateView(SRVDesc, pResource.Get());
 	}
 }
@@ -255,6 +256,7 @@ void Texture::CreateUnorderedAccessView(
 			break;
 		}
 
+		UnorderedAccessView.Desc = UAVDesc;
 		UnorderedAccessView.Descriptor.CreateView(UAVDesc, pResource.Get(), nullptr);
 	}
 }
@@ -299,6 +301,7 @@ void Texture::CreateRenderTargetView(
 			break;
 		}
 
+		RenderTargetView.Desc = RTVDesc;
 		RenderTargetView.Descriptor.CreateView(RTVDesc, pResource.Get());
 	}
 }
@@ -346,6 +349,7 @@ void Texture::CreateDepthStencilView(
 			break;
 		}
 
+		DepthStencilView.Desc = DSVDesc;
 		DepthStencilView.Descriptor.CreateView(DSVDesc, pResource.Get());
 	}
 }

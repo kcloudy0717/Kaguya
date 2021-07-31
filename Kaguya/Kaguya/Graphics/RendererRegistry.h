@@ -195,6 +195,18 @@ struct PipelineStates
 			}
 		}
 	}
+
+	static void Destroy()
+	{
+		for (auto& RS : RSs)
+		{
+			RS = {};
+		}
+		for (auto& PSO : PSOs)
+		{
+			PSO = {};
+		}
+	}
 };
 
 struct RaytracingPipelineStates
@@ -294,5 +306,12 @@ struct RaytracingPipelineStates
 		g_MissSID		   = RTPSO.GetShaderIdentifier(g_Miss);
 		g_ShadowMissSID	   = RTPSO.GetShaderIdentifier(g_ShadowMiss);
 		g_DefaultSID	   = RTPSO.GetShaderIdentifier(g_HitGroupExport);
+	}
+
+	static void Destroy()
+	{
+		GlobalRS		= {};
+		LocalHitGroupRS = {};
+		RTPSO			= {};
 	}
 };
