@@ -81,9 +81,10 @@ struct RenderResourceHandle
 {
 	auto operator<=>(const RenderResourceHandle&) const = default;
 
-	ERGResourceType Type  : 16;
-	ERGHandleState	State : 16;
-	UINT64			Id	  : 32;
+	ERGResourceType Type	: 16;
+	ERGHandleState	State	: 2;
+	UINT64			Version : 14;
+	UINT64			Id		: 32;
 };
 
 static_assert(sizeof(RenderResourceHandle) == sizeof(UINT64));

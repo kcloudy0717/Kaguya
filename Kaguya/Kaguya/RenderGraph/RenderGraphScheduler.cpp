@@ -24,8 +24,14 @@ RenderResourceHandle RenderGraphScheduler::CreateTexture(
 RenderResourceHandle RenderGraphScheduler::Read(RenderResourceHandle Resource)
 {
 	assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
-
 	CurrentRenderPass->Read(Resource);
+	return Resource;
+}
 
+RenderResourceHandle RenderGraphScheduler::Write(RenderResourceHandle Resource)
+{
+	assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
+	CurrentRenderPass->Write(Resource);
+	Resource.Version++;
 	return Resource;
 }

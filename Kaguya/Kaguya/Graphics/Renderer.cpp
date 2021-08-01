@@ -234,8 +234,6 @@ void Renderer::OnInitialize()
 				Registry.GetTexture(Parameter.Output)
 					.CreateRenderTargetView(Parameter.RTV, std::nullopt, std::nullopt, std::nullopt, true);
 
-				Context.TransitionBarrier(&Registry.GetTexture(Parameter.Output), D3D12_RESOURCE_STATE_RENDER_TARGET);
-
 				Context->SetPipelineState(PipelineStates::PSOs[ShaderPipelineStateId::Tonemap]);
 				Context->SetGraphicsRootSignature(PipelineStates::RSs[RootSignatureId::Tonemap]);
 
@@ -263,11 +261,6 @@ void Renderer::OnInitialize()
 				Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
 
 				Context.DrawInstanced(3, 1, 0, 0);
-
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.Output),
-					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-				Context.FlushResourceBarriers();
 			};
 		});
 

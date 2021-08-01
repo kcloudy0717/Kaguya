@@ -63,9 +63,6 @@ private:
 	D3D12_RECT	   ScissorRect = {};
 
 	RaytracingAccelerationStructure AccelerationStructure;
-	// PathIntegrator_DXR_1_0			PathIntegrator;
-	// ToneMapper						ToneMapper;
-	// FSRFilter						FSRFilter;
 
 	RaytracingAccelerationStructureManager Manager;
 

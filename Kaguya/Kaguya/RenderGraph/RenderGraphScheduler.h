@@ -15,14 +15,17 @@ public:
 	RenderGraphScheduler(RenderGraph* Parent)
 		: RenderGraphChild(Parent)
 	{
-		TextureHandle.Type	= ERGResourceType::Texture;
-		TextureHandle.State = ERGHandleState::Dirty;
-		TextureHandle.Id	= 0;
+		TextureHandle.Type	  = ERGResourceType::Texture;
+		TextureHandle.State	  = ERGHandleState::Dirty;
+		TextureHandle.Version = 0;
+		TextureHandle.Id	  = 0;
 	}
 
 	RenderResourceHandle CreateTexture(ETextureResolution TextureResolution, const RGTextureDesc& Desc);
 
 	RenderResourceHandle Read(RenderResourceHandle Resource);
+
+	RenderResourceHandle Write(RenderResourceHandle Resource);
 
 	bool AllowRenderTarget(RenderResourceHandle Resource) const noexcept
 	{
@@ -52,6 +55,8 @@ private:
 private:
 	friend class RenderGraph;
 	friend class RenderGraphRegistry;
+
+	// Handles have a 1 : 1 mapping to resource containers
 
 	RenderPass* CurrentRenderPass;
 

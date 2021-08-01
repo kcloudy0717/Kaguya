@@ -180,6 +180,41 @@ void RenderGraphDependencyLevel::PostInitialize()
 
 void RenderGraphDependencyLevel::Execute(CommandContext& Context)
 {
+	for (auto Read : Reads)
+	{
+		D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+		if (Parent->GetScheduler().AllowUnorderedAccess(Read))
+		{
+			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		}
+
+		Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Read);
+		Context.TransitionBarrier(&Texture, ReadState);
+	}
+	for (auto Write : Writes)
+	{
+		D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
+
+		if (Parent->GetScheduler().AllowRenderTarget(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+		}
+		if (Parent->GetScheduler().AllowDepthStencil(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		}
+		if (Parent->GetScheduler().AllowUnorderedAccess(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		}
+
+		Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Write);
+		Context.TransitionBarrier(&Texture, WriteState);
+	}
+
+	Context.FlushResourceBarriers();
+
 	for (auto& RenderPass : RenderPasses)
 	{
 		RenderPass->Callback(GetParentRenderGraph()->GetRegistry(), Context);
