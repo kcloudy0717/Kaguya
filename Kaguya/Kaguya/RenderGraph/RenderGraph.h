@@ -4,30 +4,42 @@
 #include "RenderGraphRegistry.h"
 #include <stack>
 
-class RenderGraphDependencyLevel
+class RenderGraphDependencyLevel : public RenderGraphChild
 {
 public:
-	void AddRenderPass(const RenderPass* RenderPass)
+	RenderGraphDependencyLevel() noexcept = default;
+	RenderGraphDependencyLevel(RenderGraph* Parent)
+		: RenderGraphChild(Parent)
 	{
+	}
+
+	void AddRenderPass(RenderPass* RenderPass)
+	{
+		RenderPass->DependencyLevel = this;
 		RenderPasses.push_back(RenderPass);
 		Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
 		Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
 	}
 
+	void PostInitialize();
+
+	void Execute(CommandContext& Context);
+
 private:
-	std::vector<const RenderPass*> RenderPasses;
+	std::vector<RenderPass*> RenderPasses;
 
 	// Apply barriers at a dependency level to reduce redudant barriers
 	std::unordered_set<RenderResourceHandle> Reads;
 	std::unordered_set<RenderResourceHandle> Writes;
+	std::vector<D3D12_RESOURCE_STATES>		 ReadStates;
+	std::vector<D3D12_RESOURCE_STATES>		 WriteStates;
 };
 
 class RenderGraph
 {
 public:
-	using RenderPassExecuteCallback = std::function<void(RenderGraphRegistry& Registry, CommandContext& Context)>;
 	using RenderPassCallback =
-		std::function<RenderPassExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
+		std::function<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
 
 	RenderGraph()
 		: Scheduler(this)
@@ -39,7 +51,7 @@ public:
 	{
 		RenderPass* NewRenderPass = new RenderPass(this, Name);
 		Scheduler.SetCurrentRenderPass(NewRenderPass);
-		Executables.push_back(Callback(Scheduler, NewRenderPass->Scope));
+		NewRenderPass->Callback = Callback(Scheduler, NewRenderPass->Scope);
 		Scheduler.SetCurrentRenderPass(nullptr);
 
 		RenderPasses.emplace_back(NewRenderPass);
@@ -57,7 +69,8 @@ public:
 
 	RenderScope& GetScope(const std::string& Name) const { return GetRenderPass(Name)->Scope; }
 
-	RenderGraphRegistry& GetRegistry() { return Registry; }
+	RenderGraphScheduler& GetScheduler() { return Scheduler; }
+	RenderGraphRegistry&  GetRegistry() { return Registry; }
 
 	std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
 	std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
@@ -108,8 +121,6 @@ private:
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;
 	std::vector<RenderPass*>		 TopologicalSortedPasses;
-
-	std::vector<RenderPassExecuteCallback> Executables;
 
 	std::vector<RenderGraphDependencyLevel> DependencyLevels;
 

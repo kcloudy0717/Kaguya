@@ -11,11 +11,11 @@ RenderResourceHandle RenderGraphScheduler::CreateTexture(
 	}
 
 	RHITexture& Texture			   = Textures.emplace_back();
-	Texture.Handle.Type			   = ERGResourceType::Texture;
-	Texture.Handle.State		   = ERGHandleState::Dirty;
-	Texture.Handle.Id			   = TextureId++;
+	Texture.Handle				   = TextureHandle;
 	Texture.Desc				   = Desc;
 	Texture.Desc.TextureResolution = TextureResolution;
+
+	++TextureHandle.Id;
 
 	CurrentRenderPass->Write(Texture.Handle);
 	return Texture.Handle;

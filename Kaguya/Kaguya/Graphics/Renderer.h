@@ -41,8 +41,6 @@ public:
 	{
 	}
 
-	void SetViewportMousePosition(float MouseX, float MouseY);
-
 	void SetViewportResolution(uint32_t Width, uint32_t Height);
 
 	void* GetViewportDescriptor();
@@ -84,8 +82,6 @@ private:
 	HLSL::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;
 
-	RenderGraph RenderGraph;
-
 	// Pad local root arguments explicitly
 	struct RootArgument
 	{
@@ -99,4 +95,6 @@ private:
 	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
 	RaytracingShaderTable<void>*		 MissShaderTable;
 	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
+
+	RenderGraph RenderGraph;
 };

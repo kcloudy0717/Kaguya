@@ -15,11 +15,35 @@ public:
 	RenderGraphScheduler(RenderGraph* Parent)
 		: RenderGraphChild(Parent)
 	{
+		TextureHandle.Type	= ERGResourceType::Texture;
+		TextureHandle.State = ERGHandleState::Dirty;
+		TextureHandle.Id	= 0;
 	}
 
 	RenderResourceHandle CreateTexture(ETextureResolution TextureResolution, const RGTextureDesc& Desc);
 
 	RenderResourceHandle Read(RenderResourceHandle Resource);
+
+	bool AllowRenderTarget(RenderResourceHandle Resource) const noexcept
+	{
+		assert(Resource.Type == ERGResourceType::Texture);
+		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		return Textures[Resource.Id].Desc.AllowRenderTarget();
+	}
+
+	bool AllowDepthStencil(RenderResourceHandle Resource) const noexcept
+	{
+		assert(Resource.Type == ERGResourceType::Texture);
+		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		return Textures[Resource.Id].Desc.AllowDepthStencil();
+	}
+
+	bool AllowUnorderedAccess(RenderResourceHandle Resource) const noexcept
+	{
+		assert(Resource.Type == ERGResourceType::Texture);
+		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		return Textures[Resource.Id].Desc.AllowUnorderedAccess();
+	}
 
 private:
 	// Sets the current render pass to be scheduled
@@ -31,10 +55,6 @@ private:
 
 	RenderPass* CurrentRenderPass;
 
-	UINT64							  BufferId = 0;
-	std::vector<RenderResourceHandle> BufferHandles;
-	std::vector<RGBufferDesc>		  BufferDescs;
-
-	UINT64					TextureId = 0;
+	RenderResourceHandle	TextureHandle;
 	std::vector<RHITexture> Textures;
 };

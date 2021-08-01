@@ -3,9 +3,14 @@
 
 class CommandContext;
 
+class RenderGraphRegistry;
+class RenderGraphDependencyLevel;
+
 class RenderPass : public RenderGraphChild
 {
 public:
+	using ExecuteCallback = std::function<void(RenderGraphRegistry& Registry, CommandContext& Context)>;
+
 	RenderPass(RenderGraph* Parent, const std::string& Name)
 		: RenderGraphChild(Parent)
 		, Name(Name)
@@ -28,10 +33,14 @@ public:
 
 	bool HasAnyDependencies() const { return !ReadWrites.empty(); }
 
-	std::string								 Name;
-	size_t									 TopologicalIndex = 0;
+	std::string					Name;
+	size_t						TopologicalIndex = 0;
+	RenderGraphDependencyLevel* DependencyLevel	 = nullptr;
+
 	std::unordered_set<RenderResourceHandle> Reads;
 	std::unordered_set<RenderResourceHandle> Writes;
 	std::unordered_set<RenderResourceHandle> ReadWrites;
 	RenderScope								 Scope;
+
+	ExecuteCallback Callback;
 };

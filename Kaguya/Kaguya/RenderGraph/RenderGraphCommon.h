@@ -272,6 +272,10 @@ struct RGTextureDesc
 		};
 	}
 
+	bool AllowRenderTarget() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowRenderTarget; }
+	bool AllowDepthStencil() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowDepthStencil; }
+	bool AllowUnorderedAccess() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowUnorderedAccess; }
+
 	ETextureResolution TextureResolution = ETextureResolution::Static;
 
 	DXGI_FORMAT						 Format			  = DXGI_FORMAT_UNKNOWN;

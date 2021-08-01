@@ -88,10 +88,6 @@ void Renderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight);
 	RenderGraph.GetRegistry().ScheduleResources();
 	RenderGraph.ValidViewport = false;
-
-	// PathIntegrator.SetResolution(RenderWidth, RenderHeight);
-	// ToneMapper.SetResolution(RenderWidth, RenderHeight);
-	// FSRFilter.SetResolution(ViewportWidth, ViewportHeight);
 }
 
 void* Renderer::GetViewportDescriptor()
@@ -119,10 +115,6 @@ void Renderer::OnInitialize()
 	AccelerationStructure.Initialize();
 
 	Manager = RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
-
-	// PathIntegrator.Initialize();
-	// ToneMapper.Initialize();
-	// FSRFilter.Initialize();
 
 	Materials = Buffer(
 		RenderCore::pAdapter->GetDevice(),
@@ -225,13 +217,14 @@ void Renderer::OnInitialize()
 
 			FLOAT Color[]	 = { 1, 1, 1, 1 };
 			auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
-			auto& Parameter	 = Scope.Get<Tonemap>();
+
+			auto&		Parameter = Scope.Get<Tonemap>();
+			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+
 			Parameter.Output = Scheduler.CreateTexture(
 				ETextureResolution::Render,
 				RGTextureDesc::Texture2D(SwapChain::Format, 0, 0, 1, TextureFlag_AllowRenderTarget, ClearValue));
 			Parameter.RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
-
-			const auto& ViewData = Scope.Get<RenderGraphViewData>();
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, CommandContext& Context)
@@ -268,7 +261,6 @@ void Renderer::OnInitialize()
 				settings.InputIndex = Registry.GetTextureIndex(PathTraceInput);
 
 				Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
-				// RenderDevice::Instance().BindGraphicsDescriptorTable(m_RS, CommandList);
 
 				Context.DrawInstanced(3, 1, 0, 0);
 
@@ -285,15 +277,15 @@ void Renderer::OnInitialize()
 		{
 			auto& TonemapScope = Scheduler.GetParentRenderGraph()->GetScope("Tonemap");
 
-			auto& Parameter		 = Scope.Get<FSR>();
+			auto&		Parameter = Scope.Get<FSR>();
+			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+
 			Parameter.EASUOutput = Scheduler.CreateTexture(
 				ETextureResolution::Viewport,
 				RGTextureDesc::RWTexture2D(SwapChain::Format, 0, 0, 1));
 			Parameter.RCASOutput = Scheduler.CreateTexture(
 				ETextureResolution::Viewport,
 				RGTextureDesc::RWTexture2D(SwapChain::Format, 0, 0, 1));
-
-			const auto& ViewData = Scope.Get<RenderGraphViewData>();
 
 			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, CommandContext& Context)
@@ -419,7 +411,6 @@ void Renderer::OnRender()
 
 		bool Dirty = false;
 		Dirty |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
-
 		Dirty |= ImGui::SliderScalar(
 			"Max Depth",
 			ImGuiDataType_U32,
@@ -456,7 +447,7 @@ void Renderer::OnRender()
 	}
 	ImGui::End();
 
-	World.ActiveCamera->AspectRatio = float(ViewportWidth) / float(ViewportHeight);
+	World.ActiveCamera->AspectRatio = float(RenderWidth) / float(RenderHeight);
 
 	NumMaterials = NumLights = 0;
 	AccelerationStructure.clear();
@@ -482,7 +473,6 @@ void Renderer::OnRender()
 		Copy.OpenCommandList();
 
 		// Update shader table
-		// PathIntegrator.UpdateShaderTable(AccelerationStructure, Copy);
 		HitGroupShaderTable->Reset();
 		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
 		{
@@ -565,7 +555,6 @@ void Renderer::OnRender()
 	{
 		World.WorldState				= EWorldState_Render;
 		Settings::NumAccumulatedSamples = 0;
-		// PathIntegrator.Reset();
 	}
 
 	CommandContext& Context = RenderCore::pAdapter->GetDevice()->GetCommandContext();

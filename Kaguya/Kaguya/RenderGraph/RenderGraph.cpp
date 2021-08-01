@@ -74,9 +74,9 @@ void RenderGraph::Setup()
 	// or rather maximum recursion depth AKA longest path in a DAG
 	std::vector<int> Distances(TopologicalSortedPasses.size(), 0);
 
-	for (size_t i = 0; i < TopologicalSortedPasses.size(); ++i)
+	for (auto& TopologicalSortedPass : TopologicalSortedPasses)
 	{
-		size_t u = TopologicalSortedPasses[i]->TopologicalIndex;
+		size_t u = TopologicalSortedPass->TopologicalIndex;
 		for (auto v : AdjacencyLists[u])
 		{
 			if (Distances[v] < Distances[u] + 1)
@@ -86,11 +86,18 @@ void RenderGraph::Setup()
 		}
 	}
 
-	DependencyLevels.resize(*std::max_element(Distances.begin(), Distances.end()) + 1);
+	DependencyLevels.resize(
+		*std::max_element(Distances.begin(), Distances.end()) + 1,
+		RenderGraphDependencyLevel(this));
 	for (size_t i = 0; i < TopologicalSortedPasses.size(); ++i)
 	{
 		int level = Distances[i];
 		DependencyLevels[level].AddRenderPass(TopologicalSortedPasses[i]);
+	}
+
+	for (auto& DependencyLevel : DependencyLevels)
+	{
+		DependencyLevel.PostInitialize();
 	}
 
 	std::cout << "Longest Path" << std::endl;
@@ -130,8 +137,51 @@ void RenderGraph::Execute(CommandContext& Context)
 	}
 
 	D3D12ScopedEvent(Context, "Render Graph");
-	for (auto& Executable : Executables)
+	for (auto& DependencyLevel : DependencyLevels)
 	{
-		Executable(Registry, Context);
+		DependencyLevel.Execute(Context);
+	}
+}
+
+void RenderGraphDependencyLevel::PostInitialize()
+{
+	for (auto Read : Reads)
+	{
+		D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+		if (Parent->GetScheduler().AllowUnorderedAccess(Read))
+		{
+			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		}
+
+		ReadStates.push_back(ReadState);
+	}
+
+	for (auto Write : Writes)
+	{
+		D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
+
+		if (Parent->GetScheduler().AllowRenderTarget(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+		}
+		if (Parent->GetScheduler().AllowDepthStencil(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		}
+		if (Parent->GetScheduler().AllowUnorderedAccess(Write))
+		{
+			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		}
+
+		WriteStates.push_back(WriteState);
+	}
+}
+
+void RenderGraphDependencyLevel::Execute(CommandContext& Context)
+{
+	for (auto& RenderPass : RenderPasses)
+	{
+		RenderPass->Callback(GetParentRenderGraph()->GetRegistry(), Context);
 	}
 }
