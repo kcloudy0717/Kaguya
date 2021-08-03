@@ -18,38 +18,33 @@ public:
 
 	void Initialize();
 
-	void ScheduleResources();
+	void RealizeResources();
 
-	Texture& GetTexture(RenderResourceHandle Handle)
-	{
-		assert(Handle.Type == ERGResourceType::Texture);
-		assert(Handle.Id >= 0 && Handle.Id < Textures.size());
-		return Textures[Handle.Id];
-	}
+	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle)->Texture&;
 
-	const ShaderResourceView& GetTextureSRV(
+	[[nodiscard]] auto GetTextureSRV(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt);
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const ShaderResourceView&;
 
-	const UnorderedAccessView& GetTextureUAV(
+	[[nodiscard]] auto GetTextureUAV(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt);
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const UnorderedAccessView&;
 
-	UINT GetTextureIndex(
+	[[nodiscard]] auto GetTextureIndex(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt);
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> UINT;
 
-	UINT GetRWTextureIndex(
+	[[nodiscard]] auto GetRWTextureIndex(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt);
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> UINT;
 
 private:
 	RenderGraphScheduler& Scheduler;

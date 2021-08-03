@@ -491,7 +491,7 @@ void InspectorWindow::OnRender()
 						break;
 					}
 
-					auto ImageBox = [&](ETextureTypes TextureType, UINT64& Key, std::string_view Name)
+					auto ImageBox = [&](ETextureTypes Type, UINT64& Key, std::string_view Name)
 					{
 						auto handle = AssetManager::GetImageCache().Load(Key);
 
@@ -500,12 +500,12 @@ void InspectorWindow::OnRender()
 						if (handle)
 						{
 							ImGui::Button(handle->Name.data());
-							Material.TextureIndices[TextureType] = handle->SRV.GetIndex();
+							Material.TextureIndices[Type] = handle->SRV.GetIndex();
 						}
 						else
 						{
 							ImGui::Button("NULL");
-							Material.TextureIndices[TextureType] = -1;
+							Material.TextureIndices[Type] = -1;
 						}
 
 						if (ImGui::BeginDragDropTarget())

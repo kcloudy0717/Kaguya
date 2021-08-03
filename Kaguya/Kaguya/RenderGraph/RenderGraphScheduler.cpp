@@ -1,19 +1,16 @@
 #include "RenderGraphScheduler.h"
 #include "RenderPass.h"
 
-RenderResourceHandle RenderGraphScheduler::CreateTexture(
-	ETextureResolution	 TextureResolution,
-	const RGTextureDesc& Desc)
+auto RenderGraphScheduler::CreateTexture(const RGTextureDesc& Desc) -> RenderResourceHandle
 {
-	if (TextureResolution == ETextureResolution::Render || TextureResolution == ETextureResolution::Viewport)
+	if (Desc.Resolution == ETextureResolution::Render || Desc.Resolution == ETextureResolution::Viewport)
 	{
-		assert(Desc.TextureType == ETextureType::Texture2D);
+		assert(Desc.Type == ETextureType::Texture2D);
 	}
 
-	RHITexture& Texture			   = Textures.emplace_back();
-	Texture.Handle				   = TextureHandle;
-	Texture.Desc				   = Desc;
-	Texture.Desc.TextureResolution = TextureResolution;
+	RHITexture& Texture = Textures.emplace_back();
+	Texture.Handle		= TextureHandle;
+	Texture.Desc		= Desc;
 
 	++TextureHandle.Id;
 
@@ -21,14 +18,14 @@ RenderResourceHandle RenderGraphScheduler::CreateTexture(
 	return Texture.Handle;
 }
 
-RenderResourceHandle RenderGraphScheduler::Read(RenderResourceHandle Resource)
+auto RenderGraphScheduler::Read(RenderResourceHandle Resource) -> RenderResourceHandle
 {
 	assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
 	CurrentRenderPass->Read(Resource);
 	return Resource;
 }
 
-RenderResourceHandle RenderGraphScheduler::Write(RenderResourceHandle Resource)
+auto RenderGraphScheduler::Write(RenderResourceHandle Resource) -> RenderResourceHandle
 {
 	assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
 	CurrentRenderPass->Write(Resource);

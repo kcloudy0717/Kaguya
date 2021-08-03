@@ -3,6 +3,12 @@
 
 class RenderPass;
 
+struct RHIBuffer
+{
+	RenderResourceHandle Handle;
+	RGBufferDesc		 Desc;
+};
+
 struct RHITexture
 {
 	RenderResourceHandle Handle;
@@ -21,11 +27,9 @@ public:
 		TextureHandle.Id	  = 0;
 	}
 
-	RenderResourceHandle CreateTexture(ETextureResolution TextureResolution, const RGTextureDesc& Desc);
-
-	RenderResourceHandle Read(RenderResourceHandle Resource);
-
-	RenderResourceHandle Write(RenderResourceHandle Resource);
+	[[nodiscard]] auto CreateTexture(const RGTextureDesc& Desc) -> RenderResourceHandle;
+	[[nodiscard]] auto Read(RenderResourceHandle Resource) -> RenderResourceHandle;
+	[[nodiscard]] auto Write(RenderResourceHandle Resource) -> RenderResourceHandle;
 
 	bool AllowRenderTarget(RenderResourceHandle Resource) const noexcept
 	{
@@ -43,8 +47,11 @@ public:
 
 	bool AllowUnorderedAccess(RenderResourceHandle Resource) const noexcept
 	{
-		assert(Resource.Type == ERGResourceType::Texture);
-		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
+		assert((Resource.Id >= 0 && Resource.Id < Textures.size()) || (Resource.Id >= 0 && Resource.Id < Textures.size()));
+		if (Resource.Type == ERGResourceType::Buffer)
+		{
+		}
 		return Textures[Resource.Id].Desc.AllowUnorderedAccess();
 	}
 
@@ -59,6 +66,9 @@ private:
 	// Handles have a 1 : 1 mapping to resource containers
 
 	RenderPass* CurrentRenderPass;
+
+	RenderResourceHandle   BufferHandle;
+	std::vector<RHIBuffer> Buffers;
 
 	RenderResourceHandle	TextureHandle;
 	std::vector<RHITexture> Textures;

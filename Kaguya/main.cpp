@@ -5,12 +5,14 @@
 #include <RenderCore/RenderCore.h>
 
 #include <Graphics/AssetManager.h>
-#include <Graphics/Renderer.h>
 #include <Graphics/UI/HierarchyWindow.h>
 #include <Graphics/UI/ViewportWindow.h>
 #include <Graphics/UI/InspectorWindow.h>
 #include <Graphics/UI/AssetWindow.h>
 #include <Graphics/UI/ConsoleWindow.h>
+
+#include <Graphics/Renderer.h>
+#include <Graphics/PathIntegrator.h>
 
 #define RENDER_AT_1920x1080 0
 
@@ -35,7 +37,7 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		pRenderer = std::make_unique<Renderer>(World);
+		pRenderer = std::make_unique<PathIntegrator>(&World);
 		pRenderer->OnInitialize();
 
 		return true;
@@ -75,7 +77,7 @@ public:
 		World.Update(DeltaTime);
 
 		// Render
-		pRenderer->SetViewportResolution(viewportWidth, viewportHeight);
+		pRenderer->OnSetViewportResolution(viewportWidth, viewportHeight);
 
 		pRenderer->OnRender();
 	}

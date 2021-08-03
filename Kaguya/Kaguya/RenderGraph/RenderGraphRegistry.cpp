@@ -8,7 +8,7 @@ void RenderGraphRegistry::Initialize()
 	TextureShaderViews.resize(Scheduler.Textures.size());
 }
 
-void RenderGraphRegistry::ScheduleResources()
+void RenderGraphRegistry::RealizeResources()
 {
 	for (size_t i = 0; i < Scheduler.Textures.size(); ++i)
 	{
@@ -23,13 +23,13 @@ void RenderGraphRegistry::ScheduleResources()
 		}
 		Handle.State = ERGHandleState::Ready;
 
-		if (Desc.TextureResolution == ETextureResolution::Render)
+		if (Desc.Resolution == ETextureResolution::Render)
 		{
 			auto [w, h] = Scheduler.GetParentRenderGraph()->GetRenderResolution();
 			Desc.Width	= w;
 			Desc.Height = h;
 		}
-		else if (Desc.TextureResolution == ETextureResolution::Viewport)
+		else if (Desc.Resolution == ETextureResolution::Viewport)
 		{
 			auto [w, h] = Scheduler.GetParentRenderGraph()->GetViewportResolution();
 			Desc.Width	= w;
@@ -39,20 +39,20 @@ void RenderGraphRegistry::ScheduleResources()
 		D3D12_RESOURCE_DESC	 ResourceDesc  = {};
 		D3D12_RESOURCE_FLAGS ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
 
-		if (Desc.Flags & TextureFlag_AllowRenderTarget)
+		if (Desc.AllowRenderTarget())
 		{
 			ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		}
-		if (Desc.Flags & TextureFlag_AllowDepthStencil)
+		if (Desc.AllowDepthStencil())
 		{
 			ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		}
-		if (Desc.Flags & TextureFlag_AllowUnorderedAccess)
+		if (Desc.AllowUnorderedAccess())
 		{
 			ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
-		switch (Desc.TextureType)
+		switch (Desc.Type)
 		{
 		case ETextureType::Texture2D:
 			ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
@@ -108,7 +108,7 @@ void RenderGraphRegistry::ScheduleResources()
 			ShaderViews.SRVs.resize(Textures[i].GetNumSubresources());
 		}
 
-		if (Desc.Flags & TextureFlag_AllowUnorderedAccess)
+		if (Desc.AllowUnorderedAccess())
 		{
 			if (ShaderViews.UAVs.empty())
 			{
@@ -134,11 +134,18 @@ void RenderGraphRegistry::ScheduleResources()
 	}
 }
 
-const ShaderResourceView& RenderGraphRegistry::GetTextureSRV(
+auto RenderGraphRegistry::GetTexture(RenderResourceHandle Handle) -> Texture&
+{
+	assert(Handle.Type == ERGResourceType::Texture);
+	assert(Handle.Id >= 0 && Handle.Id < Textures.size());
+	return Textures[Handle.Id];
+}
+
+auto RenderGraphRegistry::GetTextureSRV(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const ShaderResourceView&
 {
 	RenderResourceHandle& HandleRef = Scheduler.Textures[Handle.Id].Handle;
 
@@ -156,11 +163,11 @@ const ShaderResourceView& RenderGraphRegistry::GetTextureSRV(
 	return ShaderViews.SRVs[SubresourceIndex];
 }
 
-const UnorderedAccessView& RenderGraphRegistry::GetTextureUAV(
+auto RenderGraphRegistry::GetTextureUAV(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const UnorderedAccessView&
 {
 	Texture& Texture = GetTexture(Handle);
 	assert(Scheduler.Textures[Handle.Id].Desc.Flags & TextureFlag_AllowUnorderedAccess);
@@ -179,20 +186,20 @@ const UnorderedAccessView& RenderGraphRegistry::GetTextureUAV(
 	return ShaderViews.UAVs[SubresourceIndex];
 }
 
-UINT RenderGraphRegistry::GetTextureIndex(
+auto RenderGraphRegistry::GetTextureIndex(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> UINT
 {
 	return GetTextureSRV(Handle, OptArraySlice, OptMipSlice, OptPlaneSlice).GetIndex();
 }
 
-UINT RenderGraphRegistry::GetRWTextureIndex(
+auto RenderGraphRegistry::GetRWTextureIndex(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/)
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> UINT
 {
 	return GetTextureUAV(Handle, OptArraySlice, OptMipSlice, OptPlaneSlice).GetIndex();
 }

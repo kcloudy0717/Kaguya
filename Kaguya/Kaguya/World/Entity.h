@@ -13,7 +13,7 @@ public:
 	}
 
 	template<typename T, typename... TArgs>
-	T& AddComponent(TArgs&&... Args)
+	auto AddComponent(TArgs&&... Args) -> T&
 	{
 		assert(!HasComponent<T>());
 
@@ -23,7 +23,7 @@ public:
 	}
 
 	template<typename T>
-	T& GetComponent()
+	[[nodiscard]] auto GetComponent() -> T&
 	{
 		assert(HasComponent<T>());
 
@@ -31,7 +31,7 @@ public:
 	}
 
 	template<typename T, typename... TArgs>
-	T& GetOrAddComponent(TArgs&&... Args)
+	[[nodiscard]] auto GetOrAddComponent(TArgs&&... Args) -> T&
 	{
 		if (HasComponent<T>())
 		{
@@ -41,7 +41,7 @@ public:
 	}
 
 	template<typename T>
-	bool HasComponent()
+	[[nodiscard]] auto HasComponent() -> bool
 	{
 		return pWorld->Registry.any_of<T>(Handle);
 	}

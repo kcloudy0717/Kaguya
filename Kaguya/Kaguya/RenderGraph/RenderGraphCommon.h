@@ -77,6 +77,8 @@ enum class ERGHandleState : UINT64
 	Ready
 };
 
+// A virtual resource handle, the underlying realization of the
+// resource type is done in RenderGraphRegistry, refer to RenderGraph/FrameGraph in Halcyon/Frostbite
 struct RenderResourceHandle
 {
 	auto operator<=>(const RenderResourceHandle&) const = default;
@@ -103,19 +105,27 @@ struct hash<RenderResourceHandle>
 
 enum EBufferFlags
 {
-	BufferFlag_None = 0,
+	BufferFlag_None					= 0,
+	BufferFlag_AllowUnorderedAccess = 1 << 0
 };
 
 struct RGBufferDesc
 {
 	template<typename T>
-	static RGBufferDesc Create(UINT NumElements)
+	static RGBufferDesc StructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
 	{
-		return {};
+		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T), .Flags = Flags };
 	}
 
-	EBufferFlags Flags		 = EBufferFlags::BufferFlag_None;
+	template<typename T>
+	static RGBufferDesc RWStructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
+	{
+		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T),
+				 .Flags		  = Flags | EBufferFlags::BufferFlag_AllowUnorderedAccess };
+	}
+
 	UINT64		 SizeInBytes = 0;
+	EBufferFlags Flags		 = EBufferFlags::BufferFlag_None;
 };
 
 enum class ETextureResolution
@@ -144,16 +154,18 @@ DEFINE_ENUM_FLAG_OPERATORS(ETextureFlags);
 
 struct RGTextureDesc
 {
-	static RGTextureDesc RWTexture2D(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto RWTexture2D(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Width,
+		UINT			   Height,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture2D,
+			.Type			  = ETextureType::Texture2D,
 			.Width			  = Width,
 			.Height			  = Height,
 			.DepthOrArraySize = 1,
@@ -162,17 +174,19 @@ struct RGTextureDesc
 		};
 	}
 
-	static RGTextureDesc RWTexture2DArray(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  ArraySize,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto RWTexture2DArray(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Width,
+		UINT			   Height,
+		UINT16			   ArraySize,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture2DArray,
+			.Type			  = ETextureType::Texture2DArray,
 			.Width			  = Width,
 			.Height			  = Height,
 			.DepthOrArraySize = ArraySize,
@@ -181,17 +195,19 @@ struct RGTextureDesc
 		};
 	}
 
-	static RGTextureDesc RWTexture3D(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  Depth,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto RWTexture3D(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Width,
+		UINT			   Height,
+		UINT16			   Depth,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture3D,
+			.Type			  = ETextureType::Texture3D,
 			.Width			  = Width,
 			.Height			  = Height,
 			.DepthOrArraySize = Depth,
@@ -200,16 +216,18 @@ struct RGTextureDesc
 		};
 	}
 
-	static RGTextureDesc Texture2D(
+	[[nodiscard]] static auto Texture2D(
+		ETextureResolution				 Resolution,
 		DXGI_FORMAT						 Format,
 		UINT							 Width,
 		UINT							 Height,
 		UINT16							 MipLevels			 = 1,
 		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt)
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc
 	{
-		return { .Format			  = Format,
-				 .TextureType		  = ETextureType::Texture2D,
+		return { .Resolution		  = Resolution,
+				 .Format			  = Format,
+				 .Type				  = ETextureType::Texture2D,
 				 .Width				  = Width,
 				 .Height			  = Height,
 				 .DepthOrArraySize	  = 1,
@@ -218,17 +236,19 @@ struct RGTextureDesc
 				 .OptimizedClearValue = OptimizedClearValue };
 	}
 
-	static RGTextureDesc Texture2DArray(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  ArraySize,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto Texture2DArray(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Width,
+		UINT			   Height,
+		UINT16			   ArraySize,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture2DArray,
+			.Type			  = ETextureType::Texture2DArray,
 			.Width			  = Width,
 			.Height			  = Height,
 			.DepthOrArraySize = ArraySize,
@@ -237,17 +257,19 @@ struct RGTextureDesc
 		};
 	}
 
-	static RGTextureDesc Texture3D(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  Depth,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto Texture3D(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Width,
+		UINT			   Height,
+		UINT16			   Depth,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::Texture3D,
+			.Type			  = ETextureType::Texture3D,
 			.Width			  = Width,
 			.Height			  = Height,
 			.DepthOrArraySize = Depth,
@@ -256,15 +278,17 @@ struct RGTextureDesc
 		};
 	}
 
-	static RGTextureDesc TextureCube(
-		DXGI_FORMAT	  Format,
-		UINT		  Dimension,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None)
+	[[nodiscard]] static auto TextureCube(
+		ETextureResolution Resolution,
+		DXGI_FORMAT		   Format,
+		UINT			   Dimension,
+		UINT16			   MipLevels = 1,
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
 	{
 		return {
+			.Resolution		  = Resolution,
 			.Format			  = Format,
-			.TextureType	  = ETextureType::TextureCube,
+			.Type			  = ETextureType::TextureCube,
 			.Width			  = Dimension,
 			.Height			  = Dimension,
 			.DepthOrArraySize = 6,
@@ -277,14 +301,13 @@ struct RGTextureDesc
 	bool AllowDepthStencil() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowDepthStencil; }
 	bool AllowUnorderedAccess() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowUnorderedAccess; }
 
-	ETextureResolution TextureResolution = ETextureResolution::Static;
-
-	DXGI_FORMAT						 Format			  = DXGI_FORMAT_UNKNOWN;
-	ETextureType					 TextureType	  = ETextureType::Texture2D;
-	UINT							 Width			  = 1;
-	UINT							 Height			  = 1;
-	UINT16							 DepthOrArraySize = 1;
-	UINT16							 MipLevels		  = 1;
-	ETextureFlags					 Flags			  = ETextureFlags::TextureFlag_None;
-	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue;
+	ETextureResolution				 Resolution			 = ETextureResolution::Static;
+	DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
+	ETextureType					 Type				 = ETextureType::Texture2D;
+	UINT							 Width				 = 1;
+	UINT							 Height				 = 1;
+	UINT16							 DepthOrArraySize	 = 1;
+	UINT16							 MipLevels			 = 1;
+	ETextureFlags					 Flags				 = ETextureFlags::TextureFlag_None;
+	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
 };

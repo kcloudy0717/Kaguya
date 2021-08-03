@@ -47,6 +47,9 @@ public:
 	{
 	}
 
+	auto begin() const noexcept { return RenderPasses.begin(); }
+	auto end() const noexcept { return RenderPasses.end(); }
+
 	void AddRenderPass(const std::string& Name, RenderPassCallback Callback)
 	{
 		RenderPass* NewRenderPass = new RenderPass(this, Name);

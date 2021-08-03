@@ -117,8 +117,8 @@ void RenderGraph::Execute(CommandContext& Context)
 {
 	for (RHITexture& Texture : Scheduler.Textures)
 	{
-		if ((RenderResolutionResized && Texture.Desc.TextureResolution == ETextureResolution::Render) ||
-			(ViewportResolutionResized && Texture.Desc.TextureResolution == ETextureResolution::Viewport))
+		if ((RenderResolutionResized && Texture.Desc.Resolution == ETextureResolution::Render) ||
+			(ViewportResolutionResized && Texture.Desc.Resolution == ETextureResolution::Viewport))
 		{
 			Texture.Handle.State = ERGHandleState::Dirty;
 		}
@@ -126,7 +126,7 @@ void RenderGraph::Execute(CommandContext& Context)
 
 	RenderResolutionResized = ViewportResolutionResized = false;
 
-	Registry.ScheduleResources();
+	Registry.RealizeResources();
 	for (auto& RenderPass : RenderPasses)
 	{
 		auto& ViewData			= RenderPass->Scope.Get<RenderGraphViewData>();

@@ -12,8 +12,6 @@ struct GlobalConstants
 	// z, w = 1 / Resolution
 	float4 Resolution;
 
-	float2 MousePosition;
-
 	uint NumLights;
 	uint TotalFrameCount;
 
