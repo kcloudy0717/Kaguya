@@ -123,6 +123,7 @@ void PathIntegrator::Initialize()
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
 			Parameter.Output = Scheduler.CreateTexture(
+				"Path Trace Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
 
 			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, CommandContext& Context)
@@ -198,15 +199,17 @@ void PathIntegrator::Initialize()
 			auto&		Parameter = Scope.Get<Tonemap>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
-			Parameter.Output = Scheduler.CreateTexture(RGTextureDesc::Texture2D(
-				ETextureResolution::Render,
-				SwapChain::Format,
-				0,
-				0,
-				1,
-				TextureFlag_AllowRenderTarget,
-				ClearValue));
-			Parameter.RTV	 = RenderTargetView(RenderCore::pAdapter->GetDevice());
+			Parameter.Output = Scheduler.CreateTexture(
+				"Tonemap Output",
+				RGTextureDesc::Texture2D(
+					ETextureResolution::Render,
+					SwapChain::Format,
+					0,
+					0,
+					1,
+					TextureFlag_AllowRenderTarget,
+					ClearValue));
+			Parameter.RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, CommandContext& Context)
@@ -256,8 +259,10 @@ void PathIntegrator::Initialize()
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
 			Parameter.EASUOutput = Scheduler.CreateTexture(
+				"EASU Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, SwapChain::Format, 0, 0, 1));
 			Parameter.RCASOutput = Scheduler.CreateTexture(
+				"RCAS Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, SwapChain::Format, 0, 0, 1));
 
 			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);

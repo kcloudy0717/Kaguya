@@ -53,6 +53,42 @@ void Renderer::OnRender()
 	{
 		for (const auto& RenderPass : RenderGraph)
 		{
+			char Label[MAX_PATH] = {};
+			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
+			if (ImGui::TreeNode(Label))
+			{
+				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
+													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+
+				ImGui::Text("Inputs");
+				if (ImGui::BeginTable("Inputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Reads)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::Text("Outputs");
+				if (ImGui::BeginTable("Outputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Writes)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::TreePop();
+			}
 		}
 	}
 	ImGui::End();
@@ -71,9 +107,8 @@ void Renderer::OnRender()
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Context->ResourceBarrier(1, &Barrier);
 	{
-		D3D12_VIEWPORT Viewport =
-			CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
-		D3D12_RECT ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
+		auto Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
+		auto ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
 
 		Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		Context->RSSetViewports(1, &Viewport);
