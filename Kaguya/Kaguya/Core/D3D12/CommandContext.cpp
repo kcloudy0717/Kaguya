@@ -1,13 +1,13 @@
 #include "CommandContext.h"
 #include "Device.h"
 
-CommandContext::CommandContext(Device* Device, ECommandQueueType Type, D3D12_COMMAND_LIST_TYPE CommandListType)
-	: DeviceChild(Device)
+CommandContext::CommandContext(Device* Parent, ECommandQueueType Type, D3D12_COMMAND_LIST_TYPE CommandListType)
+	: DeviceChild(Parent)
 	, Type(Type)
-	, CommandListHandle(Device, CommandListType, Device->GetCommandQueue(Type))
+	, CommandListHandle(Parent, CommandListType, Parent->GetCommandQueue(Type))
 	, CommandAllocator(nullptr)
-	, CommandAllocatorPool(Device, CommandListType)
-	, CpuConstantAllocator(Device->GetDevice())
+	, CommandAllocatorPool(Parent, CommandListType)
+	, CpuConstantAllocator(Parent)
 {
 }
 

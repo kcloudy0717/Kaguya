@@ -98,8 +98,8 @@ bool CommandListHandle::AssertResourceState(Resource* pResource, D3D12_RESOURCE_
 	return true;
 }
 
-CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_TYPE Type)
-	: DeviceChild(Device)
+CommandListHandle::CommandList::CommandList(Device* Parent, D3D12_COMMAND_LIST_TYPE Type)
+	: DeviceChild(Parent)
 	, Type(Type)
 	, pCommandAllocator(nullptr)
 	, IsClosed(true)
@@ -117,7 +117,7 @@ CommandListHandle::CommandList::CommandList(Device* Device, D3D12_COMMAND_LIST_T
 		nullptr,
 		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
 #else
-	ASSERTD3D12APISUCCEEDED(Device->GetDevice5()->CreateCommandList1(
+	ASSERTD3D12APISUCCEEDED(Parent->GetDevice5()->CreateCommandList1(
 		1,
 		Type,
 		D3D12_COMMAND_LIST_FLAG_NONE,

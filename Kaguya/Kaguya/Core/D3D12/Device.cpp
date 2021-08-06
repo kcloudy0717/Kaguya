@@ -13,12 +13,12 @@ static AutoConsoleVariable<int> CVar_GlobalSamplerHeapSize(
 	"Global Sampler Heap Size",
 	D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE);
 
-Device::Device(Adapter* Adapter)
-	: AdapterChild(Adapter)
-	, GraphicsQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT, ECommandQueueType::Direct)
-	, AsyncComputeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE, ECommandQueueType::AsyncCompute)
-	, CopyQueue1(this, D3D12_COMMAND_LIST_TYPE_COPY, ECommandQueueType::Copy1)
-	, CopyQueue2(this, D3D12_COMMAND_LIST_TYPE_COPY, ECommandQueueType::Copy2)
+Device::Device(Adapter* Parent)
+	: AdapterChild(Parent)
+	, GraphicsQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT)
+	, AsyncComputeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
+	, CopyQueue1(this, D3D12_COMMAND_LIST_TYPE_COPY)
+	, CopyQueue2(this, D3D12_COMMAND_LIST_TYPE_COPY)
 	, ResourceDescriptorHeap(this)
 	, SamplerDescriptorHeap(this)
 	, RenderTargetDescriptorHeap(this)
@@ -32,10 +32,10 @@ Device::~Device()
 
 void Device::Initialize()
 {
-	GraphicsQueue.Initialize();
-	AsyncComputeQueue.Initialize();
-	CopyQueue1.Initialize();
-	CopyQueue2.Initialize();
+	GraphicsQueue.Initialize(ECommandQueueType::Direct);
+	AsyncComputeQueue.Initialize(ECommandQueueType::AsyncCompute);
+	CopyQueue1.Initialize(ECommandQueueType::Copy1);
+	CopyQueue2.Initialize(ECommandQueueType::Copy2);
 
 	ResourceDescriptorHeap.Initialize(CVar_GlobalResourceViewHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	SamplerDescriptorHeap.Initialize(CVar_GlobalSamplerHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);

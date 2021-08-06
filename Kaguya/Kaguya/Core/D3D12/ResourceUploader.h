@@ -7,7 +7,7 @@
 class ResourceUploader : public DeviceChild
 {
 public:
-	ResourceUploader(Device* Device);
+	ResourceUploader(Device* Parent);
 	~ResourceUploader();
 
 	void Begin();

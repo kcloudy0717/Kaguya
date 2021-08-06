@@ -38,7 +38,7 @@ private:
 	D3D12_GPU_VIRTUAL_ADDRESS			   GPUVirtualAddress;
 };
 
-class LinearAllocator
+class LinearAllocator : public DeviceChild
 {
 public:
 	enum
@@ -48,7 +48,10 @@ public:
 		CpuAllocatorPageSize = 128 * 1024
 	};
 
-	LinearAllocator(ID3D12Device* Device);
+	LinearAllocator(Device* Parent)
+		: DeviceChild(Parent)
+	{
+	}
 
 	void End(CommandSyncPoint SyncPoint);
 
@@ -70,15 +73,13 @@ private:
 	void DiscardPages(UINT64 FenceValue, const std::vector<LinearAllocatorPage*>& Pages);
 
 private:
-	ID3D12Device* Device;
-
 	std::vector<std::unique_ptr<LinearAllocatorPage>>	PagePool;
 	std::queue<std::pair<UINT64, LinearAllocatorPage*>> RetiredPages;
 	std::queue<LinearAllocatorPage*>					AvailablePages;
 	CriticalSection										CriticalSection;
 
 	CommandSyncPoint				  SyncPoint;
-	LinearAllocatorPage*			  CurrentPage;
+	LinearAllocatorPage*			  CurrentPage = nullptr;
 	std::vector<LinearAllocatorPage*> RetiredPageList;
 };
 

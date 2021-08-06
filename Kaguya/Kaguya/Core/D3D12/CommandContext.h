@@ -7,7 +7,7 @@
 class CommandContext : public DeviceChild
 {
 public:
-	CommandContext(Device* Device, ECommandQueueType Type, D3D12_COMMAND_LIST_TYPE CommandListType);
+	CommandContext(Device* Parent, ECommandQueueType Type, D3D12_COMMAND_LIST_TYPE CommandListType);
 
 	CommandQueue* GetCommandQueue();
 

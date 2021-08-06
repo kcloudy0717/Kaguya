@@ -89,7 +89,7 @@ private:
 	class CommandList : public DeviceChild
 	{
 	public:
-		CommandList(Device* Device, D3D12_COMMAND_LIST_TYPE Type);
+		CommandList(Device* Parent, D3D12_COMMAND_LIST_TYPE Type);
 		~CommandList();
 
 		void Close();

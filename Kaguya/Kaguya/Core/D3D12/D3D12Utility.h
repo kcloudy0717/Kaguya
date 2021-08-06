@@ -14,10 +14,10 @@ private:
 };
 
 #ifdef _DEBUG
-#define GetScopedCaptureVariableName(a, b) PIXConcatenate(a, b)
-#define PIXScopedCapture()				   PIXCapture GetScopedCaptureVariableName(pixCapture, __LINE__)
+	#define GetScopedCaptureVariableName(a, b) PIXConcatenate(a, b)
+	#define PIXScopedCapture()				   PIXCapture GetScopedCaptureVariableName(pixCapture, __LINE__)
 #else
-#define PIXScopedCapture()
+	#define PIXScopedCapture()
 #endif
 
 struct ShaderIdentifier

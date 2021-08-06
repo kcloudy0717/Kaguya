@@ -51,12 +51,10 @@ public:
 	void OnBeginFrame() { Profiler.OnBeginFrame(); }
 	void OnEndFrame() { Profiler.OnEndFrame(); }
 
-	IDXGIFactory6* GetFactory6() const noexcept { return Factory6.Get(); }
-
-	IDXGIAdapter4* GetAdapter4() const noexcept { return Adapter4.Get(); }
-
-	ID3D12Device*  GetD3D12Device() const noexcept { return D3D12Device.Get(); }
-	ID3D12Device5* GetD3D12Device5() const noexcept { return D3D12Device5.Get(); }
+	auto GetFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
+	auto GetAdapter4() const noexcept -> IDXGIAdapter4* { return Adapter4.Get(); }
+	auto GetD3D12Device() const noexcept -> ID3D12Device* { return D3D12Device.Get(); }
+	auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return D3D12Device5.Get(); }
 
 	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
 	{
@@ -154,8 +152,6 @@ private:
 private:
 	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
 
-	AftermathCrashTracker AftermathCrashTracker;
-
 	Microsoft::WRL::ComPtr<IDXGIAdapter4> Adapter4;
 	DXGI_ADAPTER_DESC3					  AdapterDesc = {};
 
@@ -174,4 +170,6 @@ private:
 	Device Device;
 
 	Profiler Profiler;
+
+	AftermathCrashTracker AftermathCrashTracker;
 };

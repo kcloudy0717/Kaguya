@@ -42,8 +42,8 @@ class Descriptor : public DeviceChild
 public:
 	Descriptor() noexcept = default;
 
-	Descriptor(Device* Device)
-		: DeviceChild(Device)
+	Descriptor(Device* Parent)
+		: DeviceChild(Parent)
 	{
 		Allocate();
 	}

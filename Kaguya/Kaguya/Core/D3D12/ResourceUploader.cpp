@@ -3,9 +3,9 @@
 
 using Microsoft::WRL::ComPtr;
 
-ResourceUploader::ResourceUploader(Device* Device)
-	: DeviceChild(Device)
-	, CopyContext2(Device->GetCopyContext2())
+ResourceUploader::ResourceUploader(Device* Parent)
+	: DeviceChild(Parent)
+	, CopyContext2(Parent->GetCopyContext2())
 {
 }
 

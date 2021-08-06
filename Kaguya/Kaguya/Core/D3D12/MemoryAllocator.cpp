@@ -25,12 +25,6 @@ void LinearAllocatorPage::Reset()
 	Offset = 0;
 }
 
-LinearAllocator::LinearAllocator(ID3D12Device* Device)
-	: Device(Device)
-	, CurrentPage(nullptr)
-{
-}
-
 void LinearAllocator::End(CommandSyncPoint SyncPoint)
 {
 	if (!CurrentPage)
@@ -101,7 +95,7 @@ LinearAllocatorPage* LinearAllocator::CreateNewPage(UINT64 PageSize)
 	auto ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
-	ASSERTD3D12APISUCCEEDED(Device->CreateCommittedResource(
+	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,

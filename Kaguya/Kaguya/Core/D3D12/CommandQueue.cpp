@@ -1,8 +1,8 @@
 #include "CommandQueue.h"
 #include "Device.h"
 
-CommandAllocatorPool::CommandAllocatorPool(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
-	: DeviceChild(Device)
+CommandAllocatorPool::CommandAllocatorPool(Device* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
+	: DeviceChild(Parent)
 	, CommandListType(CommandListType)
 {
 }
@@ -40,15 +40,14 @@ void CommandAllocatorPool::DiscardCommandAllocator(CommandAllocator* CommandAllo
 	CommandAllocatorQueue.push(CommandAllocator);
 }
 
-CommandQueue::CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType, ECommandQueueType CommandQueueType)
-	: DeviceChild(Device)
+CommandQueue::CommandQueue(Device* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
+	: DeviceChild(Parent)
 	, CommandListType(CommandListType)
-	, CommandQueueType(CommandQueueType)
-	, ResourceBarrierCommandAllocatorPool(Device, CommandListType)
+	, ResourceBarrierCommandAllocatorPool(Parent, CommandListType)
 {
 }
 
-void CommandQueue::Initialize(std::optional<UINT> NumCommandLists /*= {}*/)
+void CommandQueue::Initialize(ECommandQueueType CommandQueueType, UINT NumCommandLists /*= 1*/)
 {
 	Device* Device = GetParentDevice();
 
@@ -60,25 +59,22 @@ void CommandQueue::Initialize(std::optional<UINT> NumCommandLists /*= {}*/)
 									  .NodeMask = NodeMask };
 	ASSERTD3D12APISUCCEEDED(
 		Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(pCommandQueue.ReleaseAndGetAddressOf())));
-
-	pCommandQueue->SetName(GetCommandQueueTypeString(CommandQueueType));
-
 	ASSERTD3D12APISUCCEEDED(
 		Device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.ReleaseAndGetAddressOf())));
 
-	FenceValue = 1;
+#ifdef _DEBUG
+	pCommandQueue->SetName(GetCommandQueueTypeString(CommandQueueType));
+	Fence->SetName(GetCommandQueueTypeFenceString(CommandQueueType));
+#endif
 
 	if (FAILED(pCommandQueue->GetTimestampFrequency(&Frequency)))
 	{
 		Frequency = UINT64_MAX;
 	}
 
-	if (NumCommandLists)
+	for (UINT i = 0; i < NumCommandLists; ++i)
 	{
-		for (UINT i = 0; i < *NumCommandLists; ++i)
-		{
-			AvailableCommandListHandles.push(CommandListHandle(GetParentDevice(), CommandListType, this));
-		}
+		AvailableCommandListHandles.push(CommandListHandle(GetParentDevice(), CommandListType, this));
 	}
 
 	ResourceBarrierCommandAllocator = ResourceBarrierCommandAllocatorPool.RequestCommandAllocator();
@@ -91,7 +87,7 @@ UINT64 CommandQueue::AdvanceGpu()
 	return FenceValue++;
 }
 
-bool CommandQueue::IsFenceComplete(UINT64 FenceValue)
+bool CommandQueue::IsFenceComplete(UINT64 FenceValue) const
 {
 	return Fence->GetCompletedValue() >= FenceValue;
 }

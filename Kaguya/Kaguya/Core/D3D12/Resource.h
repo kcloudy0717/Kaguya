@@ -81,11 +81,11 @@ class Resource : public DeviceChild
 public:
 	Resource() noexcept = default;
 	Resource(
-		Device*							 Device,
+		Device*							 Parent,
 		D3D12_RESOURCE_DESC				 Desc,
 		std::optional<D3D12_CLEAR_VALUE> ClearValue,
 		UINT							 NumSubresources)
-		: DeviceChild(Device)
+		: DeviceChild(Parent)
 		, Desc(Desc)
 		, ClearValue(ClearValue)
 		, NumSubresources(NumSubresources)
@@ -126,7 +126,7 @@ class ASBuffer : public Resource
 {
 public:
 	ASBuffer() noexcept = default;
-	ASBuffer(Device* Device, UINT64 SizeInBytes);
+	ASBuffer(Device* Parent, UINT64 SizeInBytes);
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
 };
@@ -136,7 +136,7 @@ class Buffer : public Resource
 public:
 	Buffer() noexcept = default;
 	Buffer(
-		Device*				 Device,
+		Device*				 Parent,
 		UINT64				 SizeInBytes,
 		UINT				 Stride,
 		D3D12_HEAP_TYPE		 HeapType,
@@ -177,8 +177,8 @@ class StructuredBuffer : public Buffer
 {
 public:
 	StructuredBuffer() noexcept = default;
-	StructuredBuffer(Device* Device, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
-		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_NONE)
+	StructuredBuffer(Device* Parent, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
+		: Buffer(Parent, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_NONE)
 	{
 	}
 };
@@ -188,8 +188,8 @@ class RWStructuredBuffer : public Buffer
 {
 public:
 	RWStructuredBuffer() noexcept = default;
-	RWStructuredBuffer(Device* Device, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
-		: Buffer(Device, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+	RWStructuredBuffer(Device* Parent, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
+		: Buffer(Parent, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 	{
 	}
 };
@@ -199,7 +199,7 @@ class Texture : public Resource
 public:
 	Texture() noexcept = default;
 	Texture(
-		Device*							 Device,
+		Device*							 Parent,
 		const D3D12_RESOURCE_DESC&		 Desc,
 		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt);
 

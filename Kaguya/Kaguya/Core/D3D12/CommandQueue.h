@@ -29,7 +29,7 @@ struct CommandListBatch
 class CommandAllocatorPool : public DeviceChild
 {
 public:
-	CommandAllocatorPool(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
+	CommandAllocatorPool(Device* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
 
 	CommandAllocator* RequestCommandAllocator();
 
@@ -46,19 +46,17 @@ private:
 class CommandQueue : public DeviceChild
 {
 public:
-	CommandQueue(Device* Device, D3D12_COMMAND_LIST_TYPE CommandListType, ECommandQueueType CommandQueueType);
+	CommandQueue(Device* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
 
-	void Initialize(std::optional<UINT> NumCommandLists = {});
+	void Initialize(ECommandQueueType CommandQueueType, UINT NumCommandLists = 1);
 
-	ID3D12CommandQueue* GetCommandQueue() const { return pCommandQueue.Get(); }
-
-	UINT64 GetFrequency() const { return Frequency; }
-
-	UINT64 GetCompletedValue() const { return Fence->GetCompletedValue(); }
+	[[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const { return pCommandQueue.Get(); }
+	[[nodiscard]] UINT64			  GetFrequency() const { return Frequency; }
+	[[nodiscard]] UINT64			  GetCompletedValue() const { return Fence->GetCompletedValue(); }
 
 	[[nodiscard]] UINT64 AdvanceGpu();
 
-	bool IsFenceComplete(UINT64 FenceValue);
+	[[nodiscard]] bool IsFenceComplete(UINT64 FenceValue) const;
 
 	void WaitForFence(UINT64 FenceValue);
 
@@ -101,18 +99,16 @@ private:
 
 private:
 	const D3D12_COMMAND_LIST_TYPE CommandListType;
-	const ECommandQueueType		  CommandQueueType;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> pCommandQueue;
 	UINT64									   Frequency = 0;
+	Microsoft::WRL::ComPtr<ID3D12Fence>		   Fence;
+	CriticalSection							   FenceMutex;
+	UINT64									   FenceValue = 1;
 
 	// Command allocators used exclusively for resolving resource barriers
 	CommandAllocatorPool ResourceBarrierCommandAllocatorPool;
 	CommandAllocator*	 ResourceBarrierCommandAllocator = nullptr;
 
 	std::queue<CommandListHandle> AvailableCommandListHandles;
-
-	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-	CriticalSection						FenceMutex;
-	UINT64								FenceValue = 0;
 };

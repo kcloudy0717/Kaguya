@@ -111,7 +111,6 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 #endif
 
 	D3D12Device.As(&D3D12Device5);
-
 	D3D12Device.As(&D3D12InfoQueue1);
 
 	D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,

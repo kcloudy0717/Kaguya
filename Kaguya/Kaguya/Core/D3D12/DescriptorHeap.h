@@ -5,9 +5,9 @@
 class DynamicResourceDescriptorHeap : public DeviceChild
 {
 public:
-	DynamicResourceDescriptorHeap() = default;
+	DynamicResourceDescriptorHeap() noexcept = default;
 
-	DynamicResourceDescriptorHeap(Device* Parent)
+	DynamicResourceDescriptorHeap(Device* Parent) noexcept
 		: DeviceChild(Parent)
 	{
 	}
@@ -91,13 +91,13 @@ class DescriptorPage;
 class DescriptorArray
 {
 public:
-	DescriptorArray() = default;
+	DescriptorArray() noexcept = default;
 
 	DescriptorArray(
 		DescriptorPage*				Parent,
 		D3D12_CPU_DESCRIPTOR_HANDLE CPUDescriptorHandle,
 		UINT						Offset,
-		UINT						NumDescriptors)
+		UINT						NumDescriptors) noexcept
 		: Parent(Parent)
 		, CPUDescriptorHandle(CPUDescriptorHandle)
 		, Offset(Offset)
@@ -144,9 +144,9 @@ private:
 class DescriptorPage : public DeviceChild
 {
 public:
-	DescriptorPage() = default;
+	DescriptorPage() noexcept = default;
 
-	DescriptorPage(Device* Parent)
+	DescriptorPage(Device* Parent) noexcept
 		: DeviceChild(Parent)
 	{
 	}
@@ -202,7 +202,7 @@ private:
 class DescriptorAllocator : public DeviceChild
 {
 public:
-	DescriptorAllocator(Device* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+	DescriptorAllocator(Device* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type) noexcept
 		: DeviceChild(Parent)
 		, Type(Type)
 	{
@@ -227,7 +227,7 @@ class DescriptorHandleCache : public DeviceChild
 public:
 	static constexpr UINT DescriptorHandleLimit = 256;
 
-	DescriptorHandleCache(Device* Parent)
+	DescriptorHandleCache(Device* Parent) noexcept
 		: DeviceChild(Parent)
 	{
 	}
@@ -334,7 +334,7 @@ private:
 class DynamicDescriptorHeap : public DeviceChild
 {
 public:
-	DynamicDescriptorHeap(Device* Parent)
+	DynamicDescriptorHeap(Device* Parent) noexcept
 		: DeviceChild(Parent)
 		, GraphicsHandleCache(Parent)
 		, ComputeHandleCache(Parent)

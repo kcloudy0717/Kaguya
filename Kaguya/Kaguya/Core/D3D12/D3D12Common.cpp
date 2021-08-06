@@ -18,6 +18,23 @@ LPCWSTR GetCommandQueueTypeString(ECommandQueueType CommandQueueType)
 	return nullptr;
 }
 
+LPCWSTR GetCommandQueueTypeFenceString(ECommandQueueType CommandQueueType)
+{
+	switch (CommandQueueType)
+	{
+	case ECommandQueueType::Direct:
+		return L"3D Fence";
+	case ECommandQueueType::AsyncCompute:
+		return L"Async Compute Fence";
+	case ECommandQueueType::Copy1:
+		return L"Copy 1 Fence";
+	case ECommandQueueType::Copy2:
+		return L"Copy 2 Fence";
+	}
+
+	return nullptr;
+}
+
 #define DXERR(x)                                                                                                       \
 	case x:                                                                                                            \
 		Error = #x;                                                                                                    \
@@ -83,24 +100,24 @@ std::string D3D12Exception::GetError() const
 	return Error;
 }
 
-bool CommandSyncPoint::IsValid() const noexcept
+auto CommandSyncPoint::IsValid() const noexcept -> bool
 {
 	return Fence != nullptr;
 }
 
-UINT64 CommandSyncPoint::GetValue() const noexcept
+auto CommandSyncPoint::GetValue() const noexcept -> UINT64
 {
 	assert(IsValid());
 	return Value;
 }
 
-bool CommandSyncPoint::IsComplete() const
+auto CommandSyncPoint::IsComplete() const -> bool
 {
 	assert(IsValid());
 	return Fence->GetCompletedValue() >= Value;
 }
 
-void CommandSyncPoint::WaitForCompletion() const
+auto CommandSyncPoint::WaitForCompletion() const -> void
 {
 	assert(IsValid());
 	ASSERTD3D12APISUCCEEDED(Fence->SetEventOnCompletion(Value, nullptr));

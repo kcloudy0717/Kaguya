@@ -12,7 +12,7 @@
 class Device : public AdapterChild
 {
 public:
-	Device(Adapter* Adapter);
+	Device(Adapter* Parent);
 	~Device();
 
 	void Initialize();

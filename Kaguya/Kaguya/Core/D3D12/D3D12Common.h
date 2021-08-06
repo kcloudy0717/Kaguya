@@ -18,7 +18,7 @@
 #define D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT	   ((D3D12_MAX_ROOT_COST) / (D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_COST))
 
 #ifdef _DEBUG
-#define D3D12_DEBUG_RESOURCE_STATES
+	#define D3D12_DEBUG_RESOURCE_STATES
 
 // The D3D debug layer (as well as Microsoft PIX and other graphics debugger
 // tools using an injection library) is not compatible with Nsight Aftermath!
@@ -41,6 +41,7 @@ enum class ECommandQueueType
 };
 
 LPCWSTR GetCommandQueueTypeString(ECommandQueueType CommandQueueType);
+LPCWSTR GetCommandQueueTypeFenceString(ECommandQueueType CommandQueueType);
 
 class D3D12Exception : public CoreException
 {
@@ -82,7 +83,7 @@ public:
 	{
 	}
 
-	Adapter* GetParentAdapter() const noexcept { return Parent; }
+	auto GetParentAdapter() const noexcept -> Adapter* { return Parent; }
 
 	void SetParentAdapter(Adapter* Parent) noexcept
 	{
@@ -109,7 +110,7 @@ public:
 	{
 	}
 
-	Device* GetParentDevice() const noexcept { return Parent; }
+	auto GetParentDevice() const noexcept -> Device* { return Parent; }
 
 	void SetParentDevice(Device* Parent) noexcept
 	{
@@ -137,10 +138,10 @@ public:
 	{
 	}
 
-	bool   IsValid() const noexcept;
-	UINT64 GetValue() const noexcept;
-	bool   IsComplete() const;
-	void   WaitForCompletion() const;
+	auto IsValid() const noexcept -> bool;
+	auto GetValue() const noexcept -> UINT64;
+	auto IsComplete() const -> bool;
+	auto WaitForCompletion() const -> void;
 
 private:
 	friend class CommandQueue;
@@ -184,5 +185,5 @@ struct D3D12Feature
 
 	Type FeatureSupportData;
 
-	constexpr const Type* operator->() const noexcept { return &FeatureSupportData; }
+	constexpr auto operator->() const noexcept -> const Type* { return &FeatureSupportData; }
 };
