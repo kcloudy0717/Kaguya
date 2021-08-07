@@ -88,7 +88,7 @@ public:
 	RaytracingPipelineState() noexcept = default;
 	RaytracingPipelineState(ID3D12Device5* pDevice, RaytracingPipelineStateBuilder& Builder);
 
-	void* GetShaderIdentifier(std::wstring_view pExportName);
+	void* GetShaderIdentifier(std::wstring_view pExportName) const;
 
 	operator ID3D12StateObject*() const { return StateObject.Get(); }
 

@@ -93,53 +93,53 @@ struct Libraries
 	}
 };
 
-struct RootSignatureId
+struct RootSignatures
 {
-	enum
+	inline static RenderResourceHandle Tonemap;
+	inline static RenderResourceHandle FSR;
+
+	static void Compile(RenderDevice& Device)
 	{
-		Tonemap,
-		FSR,
+		Tonemap = Device.CreateRootSignature(RenderCore::pAdapter->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
 
-		NumIds
-	};
-};
+				// PointClamp
+				Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 
-struct ShaderPipelineStateId
-{
-	enum
-	{
-		Tonemap,
-		FSREASU,
-		FSRRCAS,
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			},
+			false));
 
-		NumIds
-	};
+		FSR = Device.CreateRootSignature(RenderCore::pAdapter->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.Add32BitConstants<0, 0>(2);
+				Builder.AddConstantBufferView<1, 0>();
+
+				Builder.AddStaticSampler<0, 0>(
+					D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
+					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+					1);
+
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			},
+			false));
+	}
 };
 
 struct PipelineStates
 {
-	inline static RootSignature RSs[RootSignatureId::NumIds];
-	inline static PipelineState PSOs[ShaderPipelineStateId::NumIds];
+	inline static RenderResourceHandle Tonemap;
+	inline static RenderResourceHandle FSREASU;
+	inline static RenderResourceHandle FSRRCAS;
 
-	static void Compile()
+	static void Compile(RenderDevice& Device)
 	{
 		{
-			RSs[RootSignatureId::Tonemap] = RenderCore::pAdapter->CreateRootSignature(
-				[](RootSignatureBuilder& Builder)
-				{
-					Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
-
-					// PointClamp
-					Builder.AddStaticSampler<0, 0>(
-						D3D12_FILTER_MIN_MAG_MIP_POINT,
-						D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-						16);
-
-					Builder.AllowResourceDescriptorHeapIndexing();
-					Builder.AllowSampleDescriptorHeapIndexing();
-				},
-				false);
-
 			auto DepthStencilState									  = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 			DepthStencilState.DepthEnable							  = FALSE;
 			D3D12_RT_FORMAT_ARRAY RTFormatArray						  = {};
@@ -155,56 +155,28 @@ struct PipelineStates
 				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
 			} Stream;
 
-			Stream.pRootSignature		 = RSs[RootSignatureId::Tonemap];
+			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap);
 			Stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			Stream.VS					 = Shaders::VS::FullScreenTriangle;
 			Stream.PS					 = Shaders::PS::ToneMap;
 			Stream.DepthStencilState	 = DepthStencilState;
 			Stream.RTVFormats			 = RTFormatArray;
 
-			PSOs[ShaderPipelineStateId::Tonemap] = RenderCore::pAdapter->CreatePipelineState(Stream);
+			Tonemap = Device.CreatePipelineState(RenderCore::pAdapter->CreatePipelineState(Stream));
 		}
 		{
-			RSs[RootSignatureId::FSR] = RenderCore::pAdapter->CreateRootSignature(
-				[](RootSignatureBuilder& Builder)
-				{
-					Builder.Add32BitConstants<0, 0>(2);
-					Builder.AddConstantBufferView<1, 0>();
+			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
+			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR);
+			PSODesc.CS								  = Shaders::CS::EASU;
 
-					Builder.AddStaticSampler<0, 0>(
-						D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-						D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-						1);
-
-					Builder.AllowResourceDescriptorHeapIndexing();
-					Builder.AllowSampleDescriptorHeapIndexing();
-				},
-				false);
-
-			{
-				D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-				PSODesc.pRootSignature					  = RSs[RootSignatureId::FSR];
-				PSODesc.CS								  = Shaders::CS::EASU;
-				PSOs[ShaderPipelineStateId::FSREASU]	  = RenderCore::pAdapter->CreateComputePipelineState(PSODesc);
-			}
-			{
-				D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-				PSODesc.pRootSignature					  = RSs[RootSignatureId::FSR];
-				PSODesc.CS								  = Shaders::CS::RCAS;
-				PSOs[ShaderPipelineStateId::FSRRCAS]	  = RenderCore::pAdapter->CreateComputePipelineState(PSODesc);
-			}
+			FSREASU = Device.CreatePipelineState(RenderCore::pAdapter->CreateComputePipelineState(PSODesc));
 		}
-	}
+		{
+			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
+			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR);
+			PSODesc.CS								  = Shaders::CS::RCAS;
 
-	static void Destroy()
-	{
-		for (auto& RS : RSs)
-		{
-			RS = {};
-		}
-		for (auto& PSO : PSOs)
-		{
-			PSO = {};
+			FSRRCAS = Device.CreatePipelineState(RenderCore::pAdapter->CreateComputePipelineState(PSODesc));
 		}
 	}
 };
@@ -225,12 +197,12 @@ struct RaytracingPipelineStates
 	inline static ShaderIdentifier g_ShadowMissSID;
 	inline static ShaderIdentifier g_DefaultSID;
 
-	inline static RootSignature			  GlobalRS, LocalHitGroupRS;
-	inline static RaytracingPipelineState RTPSO;
+	inline static RenderResourceHandle GlobalRS, LocalHitGroupRS;
+	inline static RenderResourceHandle RTPSO;
 
-	static void Compile()
+	static void Compile(RenderDevice& Device)
 	{
-		GlobalRS = RenderCore::pAdapter->CreateRootSignature(
+		GlobalRS = Device.CreateRootSignature(RenderCore::pAdapter->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
@@ -266,9 +238,9 @@ struct RaytracingPipelineStates
 					D3D12_FILTER_ANISOTROPIC,
 					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
 					16); // g_SamplerAnisotropicClamp	s5 | space0;
-			});
+			}));
 
-		LocalHitGroupRS = RenderCore::pAdapter->CreateRootSignature(
+		LocalHitGroupRS = Device.CreateRootSignature(RenderCore::pAdapter->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.Add32BitConstants<0, 1>(1); // RootConstants	b0 | space1
@@ -278,18 +250,18 @@ struct RaytracingPipelineStates
 
 				Builder.SetAsLocalRootSignature();
 			},
-			false);
+			false));
 
-		RTPSO = RenderCore::pAdapter->CreateRaytracingPipelineState(
+		RTPSO = Device.CreateRaytracingPipelineState(RenderCore::pAdapter->CreateRaytracingPipelineState(
 			[&](RaytracingPipelineStateBuilder& Builder)
 			{
 				Builder.AddLibrary(Libraries::PathTrace, { g_RayGeneration, g_Miss, g_ShadowMiss, g_ClosestHit });
 
 				Builder.AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {});
 
-				Builder.AddRootSignatureAssociation(LocalHitGroupRS, { g_HitGroupExport });
+				Builder.AddRootSignatureAssociation(Device.GetRootSignature(LocalHitGroupRS), { g_HitGroupExport });
 
-				Builder.SetGlobalRootSignature(GlobalRS);
+				Builder.SetGlobalRootSignature(Device.GetRootSignature(GlobalRS));
 
 				constexpr UINT PayloadSize = 12	  // p
 											 + 4  // materialID
@@ -300,18 +272,11 @@ struct RaytracingPipelineStates
 
 				// +1 for Primary
 				Builder.SetRaytracingPipelineConfig(1);
-			});
+			}));
 
-		g_RayGenerationSID = RTPSO.GetShaderIdentifier(g_RayGeneration);
-		g_MissSID		   = RTPSO.GetShaderIdentifier(g_Miss);
-		g_ShadowMissSID	   = RTPSO.GetShaderIdentifier(g_ShadowMiss);
-		g_DefaultSID	   = RTPSO.GetShaderIdentifier(g_HitGroupExport);
-	}
-
-	static void Destroy()
-	{
-		GlobalRS		= {};
-		LocalHitGroupRS = {};
-		RTPSO			= {};
+		g_RayGenerationSID = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_RayGeneration);
+		g_MissSID		   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_Miss);
+		g_ShadowMissSID	   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_ShadowMiss);
+		g_DefaultSID	   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_HitGroupExport);
 	}
 };

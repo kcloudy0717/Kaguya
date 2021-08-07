@@ -74,17 +74,17 @@ constexpr inline std::size_t operator"" _GiB(std::size_t X)
 	return X * 1024 * 1024 * 1024;
 }
 
-inline std::size_t ToKiB(std::size_t Byte)
+constexpr inline std::size_t ToKiB(std::size_t Byte)
 {
 	return Byte / 1024;
 }
 
-inline std::size_t ToMiB(std::size_t Byte)
+constexpr inline std::size_t ToMiB(std::size_t Byte)
 {
 	return Byte / 1024 / 1024;
 }
 
-inline std::size_t ToGiB(std::size_t Byte)
+constexpr inline std::size_t ToGiB(std::size_t Byte)
 {
 	return Byte / 1024 / 1024 / 1024;
 }

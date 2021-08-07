@@ -35,5 +35,6 @@ protected:
 	UINT ViewportWidth = 0, ViewportHeight = 0;
 	UINT RenderWidth = 0, RenderHeight = 0;
 
-	RenderGraph RenderGraph;
+	RenderDevice RenderDevice;
+	RenderGraph	 RenderGraph;
 };

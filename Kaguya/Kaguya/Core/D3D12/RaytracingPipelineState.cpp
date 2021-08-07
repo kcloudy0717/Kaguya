@@ -258,7 +258,7 @@ RaytracingPipelineState::RaytracingPipelineState(ID3D12Device5* pDevice, Raytrac
 	ASSERTD3D12APISUCCEEDED(StateObject.As(&StateObjectProperties));
 }
 
-void* RaytracingPipelineState::GetShaderIdentifier(std::wstring_view pExportName)
+void* RaytracingPipelineState::GetShaderIdentifier(std::wstring_view pExportName) const
 {
 	void* pShaderIdentifier = StateObjectProperties->GetShaderIdentifier(pExportName.data());
 	if (!pShaderIdentifier)

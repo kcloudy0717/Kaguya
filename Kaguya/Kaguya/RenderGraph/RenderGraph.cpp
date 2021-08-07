@@ -14,9 +14,8 @@ void RenderGraph::Setup()
 
 	for (size_t i = 0; i < RenderPasses.size(); ++i)
 	{
-		RenderPass* CurrentRenderPass = RenderPasses[i].get();
-
-		if (!CurrentRenderPass->HasAnyDependencies())
+		RenderPass* Node = RenderPasses[i].get();
+		if (!Node->HasAnyDependencies())
 		{
 			continue;
 		}
@@ -30,13 +29,12 @@ void RenderGraph::Setup()
 				continue;
 			}
 
-			RenderPass* pPassToCheck = RenderPasses[j].get();
-
-			for (auto ReadResource : pPassToCheck->Reads)
+			RenderPass* Neighbor = RenderPasses[j].get();
+			for (auto ReadResource : Neighbor->Reads)
 			{
 				// If other pass reads a subresource written by the current node, then it depends on current node and is
 				// an adjacent dependency
-				if (CurrentRenderPass->Writes.find(ReadResource) != CurrentRenderPass->Writes.end())
+				if (Node->Writes.find(ReadResource) != Node->Writes.end())
 				{
 					Indices.push_back(j);
 					break;

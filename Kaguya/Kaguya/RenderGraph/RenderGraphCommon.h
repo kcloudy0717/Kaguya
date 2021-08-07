@@ -64,9 +64,12 @@ protected:
 
 enum class ERGResourceType : UINT64
 {
+	Unknown,
+
 	Buffer,
 	Texture,
 
+	RootSignature,
 	PipelineState,
 	RaytracingPipelineState
 };
@@ -82,6 +85,8 @@ enum class ERGHandleState : UINT64
 struct RenderResourceHandle
 {
 	auto operator<=>(const RenderResourceHandle&) const = default;
+
+	bool IsValid() const noexcept { return Type != ERGResourceType::Unknown && Id != UINT32_MAX; }
 
 	ERGResourceType Type	: 16;
 	ERGHandleState	State	: 2;

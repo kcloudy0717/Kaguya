@@ -149,6 +149,4 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 
 void Renderer::OnDestroy()
 {
-	PipelineStates::Destroy();
-	RaytracingPipelineStates::Destroy();
 }

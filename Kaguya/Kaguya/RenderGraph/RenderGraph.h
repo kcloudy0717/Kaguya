@@ -2,6 +2,10 @@
 #include "RenderPass.h"
 #include "RenderGraphScheduler.h"
 #include "RenderGraphRegistry.h"
+
+#include "RenderDevice.h"
+#include "RenderCompileContext.h"
+
 #include <stack>
 
 class RenderGraphDependencyLevel : public RenderGraphChild

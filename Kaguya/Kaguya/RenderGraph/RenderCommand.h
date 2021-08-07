@@ -8,6 +8,9 @@
 
 enum class ERenderCommandType
 {
+	PipelineState,
+	RaytracingPipelineState,
+
 	Draw,
 	DrawIndexed,
 	Dispatch,
@@ -21,10 +24,18 @@ struct TypedRenderCommand
 	static constexpr ERenderCommandType Type = Type;
 };
 
-struct RenderCommandDraw : TypedRenderCommand<ERenderCommandType::Draw>
+struct RenderCommandPipelineState : TypedRenderCommand<ERenderCommandType::PipelineState>
 {
 	RenderResourceHandle PipelineState;
+};
 
+struct RenderCommandRaytracingPipelineState : TypedRenderCommand<ERenderCommandType::RaytracingPipelineState>
+{
+	RenderResourceHandle RaytracingPipelineState;
+};
+
+struct RenderCommandDraw : TypedRenderCommand<ERenderCommandType::Draw>
+{
 	UINT VertexCountPerInstance;
 	UINT InstanceCount;
 	UINT StartVertexLocation;
@@ -33,8 +44,6 @@ struct RenderCommandDraw : TypedRenderCommand<ERenderCommandType::Draw>
 
 struct RenderCommandDrawIndexed : TypedRenderCommand<ERenderCommandType::DrawIndexed>
 {
-	RenderResourceHandle PipelineState;
-
 	UINT IndexCountPerInstance;
 	UINT InstanceCount;
 	UINT StartIndexLocation;
@@ -44,8 +53,6 @@ struct RenderCommandDrawIndexed : TypedRenderCommand<ERenderCommandType::DrawInd
 
 struct RenderCommandDispatch : TypedRenderCommand<ERenderCommandType::Dispatch>
 {
-	RenderResourceHandle PipelineState;
-
 	UINT ThreadGroupCountX;
 	UINT ThreadGroupCountY;
 	UINT ThreadGroupCountZ;
@@ -56,14 +63,32 @@ struct RenderCommand
 	ERenderCommandType Type;
 	union
 	{
-		RenderCommandDraw		 Draw;
-		RenderCommandDrawIndexed DrawIndexed;
-		RenderCommandDispatch	 Dispatch;
+		RenderCommandPipelineState			 PipelineState;
+		RenderCommandRaytracingPipelineState RaytracingPipelineState;
+		RenderCommandDraw					 Draw;
+		RenderCommandDrawIndexed			 DrawIndexed;
+		RenderCommandDispatch				 Dispatch;
 	};
 };
 
 struct RenderCommandList
 {
+	void Reset() { Recorded.clear(); }
+
+	void SetPipelineState(const RenderCommandPipelineState& Args)
+	{
+		RenderCommand& Command = Recorded.emplace_back();
+		Command.Type		   = Args.Type;
+		Command.PipelineState  = Args;
+	}
+
+	void SetRaytracingPipelineState(const RenderCommandRaytracingPipelineState& Args)
+	{
+		RenderCommand& Command			= Recorded.emplace_back();
+		Command.Type					= Args.Type;
+		Command.RaytracingPipelineState = Args;
+	}
+
 	void Draw(const RenderCommandDraw& Args)
 	{
 		RenderCommand& Command = Recorded.emplace_back();

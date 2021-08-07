@@ -89,8 +89,9 @@ void PathIntegrator::Initialize()
 {
 	Shaders::Compile(*RenderCore::pShaderCompiler);
 	Libraries::Compile(*RenderCore::pShaderCompiler);
-	PipelineStates::Compile();
-	RaytracingPipelineStates::Compile();
+	RootSignatures::Compile(RenderDevice);
+	PipelineStates::Compile(RenderDevice);
+	RaytracingPipelineStates::Compile(RenderDevice);
 
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
@@ -168,14 +169,17 @@ void PathIntegrator::Initialize()
 
 				Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_GlobalConstants);
 
-				Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RaytracingPipelineStates::RTPSO);
-				Context->SetComputeRootSignature(RaytracingPipelineStates::GlobalRS);
+				Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(
+					RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
+				Context->SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
 				Context->SetComputeRootConstantBufferView(0, Allocation.GPUVirtualAddress);
 				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGPUVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGPUVirtualAddress());
 
-				RenderCore::pAdapter->BindComputeDescriptorTable(RaytracingPipelineStates::GlobalRS, Context);
+				RenderCore::pAdapter->BindComputeDescriptorTable(
+					RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS),
+					Context);
 
 				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDispatchRaysDesc(0, 0);
 				Desc.Width					  = ViewData.RenderWidth;
@@ -219,8 +223,8 @@ void PathIntegrator::Initialize()
 				Registry.GetTexture(Parameter.Output)
 					.CreateRenderTargetView(Parameter.RTV, std::nullopt, std::nullopt, std::nullopt, true);
 
-				Context->SetPipelineState(PipelineStates::PSOs[ShaderPipelineStateId::Tonemap]);
-				Context->SetGraphicsRootSignature(PipelineStates::RSs[RootSignatureId::Tonemap]);
+				Context->SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Tonemap));
+				Context->SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Tonemap));
 
 				D3D12_VIEWPORT Viewport = CD3DX12_VIEWPORT(
 					0.0f,
@@ -270,7 +274,7 @@ void PathIntegrator::Initialize()
 			{
 				D3D12ScopedEvent(Context, "FSR");
 
-				Context->SetComputeRootSignature(PipelineStates::RSs[RootSignatureId::FSR]);
+				Context->SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
 
 				// This value is the image region dimension that each thread group of the FSR shader operates on
 				constexpr UINT ThreadSize		 = 16;
@@ -284,7 +288,7 @@ void PathIntegrator::Initialize()
 				{
 					D3D12ScopedEvent(Context, "EASU");
 
-					Context->SetPipelineState(PipelineStates::PSOs[ShaderPipelineStateId::FSREASU]);
+					Context->SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSREASU));
 
 					RootConstants RC	  = { Registry.GetTextureIndex(TonemapInput),
 										  Registry.GetRWTextureIndex(Parameter.EASUOutput) };
@@ -321,7 +325,7 @@ void PathIntegrator::Initialize()
 				{
 					D3D12ScopedEvent(Context, "RCAS");
 
-					Context->SetPipelineState(PipelineStates::PSOs[ShaderPipelineStateId::FSRRCAS]);
+					Context->SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSRRCAS));
 
 					RootConstants RC	  = { Registry.GetTextureIndex(Parameter.EASUOutput),
 										  Registry.GetRWTextureIndex(Parameter.RCASOutput) };
