@@ -41,7 +41,7 @@ void ResourceUploader::Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subreso
 	const D3D12_HEAP_PROPERTIES			   HeapProperties  = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	const D3D12_RESOURCE_DESC			   ResourceDesc	   = CD3DX12_RESOURCE_DESC::Buffer(UploadSize);
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
+	VERIFY_D3D12_API(GetParentDevice()->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -67,7 +67,7 @@ void ResourceUploader::Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12R
 	const D3D12_HEAP_PROPERTIES			   HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	const D3D12_RESOURCE_DESC			   ResourceDesc	  = CD3DX12_RESOURCE_DESC::Buffer(UploadSize);
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	ASSERTD3D12APISUCCEEDED(GetParentDevice()->GetDevice()->CreateCommittedResource(
+	VERIFY_D3D12_API(GetParentDevice()->GetDevice()->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,

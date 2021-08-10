@@ -94,13 +94,13 @@ RootSignature::RootSignature(ID3D12Device* pDevice, RootSignatureBuilder& Builde
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> SerializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	ASSERTD3D12APISUCCEEDED(::D3D12SerializeVersionedRootSignature(
+	VERIFY_D3D12_API(::D3D12SerializeVersionedRootSignature(
 		&Desc,
 		SerializedRootSignatureBlob.ReleaseAndGetAddressOf(),
 		ErrorBlob.ReleaseAndGetAddressOf()));
 
 	// Create the root signature
-	ASSERTD3D12APISUCCEEDED(pDevice->CreateRootSignature(
+	VERIFY_D3D12_API(pDevice->CreateRootSignature(
 		0,
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),

@@ -69,12 +69,12 @@ void Profiler::Initialize(ID3D12Device* pDevice, UINT64 Frequency)
 	D3D12_QUERY_HEAP_DESC QueryHeapDesc = { .Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
 											.Count	  = MaxProfiles * 2,
 											.NodeMask = 0 };
-	ASSERTD3D12APISUCCEEDED(pDevice->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
+	VERIFY_D3D12_API(pDevice->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
 	QueryHeap->SetName(L"Timestamp Query Heap");
 
 	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
 	D3D12_RESOURCE_DESC	  ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
-	ASSERTD3D12APISUCCEEDED(pDevice->CreateCommittedResource(
+	VERIFY_D3D12_API(pDevice->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,

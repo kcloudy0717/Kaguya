@@ -65,7 +65,7 @@ public:
 	{
 		if (D3D12InfoQueue1)
 		{
-			ASSERTD3D12APISUCCEEDED(D3D12InfoQueue1->RegisterMessageCallback(
+			VERIFY_D3D12_API(D3D12InfoQueue1->RegisterMessageCallback(
 				CallbackFunc,
 				D3D12_MESSAGE_CALLBACK_FLAG_NONE,
 				nullptr,
@@ -77,7 +77,7 @@ public:
 	{
 		if (D3D12InfoQueue1)
 		{
-			ASSERTD3D12APISUCCEEDED(D3D12InfoQueue1->UnregisterMessageCallback(CallbackCookie));
+			VERIFY_D3D12_API(D3D12InfoQueue1->UnregisterMessageCallback(CallbackCookie));
 		}
 	}
 

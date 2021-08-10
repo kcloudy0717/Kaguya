@@ -57,9 +57,9 @@ void CommandQueue::Initialize(ECommandQueueType CommandQueueType, UINT NumComman
 									  .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 									  .Flags	= D3D12_COMMAND_QUEUE_FLAG_NONE,
 									  .NodeMask = NodeMask };
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(pCommandQueue.ReleaseAndGetAddressOf())));
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		Device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.ReleaseAndGetAddressOf())));
 
 #ifdef _DEBUG
@@ -83,7 +83,7 @@ void CommandQueue::Initialize(ECommandQueueType CommandQueueType, UINT NumComman
 UINT64 CommandQueue::AdvanceGpu()
 {
 	std::scoped_lock _(FenceMutex);
-	ASSERTD3D12APISUCCEEDED(pCommandQueue->Signal(Fence.Get(), FenceValue));
+	VERIFY_D3D12_API(pCommandQueue->Signal(Fence.Get(), FenceValue));
 	return FenceValue++;
 }
 
@@ -100,20 +100,20 @@ void CommandQueue::WaitForFence(UINT64 FenceValue)
 	}
 
 	std::scoped_lock _(FenceMutex);
-	ASSERTD3D12APISUCCEEDED(Fence->SetEventOnCompletion(FenceValue, nullptr));
+	VERIFY_D3D12_API(Fence->SetEventOnCompletion(FenceValue, nullptr));
 }
 
 void CommandQueue::Wait(CommandQueue* CommandQueue)
 {
 	UINT64 Value = CommandQueue->FenceValue - 1;
-	ASSERTD3D12APISUCCEEDED(pCommandQueue->Wait(CommandQueue->Fence.Get(), Value));
+	VERIFY_D3D12_API(pCommandQueue->Wait(CommandQueue->Fence.Get(), Value));
 }
 
 void CommandQueue::WaitForSyncPoint(const CommandSyncPoint& SyncPoint)
 {
 	if (SyncPoint.IsValid())
 	{
-		ASSERTD3D12APISUCCEEDED(pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value));
+		VERIFY_D3D12_API(pCommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value));
 	}
 }
 

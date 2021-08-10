@@ -60,5 +60,5 @@ CommandSignature::CommandSignature(
 {
 	D3D12_COMMAND_SIGNATURE_DESC Desc = Builder.Build();
 
-	ASSERTD3D12APISUCCEEDED(Device->CreateCommandSignature(&Desc, RootSignature, IID_PPV_ARGS(&pCommandSignature)));
+	VERIFY_D3D12_API(Device->CreateCommandSignature(&Desc, RootSignature, IID_PPV_ARGS(&pCommandSignature)));
 }

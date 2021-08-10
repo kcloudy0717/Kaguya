@@ -120,5 +120,5 @@ auto CommandSyncPoint::IsComplete() const -> bool
 auto CommandSyncPoint::WaitForCompletion() const -> void
 {
 	assert(IsValid());
-	ASSERTD3D12APISUCCEEDED(Fence->SetEventOnCompletion(Value, nullptr));
+	VERIFY_D3D12_API(Fence->SetEventOnCompletion(Value, nullptr));
 }

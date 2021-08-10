@@ -93,7 +93,7 @@ void Adapter::Initialize(const DeviceOptions& Options)
 	if (CVar_DRED)
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
-		ASSERTD3D12APISUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&DREDSettings)));
+		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(&DREDSettings)));
 
 		// Turn on auto-breadcrumbs and page fault reporting.
 		DREDSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -103,7 +103,7 @@ void Adapter::Initialize(const DeviceOptions& Options)
 
 void Adapter::InitializeDevice(const DeviceFeatures& Features)
 {
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		::D3D12CreateDevice(Adapter4.Get(), Features.FeatureLevel, IID_PPV_ARGS(D3D12Device.ReleaseAndGetAddressOf())));
 
 #ifdef NVIDIA_NSIGHT_AFTERMATH
@@ -151,7 +151,7 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 	{
 		// DRED
 		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
-		ASSERTD3D12APISUCCEEDED(D3D12Device->CreateFence(
+		VERIFY_D3D12_API(D3D12Device->CreateFence(
 			0,
 			D3D12_FENCE_FLAG_NONE,
 			IID_PPV_ARGS(DeviceRemovedFence.ReleaseAndGetAddressOf())));
@@ -159,7 +159,7 @@ void Adapter::InitializeDevice(const DeviceFeatures& Features)
 		DeviceRemovedEvent.create();
 		// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior to
 		// what happened.
-		ASSERTD3D12APISUCCEEDED(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
+		VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
 
 		RegisterWaitForSingleObject(
 			&DeviceRemovedWaitHandle,
@@ -258,11 +258,11 @@ void Adapter::OnDeviceRemoved(PVOID Context, BOOLEAN)
 	if (FAILED(RemovedReason))
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedData> DRED;
-		ASSERTD3D12APISUCCEEDED(D3D12Device->QueryInterface(IID_PPV_ARGS(&DRED)));
+		VERIFY_D3D12_API(D3D12Device->QueryInterface(IID_PPV_ARGS(&DRED)));
 		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT AutoBreadcrumbsOutput = {};
 		D3D12_DRED_PAGE_FAULT_OUTPUT	   PageFaultOutput		 = {};
-		ASSERTD3D12APISUCCEEDED(DRED->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput));
-		ASSERTD3D12APISUCCEEDED(DRED->GetPageFaultAllocationOutput(&PageFaultOutput));
+		VERIFY_D3D12_API(DRED->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput));
+		VERIFY_D3D12_API(DRED->GetPageFaultAllocationOutput(&PageFaultOutput));
 
 		// TODO: Log breadcrumbs and page fault
 		// Haven't experienced TDR yet, so when I do, fill this out
@@ -273,7 +273,7 @@ void Adapter::InitializeDXGIObjects(bool Debug)
 {
 	UINT Flags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	ASSERTD3D12APISUCCEEDED(::CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(::CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
 
 	// Enumerate hardware for an adapter that supports D3D12
 	ComPtr<IDXGIAdapter4> pAdapter4;

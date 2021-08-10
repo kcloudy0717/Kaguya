@@ -13,7 +13,7 @@ void DynamicResourceDescriptorHeap::Initialize(UINT NumDescriptors, bool ShaderV
 			 .Flags	   = ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			 .NodeMask = 0 };
 
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		GetParentDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
 	DescriptorHandleIncrementSize = GetParentDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
@@ -60,7 +60,7 @@ void DescriptorPage::Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE 
 {
 	Desc = { .Type = Type, .NumDescriptors = NumDescriptors, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		GetParentDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
 	DescriptorHandleIncrementSize = GetParentDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
@@ -233,7 +233,7 @@ void DynamicDescriptorHeap::Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEA
 			 .Flags			 = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 			 .NodeMask		 = 0 };
 
-	ASSERTD3D12APISUCCEEDED(
+	VERIFY_D3D12_API(
 		GetParentDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&pDescriptorHeap)));
 	DescriptorHandleIncrementSize = GetParentDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 

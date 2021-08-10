@@ -4,9 +4,9 @@ using Microsoft::WRL::ComPtr;
 
 void ShaderCompiler::Initialize()
 {
-	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
-	ASSERTD3D12APISUCCEEDED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
-	ASSERTD3D12APISUCCEEDED(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
+	VERIFY_D3D12_API(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
 }
 
 void ShaderCompiler::SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept
@@ -140,7 +140,7 @@ void ShaderCompiler::Compile(
 
 	// Build arguments
 	ComPtr<IDxcCompilerArgs> DxcCompilerArgs;
-	ASSERTD3D12APISUCCEEDED(Utils->BuildArguments(
+	VERIFY_D3D12_API(Utils->BuildArguments(
 		Path.c_str(),
 		EntryPoint.data(),
 		Profile.data(),
@@ -153,11 +153,11 @@ void ShaderCompiler::Compile(
 	ComPtr<IDxcBlobEncoding> Source;
 	UINT32					 CodePage = CP_ACP;
 
-	ASSERTD3D12APISUCCEEDED(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
+	VERIFY_D3D12_API(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
 
 	BOOL SourceKnown	= FALSE;
 	UINT SourceCodePage = 0;
-	ASSERTD3D12APISUCCEEDED(Source->GetEncoding(&SourceKnown, &CodePage));
+	VERIFY_D3D12_API(Source->GetEncoding(&SourceKnown, &CodePage));
 
 	DxcBuffer DxcBuffer = {};
 	DxcBuffer.Ptr		= Source->GetBufferPointer();
@@ -165,7 +165,7 @@ void ShaderCompiler::Compile(
 	DxcBuffer.Encoding	= SourceCodePage;
 
 	ComPtr<IDxcResult> DxcResult;
-	ASSERTD3D12APISUCCEEDED(Compiler3->Compile(
+	VERIFY_D3D12_API(Compiler3->Compile(
 		&DxcBuffer,
 		DxcCompilerArgs->GetArguments(),
 		DxcCompilerArgs->GetCount(),

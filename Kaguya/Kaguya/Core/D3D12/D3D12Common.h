@@ -59,7 +59,7 @@ private:
 	const HRESULT ErrorCode;
 };
 
-#define ASSERTD3D12APISUCCEEDED(expr)                                                                                  \
+#define VERIFY_D3D12_API(expr)                                                                                  \
 	{                                                                                                                  \
 		HRESULT hr = expr;                                                                                             \
 		if (FAILED(hr))                                                                                                \

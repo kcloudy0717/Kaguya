@@ -28,7 +28,7 @@ public:
 	void Reset()
 	{
 		assert(IsReady());
-		ASSERTD3D12APISUCCEEDED(pCommandAllocator->Reset());
+		VERIFY_D3D12_API(pCommandAllocator->Reset());
 	}
 
 private:
