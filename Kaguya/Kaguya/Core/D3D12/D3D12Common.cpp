@@ -1,44 +1,38 @@
 #include "D3D12Common.h"
-#include "CommandContext.h"
 
-LPCWSTR GetCommandQueueTypeString(ECommandQueueType CommandQueueType)
+LPCWSTR GetCommandQueueTypeString(ED3D12CommandQueueType CommandQueueType)
 {
 	switch (CommandQueueType)
 	{
-	case ECommandQueueType::Direct:
+	case ED3D12CommandQueueType::Direct:
 		return L"3D";
-	case ECommandQueueType::AsyncCompute:
+	case ED3D12CommandQueueType::AsyncCompute:
 		return L"Async Compute";
-	case ECommandQueueType::Copy1:
+	case ED3D12CommandQueueType::Copy1:
 		return L"Copy 1";
-	case ECommandQueueType::Copy2:
+	case ED3D12CommandQueueType::Copy2:
 		return L"Copy 2";
 	}
 
 	return nullptr;
 }
 
-LPCWSTR GetCommandQueueTypeFenceString(ECommandQueueType CommandQueueType)
+LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType)
 {
 	switch (CommandQueueType)
 	{
-	case ECommandQueueType::Direct:
+	case ED3D12CommandQueueType::Direct:
 		return L"3D Fence";
-	case ECommandQueueType::AsyncCompute:
+	case ED3D12CommandQueueType::AsyncCompute:
 		return L"Async Compute Fence";
-	case ECommandQueueType::Copy1:
+	case ED3D12CommandQueueType::Copy1:
 		return L"Copy 1 Fence";
-	case ECommandQueueType::Copy2:
+	case ED3D12CommandQueueType::Copy2:
 		return L"Copy 2 Fence";
 	}
 
 	return nullptr;
 }
-
-#define DXERR(x)                                                                                                       \
-	case x:                                                                                                            \
-		Error = #x;                                                                                                    \
-		break
 
 const char* D3D12Exception::GetErrorType() const noexcept
 {
@@ -47,6 +41,11 @@ const char* D3D12Exception::GetErrorType() const noexcept
 
 std::string D3D12Exception::GetError() const
 {
+#define DXERR(x)                                                                                                       \
+	case x:                                                                                                            \
+		Error = #x;                                                                                                    \
+		break
+
 	std::string Error;
 
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/d3d12-graphics-reference-returnvalues
@@ -97,27 +96,28 @@ std::string D3D12Exception::GetError() const
 	break;
 	}
 
+#undef DXERR
 	return Error;
 }
 
-auto CommandSyncPoint::IsValid() const noexcept -> bool
+auto D3D12CommandSyncPoint::IsValid() const noexcept -> bool
 {
 	return Fence != nullptr;
 }
 
-auto CommandSyncPoint::GetValue() const noexcept -> UINT64
+auto D3D12CommandSyncPoint::GetValue() const noexcept -> UINT64
 {
 	assert(IsValid());
 	return Value;
 }
 
-auto CommandSyncPoint::IsComplete() const -> bool
+auto D3D12CommandSyncPoint::IsComplete() const -> bool
 {
 	assert(IsValid());
 	return Fence->GetCompletedValue() >= Value;
 }
 
-auto CommandSyncPoint::WaitForCompletion() const -> void
+auto D3D12CommandSyncPoint::WaitForCompletion() const -> void
 {
 	assert(IsValid());
 	VERIFY_D3D12_API(Fence->SetEventOnCompletion(Value, nullptr));

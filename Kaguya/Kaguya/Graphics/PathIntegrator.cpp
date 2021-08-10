@@ -31,7 +31,7 @@ struct Tonemap
 {
 	RenderResourceHandle Output;
 
-	RenderTargetView RTV;
+	D3D12RenderTargetView RTV;
 };
 
 struct FSR
@@ -96,9 +96,9 @@ void PathIntegrator::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
 
-	Manager = RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
+	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
 
-	Materials = Buffer(
+	Materials = D3D12Buffer(
 		RenderCore::pAdapter->GetDevice(),
 		sizeof(HLSL::Material) * World::MaterialLimit,
 		sizeof(HLSL::Material),
@@ -107,7 +107,7 @@ void PathIntegrator::Initialize()
 	Materials.Initialize();
 	pMaterials = Materials.GetCPUVirtualAddress<HLSL::Material>();
 
-	Lights = Buffer(
+	Lights = D3D12Buffer(
 		RenderCore::pAdapter->GetDevice(),
 		sizeof(HLSL::Light) * World::LightLimit,
 		sizeof(HLSL::Light),
@@ -127,7 +127,7 @@ void PathIntegrator::Initialize()
 				"Path Trace Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
 
-			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, CommandContext& Context)
+			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
@@ -167,7 +167,7 @@ void PathIntegrator::Initialize()
 				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
 				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
 
-				Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_GlobalConstants);
+				D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_GlobalConstants);
 
 				Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(
 					RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
@@ -198,7 +198,7 @@ void PathIntegrator::Initialize()
 			auto& PathTraceData = Scheduler.GetParentRenderGraph()->GetScope("Path Trace").Get<PathTrace>();
 
 			FLOAT Color[]	 = { 1, 1, 1, 1 };
-			auto  ClearValue = CD3DX12_CLEAR_VALUE(SwapChain::Format_sRGB, Color);
+			auto  ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format_sRGB, Color);
 
 			auto&		Parameter = Scope.Get<Tonemap>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
@@ -207,16 +207,16 @@ void PathIntegrator::Initialize()
 				"Tonemap Output",
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
-					SwapChain::Format,
+					D3D12SwapChain::Format,
 					0,
 					0,
 					1,
 					TextureFlag_AllowRenderTarget,
 					ClearValue));
-			Parameter.RTV = RenderTargetView(RenderCore::pAdapter->GetDevice());
+			Parameter.RTV = D3D12RenderTargetView(RenderCore::pAdapter->GetDevice());
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
-			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, CommandContext& Context)
+			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Tonemap");
 
@@ -264,13 +264,13 @@ void PathIntegrator::Initialize()
 
 			Parameter.EASUOutput = Scheduler.CreateTexture(
 				"EASU Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, SwapChain::Format, 0, 0, 1));
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
 			Parameter.RCASOutput = Scheduler.CreateTexture(
 				"RCAS Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, SwapChain::Format, 0, 0, 1));
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
 
 			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);
-			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, CommandContext& Context)
+			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "FSR");
 
@@ -306,7 +306,7 @@ void PathIntegrator::Initialize()
 						(AF1)ViewData.ViewportHeight);
 					FsrEasu.Sample.x = 0;
 
-					Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
+					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
 					std::memcpy(Allocation.CPUVirtualAddress, &FsrEasu, sizeof(FSRConstants));
 
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
@@ -333,7 +333,7 @@ void PathIntegrator::Initialize()
 					FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
 					FsrRcas.Sample.x = 0;
 
-					Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
+					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
 					std::memcpy(Allocation.CPUVirtualAddress, &FsrRcas, sizeof(FSRConstants));
 
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
@@ -364,7 +364,7 @@ void PathIntegrator::Initialize()
 	ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
 }
 
-void PathIntegrator::Render(CommandContext& Context)
+void PathIntegrator::Render(D3D12CommandContext& Context)
 {
 	if (ImGui::Begin("Path Integrator"))
 	{
@@ -428,10 +428,10 @@ void PathIntegrator::Render(CommandContext& Context)
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
 		});
 
-	CommandSyncPoint CopySyncPoint;
+	D3D12CommandSyncPoint CopySyncPoint;
 	if (!AccelerationStructure.empty())
 	{
-		CommandContext& Copy = RenderCore::pAdapter->GetDevice()->GetCopyContext1();
+		D3D12CommandContext& Copy = RenderCore::pAdapter->GetDevice()->GetCopyContext1();
 		Copy.OpenCommandList();
 
 		// Update shader table
@@ -441,12 +441,12 @@ void PathIntegrator::Render(CommandContext& Context)
 			ID3D12Resource* VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource.GetResource();
 			ID3D12Resource* IndexBuffer	 = MeshRenderer->pMeshFilter->Mesh->IndexResource.GetResource();
 
-			RaytracingShaderTable<RootArgument>::Record Record = {};
-			Record.ShaderIdentifier							   = RaytracingPipelineStates::g_DefaultSID;
-			Record.RootArguments							   = { .MaterialIndex = static_cast<UINT>(i),
-									   .Padding		  = 0xDEADBEEF,
-									   .VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
-									   .IndexBuffer	  = IndexBuffer->GetGPUVirtualAddress() };
+			D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
+			Record.ShaderIdentifier									= RaytracingPipelineStates::g_DefaultSID;
+			Record.RootArguments									= { .MaterialIndex = static_cast<UINT>(i),
+										.Padding	   = 0xDEADBEEF,
+										.VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
+										.IndexBuffer   = IndexBuffer->GetGPUVirtualAddress() };
 
 			HitGroupShaderTable->AddShaderRecord(Record);
 		}
@@ -459,10 +459,10 @@ void PathIntegrator::Render(CommandContext& Context)
 		CopySyncPoint = Copy.Execute(false);
 	}
 
-	CommandSyncPoint ASBuildSyncPoint;
+	D3D12CommandSyncPoint ASBuildSyncPoint;
 	if (!AccelerationStructure.empty())
 	{
-		CommandContext& AsyncCompute = RenderCore::pAdapter->GetDevice()->GetAsyncComputeCommandContext();
+		D3D12CommandContext& AsyncCompute = RenderCore::pAdapter->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
 		bool AnyBuild = false;

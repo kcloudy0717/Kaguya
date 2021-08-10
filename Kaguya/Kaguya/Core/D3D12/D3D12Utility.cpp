@@ -16,7 +16,7 @@ PIXCapture::~PIXCapture()
 	}
 }
 
-void InputLayout::AddVertexLayoutElement(
+void D3D12InputLayout::AddVertexLayoutElement(
 	std::string_view SemanticName,
 	UINT			 SemanticIndex,
 	DXGI_FORMAT		 Format,
@@ -35,7 +35,7 @@ void InputLayout::AddVertexLayoutElement(
 	Desc.InstanceDataStepRate	   = 0;
 }
 
-void InputLayout::AddInstanceLayoutElement(
+void D3D12InputLayout::AddInstanceLayoutElement(
 	std::string_view SemanticName,
 	UINT			 SemanticIndex,
 	DXGI_FORMAT		 Format,
@@ -55,13 +55,12 @@ void InputLayout::AddInstanceLayoutElement(
 	Desc.InstanceDataStepRate	   = InstanceDataStepRate;
 }
 
-InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
+D3D12InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
 {
 	for (size_t i = 0; i < InputElements.size(); ++i)
 	{
 		InputElements[i].SemanticName = SemanticNames[i].data();
 	}
 
-	return D3D12_INPUT_LAYOUT_DESC{ .pInputElementDescs = InputElements.data(),
-									.NumElements		= static_cast<UINT>(InputElements.size()) };
+	return { .pInputElementDescs = InputElements.data(), .NumElements = static_cast<UINT>(InputElements.size()) };
 }

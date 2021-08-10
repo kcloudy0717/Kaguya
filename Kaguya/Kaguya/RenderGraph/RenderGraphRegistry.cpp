@@ -100,7 +100,7 @@ void RenderGraphRegistry::RealizeResources()
 			break;
 		}
 
-		Textures[i]				 = Texture(RenderCore::pAdapter->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		Textures[i]				 = D3D12Texture(RenderCore::pAdapter->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
 		ShaderViews& ShaderViews = TextureShaderViews[i];
 
 		if (ShaderViews.SRVs.empty())
@@ -134,7 +134,7 @@ void RenderGraphRegistry::RealizeResources()
 	}
 }
 
-auto RenderGraphRegistry::GetTexture(RenderResourceHandle Handle) -> Texture&
+auto RenderGraphRegistry::GetTexture(RenderResourceHandle Handle) -> D3D12Texture&
 {
 	assert(Handle.Type == ERGResourceType::Texture);
 	assert(Handle.Id >= 0 && Handle.Id < Textures.size());
@@ -145,18 +145,18 @@ auto RenderGraphRegistry::GetTextureSRV(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const ShaderResourceView&
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const D3D12ShaderResourceView&
 {
 	RenderResourceHandle& HandleRef = Scheduler.Textures[Handle.Id].Handle;
 
-	Texture& Texture = GetTexture(Handle);
+	D3D12Texture& Texture = GetTexture(Handle);
 
 	UINT SubresourceIndex = Texture.GetSubresourceIndex(OptArraySlice, OptMipSlice, OptPlaneSlice);
 
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.SRVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		ShaderViews.SRVs[SubresourceIndex] = ShaderResourceView(RenderCore::pAdapter->GetDevice());
+		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::pAdapter->GetDevice());
 		Texture.CreateShaderResourceView(ShaderViews.SRVs[SubresourceIndex]);
 	}
 
@@ -167,9 +167,9 @@ auto RenderGraphRegistry::GetTextureUAV(
 	RenderResourceHandle Handle,
 	std::optional<UINT>	 OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>	 OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const UnorderedAccessView&
+	std::optional<UINT>	 OptPlaneSlice /*= std::nullopt*/) -> const D3D12UnorderedAccessView&
 {
-	Texture& Texture = GetTexture(Handle);
+	D3D12Texture& Texture = GetTexture(Handle);
 	assert(Scheduler.Textures[Handle.Id].Desc.Flags & TextureFlag_AllowUnorderedAccess);
 
 	UINT SubresourceIndex = Texture.GetSubresourceIndex(OptArraySlice, OptMipSlice, OptPlaneSlice);
@@ -177,7 +177,7 @@ auto RenderGraphRegistry::GetTextureUAV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.UAVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		auto UAV = UnorderedAccessView(RenderCore::pAdapter->GetDevice());
+		auto UAV = D3D12UnorderedAccessView(RenderCore::pAdapter->GetDevice());
 		Texture.CreateUnorderedAccessView(UAV, OptArraySlice, OptMipSlice);
 
 		ShaderViews.UAVs[SubresourceIndex] = std::move(UAV);

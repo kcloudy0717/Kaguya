@@ -41,7 +41,7 @@ protected:
 	std::vector<T>		 Registry;
 };
 
-class RootSignatureRegistry : public RenderRegistry<RootSignatureRegistry, RootSignature>
+class RootSignatureRegistry : public RenderRegistry<RootSignatureRegistry, D3D12RootSignature>
 {
 public:
 	RootSignatureRegistry()
@@ -50,7 +50,7 @@ public:
 	}
 };
 
-class PipelineStateRegistry : public RenderRegistry<PipelineStateRegistry, PipelineState>
+class PipelineStateRegistry : public RenderRegistry<PipelineStateRegistry, D3D12PipelineState>
 {
 public:
 	PipelineStateRegistry()
@@ -59,7 +59,7 @@ public:
 	}
 };
 
-class RaytracingPipelineStateRegistry : public RenderRegistry<RaytracingPipelineStateRegistry, RaytracingPipelineState>
+class RaytracingPipelineStateRegistry : public RenderRegistry<RaytracingPipelineStateRegistry, D3D12RaytracingPipelineState>
 {
 public:
 	RaytracingPipelineStateRegistry()
@@ -71,14 +71,14 @@ public:
 class RenderDevice
 {
 public:
-	[[nodiscard]] auto CreateRootSignature(RootSignature&& RootSignature) -> RenderResourceHandle;
-	[[nodiscard]] auto CreatePipelineState(PipelineState&& PipelineState) -> RenderResourceHandle;
-	[[nodiscard]] auto CreateRaytracingPipelineState(RaytracingPipelineState&& RaytracingPipelineState)
+	[[nodiscard]] auto CreateRootSignature(D3D12RootSignature&& RootSignature) -> RenderResourceHandle;
+	[[nodiscard]] auto CreatePipelineState(D3D12PipelineState&& PipelineState) -> RenderResourceHandle;
+	[[nodiscard]] auto CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
 		-> RenderResourceHandle;
 
-	const RootSignature&		   GetRootSignature(RenderResourceHandle Handle) const;
-	const PipelineState&		   GetPipelineState(RenderResourceHandle Handle) const;
-	const RaytracingPipelineState& GetRaytracingPipelineState(RenderResourceHandle Handle) const;
+	const D3D12RootSignature&		   GetRootSignature(RenderResourceHandle Handle) const;
+	const D3D12PipelineState&		   GetPipelineState(RenderResourceHandle Handle) const;
+	const D3D12RaytracingPipelineState& GetRaytracingPipelineState(RenderResourceHandle Handle) const;
 
 private:
 	RootSignatureRegistry			RootSignatureRegistry;

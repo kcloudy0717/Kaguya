@@ -6,8 +6,8 @@ void Initialize();
 
 void Shutdown();
 
-extern Adapter*					   pAdapter;
-extern SwapChain*				   pSwapChain;
+extern D3D12Device*					   pAdapter;
+extern D3D12SwapChain*				   pSwapChain;
 extern ShaderCompiler*			   pShaderCompiler;
 extern D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor;
 extern D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor;

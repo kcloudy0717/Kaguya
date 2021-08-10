@@ -27,7 +27,7 @@ public:
 
 	void PostInitialize();
 
-	void Execute(CommandContext& Context);
+	void Execute(D3D12CommandContext& Context);
 
 private:
 	std::vector<RenderPass*> RenderPasses;
@@ -84,7 +84,7 @@ public:
 
 	void Setup();
 	void Compile();
-	void Execute(CommandContext& Context);
+	void Execute(D3D12CommandContext& Context);
 
 	void SetResolution(UINT RenderWidth, UINT RenderHeight, UINT ViewportWidth, UINT ViewportHeight)
 	{

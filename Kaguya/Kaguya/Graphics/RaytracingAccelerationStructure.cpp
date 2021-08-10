@@ -8,7 +8,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 
 void RaytracingAccelerationStructure::Initialize()
 {
-	InstanceDescs = Buffer(
+	InstanceDescs = D3D12Buffer(
 		RenderCore::pAdapter->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
@@ -37,7 +37,7 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 		static_cast<UINT>(pMeshRenderer->pMeshFilter->Mesh->BLAS.size()) * NumHitGroups;
 }
 
-void RaytracingAccelerationStructure::Build(CommandContext& Context)
+void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 {
 	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"TLAS");
 
@@ -57,7 +57,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	if (!TLASScratch || TLASScratch.GetDesc().Width < ScratchSize)
 	{
 		// TLAS Scratch
-		TLASScratch = Buffer(
+		TLASScratch = D3D12Buffer(
 			RenderCore::pAdapter->GetDevice(),
 			ScratchSize,
 			0,
@@ -68,7 +68,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	if (!TLASResult || TLASResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TLASResult = ASBuffer(RenderCore::pAdapter->GetDevice(), ResultSize);
+		TLASResult = D3D12ASBuffer(RenderCore::pAdapter->GetDevice(), ResultSize);
 	}
 
 	// Create the description for each instance

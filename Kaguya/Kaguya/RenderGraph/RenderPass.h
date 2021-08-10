@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderGraphCommon.h"
 
-class CommandContext;
+class D3D12CommandContext;
 
 class RenderGraphRegistry;
 class RenderGraphDependencyLevel;
@@ -9,7 +9,7 @@ class RenderGraphDependencyLevel;
 class RenderPass : public RenderGraphChild
 {
 public:
-	using ExecuteCallback = std::function<void(RenderGraphRegistry& Registry, CommandContext& Context)>;
+	using ExecuteCallback = std::function<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
 
 	RenderPass(RenderGraph* Parent, const std::string& Name)
 		: RenderGraphChild(Parent)

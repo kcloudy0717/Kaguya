@@ -2,7 +2,7 @@
 #include <d3d12.h>
 #include "d3dx12.h"
 #include "D3D12Utility.h"
-#include "Profiler.h"
+#include "D3D12Profiler.h"
 #include "Aftermath/AftermathCrashTracker.h"
 
 #define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES (8)
@@ -29,7 +29,7 @@
 //#define NVIDIA_NSIGHT_AFTERMATH
 #endif
 
-enum class ECommandQueueType
+enum class ED3D12CommandQueueType
 {
 	Direct,
 	AsyncCompute,
@@ -40,8 +40,8 @@ enum class ECommandQueueType
 	NumCommandQueues
 };
 
-LPCWSTR GetCommandQueueTypeString(ECommandQueueType CommandQueueType);
-LPCWSTR GetCommandQueueTypeFenceString(ECommandQueueType CommandQueueType);
+LPCWSTR GetCommandQueueTypeString(ED3D12CommandQueueType CommandQueueType);
+LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType);
 
 class D3D12Exception : public CoreException
 {
@@ -59,7 +59,7 @@ private:
 	const HRESULT ErrorCode;
 };
 
-#define VERIFY_D3D12_API(expr)                                                                                  \
+#define VERIFY_D3D12_API(expr)                                                                                         \
 	{                                                                                                                  \
 		HRESULT hr = expr;                                                                                             \
 		if (FAILED(hr))                                                                                                \
@@ -68,71 +68,69 @@ private:
 		}                                                                                                              \
 	}
 
-class Adapter;
+class D3D12Device;
 
-class AdapterChild
+class D3D12DeviceChild
 {
 public:
-	AdapterChild() noexcept
+	D3D12DeviceChild() noexcept
 		: Parent(nullptr)
 	{
 	}
-
-	AdapterChild(Adapter* Parent) noexcept
+	D3D12DeviceChild(D3D12Device* Parent) noexcept
 		: Parent(Parent)
 	{
 	}
 
-	auto GetParentAdapter() const noexcept -> Adapter* { return Parent; }
+	auto GetParentAdapter() const noexcept -> D3D12Device* { return Parent; }
 
-	void SetParentAdapter(Adapter* Parent) noexcept
+	void SetParentAdapter(D3D12Device* Parent) noexcept
 	{
 		assert(this->Parent == nullptr);
 		this->Parent = Parent;
 	}
 
 protected:
-	Adapter* Parent;
+	D3D12Device* Parent;
 };
 
-class Device;
+class D3D12LinkedDevice;
 
-class DeviceChild
+class D3D12LinkedDeviceChild
 {
 public:
-	DeviceChild() noexcept
+	D3D12LinkedDeviceChild() noexcept
 		: Parent(nullptr)
 	{
 	}
-
-	DeviceChild(Device* Parent) noexcept
+	D3D12LinkedDeviceChild(D3D12LinkedDevice* Parent) noexcept
 		: Parent(Parent)
 	{
 	}
 
-	auto GetParentDevice() const noexcept -> Device* { return Parent; }
+	auto GetParentLinkedDevice() const noexcept -> D3D12LinkedDevice* { return Parent; }
 
-	void SetParentDevice(Device* Parent) noexcept
+	void SetParentLinkedDevice(D3D12LinkedDevice* Parent) noexcept
 	{
 		assert(this->Parent == nullptr);
 		this->Parent = Parent;
 	}
 
 protected:
-	Device* Parent;
+	D3D12LinkedDevice* Parent;
 };
 
 // Represents a Fence and Value pair, similar to that of a coroutine handle
 // you can query the status of a command execution point and wait for it
-class CommandSyncPoint
+class D3D12CommandSyncPoint
 {
 public:
-	CommandSyncPoint() noexcept
+	D3D12CommandSyncPoint() noexcept
 		: Fence(nullptr)
 		, Value(0)
 	{
 	}
-	CommandSyncPoint(ID3D12Fence* Fence, UINT64 Value) noexcept
+	D3D12CommandSyncPoint(ID3D12Fence* Fence, UINT64 Value) noexcept
 		: Fence(Fence)
 		, Value(Value)
 	{
@@ -144,7 +142,7 @@ public:
 	auto WaitForCompletion() const -> void;
 
 private:
-	friend class CommandQueue;
+	friend class D3D12CommandQueue;
 
 	ID3D12Fence* Fence;
 	UINT64		 Value;

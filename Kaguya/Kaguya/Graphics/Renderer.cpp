@@ -35,7 +35,7 @@ void Renderer::OnRender()
 
 	if (ImGui::Begin("GPU Timing"))
 	{
-		for (const auto& iter : Profiler::Data)
+		for (const auto& iter : D3D12Profiler::Data)
 		{
 			for (INT i = 0; i < iter.Depth; ++i)
 			{
@@ -93,7 +93,7 @@ void Renderer::OnRender()
 	}
 	ImGui::End();
 
-	CommandContext& Context = RenderCore::pAdapter->GetDevice()->GetCommandContext();
+	D3D12CommandContext& Context = RenderCore::pAdapter->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
 	Context.BindResourceViewHeaps();
 
@@ -132,7 +132,7 @@ void Renderer::OnRender()
 	Context->ResourceBarrier(1, &Barrier);
 
 	Context.CloseCommandList();
-	CommandSyncPoint MainSyncPoint = Context.Execute(false);
+	D3D12CommandSyncPoint MainSyncPoint = Context.Execute(false);
 
 	RenderCore::pSwapChain->Present(false);
 

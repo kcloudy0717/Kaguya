@@ -2,8 +2,8 @@
 
 namespace RenderCore
 {
-Adapter*					pAdapter		   = nullptr;
-SwapChain*					pSwapChain		   = nullptr;
+D3D12Device*					pAdapter		   = nullptr;
+D3D12SwapChain*					pSwapChain		   = nullptr;
 ShaderCompiler*				pShaderCompiler	   = nullptr;
 D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor = {};
 D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor = {};
@@ -34,7 +34,7 @@ void Initialize()
 									  .EnableAutoDebugName		= true };
 	DeviceFeatures DeviceFeatures = { .FeatureLevel = D3D_FEATURE_LEVEL_12_0, .WaveOperation = true };
 
-	pAdapter = new Adapter();
+	pAdapter = new D3D12Device();
 	pAdapter->Initialize(DeviceOptions);
 	pAdapter->InitializeDevice(DeviceFeatures);
 
@@ -48,7 +48,7 @@ void Initialize()
 			LOG_INFO("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
 		});
 
-	pSwapChain = new SwapChain(
+	pSwapChain = new D3D12SwapChain(
 		Application::GetWindowHandle(),
 		pAdapter->GetFactory6(),
 		pAdapter->GetD3D12Device(),
@@ -61,7 +61,7 @@ void Initialize()
 	ImGui_ImplDX12_Init(
 		pAdapter->GetD3D12Device(),
 		1,
-		SwapChain::Format,
+		D3D12SwapChain::Format,
 		pAdapter->GetDevice()->GetResourceDescriptorHeap(),
 		ImGuiCpuDescriptor,
 		ImGuiGpuDescriptor);
@@ -86,7 +86,7 @@ void Shutdown()
 	delete pSwapChain;
 	delete pAdapter;
 
-	Adapter::ReportLiveObjects();
+	D3D12Device::ReportLiveObjects();
 }
 
 } // namespace RenderCore

@@ -45,12 +45,12 @@ public:
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
-	void Render(CommandContext& Context) override;
+	void Render(D3D12CommandContext& Context) override;
 
 private:
 	RaytracingAccelerationStructure AccelerationStructure;
 
-	RaytracingAccelerationStructureManager Manager;
+	D3D12RaytracingAccelerationStructureManager Manager;
 
 	struct Settings
 	{
@@ -59,9 +59,9 @@ private:
 	PathIntegratorState PathIntegratorState;
 	FSRState			FSRState;
 
-	Buffer			Materials;
+	D3D12Buffer			Materials;
 	HLSL::Material* pMaterials = nullptr;
-	Buffer			Lights;
+	D3D12Buffer			Lights;
 	HLSL::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;
 
@@ -74,8 +74,8 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	RaytracingShaderBindingTable		 ShaderBindingTable;
-	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
-	RaytracingShaderTable<void>*		 MissShaderTable;
-	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
+	D3D12RaytracingShaderBindingTable		 ShaderBindingTable;
+	D3D12RaytracingShaderTable<void>*		 RayGenerationShaderTable;
+	D3D12RaytracingShaderTable<void>*		 MissShaderTable;
+	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };

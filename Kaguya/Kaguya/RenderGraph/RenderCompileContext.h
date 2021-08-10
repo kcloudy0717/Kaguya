@@ -5,7 +5,7 @@
 class RenderCompileContext
 {
 public:
-	RenderCompileContext(RenderDevice& Device, CommandContext& Context)
+	RenderCompileContext(RenderDevice& Device, D3D12CommandContext& Context)
 		: Device(Device)
 		, Context(Context)
 	{
@@ -21,5 +21,5 @@ public:
 
 private:
 	RenderDevice&	Device;
-	CommandContext& Context;
+	D3D12CommandContext& Context;
 };

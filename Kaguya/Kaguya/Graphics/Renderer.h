@@ -27,7 +27,7 @@ public:
 protected:
 	virtual void SetViewportResolution(uint32_t Width, uint32_t Height) = 0;
 	virtual void Initialize()											= 0;
-	virtual void Render(CommandContext& Context)						= 0;
+	virtual void Render(D3D12CommandContext& Context)						= 0;
 
 protected:
 	World* pWorld;

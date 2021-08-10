@@ -111,7 +111,7 @@ void RenderGraph::Compile()
 	Registry.Initialize();
 }
 
-void RenderGraph::Execute(CommandContext& Context)
+void RenderGraph::Execute(D3D12CommandContext& Context)
 {
 	for (RHITexture& Texture : Scheduler.Textures)
 	{
@@ -176,7 +176,7 @@ void RenderGraphDependencyLevel::PostInitialize()
 	}
 }
 
-void RenderGraphDependencyLevel::Execute(CommandContext& Context)
+void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
 {
 	for (auto Read : Reads)
 	{
@@ -187,7 +187,7 @@ void RenderGraphDependencyLevel::Execute(CommandContext& Context)
 			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		}
 
-		Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Read);
+		D3D12Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Read);
 		Context.TransitionBarrier(&Texture, ReadState);
 	}
 	for (auto Write : Writes)
@@ -207,7 +207,7 @@ void RenderGraphDependencyLevel::Execute(CommandContext& Context)
 			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		}
 
-		Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Write);
+		D3D12Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Write);
 		Context.TransitionBarrier(&Texture, WriteState);
 	}
 

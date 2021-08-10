@@ -1,32 +1,32 @@
 #include "RenderDevice.h"
 
-auto RenderDevice::CreateRootSignature(RootSignature&& RootSignature) -> RenderResourceHandle
+auto RenderDevice::CreateRootSignature(D3D12RootSignature&& RootSignature) -> RenderResourceHandle
 {
 	return RootSignatureRegistry.Construct(std::move(RootSignature));
 }
 
-auto RenderDevice::CreatePipelineState(PipelineState&& PipelineState) -> RenderResourceHandle
+auto RenderDevice::CreatePipelineState(D3D12PipelineState&& PipelineState) -> RenderResourceHandle
 {
 	return PipelineStateRegistry.Construct(std::move(PipelineState));
 }
 
-auto RenderDevice::CreateRaytracingPipelineState(RaytracingPipelineState&& RaytracingPipelineState)
+auto RenderDevice::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
 	-> RenderResourceHandle
 {
 	return RaytracingPipelineStateRegistry.Construct(std::move(RaytracingPipelineState));
 }
 
-const RootSignature& RenderDevice::GetRootSignature(RenderResourceHandle Handle) const
+const D3D12RootSignature& RenderDevice::GetRootSignature(RenderResourceHandle Handle) const
 {
 	return RootSignatureRegistry.GetResource(Handle);
 }
 
-const PipelineState& RenderDevice::GetPipelineState(RenderResourceHandle Handle) const
+const D3D12PipelineState& RenderDevice::GetPipelineState(RenderResourceHandle Handle) const
 {
 	return PipelineStateRegistry.GetResource(Handle);
 }
 
-const RaytracingPipelineState& RenderDevice::GetRaytracingPipelineState(RenderResourceHandle Handle) const
+const D3D12RaytracingPipelineState& RenderDevice::GetRaytracingPipelineState(RenderResourceHandle Handle) const
 {
 	return RaytracingPipelineStateRegistry.GetResource(Handle);
 }

@@ -53,7 +53,7 @@ inline DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
 	}
 };
 
-class InputLayout
+class D3D12InputLayout
 {
 public:
 	void AddVertexLayoutElement(

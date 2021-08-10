@@ -30,17 +30,17 @@ public:
 
 	void AddInstance(const Transform& Transform, MeshRenderer* pMeshRenderer);
 
-	void Build(CommandContext& Context);
+	void Build(D3D12CommandContext& Context);
 
 	UINT NumHitGroups = 0;
 
-	TopLevelAccelerationStructure	   TopLevelAccelerationStructure;
+	D3D12RaytracingScene	   TopLevelAccelerationStructure;
 	std::vector<MeshRenderer*>		   MeshRenderers;
 	std::set<AssetHandle<Asset::Mesh>> ReferencedGeometries;
 	UINT							   InstanceContributionToHitGroupIndex = 0;
 
-	Buffer							TLASScratch;
-	ASBuffer						TLASResult;
-	Buffer							InstanceDescs;
+	D3D12Buffer							TLASScratch;
+	D3D12ASBuffer						TLASResult;
+	D3D12Buffer							InstanceDescs;
 	D3D12_RAYTRACING_INSTANCE_DESC* pInstanceDescs = nullptr;
 };

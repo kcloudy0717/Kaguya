@@ -143,7 +143,7 @@ struct PipelineStates
 			auto DepthStencilState									  = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 			DepthStencilState.DepthEnable							  = FALSE;
 			D3D12_RT_FORMAT_ARRAY RTFormatArray						  = {};
-			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = SwapChain::Format_sRGB;
+			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = D3D12SwapChain::Format_sRGB;
 
 			struct PipelineStateStream
 			{

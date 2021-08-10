@@ -4,8 +4,8 @@
 
 struct ShaderViews
 {
-	std::vector<ShaderResourceView>	 SRVs;
-	std::vector<UnorderedAccessView> UAVs;
+	std::vector<D3D12ShaderResourceView>	 SRVs;
+	std::vector<D3D12UnorderedAccessView> UAVs;
 };
 
 class RenderGraphRegistry
@@ -20,19 +20,19 @@ public:
 
 	void RealizeResources();
 
-	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle)->Texture&;
+	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle)->D3D12Texture&;
 
 	[[nodiscard]] auto GetTextureSRV(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const ShaderResourceView&;
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const D3D12ShaderResourceView&;
 
 	[[nodiscard]] auto GetTextureUAV(
 		RenderResourceHandle Handle,
 		std::optional<UINT>	 OptArraySlice = std::nullopt,
 		std::optional<UINT>	 OptMipSlice   = std::nullopt,
-		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const UnorderedAccessView&;
+		std::optional<UINT>	 OptPlaneSlice = std::nullopt) -> const D3D12UnorderedAccessView&;
 
 	[[nodiscard]] auto GetTextureIndex(
 		RenderResourceHandle Handle,
@@ -50,6 +50,6 @@ private:
 	RenderGraphScheduler& Scheduler;
 
 	// std::vector<Buffer>	 Buffers;
-	std::vector<Texture>	 Textures;
+	std::vector<D3D12Texture>	 Textures;
 	std::vector<ShaderViews> TextureShaderViews;
 };
