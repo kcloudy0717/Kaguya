@@ -25,30 +25,6 @@ enum Hotkeys
 	PRINTSCREEN = 1,
 };
 
-class ImGuiContextManager
-{
-public:
-	ImGuiContextManager(HWND hWnd)
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGui::StyleColorsDark();
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-		// Initialize ImGui for win32
-		ImGui_ImplWin32_Init(hWnd);
-	}
-
-	~ImGuiContextManager()
-	{
-		ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-	}
-};
-
-// Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 void Application::InitializeComponents()
 {
 #if defined(_DEBUG)
@@ -134,9 +110,6 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	// Register prt sc hotkey to the window
 	RegisterHotKey(hWnd.get(), PRINTSCREEN, 0, VK_SNAPSHOT);
-
-	// Initialize ImGui
-	ImGuiContextManager imgui(hWnd.get());
 
 	// Initialize InputHandler
 	InputHandler = { hWnd.get() };
@@ -249,11 +222,6 @@ bool Application::ProcessMessages()
 
 LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
-	if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
-	{
-		return true;
-	}
-
 	Application* App = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	InputHandler.Process(uMsg, wParam, lParam);

@@ -1,4 +1,5 @@
 #pragma once
+#include <Core/RHI/RHICommon.h>
 #include "D3D12Common.h"
 #include "D3D12LinkedDevice.h"
 #include "D3D12RootSignature.h"
@@ -6,13 +7,6 @@
 #include "D3D12RaytracingPipelineState.h"
 
 class D3D12LinkedDevice;
-
-struct DeviceOptions
-{
-	bool EnableDebugLayer;
-	bool EnableGpuBasedValidation;
-	bool EnableAutoDebugName;
-};
 
 // Specify whether or not you want to require the device to have these features
 struct DeviceFeatures

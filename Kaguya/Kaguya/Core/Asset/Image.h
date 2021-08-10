@@ -1,6 +1,6 @@
 #pragma once
 #include <DirectXTex.h>
-#include "D3D12/D3D12Device.h"
+#include <Core/RHI/D3D12/D3D12Device.h>
 
 namespace Asset
 {
