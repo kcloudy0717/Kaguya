@@ -1,14 +1,14 @@
 #pragma once
 #include "VulkanCommon.h"
-#include "Adapter.h"
+#include "VulkanDevice.h"
 
-class SwapChain
+class VulkanSwapChain
 {
 public:
-	SwapChain() noexcept = default;
-	~SwapChain();
+	VulkanSwapChain() noexcept = default;
+	~VulkanSwapChain();
 
-	void Initialize(HWND hWnd, Adapter* Adapter);
+	void Initialize(HWND hWnd, VulkanDevice* Device);
 
 	[[nodiscard]]	   operator auto() const noexcept { return VkSwapchain; }
 	[[nodiscard]] auto GetFormat() const noexcept -> VkFormat { return Format; }
@@ -62,6 +62,6 @@ private:
 	std::vector<VkImage>	 Images;
 	std::vector<VkImageView> ImageViews;
 
-	CommandQueue* PresentQueue = nullptr;
-	uint32_t	  CurrentImageIndex;
+	VulkanCommandQueue* PresentQueue = nullptr;
+	uint32_t			CurrentImageIndex;
 };

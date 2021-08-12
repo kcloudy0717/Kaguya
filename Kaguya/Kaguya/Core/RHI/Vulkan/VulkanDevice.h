@@ -1,23 +1,23 @@
 #pragma once
 #include <Core/RHI/RHICommon.h>
 #include "VulkanCommon.h"
-#include "Device.h"
+#include "VulkanCommandQueue.h"
 
-class Adapter
+class VulkanDevice
 {
 public:
-	Adapter();
-	~Adapter();
+	VulkanDevice();
+	~VulkanDevice();
 
 	void Initialize(const DeviceOptions& Options);
 	void InitializeDevice();
 
-	CommandQueue* InitializePresentQueue(VkSurfaceKHR Surface);
+	VulkanCommandQueue* InitializePresentQueue(VkSurfaceKHR Surface);
 
 	[[nodiscard]] auto GetVkInstance() const noexcept -> VkInstance { return Instance; }
 	[[nodiscard]] auto GetVkPhysicalDevice() const noexcept -> VkPhysicalDevice { return PhysicalDevice; }
 	[[nodiscard]] auto GetVkDevice() const noexcept -> VkDevice { return VkDevice; }
-	[[nodiscard]] auto GetDevice() -> Device& { return Device; }
+	[[nodiscard]] auto GetGraphicsQueue() noexcept -> VulkanCommandQueue& { return GraphicsQueue; }
 
 private:
 	std::vector<const char*> GetExtensions(bool EnableDebugLayer)
@@ -92,5 +92,5 @@ private:
 
 	VkDevice VkDevice;
 
-	Device Device;
+	VulkanCommandQueue GraphicsQueue;
 };

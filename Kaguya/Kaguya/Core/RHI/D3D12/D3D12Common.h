@@ -82,9 +82,9 @@ public:
 	{
 	}
 
-	auto GetParentAdapter() const noexcept -> D3D12Device* { return Parent; }
+	auto GetParentDevice() const noexcept -> D3D12Device* { return Parent; }
 
-	void SetParentAdapter(D3D12Device* Parent) noexcept
+	void SetParentDevice(D3D12Device* Parent) noexcept
 	{
 		assert(this->Parent == nullptr);
 		this->Parent = Parent;

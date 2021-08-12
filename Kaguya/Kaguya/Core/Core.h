@@ -21,6 +21,9 @@
 #include "Asset/Image.h"
 #include "Asset/Mesh.h"
 
+// RHI
+#include "RHI/ShaderCompiler.h"
+
 // D3D12
 #include "RHI/D3D12/D3D12Profiler.h"
 
@@ -38,4 +41,11 @@
 #include "RHI/D3D12/D3D12Raytracing.h"
 #include "RHI/D3D12/D3D12RaytracingShaderTable.h"
 
-#include "RHI/D3D12/ShaderCompiler.h"
+// Vulkan
+#include "RHI/Vulkan/VulkanCommon.h"
+#include "RHI/Vulkan/VulkanDevice.h"
+
+#include "RHI/Vulkan/VulkanCommandQueue.h"
+#include "RHI/Vulkan/VulkanPipelineState.h"
+
+#include "RHI/Vulkan/VulkanSwapChain.h"

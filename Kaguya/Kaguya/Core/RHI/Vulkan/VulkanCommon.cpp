@@ -13,7 +13,6 @@ std::string VulkanException::GetError() const
 		break
 
 	std::string Error;
-
 	switch (ErrorCode)
 	{
 		VKERR(VK_NOT_READY);
@@ -68,8 +67,6 @@ std::string VulkanException::GetError() const
 	}
 	break;
 	}
-
 #undef VKERR
-
 	return Error;
 }

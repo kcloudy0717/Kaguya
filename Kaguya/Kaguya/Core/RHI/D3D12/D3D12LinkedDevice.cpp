@@ -76,12 +76,12 @@ void D3D12LinkedDevice::Initialize()
 
 ID3D12Device* D3D12LinkedDevice::GetDevice() const
 {
-	return GetParentAdapter()->GetD3D12Device();
+	return GetParentDevice()->GetD3D12Device();
 }
 
 ID3D12Device5* D3D12LinkedDevice::GetDevice5() const
 {
-	return GetParentAdapter()->GetD3D12Device5();
+	return GetParentDevice()->GetD3D12Device5();
 }
 
 D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(ED3D12CommandQueueType Type)

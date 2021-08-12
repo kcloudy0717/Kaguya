@@ -1,5 +1,4 @@
-#include "Adapter.h"
-#include <iostream>
+#include "VulkanDevice.h"
 
 static constexpr const char* ValidationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -96,14 +95,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL MessageCallback(
 	return VK_FALSE;
 }
 
-Adapter::Adapter()
-	: Device(this)
+VulkanDevice::VulkanDevice()
+	: GraphicsQueue(this)
 {
 }
 
-Adapter::~Adapter()
+VulkanDevice::~VulkanDevice()
 {
-	Device.Destroy();
+	GraphicsQueue.Destroy();
 
 	vkDestroyDevice(VkDevice, nullptr);
 
@@ -116,7 +115,7 @@ Adapter::~Adapter()
 	vkDestroyInstance(Instance, nullptr);
 }
 
-void Adapter::Initialize(const DeviceOptions& Options)
+void VulkanDevice::Initialize(const DeviceOptions& Options)
 {
 	if (Options.EnableDebugLayer && !QueryValidationLayerSupport())
 	{
@@ -188,7 +187,7 @@ void Adapter::Initialize(const DeviceOptions& Options)
 	}
 }
 
-void Adapter::InitializeDevice()
+void VulkanDevice::InitializeDevice()
 {
 	constexpr float QueuePriority = 1.0f;
 
@@ -214,19 +213,19 @@ void Adapter::InitializeDevice()
 
 	VERIFY_VULKAN_API(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &VkDevice));
 
-	Device.Initialize(Indices.GraphicsFamily.value());
+	GraphicsQueue.Initialize(Indices.GraphicsFamily.value());
 }
 
-CommandQueue* Adapter::InitializePresentQueue(VkSurfaceKHR Surface)
+VulkanCommandQueue* VulkanDevice::InitializePresentQueue(VkSurfaceKHR Surface)
 {
 	VkBool32	 PresentSupport = VK_FALSE;
-	const uint32 FamilyIndex	= Device.GetGraphicsQueue()->GetQueueFamilyIndex();
+	const uint32 FamilyIndex	= GraphicsQueue.GetQueueFamilyIndex();
 	vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, FamilyIndex, Surface, &PresentSupport);
 	assert(PresentSupport && "Queue does not support present");
-	return Device.GetGraphicsQueue();
+	return &GraphicsQueue;
 }
 
-bool Adapter::QueryValidationLayerSupport()
+bool VulkanDevice::QueryValidationLayerSupport()
 {
 	uint32_t PropertyCount;
 	vkEnumerateInstanceLayerProperties(&PropertyCount, nullptr);
@@ -256,7 +255,7 @@ bool Adapter::QueryValidationLayerSupport()
 	return true;
 }
 
-bool Adapter::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
+bool VulkanDevice::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
 {
 	vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
 	vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
@@ -265,7 +264,7 @@ bool Adapter::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
 		   CheckDeviceExtensionSupport(PhysicalDevice);
 }
 
-bool Adapter::CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice)
+bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice)
 {
 	uint32_t PropertyCount;
 	vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &PropertyCount, nullptr);

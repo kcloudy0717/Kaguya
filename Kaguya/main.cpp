@@ -1,8 +1,8 @@
 // main.cpp : Defines the entry point for the application.
 //
 #include <Core/Application.h>
-#include <Core/RHI/Vulkan/Adapter.h>
-#include <Core/RHI/Vulkan/SwapChain.h>
+
+#include <iostream>
 
 class VulkanEngine : public Application
 {
@@ -13,18 +13,21 @@ public:
 
 	bool Initialize() override
 	{
+		ShaderCompiler.Initialize();
+
 		DeviceOptions Options	 = {};
 		Options.EnableDebugLayer = true;
-		Adapter.Initialize(Options);
-		Adapter.InitializeDevice();
+		Device.Initialize(Options);
+		Device.InitializeDevice();
 
-		CommandBuffer = Adapter.GetDevice().GetGraphicsQueue()->GetCommandBuffer();
+		CommandBuffer = Device.GetGraphicsQueue().GetCommandBuffer();
 
-		SwapChain.Initialize(GetWindowHandle(), &Adapter);
+		SwapChain.Initialize(GetWindowHandle(), &Device);
 
 		InitDefaultRenderPass();
 		InitFrameBuffers();
 		InitSyncStructures();
+		InitPipelines();
 
 		return true;
 	}
@@ -32,8 +35,8 @@ public:
 	void Update(float DeltaTime) override
 	{
 		// wait until the GPU has finished rendering the last frame. Timeout of 1 second
-		VERIFY_VULKAN_API(vkWaitForFences(Adapter.GetVkDevice(), 1, &RenderFence, true, 1000000000));
-		VERIFY_VULKAN_API(vkResetFences(Adapter.GetVkDevice(), 1, &RenderFence));
+		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, 1000000000));
+		VERIFY_VULKAN_API(vkResetFences(Device.GetVkDevice(), 1, &RenderFence));
 
 		// request image from the swapchain, one second timeout
 		uint32_t swapchainImageIndex = SwapChain.AcquireNextImage(PresentSemaphore);
@@ -73,6 +76,11 @@ public:
 
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+		// once we start adding rendering commands, they will go here
+
+		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, TrianglePipeline);
+		vkCmdDraw(cmd, 3, 1, 0, 0);
+
 		// finalize the render pass
 		vkCmdEndRenderPass(cmd);
 		// finalize the command buffer (we can no longer add commands, but it can now be executed)
@@ -98,8 +106,7 @@ public:
 
 		// submit command buffer to the queue and execute it.
 		// _renderFence will now block until the graphic commands finish execution
-		VERIFY_VULKAN_API(
-			vkQueueSubmit(Adapter.GetDevice().GetGraphicsQueue()->GetAPIHandle(), 1, &SubmitInfo, RenderFence));
+		VERIFY_VULKAN_API(vkQueueSubmit(Device.GetGraphicsQueue().GetAPIHandle(), 1, &SubmitInfo, RenderFence));
 
 		SwapChain.Present(RenderSemaphore);
 
@@ -109,16 +116,21 @@ public:
 
 	void Shutdown() override
 	{
-		VERIFY_VULKAN_API(vkWaitForFences(Adapter.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
+		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
 
-		vkDestroyFence(Adapter.GetVkDevice(), RenderFence, nullptr);
-		vkDestroySemaphore(Adapter.GetVkDevice(), RenderSemaphore, nullptr);
-		vkDestroySemaphore(Adapter.GetVkDevice(), PresentSemaphore, nullptr);
+		vkDestroyPipelineLayout(Device.GetVkDevice(), TrianglePipelineLayout, nullptr);
 
-		vkDestroyRenderPass(Adapter.GetVkDevice(), RenderPass, nullptr);
+		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
+		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
+
+		vkDestroyFence(Device.GetVkDevice(), RenderFence, nullptr);
+		vkDestroySemaphore(Device.GetVkDevice(), RenderSemaphore, nullptr);
+		vkDestroySemaphore(Device.GetVkDevice(), PresentSemaphore, nullptr);
+
+		vkDestroyRenderPass(Device.GetVkDevice(), RenderPass, nullptr);
 		for (auto& Framebuffer : Framebuffers)
 		{
-			vkDestroyFramebuffer(Adapter.GetVkDevice(), Framebuffer, nullptr);
+			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
 		}
 	}
 
@@ -166,7 +178,7 @@ private:
 		RenderPassCreateInfo.subpassCount = 1;
 		RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
 
-		VERIFY_VULKAN_API(vkCreateRenderPass(Adapter.GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
+		VERIFY_VULKAN_API(vkCreateRenderPass(Device.GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
 	}
 
 	void InitFrameBuffers()
@@ -189,7 +201,7 @@ private:
 			const VkImageView Attachment[]	   = { SwapChain.GetImageView(i) };
 			FramebufferCreateInfo.pAttachments = Attachment;
 			VERIFY_VULKAN_API(
-				vkCreateFramebuffer(Adapter.GetVkDevice(), &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+				vkCreateFramebuffer(Device.GetVkDevice(), &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
 		}
 	}
 
@@ -201,27 +213,114 @@ private:
 		// command (for the first frame)
 		FenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		VERIFY_VULKAN_API(vkCreateFence(Adapter.GetVkDevice(), &FenceCreateInfo, nullptr, &RenderFence));
+		VERIFY_VULKAN_API(vkCreateFence(Device.GetVkDevice(), &FenceCreateInfo, nullptr, &RenderFence));
 
 		// for the semaphores we don't need any flags
 		auto SemaphoreCreateInfo  = VkStruct<VkSemaphoreCreateInfo>();
 		SemaphoreCreateInfo.flags = 0;
 
-		VERIFY_VULKAN_API(vkCreateSemaphore(Adapter.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-		VERIFY_VULKAN_API(vkCreateSemaphore(Adapter.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+		VERIFY_VULKAN_API(vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+		VERIFY_VULKAN_API(vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+	}
+
+	void InitPipelines()
+	{
+		if (!LoadShaderModule(EShaderType::Vertex, "Shaders/Vulkan/Triangle.vs.hlsl", &VS))
+		{
+			std::cout << "Error when building the triangle vertex shader module" << std::endl;
+		}
+		if (!LoadShaderModule(EShaderType::Pixel, "Shaders/Vulkan/Triangle.ps.hlsl", &PS))
+		{
+			std::cout << "Error when building the triangle fragment shader module" << std::endl;
+		}
+
+		// build the pipeline layout that controls the inputs/outputs of the shader
+		// we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
+		VkPipelineLayoutCreateInfo pipeline_layout_info = InitPipelineLayoutCreateInfo();
+
+		VERIFY_VULKAN_API(
+			vkCreatePipelineLayout(Device.GetVkDevice(), &pipeline_layout_info, nullptr, &TrianglePipelineLayout));
+
+		// build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader
+		// modules per stage
+		VulkanPipelineStateBuilder pipelineBuilder;
+
+		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, VS));
+		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, PS));
+
+		// vertex input controls how to read vertices from vertex buffers. We aren't using it yet
+		pipelineBuilder.VertexInputState = InitPipelineVertexInputStateCreateInfo();
+
+		// input assembly is the configuration for drawing triangle lists, strips, or individual points.
+		// we are just going to draw triangle list
+		pipelineBuilder.InputAssemblyState = InitPipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+
+		// build viewport and scissor from the swapchain extents
+		pipelineBuilder.Viewport.x		  = 0.0f;
+		pipelineBuilder.Viewport.y		  = 0.0f;
+		pipelineBuilder.Viewport.width	  = (float)SwapChain.GetWidth();
+		pipelineBuilder.Viewport.height	  = (float)SwapChain.GetHeight();
+		pipelineBuilder.Viewport.minDepth = 0.0f;
+		pipelineBuilder.Viewport.maxDepth = 1.0f;
+
+		pipelineBuilder.ScissorRect.offset = { 0, 0 };
+		pipelineBuilder.ScissorRect.extent = SwapChain.GetExtent();
+
+		// configure the rasterizer to draw filled triangles
+		pipelineBuilder.RasterizationState = InitPipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
+
+		// we don't use multisampling, so just run the default one
+		pipelineBuilder.MultisampleState = InitPipelineMultisampleStateCreateInfo();
+
+		// a single blend attachment with no blending and writing to RGBA
+		pipelineBuilder.ColorBlendAttachmentState = InitPipelineColorBlendAttachmentState();
+
+		// use the triangle layout we created
+		pipelineBuilder.PipelineLayout = TrianglePipelineLayout;
+		pipelineBuilder.RenderPass	   = RenderPass;
+
+		// finally build the pipeline
+		TrianglePipeline = VulkanPipelineState(&Device, pipelineBuilder);
+	}
+
+	bool LoadShaderModule(EShaderType ShaderType, const std::filesystem::path& Path, VkShaderModule* pShaderModule)
+	{
+		Shader Shader = ShaderCompiler.SpirVCodeGen(ShaderType, ExecutableDirectory / Path, L"main", {});
+
+		// create a new shader module, using the buffer we loaded
+		auto ShaderModuleCreateInfo		= VkStruct<VkShaderModuleCreateInfo>();
+		ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
+		ShaderModuleCreateInfo.pCode	= (uint32_t*)Shader.GetBufferPointer();
+
+		// check that the creation goes well.
+		VkShaderModule ShaderModule = VK_NULL_HANDLE;
+		if (vkCreateShaderModule(Device.GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule) != VK_SUCCESS)
+		{
+			return false;
+		}
+		*pShaderModule = ShaderModule;
+		return true;
 	}
 
 private:
-	Adapter	  Adapter;
-	SwapChain SwapChain;
+	ShaderCompiler ShaderCompiler;
+
+	VulkanDevice	Device;
+	VulkanSwapChain SwapChain;
 
 	VkRenderPass			   RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
 
 	VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
 
-	VkSemaphore PresentSemaphore, RenderSemaphore;
-	VkFence		RenderFence;
+	VkSemaphore PresentSemaphore = VK_NULL_HANDLE, RenderSemaphore = VK_NULL_HANDLE;
+	VkFence		RenderFence = VK_NULL_HANDLE;
+
+	VkShaderModule VS, PS;
+
+	VkPipelineLayout TrianglePipelineLayout = VK_NULL_HANDLE;
+
+	VulkanPipelineState TrianglePipeline;
 };
 
 int main(int argc, char* argv[])

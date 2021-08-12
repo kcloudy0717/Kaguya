@@ -1,6 +1,6 @@
-#include "SwapChain.h"
+#include "VulkanSwapChain.h"
 
-SwapChain::~SwapChain()
+VulkanSwapChain::~VulkanSwapChain()
 {
 	for (auto ImageView : ImageViews)
 	{
@@ -11,10 +11,10 @@ SwapChain::~SwapChain()
 	vkDestroySurfaceKHR(Instance, Surface, nullptr);
 }
 
-void SwapChain::Initialize(HWND hWnd, Adapter* Adapter)
+void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 {
-	this->Instance = Adapter->GetVkInstance();
-	this->Device   = Adapter->GetVkDevice();
+	this->Instance = Device->GetVkInstance();
+	this->Device   = Device->GetVkDevice();
 
 	// Surface
 	auto Win32SurfaceCreateInfo		 = VkStruct<VkWin32SurfaceCreateInfoKHR>();
@@ -24,16 +24,16 @@ void SwapChain::Initialize(HWND hWnd, Adapter* Adapter)
 	VERIFY_VULKAN_API(vkCreateWin32SurfaceKHR(Instance, &Win32SurfaceCreateInfo, nullptr, &Surface));
 
 	VERIFY_VULKAN_API(
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Adapter->GetVkPhysicalDevice(), Surface, &SurfaceCapabilities));
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(Device->GetVkPhysicalDevice(), Surface, &SurfaceCapabilities));
 
 	uint32_t SurfaceFormatCount = 0;
 	VERIFY_VULKAN_API(
-		vkGetPhysicalDeviceSurfaceFormatsKHR(Adapter->GetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr));
+		vkGetPhysicalDeviceSurfaceFormatsKHR(Device->GetVkPhysicalDevice(), Surface, &SurfaceFormatCount, nullptr));
 	if (SurfaceFormatCount != 0)
 	{
 		SurfaceFormats.resize(SurfaceFormatCount);
 		VERIFY_VULKAN_API(vkGetPhysicalDeviceSurfaceFormatsKHR(
-			Adapter->GetVkPhysicalDevice(),
+			Device->GetVkPhysicalDevice(),
 			Surface,
 			&SurfaceFormatCount,
 			SurfaceFormats.data()));
@@ -41,18 +41,18 @@ void SwapChain::Initialize(HWND hWnd, Adapter* Adapter)
 
 	uint32_t PresentModeCount = 0;
 	VERIFY_VULKAN_API(
-		vkGetPhysicalDeviceSurfacePresentModesKHR(Adapter->GetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr));
+		vkGetPhysicalDeviceSurfacePresentModesKHR(Device->GetVkPhysicalDevice(), Surface, &PresentModeCount, nullptr));
 	if (PresentModeCount != 0)
 	{
 		PresentModes.resize(PresentModeCount);
 		VERIFY_VULKAN_API(vkGetPhysicalDeviceSurfacePresentModesKHR(
-			Adapter->GetVkPhysicalDevice(),
+			Device->GetVkPhysicalDevice(),
 			Surface,
 			&PresentModeCount,
 			PresentModes.data()));
 	}
 
-	PresentQueue = Adapter->InitializePresentQueue(Surface);
+	PresentQueue = Device->InitializePresentQueue(Surface);
 
 	VkSurfaceFormatKHR SurfaceFormat = GetPreferredSurfaceFormat();
 	VkPresentModeKHR   PresentMode	 = GetPreferredPresentMode();
@@ -81,13 +81,13 @@ void SwapChain::Initialize(HWND hWnd, Adapter* Adapter)
 	SwapchainCreateInfo.clipped				  = VK_TRUE;
 	SwapchainCreateInfo.oldSwapchain		  = VK_NULL_HANDLE;
 
-	VERIFY_VULKAN_API(vkCreateSwapchainKHR(Adapter->GetVkDevice(), &SwapchainCreateInfo, nullptr, &VkSwapchain));
+	VERIFY_VULKAN_API(vkCreateSwapchainKHR(Device->GetVkDevice(), &SwapchainCreateInfo, nullptr, &VkSwapchain));
 
 	Format		 = SurfaceFormat.format;
 	this->Extent = Extent;
-	VERIFY_VULKAN_API(vkGetSwapchainImagesKHR(Device, VkSwapchain, &ImageCount, nullptr));
+	VERIFY_VULKAN_API(vkGetSwapchainImagesKHR(Device->GetVkDevice(), VkSwapchain, &ImageCount, nullptr));
 	Images.resize(ImageCount);
-	VERIFY_VULKAN_API(vkGetSwapchainImagesKHR(Device, VkSwapchain, &ImageCount, Images.data()));
+	VERIFY_VULKAN_API(vkGetSwapchainImagesKHR(Device->GetVkDevice(), VkSwapchain, &ImageCount, Images.data()));
 
 	ImageViews.resize(ImageCount);
 	for (uint32_t i = 0; i < ImageCount; ++i)
@@ -106,16 +106,16 @@ void SwapChain::Initialize(HWND hWnd, Adapter* Adapter)
 		ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		ImageViewCreateInfo.subresourceRange.layerCount		= 1;
 
-		VERIFY_VULKAN_API(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &ImageViews[i]))
+		VERIFY_VULKAN_API(vkCreateImageView(Device->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViews[i]))
 	}
 }
 
-auto SwapChain::GetImageView(size_t i) const noexcept -> VkImageView
+auto VulkanSwapChain::GetImageView(size_t i) const noexcept -> VkImageView
 {
 	return ImageViews[i];
 }
 
-VkSurfaceFormatKHR SwapChain::GetPreferredSurfaceFormat()
+VkSurfaceFormatKHR VulkanSwapChain::GetPreferredSurfaceFormat()
 {
 	for (const auto& SurfaceFormat : SurfaceFormats)
 	{
@@ -129,7 +129,7 @@ VkSurfaceFormatKHR SwapChain::GetPreferredSurfaceFormat()
 	return SurfaceFormats[0];
 }
 
-VkPresentModeKHR SwapChain::GetPreferredPresentMode()
+VkPresentModeKHR VulkanSwapChain::GetPreferredPresentMode()
 {
 	for (const auto& PresentMode : PresentModes)
 	{
@@ -142,27 +142,26 @@ VkPresentModeKHR SwapChain::GetPreferredPresentMode()
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D SwapChain::GetPreferredExtent()
+VkExtent2D VulkanSwapChain::GetPreferredExtent()
 {
-	if (SurfaceCapabilities.currentExtent.width != UINT32_MAX)
+	if (SurfaceCapabilities.currentExtent.width != UINT32_MAX && SurfaceCapabilities.currentExtent.height != UINT32_MAX)
 	{
 		return SurfaceCapabilities.currentExtent;
 	}
 	else
 	{
-		int width = Application::GetWidth(), height = Application::GetHeight();
+		int		   Width		= Application::GetWidth();
+		int		   Height		= Application::GetHeight();
+		VkExtent2D ActualExtent = { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) };
 
-		VkExtent2D actualExtent = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-
-		actualExtent.width = std::clamp(
-			actualExtent.width,
+		ActualExtent.width = std::clamp(
+			ActualExtent.width,
 			SurfaceCapabilities.minImageExtent.width,
 			SurfaceCapabilities.maxImageExtent.width);
-		actualExtent.height = std::clamp(
-			actualExtent.height,
+		ActualExtent.height = std::clamp(
+			ActualExtent.height,
 			SurfaceCapabilities.minImageExtent.height,
 			SurfaceCapabilities.maxImageExtent.height);
-
-		return actualExtent;
+		return ActualExtent;
 	}
 }

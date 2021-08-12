@@ -2,14 +2,46 @@
 
 using Microsoft::WRL::ComPtr;
 
-void ShaderCompiler::Initialize()
+const char* DxcException::GetErrorType() const noexcept
 {
-	VERIFY_D3D12_API(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
-	VERIFY_D3D12_API(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
-	VERIFY_D3D12_API(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
+	return "[Dxc]";
 }
 
-void ShaderCompiler::SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept
+std::string DxcException::GetError() const
+{
+#define DXCERR(x)                                                                                                      \
+	case x:                                                                                                            \
+		Error = #x;                                                                                                    \
+		break
+
+	std::string Error;
+	switch (ErrorCode)
+	{
+		DXCERR(E_FAIL);
+		DXCERR(E_INVALIDARG);
+		DXCERR(E_OUTOFMEMORY);
+		DXCERR(E_NOTIMPL);
+		DXCERR(E_NOINTERFACE);
+	default:
+	{
+		char Buffer[64] = {};
+		sprintf_s(Buffer, "HRESULT of 0x%08X", static_cast<UINT>(ErrorCode));
+		Error = Buffer;
+	}
+	break;
+	}
+#undef DXCERR
+	return Error;
+}
+
+void ShaderCompiler::Initialize()
+{
+	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(Compiler3.ReleaseAndGetAddressOf())));
+	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(Utils.ReleaseAndGetAddressOf())));
+	VERIFY_DXC_API(Utils->CreateDefaultIncludeHandler(DefaultIncludeHandler.ReleaseAndGetAddressOf()));
+}
+
+void ShaderCompiler::SetShaderModel(EShaderModel ShaderModel) noexcept
 {
 	this->ShaderModel = ShaderModel;
 }
@@ -47,21 +79,29 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	return Library(Blob, PDBBlob, std::move(PDBName));
 }
 
+Shader ShaderCompiler::SpirVCodeGen(
+	EShaderType					  ShaderType,
+	const std::filesystem::path&  Path,
+	std::wstring_view			  EntryPoint,
+	const std::vector<DxcDefine>& ShaderDefines)
+{
+	std::wstring ProfileString = ShaderProfileString(ShaderType);
+
+	IDxcBlob* Blob = nullptr;
+	SpirV(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob);
+
+	return Shader(ShaderType, Blob, nullptr, std::wstring());
+}
+
 std::wstring ShaderCompiler::GetShaderModelString() const
 {
 	std::wstring ShaderModelString;
 	switch (ShaderModel)
 	{
-	case D3D_SHADER_MODEL_6_3:
-		ShaderModelString = L"6_3";
-		break;
-	case D3D_SHADER_MODEL_6_4:
-		ShaderModelString = L"6_4";
-		break;
-	case D3D_SHADER_MODEL_6_5:
+	case EShaderModel::ShaderModel_6_5:
 		ShaderModelString = L"6_5";
 		break;
-	case D3D_SHADER_MODEL_6_6:
+	case EShaderModel::ShaderModel_6_6:
 		ShaderModelString = L"6_6";
 		break;
 	}
@@ -140,7 +180,7 @@ void ShaderCompiler::Compile(
 
 	// Build arguments
 	ComPtr<IDxcCompilerArgs> DxcCompilerArgs;
-	VERIFY_D3D12_API(Utils->BuildArguments(
+	VERIFY_DXC_API(Utils->BuildArguments(
 		Path.c_str(),
 		EntryPoint.data(),
 		Profile.data(),
@@ -153,11 +193,11 @@ void ShaderCompiler::Compile(
 	ComPtr<IDxcBlobEncoding> Source;
 	UINT32					 CodePage = CP_ACP;
 
-	VERIFY_D3D12_API(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
+	VERIFY_DXC_API(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
 
 	BOOL SourceKnown	= FALSE;
 	UINT SourceCodePage = 0;
-	VERIFY_D3D12_API(Source->GetEncoding(&SourceKnown, &CodePage));
+	VERIFY_DXC_API(Source->GetEncoding(&SourceKnown, &CodePage));
 
 	DxcBuffer DxcBuffer = {};
 	DxcBuffer.Ptr		= Source->GetBufferPointer();
@@ -165,7 +205,7 @@ void ShaderCompiler::Compile(
 	DxcBuffer.Encoding	= SourceCodePage;
 
 	ComPtr<IDxcResult> DxcResult;
-	VERIFY_D3D12_API(Compiler3->Compile(
+	VERIFY_DXC_API(Compiler3->Compile(
 		&DxcBuffer,
 		DxcCompilerArgs->GetArguments(),
 		DxcCompilerArgs->GetCount(),
@@ -201,4 +241,84 @@ void ShaderCompiler::Compile(
 		DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(ppPDBBlob), PDB.ReleaseAndGetAddressOf());
 		PDBName = PDB->GetStringPointer();
 	}
+}
+
+void ShaderCompiler::SpirV(
+	const std::filesystem::path&  Path,
+	std::wstring_view			  EntryPoint,
+	std::wstring_view			  Profile,
+	const std::vector<DxcDefine>& ShaderDefines,
+	_Outptr_result_maybenull_ IDxcBlob** ppBlob) const
+{
+	*ppBlob = nullptr;
+
+	LPCWSTR Arguments[] = { L"-spirv",
+#ifdef _DEBUG
+							L"-WX", // Warnings as errors
+							L"-Zi", // Debug info
+							L"-Od", // Disable optimization
+#else
+							L"-O3", // Optimization level 3
+#endif
+									// Add include directory
+							L"-I",
+							IncludeDirectory.data() };
+
+	// Build arguments
+	ComPtr<IDxcCompilerArgs> DxcCompilerArgs;
+	VERIFY_DXC_API(Utils->BuildArguments(
+		Path.c_str(),
+		EntryPoint.data(),
+		Profile.data(),
+		Arguments,
+		ARRAYSIZE(Arguments),
+		ShaderDefines.data(),
+		static_cast<UINT32>(ShaderDefines.size()),
+		DxcCompilerArgs.ReleaseAndGetAddressOf()));
+
+	ComPtr<IDxcBlobEncoding> Source;
+	UINT32					 CodePage = CP_ACP;
+
+	VERIFY_DXC_API(Utils->LoadFile(Path.c_str(), &CodePage, Source.ReleaseAndGetAddressOf()));
+
+	BOOL SourceKnown	= FALSE;
+	UINT SourceCodePage = 0;
+	VERIFY_DXC_API(Source->GetEncoding(&SourceKnown, &CodePage));
+
+	DxcBuffer DxcBuffer = {};
+	DxcBuffer.Ptr		= Source->GetBufferPointer();
+	DxcBuffer.Size		= Source->GetBufferSize();
+	DxcBuffer.Encoding	= SourceCodePage;
+
+	ComPtr<IDxcResult> DxcResult;
+	VERIFY_DXC_API(Compiler3->Compile(
+		&DxcBuffer,
+		DxcCompilerArgs->GetArguments(),
+		DxcCompilerArgs->GetCount(),
+		DefaultIncludeHandler.Get(),
+		IID_PPV_ARGS(DxcResult.ReleaseAndGetAddressOf())));
+
+	HRESULT Status;
+	if (SUCCEEDED(DxcResult->GetStatus(&Status)))
+	{
+		if (FAILED(Status))
+		{
+			ComPtr<IDxcBlobUtf8>  Errors;
+			ComPtr<IDxcBlobUtf16> OutputName;
+			if (SUCCEEDED(DxcResult->GetOutput(
+					DXC_OUT_ERRORS,
+					IID_PPV_ARGS(Errors.GetAddressOf()),
+					OutputName.ReleaseAndGetAddressOf())))
+			{
+				OutputDebugStringA(std::bit_cast<char*>(Errors->GetBufferPointer()));
+				throw std::runtime_error("Failed to compile shader");
+			}
+			else
+			{
+				throw std::runtime_error("Failed to obtain error");
+			}
+		}
+	}
+
+	DxcResult->GetResult(ppBlob);
 }

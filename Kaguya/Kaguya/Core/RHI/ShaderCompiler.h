@@ -1,7 +1,37 @@
 #pragma once
-#include "D3D12Common.h"
 #include "dxcapi.h"
 #include "d3d12shader.h"
+
+class DxcException : public CoreException
+{
+public:
+	DxcException(const char* File, int Line, HRESULT ErrorCode)
+		: CoreException(File, Line)
+		, ErrorCode(ErrorCode)
+	{
+	}
+
+	const char* GetErrorType() const noexcept override;
+	std::string GetError() const override;
+
+private:
+	const HRESULT ErrorCode;
+};
+
+#define VERIFY_DXC_API(expr)                                                                                           \
+	{                                                                                                                  \
+		HRESULT hr = expr;                                                                                             \
+		if (FAILED(hr))                                                                                                \
+		{                                                                                                              \
+			throw DxcException(__FILE__, __LINE__, hr);                                                                \
+		}                                                                                                              \
+	}
+
+enum class EShaderModel
+{
+	ShaderModel_6_5,
+	ShaderModel_6_6
+};
 
 enum class EShaderType
 {
@@ -33,6 +63,9 @@ public:
 		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Blob->GetBufferPointer(),
 									  .BytecodeLength  = Blob->GetBufferSize() };
 	}
+
+	[[nodiscard]] auto GetBufferPointer() -> LPVOID const { return Blob->GetBufferPointer(); }
+	[[nodiscard]] auto GetBufferSize() -> SIZE_T const { return Blob->GetBufferSize(); }
 
 private:
 	EShaderType						 ShaderType;
@@ -75,13 +108,13 @@ class ShaderCompiler
 {
 public:
 	ShaderCompiler()
-		: ShaderModel(D3D_SHADER_MODEL_6_5)
+		: ShaderModel(EShaderModel::ShaderModel_6_5)
 	{
 	}
 
 	void Initialize();
 
-	void SetShaderModel(D3D_SHADER_MODEL ShaderModel) noexcept;
+	void SetShaderModel(EShaderModel ShaderModel) noexcept;
 
 	void SetIncludeDirectory(const std::filesystem::path& Path);
 
@@ -92,6 +125,12 @@ public:
 		const std::vector<DxcDefine>& ShaderDefines) const;
 
 	Library CompileLibrary(const std::filesystem::path& Path) const;
+
+	Shader SpirVCodeGen(
+		EShaderType					  ShaderType,
+		const std::filesystem::path&  Path,
+		std::wstring_view			  EntryPoint,
+		const std::vector<DxcDefine>& ShaderDefines);
 
 private:
 	std::wstring GetShaderModelString() const;
@@ -109,10 +148,17 @@ private:
 		_Outptr_result_maybenull_ IDxcBlob** ppPDBBlob,
 		std::wstring&						 PDBName) const;
 
+	void SpirV(
+		const std::filesystem::path&  Path,
+		std::wstring_view			  EntryPoint,
+		std::wstring_view			  Profile,
+		const std::vector<DxcDefine>& ShaderDefines,
+		_Outptr_result_maybenull_ IDxcBlob** ppBlob) const;
+
 private:
 	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
 	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
 	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
-	D3D_SHADER_MODEL						   ShaderModel;
+	EShaderModel							   ShaderModel;
 	std::wstring							   IncludeDirectory;
 };

@@ -1,11 +1,11 @@
 #pragma once
 #include "VulkanCommon.h"
 
-class CommandQueue : public DeviceChild
+class VulkanCommandQueue : public VulkanDeviceChild
 {
 public:
-	CommandQueue(Device* Parent) noexcept;
-	~CommandQueue();
+	VulkanCommandQueue(VulkanDevice* Parent) noexcept;
+	~VulkanCommandQueue();
 
 	void Initialize(uint32_t QueueFamilyIndex);
 	void Destroy();

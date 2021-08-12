@@ -68,7 +68,7 @@ void Initialize()
 
 	pShaderCompiler = new ShaderCompiler();
 	pShaderCompiler->Initialize();
-	pShaderCompiler->SetShaderModel(D3D_SHADER_MODEL_6_6);
+	pShaderCompiler->SetShaderModel(EShaderModel::ShaderModel_6_6);
 	pShaderCompiler->SetIncludeDirectory(Application::ExecutableDirectory / L"Shaders");
 }
 
