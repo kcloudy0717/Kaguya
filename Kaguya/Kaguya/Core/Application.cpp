@@ -25,7 +25,7 @@ enum Hotkeys
 	PRINTSCREEN = 1,
 };
 
-void Application::InitializeComponents()
+void Application::InitializeComponents(const std::string& LoggerName)
 {
 #if defined(_DEBUG)
 	ENABLE_LEAK_DETECTION();
@@ -42,7 +42,8 @@ void Application::InitializeComponents()
 	}
 
 	// Initialize Log
-	Log::Initialize();
+	Log::Initialize(LoggerName);
+	LOG_INFO("Log Initialized");
 }
 
 int Application::Run(Application& Application, const ApplicationOptions& Options)

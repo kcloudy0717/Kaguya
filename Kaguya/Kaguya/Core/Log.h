@@ -4,7 +4,7 @@
 class Log
 {
 public:
-	static void Initialize();
+	static void Initialize(const std::string& Name);
 
 	template<typename T>
 	static void Trace(const T& Msg)

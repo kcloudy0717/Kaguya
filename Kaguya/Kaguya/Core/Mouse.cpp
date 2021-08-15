@@ -53,20 +53,6 @@ void Mouse::OnMove(int x, int y)
 	TrimBuffer(MouseBuffer);
 }
 
-void Mouse::OnEnter()
-{
-	IsInWindow = true;
-	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Enter, *this));
-	TrimBuffer(MouseBuffer);
-}
-
-void Mouse::OnLeave()
-{
-	IsInWindow = false;
-	MouseBuffer.push(Mouse::Event(Mouse::Event::EType::Leave, *this));
-	TrimBuffer(MouseBuffer);
-}
-
 void Mouse::OnButtonDown(Button Button, int x, int y)
 {
 	this->x = x, this->y = y;

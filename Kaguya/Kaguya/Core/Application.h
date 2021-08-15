@@ -20,7 +20,7 @@ struct ApplicationOptions
 class Application
 {
 public:
-	static void InitializeComponents();
+	static void InitializeComponents(const std::string& LoggerName);
 
 	static int Run(Application& Application, const ApplicationOptions& Options);
 

@@ -253,7 +253,8 @@ private:
 
 		// input assembly is the configuration for drawing triangle lists, strips, or individual points.
 		// we are just going to draw triangle list
-		pipelineBuilder.InputAssemblyState = InitPipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+		pipelineBuilder.InputAssemblyState =
+			InitPipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
 		// build viewport and scissor from the swapchain extents
 		pipelineBuilder.Viewport.x		  = 0.0f;
@@ -327,7 +328,7 @@ int main(int argc, char* argv[])
 {
 	try
 	{
-		Application::InitializeComponents();
+		Application::InitializeComponents("Kaguya");
 
 		const ApplicationOptions AppOptions = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
 

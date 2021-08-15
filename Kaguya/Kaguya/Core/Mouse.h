@@ -27,8 +27,6 @@ public:
 		{
 			Invalid,
 			Move,
-			Enter,
-			Leave,
 			LMBPress,
 			LMBRelease,
 			MMBPress,
@@ -79,8 +77,6 @@ public:
 
 private:
 	void OnMove(int x, int y);
-	void OnEnter();
-	void OnLeave();
 
 	void OnButtonDown(Button Button, int x, int y);
 
@@ -106,8 +102,6 @@ public:
 	int y	 = 0;
 	int xRaw = 0;
 	int yRaw = 0;
-
-	bool IsInWindow = false;
 
 private:
 	std::bitset<NumButtons>	 ButtonStates;
