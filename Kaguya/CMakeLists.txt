@@ -69,10 +69,8 @@ source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${spdlog})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${dxc})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
-if (MSVC)
-    add_compile_options(/W3) # warning level 3
-	add_compile_options(/MP) # Multi-processor compilation
-endif()
+add_compile_options(/W3) # warning level 3
+add_compile_options(/MP) # Multi-processor compilation
 
 add_executable(
 	${PROJECTNAME}
@@ -89,6 +87,13 @@ add_executable(
 	# Offline
 	${dxc}
 	${cityhash})
+
+add_custom_target(Shaders ALL COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/Shaders
+
+	${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/Shaders)
+
+add_dependencies(${PROJECTNAME} Shaders)
 
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
@@ -210,13 +215,4 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/Assets
 
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
-DEPENDS ${PROJECTNAME})
-
-# Copy shaders
-add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/Shaders
-
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/Shaders
 DEPENDS ${PROJECTNAME})
