@@ -59,7 +59,6 @@ private:
 
 	D3D12DynamicResourceDescriptorHeap ResourceDescriptorHeap;
 	D3D12DynamicResourceDescriptorHeap SamplerDescriptorHeap;
-
 	D3D12DynamicResourceDescriptorHeap RenderTargetDescriptorHeap;
 	D3D12DynamicResourceDescriptorHeap DepthStencilDescriptorHeap;
 

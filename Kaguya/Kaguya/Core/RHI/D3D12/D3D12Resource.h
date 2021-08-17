@@ -81,7 +81,7 @@ class D3D12Resource : public D3D12LinkedDeviceChild
 public:
 	D3D12Resource() noexcept = default;
 	D3D12Resource(
-		D3D12LinkedDevice*					 Parent,
+		D3D12LinkedDevice*				 Parent,
 		D3D12_RESOURCE_DESC				 Desc,
 		std::optional<D3D12_CLEAR_VALUE> ClearValue,
 		UINT							 NumSubresources)
@@ -136,7 +136,7 @@ class D3D12Buffer : public D3D12Resource
 public:
 	D3D12Buffer() noexcept = default;
 	D3D12Buffer(
-		D3D12LinkedDevice*		 Parent,
+		D3D12LinkedDevice*	 Parent,
 		UINT64				 SizeInBytes,
 		UINT				 Stride,
 		D3D12_HEAP_TYPE		 HeapType,
@@ -199,7 +199,7 @@ class D3D12Texture : public D3D12Resource
 public:
 	D3D12Texture() noexcept = default;
 	D3D12Texture(
-		D3D12LinkedDevice*					 Parent,
+		D3D12LinkedDevice*				 Parent,
 		const D3D12_RESOURCE_DESC&		 Desc,
 		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt);
 

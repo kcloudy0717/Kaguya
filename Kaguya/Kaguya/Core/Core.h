@@ -44,8 +44,7 @@
 // Vulkan
 #include "RHI/Vulkan/VulkanCommon.h"
 #include "RHI/Vulkan/VulkanDevice.h"
-
 #include "RHI/Vulkan/VulkanCommandQueue.h"
 #include "RHI/Vulkan/VulkanPipelineState.h"
-
+#include "RHI/Vulkan/VulkanResource.h"
 #include "RHI/Vulkan/VulkanSwapChain.h"

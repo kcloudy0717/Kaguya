@@ -1,4 +1,5 @@
 #pragma once
+#include "vk_mem_alloc.h"
 
 class VulkanException : public CoreException
 {
@@ -114,4 +115,26 @@ struct QueueFamilyIndices
 	bool IsValid() { return GraphicsFamily.has_value(); }
 
 	std::optional<uint32_t> GraphicsFamily;
+};
+
+class VulkanInputLayout
+{
+public:
+	VulkanInputLayout(uint32_t Stride);
+
+	void AddVertexLayoutElement(UINT Location, VkFormat Format, uint32_t AlignedByteOffset)
+	{
+		VkVertexInputAttributeDescription& Desc = AttributeDescriptions.emplace_back();
+		Desc.location							= Location;
+		Desc.binding							= 0;
+		Desc.format								= Format;
+		Desc.offset								= AlignedByteOffset;
+	}
+
+	operator VkPipelineVertexInputStateCreateInfo() const noexcept;
+
+private:
+	std::vector<VkVertexInputBindingDescription>   BindingDescriptions;
+	std::vector<VkVertexInputAttributeDescription> AttributeDescriptions;
+	VkPipelineVertexInputStateCreateFlags		   StateCreateFlags = 0;
 };

@@ -1,6 +1,5 @@
 #pragma once
 #include <World/Vertex.h>
-#include <Core/RHI/D3D12/D3D12Device.h>
 
 namespace Asset
 {

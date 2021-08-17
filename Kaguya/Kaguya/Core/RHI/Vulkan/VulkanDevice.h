@@ -2,6 +2,7 @@
 #include <Core/RHI/RHICommon.h>
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
+#include "VulkanResource.h"
 
 class VulkanDevice
 {
@@ -17,6 +18,7 @@ public:
 	[[nodiscard]] auto GetVkInstance() const noexcept -> VkInstance { return Instance; }
 	[[nodiscard]] auto GetVkPhysicalDevice() const noexcept -> VkPhysicalDevice { return PhysicalDevice; }
 	[[nodiscard]] auto GetVkDevice() const noexcept -> VkDevice { return VkDevice; }
+	[[nodiscard]] auto GetVkAllocator() const noexcept -> VmaAllocator { return Allocator; }
 	[[nodiscard]] auto GetGraphicsQueue() noexcept -> VulkanCommandQueue& { return GraphicsQueue; }
 
 private:
@@ -90,7 +92,8 @@ private:
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
 	std::vector<VkPresentModeKHR>	PresentModes;
 
-	VkDevice VkDevice;
+	VkDevice	 VkDevice;
+	VmaAllocator Allocator;
 
 	VulkanCommandQueue GraphicsQueue;
 };

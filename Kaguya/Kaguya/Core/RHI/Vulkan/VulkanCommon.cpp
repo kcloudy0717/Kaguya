@@ -70,3 +70,22 @@ std::string VulkanException::GetError() const
 #undef VKERR
 	return Error;
 }
+
+VulkanInputLayout::VulkanInputLayout(uint32_t Stride)
+{
+	// we will have just 1 vertex buffer binding, with a per-vertex rate
+	VkVertexInputBindingDescription& Binding = BindingDescriptions.emplace_back();
+	Binding.binding							 = 0;
+	Binding.stride							 = Stride;
+	Binding.inputRate						 = VK_VERTEX_INPUT_RATE_VERTEX;
+}
+
+VulkanInputLayout::operator VkPipelineVertexInputStateCreateInfo() const noexcept
+{
+	auto Desc							 = VkStruct<VkPipelineVertexInputStateCreateInfo>();
+	Desc.vertexBindingDescriptionCount	 = static_cast<uint32_t>(BindingDescriptions.size());
+	Desc.pVertexBindingDescriptions		 = BindingDescriptions.data();
+	Desc.vertexAttributeDescriptionCount = static_cast<uint32_t>(AttributeDescriptions.size());
+	Desc.pVertexAttributeDescriptions	 = AttributeDescriptions.data();
+	return Desc;
+}

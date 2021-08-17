@@ -17,6 +17,48 @@ D3D12CommandListHandle::D3D12CommandListHandle(
 	CommandList = std::make_shared<D3D12CommandList>(Device, Type);
 }
 
+std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()
+{
+	auto& PendingResourceBarriers = CommandList->ResourceStateTracker.GetPendingResourceBarriers();
+
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
+	ResourceBarriers.reserve(PendingResourceBarriers.size());
+
+	D3D12_RESOURCE_BARRIER Desc = {};
+	Desc.Type					= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	for (const auto& Pending : PendingResourceBarriers)
+	{
+		CResourceState& ResourceState = Pending.Resource->GetResourceState();
+
+		Desc.Transition.Subresource = Pending.Subresource;
+
+		const D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Pending.Subresource);
+		const D3D12_RESOURCE_STATES StateAfter =
+			(Pending.State != D3D12_RESOURCE_STATE_UNKNOWN) ? Pending.State : StateBefore;
+
+		if (StateBefore != StateAfter)
+		{
+			Desc.Transition.pResource	= Pending.Resource->GetResource();
+			Desc.Transition.StateBefore = StateBefore;
+			Desc.Transition.StateAfter	= StateAfter;
+
+			ResourceBarriers.push_back(Desc);
+		}
+
+		const D3D12_RESOURCE_STATES StateCommandList =
+			GetResourceState(Pending.Resource).GetSubresourceState(Desc.Transition.Subresource);
+		const D3D12_RESOURCE_STATES StatePrevious =
+			(StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN) ? StateCommandList : StateAfter;
+
+		if (StateBefore != StatePrevious)
+		{
+			ResourceState.SetSubresourceState(Desc.Transition.Subresource, StatePrevious);
+		}
+	}
+
+	return ResourceBarriers;
+}
+
 void D3D12CommandListHandle::TransitionBarrier(
 	D3D12Resource*		  Resource,
 	D3D12_RESOURCE_STATES State,
@@ -44,7 +86,7 @@ void D3D12CommandListHandle::TransitionBarrier(
 		{
 			// First transition all of the subresources if they are different than the StateAfter
 			int i = 0;
-			for (const auto& SubresourceState : ResourceState)
+			for (D3D12_RESOURCE_STATES SubresourceState : ResourceState)
 			{
 				if (SubresourceState != State)
 				{

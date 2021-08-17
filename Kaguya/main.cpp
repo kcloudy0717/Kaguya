@@ -4,6 +4,12 @@
 
 #include <iostream>
 
+struct VulkanMesh
+{
+	std::vector<Vertex> Vertices;
+	VulkanBuffer		VertexResource;
+};
+
 class VulkanEngine : public Application
 {
 public:
@@ -28,6 +34,8 @@ public:
 		InitFrameBuffers();
 		InitSyncStructures();
 		InitPipelines();
+
+		LoadMeshes();
 
 		return true;
 	}
@@ -77,6 +85,15 @@ public:
 		// once we start adding rendering commands, they will go here
 
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, TrianglePipeline);
+
+		// bind the mesh vertex buffer with offset 0
+		VkDeviceSize offset			 = 0;
+		VkBuffer	 VertexBuffers[] = { TriangleMesh.VertexResource };
+		vkCmdBindVertexBuffers(cmd, 0, 1, VertexBuffers, &offset);
+
+		// we can now draw the mesh
+		vkCmdDraw(cmd, TriangleMesh.Vertices.size(), 1, 0, 0);
+
 		vkCmdDraw(cmd, 3, 1, 0, 0);
 
 		// finalize the render pass
@@ -244,7 +261,12 @@ private:
 		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, PS));
 
 		// vertex input controls how to read vertices from vertex buffers. We aren't using it yet
-		pipelineBuilder.VertexInputState = InitPipelineVertexInputStateCreateInfo();
+		VulkanInputLayout InputLayout(sizeof(Vertex));
+		InputLayout.AddVertexLayoutElement(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, Position));
+		InputLayout.AddVertexLayoutElement(1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, TextureCoord));
+		InputLayout.AddVertexLayoutElement(2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, Normal));
+
+		pipelineBuilder.VertexInputState = InputLayout;
 
 		// input assembly is the configuration for drawing triangle lists, strips, or individual points.
 		// we are just going to draw triangle list
@@ -298,10 +320,50 @@ private:
 		return true;
 	}
 
+	void LoadMeshes()
+	{
+		// make the array 3 vertices long
+		TriangleMesh.Vertices.resize(3);
+
+		// vertex positions
+		TriangleMesh.Vertices[0].Position = { 0.5f, 0.5f, 0.0f };
+		TriangleMesh.Vertices[1].Position = { -0.5f, 0.5f, 0.0f };
+		TriangleMesh.Vertices[2].Position = { 0.f, -0.5f, 0.0f };
+
+		// vertex colors, all green
+		TriangleMesh.Vertices[0].Normal = { 1.f, 0.f, 0.0f }; // pure green
+		TriangleMesh.Vertices[1].Normal = { 0.f, 1.f, 0.0f }; // pure green
+		TriangleMesh.Vertices[2].Normal = { 0.f, 0.f, 1.0f }; // pure green
+
+		UploadMesh(TriangleMesh);
+	}
+
+	void UploadMesh(VulkanMesh& Mesh)
+	{
+		// allocate vertex buffer
+		auto BufferCreateInfo = VkStruct<VkBufferCreateInfo>();
+		BufferCreateInfo.size = Mesh.Vertices.size() * sizeof(Vertex);
+		// this buffer is going to be used as a Vertex Buffer
+		BufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+		// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+		VmaAllocationCreateInfo vmaallocInfo = {};
+		vmaallocInfo.usage					 = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+		Mesh.VertexResource = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
+
+		Mesh.VertexResource.Upload(
+			[&](void* CPUVirtualAddress)
+			{
+				memcpy(CPUVirtualAddress, Mesh.Vertices.data(), BufferCreateInfo.size);
+			});
+	}
+
 private:
 	ShaderCompiler ShaderCompiler;
 
-	VulkanDevice	Device;
+	VulkanDevice Device;
+
 	VulkanSwapChain SwapChain;
 
 	VkRenderPass			   RenderPass = VK_NULL_HANDLE;
@@ -317,6 +379,8 @@ private:
 	VkPipelineLayout TrianglePipelineLayout = VK_NULL_HANDLE;
 
 	VulkanPipelineState TrianglePipeline;
+	VulkanPipelineState MeshPipeline;
+	VulkanMesh			TriangleMesh;
 };
 
 int main(int argc, char* argv[])

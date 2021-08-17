@@ -1,4 +1,6 @@
 #include "VulkanDevice.h"
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 static constexpr const char* ValidationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -103,6 +105,8 @@ VulkanDevice::VulkanDevice()
 VulkanDevice::~VulkanDevice()
 {
 	GraphicsQueue.Destroy();
+
+	vmaDestroyAllocator(Allocator);
 
 	vkDestroyDevice(VkDevice, nullptr);
 
@@ -212,6 +216,12 @@ void VulkanDevice::InitializeDevice()
 	DeviceCreateInfo.pEnabledFeatures		 = &PhysicalDeviceFeatures;
 
 	VERIFY_VULKAN_API(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &VkDevice));
+
+	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
+	AllocatorCreateInfo.physicalDevice		   = PhysicalDevice;
+	AllocatorCreateInfo.device				   = VkDevice;
+	AllocatorCreateInfo.instance			   = Instance;
+	VERIFY_VULKAN_API(vmaCreateAllocator(&AllocatorCreateInfo, &Allocator));
 
 	GraphicsQueue.Initialize(Indices.GraphicsFamily.value());
 }

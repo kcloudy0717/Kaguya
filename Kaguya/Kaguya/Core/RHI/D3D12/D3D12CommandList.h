@@ -64,15 +64,12 @@ public:
 		CommandList->CommandAllocator->SetSyncPoint(SyncPoint);
 	}
 
-	std::vector<PendingResourceBarrier>& GetPendingResourceBarriers()
-	{
-		return CommandList->ResourceStateTracker.GetPendingResourceBarriers();
-	}
-
 	CResourceState& GetResourceState(D3D12Resource* Resource)
 	{
 		return CommandList->ResourceStateTracker.GetResourceState(Resource);
 	}
+
+	std::vector<D3D12_RESOURCE_BARRIER> ResolveResourceBarriers();
 
 	void TransitionBarrier(
 		D3D12Resource*		  Resource,
