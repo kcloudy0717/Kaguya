@@ -29,6 +29,8 @@ public:
 		return *this;
 	}
 
+	NONCOPYABLE(VulkanResource);
+
 protected:
 	VmaAllocationCreateInfo AllocationDesc = {};
 	VmaAllocation			Allocation	   = VK_NULL_HANDLE;

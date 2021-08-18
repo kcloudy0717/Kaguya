@@ -1,13 +1,22 @@
 // main.cpp : Defines the entry point for the application.
 //
 #include <Core/Application.h>
+#include <World/World.h>
+#include <Physics/PhysicsManager.h>
 
 #include <iostream>
 
 struct VulkanMesh
 {
-	std::vector<Vertex> Vertices;
-	VulkanBuffer		VertexResource;
+	std::shared_ptr<Asset::Mesh> Mesh;
+	VulkanBuffer				 VertexResource;
+	VulkanBuffer				 IndexResource;
+};
+
+struct MeshPushConstants
+{
+	DirectX::XMFLOAT4	data;
+	DirectX::XMFLOAT4X4 render_matrix;
 };
 
 class VulkanEngine : public Application
@@ -19,6 +28,8 @@ public:
 
 	bool Initialize() override
 	{
+		PhysicsManager::Initialize();
+
 		ShaderCompiler.Initialize();
 
 		DeviceOptions Options	 = {};
@@ -42,6 +53,26 @@ public:
 
 	void Update(float DeltaTime) override
 	{
+		while (auto Key = InputHandler.Keyboard.ReadKey())
+		{
+			if (!Key->IsPressed())
+			{
+				continue;
+			}
+
+			switch (Key->Code)
+			{
+			case VK_ESCAPE:
+				InputHandler.RawInputEnabled = !InputHandler.RawInputEnabled;
+			}
+		}
+
+		world.Update(DeltaTime);
+		Camera& MainCamera = *world.ActiveCamera;
+
+		MeshPushConstants PushConstants = {};
+		XMStoreFloat4x4(&PushConstants.render_matrix, XMMatrixTranspose(MainCamera.ViewProjectionMatrix));
+
 		// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, 1000000000));
 		VERIFY_VULKAN_API(vkResetFences(Device.GetVkDevice(), 1, &RenderFence));
@@ -90,11 +121,13 @@ public:
 		VkDeviceSize offset			 = 0;
 		VkBuffer	 VertexBuffers[] = { TriangleMesh.VertexResource };
 		vkCmdBindVertexBuffers(cmd, 0, 1, VertexBuffers, &offset);
+		vkCmdBindIndexBuffer(cmd, TriangleMesh.IndexResource, 0, VK_INDEX_TYPE_UINT32);
+
+		// upload the matrix to the GPU via push constants
+		vkCmdPushConstants(cmd, RootSignature, VK_SHADER_STAGE_ALL, 0, sizeof(MeshPushConstants), &PushConstants);
 
 		// we can now draw the mesh
-		vkCmdDraw(cmd, TriangleMesh.Vertices.size(), 1, 0, 0);
-
-		vkCmdDraw(cmd, 3, 1, 0, 0);
+		vkCmdDrawIndexed(cmd, TriangleMesh.Mesh->Indices.size(), 1, 0, 0, 0);
 
 		// finalize the render pass
 		vkCmdEndRenderPass(cmd);
@@ -130,8 +163,6 @@ public:
 	{
 		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
 
-		vkDestroyPipelineLayout(Device.GetVkDevice(), TrianglePipelineLayout, nullptr);
-
 		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
 		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
 
@@ -144,6 +175,8 @@ public:
 		{
 			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
 		}
+
+		PhysicsManager::Shutdown();
 	}
 
 	void Resize(UINT Width, UINT Height) override {}
@@ -248,10 +281,10 @@ private:
 
 		// build the pipeline layout that controls the inputs/outputs of the shader
 		// we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-		VkPipelineLayoutCreateInfo pipeline_layout_info = InitPipelineLayoutCreateInfo();
+		VulkanRootSignatureBuilder Builder;
+		Builder.Add32BitConstants<MeshPushConstants>();
 
-		VERIFY_VULKAN_API(
-			vkCreatePipelineLayout(Device.GetVkDevice(), &pipeline_layout_info, nullptr, &TrianglePipelineLayout));
+		RootSignature = VulkanRootSignature(&Device, Builder);
 
 		// build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader
 		// modules per stage
@@ -294,7 +327,7 @@ private:
 		pipelineBuilder.ColorBlendAttachmentState = InitPipelineColorBlendAttachmentState();
 
 		// use the triangle layout we created
-		pipelineBuilder.PipelineLayout = TrianglePipelineLayout;
+		pipelineBuilder.PipelineLayout = RootSignature;
 		pipelineBuilder.RenderPass	   = RenderPass;
 
 		// finally build the pipeline
@@ -322,40 +355,37 @@ private:
 
 	void LoadMeshes()
 	{
-		// make the array 3 vertices long
-		TriangleMesh.Vertices.resize(3);
-
-		// vertex positions
-		TriangleMesh.Vertices[0].Position = { 0.5f, 0.5f, 0.0f };
-		TriangleMesh.Vertices[1].Position = { -0.5f, 0.5f, 0.0f };
-		TriangleMesh.Vertices[2].Position = { 0.f, -0.5f, 0.0f };
-
-		// vertex colors, all green
-		TriangleMesh.Vertices[0].Normal = { 1.f, 0.f, 0.0f }; // pure green
-		TriangleMesh.Vertices[1].Normal = { 0.f, 1.f, 0.0f }; // pure green
-		TriangleMesh.Vertices[2].Normal = { 0.f, 0.f, 1.0f }; // pure green
+		Asset::MeshMetadata MeshMetadata = {};
+		MeshMetadata.Path				 = ExecutableDirectory / "Assets/models/cube.obj";
+		TriangleMesh.Mesh				 = MeshLoader.AsyncLoad(MeshMetadata);
 
 		UploadMesh(TriangleMesh);
 	}
 
 	void UploadMesh(VulkanMesh& Mesh)
 	{
-		// allocate vertex buffer
 		auto BufferCreateInfo = VkStruct<VkBufferCreateInfo>();
-		BufferCreateInfo.size = Mesh.Vertices.size() * sizeof(Vertex);
-		// this buffer is going to be used as a Vertex Buffer
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
 		// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
 		VmaAllocationCreateInfo vmaallocInfo = {};
 		vmaallocInfo.usage					 = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-		Mesh.VertexResource = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
-
+		BufferCreateInfo.size  = Mesh.Mesh->Vertices.size() * sizeof(Vertex);
+		BufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		Mesh.VertexResource	   = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
 		Mesh.VertexResource.Upload(
 			[&](void* CPUVirtualAddress)
 			{
-				memcpy(CPUVirtualAddress, Mesh.Vertices.data(), BufferCreateInfo.size);
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Vertices.data(), BufferCreateInfo.size);
+			});
+
+		BufferCreateInfo.size  = Mesh.Mesh->Indices.size() * sizeof(unsigned int);
+		BufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		Mesh.IndexResource	   = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
+		Mesh.IndexResource.Upload(
+			[&](void* CPUVirtualAddress)
+			{
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Indices.data(), BufferCreateInfo.size);
 			});
 	}
 
@@ -376,11 +406,13 @@ private:
 
 	VkShaderModule VS, PS;
 
-	VkPipelineLayout TrianglePipelineLayout = VK_NULL_HANDLE;
-
+	VulkanRootSignature RootSignature;
 	VulkanPipelineState TrianglePipeline;
 	VulkanPipelineState MeshPipeline;
 	VulkanMesh			TriangleMesh;
+
+	World			world;
+	AsyncMeshLoader MeshLoader;
 };
 
 int main(int argc, char* argv[])
