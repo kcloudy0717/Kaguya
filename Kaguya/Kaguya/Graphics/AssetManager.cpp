@@ -27,7 +27,7 @@ void AssetManager::Initialize()
 	{
 		static unsigned int WINAPI thunk(LPVOID lpParameter)
 		{
-			D3D12LinkedDevice*			 Device = RenderCore::pAdapter->GetDevice();
+			D3D12LinkedDevice*			 Device = RenderCore::pDevice->GetDevice();
 			D3D12ResourceUploader uploader(Device);
 
 			while (true)
@@ -90,8 +90,8 @@ void AssetManager::Initialize()
 							break;
 						}
 
-						assetImage->Texture = D3D12Texture(RenderCore::pAdapter->GetDevice(), resourceDesc, {});
-						assetImage->SRV		= D3D12ShaderResourceView(RenderCore::pAdapter->GetDevice());
+						assetImage->Texture = D3D12Texture(RenderCore::pDevice->GetDevice(), resourceDesc, {});
+						assetImage->SRV		= D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
 						assetImage->Texture.CreateShaderResourceView(assetImage->SRV);
 
 						std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());

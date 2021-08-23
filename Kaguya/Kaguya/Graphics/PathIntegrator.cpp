@@ -96,10 +96,10 @@ void PathIntegrator::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
 
-	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
+	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pDevice->GetDevice(), 6_MiB);
 
 	Materials = D3D12Buffer(
-		RenderCore::pAdapter->GetDevice(),
+		RenderCore::pDevice->GetDevice(),
 		sizeof(HLSL::Material) * World::MaterialLimit,
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -108,7 +108,7 @@ void PathIntegrator::Initialize()
 	pMaterials = Materials.GetCPUVirtualAddress<HLSL::Material>();
 
 	Lights = D3D12Buffer(
-		RenderCore::pAdapter->GetDevice(),
+		RenderCore::pDevice->GetDevice(),
 		sizeof(HLSL::Light) * World::LightLimit,
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -177,7 +177,7 @@ void PathIntegrator::Initialize()
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGPUVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGPUVirtualAddress());
 
-				RenderCore::pAdapter->BindComputeDescriptorTable(
+				RenderCore::pDevice->BindComputeDescriptorTable(
 					RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS),
 					Context);
 
@@ -213,7 +213,7 @@ void PathIntegrator::Initialize()
 					1,
 					TextureFlag_AllowRenderTarget,
 					ClearValue));
-			Parameter.RTV = D3D12RenderTargetView(RenderCore::pAdapter->GetDevice());
+			Parameter.RTV = D3D12RenderTargetView(RenderCore::pDevice->GetDevice());
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
@@ -361,7 +361,7 @@ void PathIntegrator::Initialize()
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
 
-	ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
+	ShaderBindingTable.Generate(RenderCore::pDevice->GetDevice());
 }
 
 void PathIntegrator::Render(D3D12CommandContext& Context)
@@ -431,7 +431,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	D3D12CommandSyncPoint CopySyncPoint;
 	if (!AccelerationStructure.empty())
 	{
-		D3D12CommandContext& Copy = RenderCore::pAdapter->GetDevice()->GetCopyContext1();
+		D3D12CommandContext& Copy = RenderCore::pDevice->GetDevice()->GetCopyContext1();
 		Copy.OpenCommandList();
 
 		// Update shader table
@@ -462,7 +462,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	D3D12CommandSyncPoint ASBuildSyncPoint;
 	if (!AccelerationStructure.empty())
 	{
-		D3D12CommandContext& AsyncCompute = RenderCore::pAdapter->GetDevice()->GetAsyncComputeCommandContext();
+		D3D12CommandContext& AsyncCompute = RenderCore::pDevice->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
 		bool AnyBuild = false;

@@ -315,11 +315,11 @@ private:
 
 	void InitPipelines()
 	{
-		if (!LoadShaderModule(EShaderType::Vertex, "Shaders/Vulkan/Triangle.vs.hlsl", &VS))
+		if (!LoadShaderModule(EShaderType::Vertex, ExecutableDirectory / "Shaders/Vulkan/Triangle.vs.hlsl", &VS))
 		{
 			std::cout << "Error when building the triangle vertex shader module" << std::endl;
 		}
-		if (!LoadShaderModule(EShaderType::Pixel, "Shaders/Vulkan/Triangle.ps.hlsl", &PS))
+		if (!LoadShaderModule(EShaderType::Pixel, ExecutableDirectory / "Shaders/Vulkan/Triangle.ps.hlsl", &PS))
 		{
 			std::cout << "Error when building the triangle fragment shader module" << std::endl;
 		}

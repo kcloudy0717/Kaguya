@@ -91,7 +91,7 @@ add_executable(
 add_custom_target(Shaders ALL COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/Shaders
 
-	${CMAKE_CURRENT_BINARY_DIR}/$<CONFIGURATION>/Shaders)
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders)
 
 add_dependencies(${PROJECTNAME} Shaders)
 
