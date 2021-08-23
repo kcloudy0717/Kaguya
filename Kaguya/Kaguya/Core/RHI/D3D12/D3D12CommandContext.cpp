@@ -31,7 +31,7 @@ D3D12CommandSyncPoint D3D12CommandContext::Execute(bool WaitForCompletion)
 	CommandAllocatorPool.DiscardCommandAllocator(CommandAllocator);
 	CommandAllocator = nullptr;
 
-	CpuConstantAllocator.End(SyncPoint);
+	CpuConstantAllocator.Version(SyncPoint);
 	return SyncPoint;
 }
 

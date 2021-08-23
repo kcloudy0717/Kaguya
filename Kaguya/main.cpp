@@ -19,6 +19,20 @@ struct MeshPushConstants
 	DirectX::XMFLOAT4X4 render_matrix;
 };
 
+struct VulkanMaterial
+{
+	VulkanRootSignature* RootSignature;
+	VulkanPipelineState	 PipelineState;
+};
+
+struct RenderObject
+{
+	VulkanMesh*		mesh;
+	VulkanMaterial* material;
+
+	DirectX::XMFLOAT4X4 transformMatrix;
+};
+
 class VulkanEngine : public Application
 {
 public:
@@ -41,12 +55,34 @@ public:
 
 		SwapChain.Initialize(GetWindowHandle(), &Device);
 
+		// depth image size will match the window
+		VkExtent3D depthImageExtent = { WindowWidth, WindowHeight, 1 };
+
+		// hardcoding the depth format to 32 bit float
+		auto _depthFormat = VK_FORMAT_D32_SFLOAT;
+
+		// the depth image will be an image with the format we selected and Depth Attachment usage flag
+		VkImageCreateInfo dimg_info =
+			ImageCreateInfo(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+
+		// for the depth image, we want to allocate it from GPU local memory
+		VmaAllocationCreateInfo dimg_allocinfo = {};
+		dimg_allocinfo.usage				   = VMA_MEMORY_USAGE_GPU_ONLY;
+		dimg_allocinfo.requiredFlags		   = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		DepthBuffer = VulkanTexture(&Device, dimg_info, dimg_allocinfo);
+
+		// build an image-view for the depth image to use for rendering
+		VkImageViewCreateInfo dview_info = ImageViewCreateInfo(_depthFormat, DepthBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
+		VERIFY_VULKAN_API(vkCreateImageView(Device.GetVkDevice(), &dview_info, nullptr, &_depthImageView));
+
 		InitDefaultRenderPass();
 		InitFrameBuffers();
 		InitSyncStructures();
 		InitPipelines();
 
 		LoadMeshes();
+		InitScene();
 
 		return true;
 	}
@@ -98,6 +134,9 @@ public:
 		VkClearValue clearValue;
 		clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
+		VkClearValue depthClear		  = {};
+		depthClear.depthStencil.depth = 1.0f;
+
 		// start the main renderpass.
 		// We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 		auto rpInfo				   = VkStruct<VkRenderPassBeginInfo>();
@@ -108,26 +147,13 @@ public:
 		rpInfo.framebuffer		   = Framebuffers[swapchainImageIndex];
 
 		// connect clear values
-		rpInfo.clearValueCount = 1;
-		rpInfo.pClearValues	   = &clearValue;
+		VkClearValue ClearValues[] = { clearValue, depthClear };
+		rpInfo.clearValueCount	   = 2;
+		rpInfo.pClearValues		   = ClearValues;
 
 		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-		// once we start adding rendering commands, they will go here
-
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, TrianglePipeline);
-
-		// bind the mesh vertex buffer with offset 0
-		VkDeviceSize offset			 = 0;
-		VkBuffer	 VertexBuffers[] = { TriangleMesh.VertexResource };
-		vkCmdBindVertexBuffers(cmd, 0, 1, VertexBuffers, &offset);
-		vkCmdBindIndexBuffer(cmd, TriangleMesh.IndexResource, 0, VK_INDEX_TYPE_UINT32);
-
-		// upload the matrix to the GPU via push constants
-		vkCmdPushConstants(cmd, RootSignature, VK_SHADER_STAGE_ALL, 0, sizeof(MeshPushConstants), &PushConstants);
-
-		// we can now draw the mesh
-		vkCmdDrawIndexed(cmd, TriangleMesh.Mesh->Indices.size(), 1, 0, 0, 0);
+		draw_objects(cmd, _renderables.data(), _renderables.size());
 
 		// finalize the render pass
 		vkCmdEndRenderPass(cmd);
@@ -162,6 +188,8 @@ public:
 	void Shutdown() override
 	{
 		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
+
+		vkDestroyImageView(Device.GetVkDevice(), _depthImageView, nullptr);
 
 		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
 		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
@@ -204,21 +232,38 @@ private:
 		// after the renderpass ends, the image has to be on a layout ready for display
 		AttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+		VkAttachmentDescription depth_attachment = {};
+		depth_attachment.format					 = DepthBuffer.GetDesc().format;
+		depth_attachment.samples				 = VK_SAMPLE_COUNT_1_BIT;
+		depth_attachment.loadOp					 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depth_attachment.storeOp				 = VK_ATTACHMENT_STORE_OP_STORE;
+		depth_attachment.stencilLoadOp			 = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depth_attachment.stencilStoreOp			 = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depth_attachment.initialLayout			 = VK_IMAGE_LAYOUT_UNDEFINED;
+		depth_attachment.finalLayout			 = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentReference depth_attachment_ref = {};
+		depth_attachment_ref.attachment			   = 1;
+		depth_attachment_ref.layout				   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		VkAttachmentReference AttachmentReference = {};
 		// attachment number will index into the pAttachments array in the parent renderpass itself
 		AttachmentReference.attachment = 0;
 		AttachmentReference.layout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 		// we are going to create 1 subpass, which is the minimum you can do
-		VkSubpassDescription SubpassDescription = {};
-		SubpassDescription.pipelineBindPoint	= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		SubpassDescription.colorAttachmentCount = 1;
-		SubpassDescription.pColorAttachments	= &AttachmentReference;
+		VkSubpassDescription SubpassDescription	   = {};
+		SubpassDescription.pipelineBindPoint	   = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		SubpassDescription.colorAttachmentCount	   = 1;
+		SubpassDescription.pColorAttachments	   = &AttachmentReference;
+		SubpassDescription.pDepthStencilAttachment = &depth_attachment_ref;
+
+		VkAttachmentDescription attachments[2] = { AttachmentDescription, depth_attachment };
 
 		auto RenderPassCreateInfo = VkStruct<VkRenderPassCreateInfo>();
 		// connect the color attachment to the info
-		RenderPassCreateInfo.attachmentCount = 1;
-		RenderPassCreateInfo.pAttachments	 = &AttachmentDescription;
+		RenderPassCreateInfo.attachmentCount = 2;
+		RenderPassCreateInfo.pAttachments	 = attachments;
 		// connect the subpass to the info
 		RenderPassCreateInfo.subpassCount = 1;
 		RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
@@ -230,12 +275,11 @@ private:
 	{
 		// create the framebuffers for the swapchain images. This will connect the render-pass to the images for
 		// rendering
-		auto FramebufferCreateInfo			  = VkStruct<VkFramebufferCreateInfo>();
-		FramebufferCreateInfo.renderPass	  = RenderPass;
-		FramebufferCreateInfo.attachmentCount = 1;
-		FramebufferCreateInfo.width			  = SwapChain.GetWidth();
-		FramebufferCreateInfo.height		  = SwapChain.GetHeight();
-		FramebufferCreateInfo.layers		  = 1;
+		auto FramebufferCreateInfo		 = VkStruct<VkFramebufferCreateInfo>();
+		FramebufferCreateInfo.renderPass = RenderPass;
+		FramebufferCreateInfo.width		 = SwapChain.GetWidth();
+		FramebufferCreateInfo.height	 = SwapChain.GetHeight();
+		FramebufferCreateInfo.layers	 = 1;
 
 		// grab how many images we have in the swapchain
 		const uint32_t ImageCount = SwapChain.GetImageCount();
@@ -243,8 +287,9 @@ private:
 		// create framebuffers for each of the swapchain image views
 		for (uint32_t i = 0; i < ImageCount; i++)
 		{
-			const VkImageView Attachment[]	   = { SwapChain.GetImageView(i) };
-			FramebufferCreateInfo.pAttachments = Attachment;
+			const VkImageView Attachment[]		  = { SwapChain.GetImageView(i), _depthImageView };
+			FramebufferCreateInfo.attachmentCount = std::size(Attachment);
+			FramebufferCreateInfo.pAttachments	  = Attachment;
 			VERIFY_VULKAN_API(
 				vkCreateFramebuffer(Device.GetVkDevice(), &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
 		}
@@ -323,6 +368,9 @@ private:
 		// we don't use multisampling, so just run the default one
 		pipelineBuilder.MultisampleState = InitPipelineMultisampleStateCreateInfo();
 
+		pipelineBuilder.DepthStencilState =
+			InitPipelineDepthStencilStateCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+
 		// a single blend attachment with no blending and writing to RGBA
 		pipelineBuilder.ColorBlendAttachmentState = InitPipelineColorBlendAttachmentState();
 
@@ -331,7 +379,9 @@ private:
 		pipelineBuilder.RenderPass	   = RenderPass;
 
 		// finally build the pipeline
-		TrianglePipeline = VulkanPipelineState(&Device, pipelineBuilder);
+		MeshPipeline = VulkanPipelineState(&Device, pipelineBuilder);
+
+		create_material(&RootSignature, std::move(MeshPipeline), "Default");
 	}
 
 	bool LoadShaderModule(EShaderType ShaderType, const std::filesystem::path& Path, VkShaderModule* pShaderModule)
@@ -355,11 +405,45 @@ private:
 
 	void LoadMeshes()
 	{
+		TriangleMesh.Mesh = std::make_shared<Asset::Mesh>();
+		TriangleMesh.Mesh->Vertices.resize(3);
+		TriangleMesh.Mesh->Vertices[0].Position = { 1.f, 1.f, 0.5f };
+		TriangleMesh.Mesh->Vertices[1].Position = { -1.f, 1.f, 0.5f };
+		TriangleMesh.Mesh->Vertices[2].Position = { 0.f, -1.f, 0.5f };
+		TriangleMesh.Mesh->Vertices[0].Normal	= { 0.f, 1.f, 0.0f }; // pure green
+		TriangleMesh.Mesh->Vertices[1].Normal	= { 0.f, 1.f, 0.0f }; // pure green
+		TriangleMesh.Mesh->Vertices[2].Normal	= { 0.f, 1.f, 0.0f }; // pure green
+		TriangleMesh.Mesh->Indices				= { 0, 1, 2 };
+
 		Asset::MeshMetadata MeshMetadata = {};
-		MeshMetadata.Path				 = ExecutableDirectory / "Assets/models/cube.obj";
-		TriangleMesh.Mesh				 = MeshLoader.AsyncLoad(MeshMetadata);
+		MeshMetadata.Path				 = ExecutableDirectory / "Assets/models/Sphere.obj";
+		SphereMesh.Mesh					 = MeshLoader.AsyncLoad(MeshMetadata);
 
 		UploadMesh(TriangleMesh);
+		UploadMesh(SphereMesh);
+	}
+
+	void InitScene()
+	{
+		RenderObject monkey;
+		monkey.mesh		= &SphereMesh;
+		monkey.material = get_material("Default");
+		XMStoreFloat4x4(&monkey.transformMatrix, DirectX::XMMatrixIdentity());
+
+		_renderables.push_back(monkey);
+
+		for (int x = -20; x <= 20; x++)
+		{
+			for (int y = -20; y <= 20; y++)
+			{
+				RenderObject tri;
+				tri.mesh	 = &TriangleMesh;
+				tri.material = get_material("Default");
+				XMStoreFloat4x4(&tri.transformMatrix, DirectX::XMMatrixTranslation(x, 0, y));
+
+				_renderables.push_back(tri);
+			}
+		}
 	}
 
 	void UploadMesh(VulkanMesh& Mesh)
@@ -407,12 +491,110 @@ private:
 	VkShaderModule VS, PS;
 
 	VulkanRootSignature RootSignature;
-	VulkanPipelineState TrianglePipeline;
 	VulkanPipelineState MeshPipeline;
 	VulkanMesh			TriangleMesh;
+	VulkanMesh			SphereMesh;
+
+	VulkanTexture DepthBuffer;
+	VkImageView	  _depthImageView;
 
 	World			world;
 	AsyncMeshLoader MeshLoader;
+
+	// default array of renderable objects
+	std::vector<RenderObject> _renderables;
+
+	std::unordered_map<std::string, VulkanMaterial> _materials;
+	std::unordered_map<std::string, VulkanMesh>		_meshes;
+
+	// create material and add it to the map
+	VulkanMaterial* create_material(
+		VulkanRootSignature*  RootSignature,
+		VulkanPipelineState&& PipelineState,
+		const std::string&	  name)
+	{
+		VulkanMaterial mat;
+		mat.RootSignature = RootSignature;
+		mat.PipelineState = std::move(PipelineState);
+		_materials[name]  = std::move(mat);
+		return &_materials[name];
+	}
+
+	// returns nullptr if it can't be found
+	VulkanMaterial* get_material(const std::string& name)
+	{
+		// search for the object, and return nullptr if not found
+		auto it = _materials.find(name);
+		if (it == _materials.end())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return &it->second;
+		}
+	}
+
+	// returns nullptr if it can't be found
+	VulkanMesh* get_mesh(const std::string& name)
+	{
+		auto it = _meshes.find(name);
+		if (it == _meshes.end())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return &it->second;
+		}
+	}
+
+	// our draw function
+	void draw_objects(VkCommandBuffer cmd, RenderObject* first, int count)
+	{
+		VulkanMesh*		lastMesh	 = nullptr;
+		VulkanMaterial* lastMaterial = nullptr;
+		for (int i = 0; i < count; i++)
+		{
+			RenderObject& object = first[i];
+
+			// only bind the pipeline if it doesn't match with the already bound one
+			if (object.material != lastMaterial)
+			{
+				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->PipelineState);
+				lastMaterial = object.material;
+			}
+
+			MeshPushConstants constants;
+			XMStoreFloat4x4(
+				&constants.render_matrix,
+				XMMatrixTranspose(XMMatrixMultiply(
+					XMLoadFloat4x4(&object.transformMatrix),
+					world.ActiveCamera->ViewProjectionMatrix)));
+
+			// upload the mesh to the GPU via push constants
+			vkCmdPushConstants(
+				cmd,
+				*object.material->RootSignature,
+				VK_SHADER_STAGE_ALL,
+				0,
+				sizeof(MeshPushConstants),
+				&constants);
+
+			// only bind the mesh if it's a different one from last bind
+			if (object.mesh != lastMesh)
+			{
+				// bind the mesh vertex buffer with offset 0
+				VkDeviceSize Offsets[]		 = { 0 };
+				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource };
+				vkCmdBindVertexBuffers(cmd, 0, 1, VertexBuffers, Offsets);
+				vkCmdBindIndexBuffer(cmd, object.mesh->IndexResource, 0, VK_INDEX_TYPE_UINT32);
+				lastMesh = object.mesh;
+			}
+			// we can now draw
+			vkCmdDrawIndexed(cmd, object.mesh->Mesh->Indices.size(), 1, 0, 0, 0);
+		}
+	}
 };
 
 int main(int argc, char* argv[])

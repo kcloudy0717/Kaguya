@@ -31,3 +31,18 @@ VulkanBuffer::~VulkanBuffer()
 		vmaDestroyBuffer(Parent->GetVkAllocator(), Buffer, Allocation);
 	}
 }
+
+VulkanTexture::VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc)
+	: VulkanResource(Parent, AllocationDesc)
+	, Desc(Desc)
+{
+	VERIFY_VULKAN_API(vmaCreateImage(Parent->GetVkAllocator(), &Desc, &AllocationDesc, &Texture, &Allocation, nullptr));
+}
+
+VulkanTexture::~VulkanTexture()
+{
+	if (Parent && Allocation && Texture)
+	{
+		vmaDestroyImage(Parent->GetVkAllocator(), Texture, Allocation);
+	}
+}

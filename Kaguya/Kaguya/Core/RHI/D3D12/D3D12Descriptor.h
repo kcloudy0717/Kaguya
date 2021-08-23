@@ -23,22 +23,22 @@ public:
 
 	~D3D12Descriptor() { Release(); }
 
-	D3D12Descriptor(D3D12Descriptor&& rvalue) noexcept
-		: D3D12LinkedDeviceChild(std::exchange(rvalue.Parent, {}))
-		, CPUHandle(std::exchange(rvalue.CPUHandle, {}))
-		, GPUHandle(std::exchange(rvalue.GPUHandle, {}))
-		, Index(std::exchange(rvalue.Index, UINT_MAX))
+	D3D12Descriptor(D3D12Descriptor&& D3D12Descriptor) noexcept
+		: D3D12LinkedDeviceChild(std::exchange(D3D12Descriptor.Parent, {}))
+		, CPUHandle(std::exchange(D3D12Descriptor.CPUHandle, {}))
+		, GPUHandle(std::exchange(D3D12Descriptor.GPUHandle, {}))
+		, Index(std::exchange(D3D12Descriptor.Index, UINT_MAX))
 	{
 	}
 
-	D3D12Descriptor& operator=(D3D12Descriptor&& rvalue) noexcept
+	D3D12Descriptor& operator=(D3D12Descriptor&& D3D12Descriptor) noexcept
 	{
-		if (this != &rvalue)
+		if (this != &D3D12Descriptor)
 		{
-			Parent	  = std::exchange(rvalue.Parent, {});
-			CPUHandle = std::exchange(rvalue.CPUHandle, {});
-			GPUHandle = std::exchange(rvalue.GPUHandle, {});
-			Index	  = std::exchange(rvalue.Index, UINT_MAX);
+			Parent	  = std::exchange(D3D12Descriptor.Parent, {});
+			CPUHandle = std::exchange(D3D12Descriptor.CPUHandle, {});
+			GPUHandle = std::exchange(D3D12Descriptor.GPUHandle, {});
+			Index	  = std::exchange(D3D12Descriptor.Index, UINT_MAX);
 		}
 		return *this;
 	}

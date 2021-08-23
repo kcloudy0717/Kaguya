@@ -124,9 +124,9 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	ComPtr<ID3D12InfoQueue> InfoQueue;
 	if (SUCCEEDED(Device.As(&InfoQueue)))
 	{
-		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-		InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
+		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
 
 		// Suppress messages based on their severity level
 		// D3D12_MESSAGE_SEVERITY Severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
@@ -271,21 +271,12 @@ void D3D12Device::InitializeDXGIObjects(bool Debug)
 	// Enumerate hardware for an adapter that supports D3D12
 	ComPtr<IDXGIAdapter4> pAdapter4;
 	UINT				  AdapterID = 0;
-	while (Factory6->EnumAdapterByGpuPreference(
-			   AdapterID,
-			   DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-			   IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
+	while (SUCCEEDED(Factory6->EnumAdapterByGpuPreference(
+		AdapterID,
+		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+		IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf()))))
 	{
-		if (SUCCEEDED(pAdapter4->GetDesc3(&AdapterDesc)))
-		{
-			if (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			{
-				// Skip SOFTWARE adapters
-				continue;
-			}
-		}
-
-		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 		{
 			Adapter4 = pAdapter4;
 			break;

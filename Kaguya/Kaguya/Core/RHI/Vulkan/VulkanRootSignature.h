@@ -26,12 +26,12 @@ public:
 	VulkanRootSignature(VulkanDevice* Parent, VulkanRootSignatureBuilder& Builder);
 	~VulkanRootSignature();
 
-	VulkanRootSignature(VulkanRootSignature&& VulkanRootSignature)
+	VulkanRootSignature(VulkanRootSignature&& VulkanRootSignature) noexcept
 		: VulkanDeviceChild(std::exchange(VulkanRootSignature.Parent, nullptr))
 		, PipelineLayout(std::exchange(VulkanRootSignature.PipelineLayout, VK_NULL_HANDLE))
 	{
 	}
-	VulkanRootSignature& operator=(VulkanRootSignature&& VulkanRootSignature)
+	VulkanRootSignature& operator=(VulkanRootSignature&& VulkanRootSignature) noexcept
 	{
 		if (this != &VulkanRootSignature)
 		{

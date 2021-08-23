@@ -68,6 +68,22 @@ inline VkPipelineMultisampleStateCreateInfo InitPipelineMultisampleStateCreateIn
 	return PipelineMultisampleStateCreateInfo;
 }
 
+inline VkPipelineDepthStencilStateCreateInfo InitPipelineDepthStencilStateCreateInfo(
+	bool		bDepthTest,
+	bool		bDepthWrite,
+	VkCompareOp compareOp)
+{
+	auto PipelineDepthStencilStateCreateInfo				  = VkStruct<VkPipelineDepthStencilStateCreateInfo>();
+	PipelineDepthStencilStateCreateInfo.depthTestEnable		  = bDepthTest ? VK_TRUE : VK_FALSE;
+	PipelineDepthStencilStateCreateInfo.depthWriteEnable	  = bDepthWrite ? VK_TRUE : VK_FALSE;
+	PipelineDepthStencilStateCreateInfo.depthCompareOp		  = bDepthTest ? compareOp : VK_COMPARE_OP_ALWAYS;
+	PipelineDepthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	PipelineDepthStencilStateCreateInfo.minDepthBounds		  = 0.0f; // Optional
+	PipelineDepthStencilStateCreateInfo.maxDepthBounds		  = 1.0f; // Optional
+	PipelineDepthStencilStateCreateInfo.stencilTestEnable	  = VK_FALSE;
+	return PipelineDepthStencilStateCreateInfo;
+}
+
 inline VkPipelineColorBlendAttachmentState InitPipelineColorBlendAttachmentState()
 {
 	VkPipelineColorBlendAttachmentState PipelineColorBlendAttachmentState = {};
@@ -100,6 +116,7 @@ public:
 	VkPipelineRasterizationStateCreateInfo		 RasterizationState;
 	VkPipelineColorBlendAttachmentState			 ColorBlendAttachmentState;
 	VkPipelineMultisampleStateCreateInfo		 MultisampleState;
+	VkPipelineDepthStencilStateCreateInfo		 DepthStencilState;
 	VkPipelineLayout							 PipelineLayout;
 	VkRenderPass								 RenderPass;
 
@@ -133,7 +150,7 @@ public:
 		GraphicsPipelineCreateInfo.pViewportState	   = &ViewportStateCreateInfo;
 		GraphicsPipelineCreateInfo.pRasterizationState = &RasterizationState;
 		GraphicsPipelineCreateInfo.pMultisampleState   = &MultisampleState;
-		GraphicsPipelineCreateInfo.pDepthStencilState  = nullptr;
+		GraphicsPipelineCreateInfo.pDepthStencilState  = &DepthStencilState;
 		GraphicsPipelineCreateInfo.pColorBlendState	   = &ColorBlendStateCreateInfo;
 		GraphicsPipelineCreateInfo.pDynamicState	   = nullptr;
 		GraphicsPipelineCreateInfo.layout			   = PipelineLayout;
@@ -164,12 +181,12 @@ public:
 	VulkanPipelineState(VulkanDevice* Parent, VulkanPipelineStateBuilder& Builder);
 	~VulkanPipelineState();
 
-	VulkanPipelineState(VulkanPipelineState&& VulkanPipelineState)
+	VulkanPipelineState(VulkanPipelineState&& VulkanPipelineState) noexcept
 		: VulkanDeviceChild(std::exchange(VulkanPipelineState.Parent, nullptr))
 		, Pipeline(std::exchange(VulkanPipelineState.Pipeline, VK_NULL_HANDLE))
 	{
 	}
-	VulkanPipelineState& operator=(VulkanPipelineState&& VulkanPipelineState)
+	VulkanPipelineState& operator=(VulkanPipelineState&& VulkanPipelineState) noexcept
 	{
 		if (this != &VulkanPipelineState)
 		{

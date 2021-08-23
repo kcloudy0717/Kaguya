@@ -43,8 +43,6 @@ class D3D12LinearAllocator : public D3D12LinkedDeviceChild
 public:
 	enum
 	{
-		DefaultAlignment = 256,
-
 		CpuAllocatorPageSize = 128 * 1024
 	};
 
@@ -53,9 +51,10 @@ public:
 	{
 	}
 
-	void End(D3D12CommandSyncPoint SyncPoint);
+	// Versions all the current constant data with SyncPoint to ensure memory is not overriden when it GPU uses it
+	void Version(D3D12CommandSyncPoint SyncPoint);
 
-	D3D12Allocation Allocate(UINT64 Size, UINT Alignment = DefaultAlignment);
+	D3D12Allocation Allocate(UINT64 Size, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 	template<typename T>
 	D3D12Allocation Allocate(const T& Data, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)

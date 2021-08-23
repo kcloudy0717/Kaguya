@@ -25,7 +25,7 @@ void D3D12LinearAllocatorPage::Reset()
 	Offset = 0;
 }
 
-void D3D12LinearAllocator::End(D3D12CommandSyncPoint SyncPoint)
+void D3D12LinearAllocator::Version(D3D12CommandSyncPoint SyncPoint)
 {
 	if (!CurrentPage)
 	{
