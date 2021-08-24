@@ -19,7 +19,7 @@ void D3D12Device::ReportLiveObjects()
 {
 #ifdef _DEBUG
 	ComPtr<IDXGIDebug> DXGIDebug;
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&DXGIDebug))))
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(DXGIDebug.GetAddressOf()))))
 	{
 		DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
 	}
@@ -92,7 +92,7 @@ void D3D12Device::Initialize(const DeviceOptions& Options)
 	if (CVar_DRED)
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
-		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(&DREDSettings)));
+		VERIFY_D3D12_API(::D3D12GetDebugInterface(IID_PPV_ARGS(DREDSettings.GetAddressOf())));
 
 		// Turn on auto-breadcrumbs and page fault reporting.
 		DREDSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -251,14 +251,14 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 	if (FAILED(RemovedReason))
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedData> DRED;
-		VERIFY_D3D12_API(D3D12Device->QueryInterface(IID_PPV_ARGS(&DRED)));
+		VERIFY_D3D12_API(D3D12Device->QueryInterface(IID_PPV_ARGS(DRED.GetAddressOf())));
 		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT AutoBreadcrumbsOutput = {};
 		D3D12_DRED_PAGE_FAULT_OUTPUT	   PageFaultOutput		 = {};
 		VERIFY_D3D12_API(DRED->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput));
 		VERIFY_D3D12_API(DRED->GetPageFaultAllocationOutput(&PageFaultOutput));
 
-		// TODO: Log breadcrumbs and page fault
-		// Haven't experienced TDR yet, so when I do, fill this out
+		// TODO: Log breadcrumbs and page fault, right now is not logged because im too lazy to implement it, i just
+		// used Watch window to see breadcrumbs and page fault lol..
 	}
 }
 

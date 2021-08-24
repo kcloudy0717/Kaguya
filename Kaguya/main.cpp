@@ -9,14 +9,13 @@
 struct VulkanMesh
 {
 	std::shared_ptr<Asset::Mesh> Mesh;
-	VulkanBuffer				 VertexResource;
-	VulkanBuffer				 IndexResource;
+	RefCountPtr<IRHIBuffer>		 VertexResource;
+	RefCountPtr<IRHIBuffer>		 IndexResource;
 };
 
 struct MeshPushConstants
 {
-	DirectX::XMFLOAT4	data;
-	DirectX::XMFLOAT4X4 render_matrix;
+	DirectX::XMFLOAT4X4 Transform;
 };
 
 struct VulkanMaterial
@@ -107,7 +106,7 @@ public:
 		Camera& MainCamera = *world.ActiveCamera;
 
 		MeshPushConstants PushConstants = {};
-		XMStoreFloat4x4(&PushConstants.render_matrix, XMMatrixTranspose(MainCamera.ViewProjectionMatrix));
+		XMStoreFloat4x4(&PushConstants.Transform, XMMatrixTranspose(MainCamera.ViewProjectionMatrix));
 
 		// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, 1000000000));
@@ -448,28 +447,24 @@ private:
 
 	void UploadMesh(VulkanMesh& Mesh)
 	{
-		auto BufferCreateInfo = VkStruct<VkBufferCreateInfo>();
+		RHIBufferDesc Desc = {};
 
-		// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
-		VmaAllocationCreateInfo vmaallocInfo = {};
-		vmaallocInfo.usage					 = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-		BufferCreateInfo.size  = Mesh.Mesh->Vertices.size() * sizeof(Vertex);
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		Mesh.VertexResource	   = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
-		Mesh.VertexResource.Upload(
+		Desc.SizeInBytes	= Mesh.Mesh->Vertices.size() * sizeof(Vertex);
+		Desc.Flags			= RHIBufferFlag_VertexBuffer;
+		Mesh.VertexResource = Device.CreateBuffer(Desc);
+		Mesh.VertexResource->As<VulkanBuffer>()->Upload(
 			[&](void* CPUVirtualAddress)
 			{
-				memcpy(CPUVirtualAddress, Mesh.Mesh->Vertices.data(), BufferCreateInfo.size);
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Vertices.data(), Desc.SizeInBytes);
 			});
 
-		BufferCreateInfo.size  = Mesh.Mesh->Indices.size() * sizeof(unsigned int);
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-		Mesh.IndexResource	   = VulkanBuffer(&Device, BufferCreateInfo, vmaallocInfo);
-		Mesh.IndexResource.Upload(
+		Desc.SizeInBytes   = Mesh.Mesh->Indices.size() * sizeof(unsigned int);
+		Desc.Flags		   = RHIBufferFlag_IndexBuffer;
+		Mesh.IndexResource = Device.CreateBuffer(Desc);
+		Mesh.IndexResource->As<VulkanBuffer>()->Upload(
 			[&](void* CPUVirtualAddress)
 			{
-				memcpy(CPUVirtualAddress, Mesh.Mesh->Indices.data(), BufferCreateInfo.size);
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Indices.data(), Desc.SizeInBytes);
 			});
 	}
 
@@ -567,7 +562,7 @@ private:
 
 			MeshPushConstants constants;
 			XMStoreFloat4x4(
-				&constants.render_matrix,
+				&constants.Transform,
 				XMMatrixTranspose(XMMatrixMultiply(
 					XMLoadFloat4x4(&object.transformMatrix),
 					world.ActiveCamera->ViewProjectionMatrix)));
@@ -586,9 +581,13 @@ private:
 			{
 				// bind the mesh vertex buffer with offset 0
 				VkDeviceSize Offsets[]		 = { 0 };
-				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource };
+				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource->As<VulkanBuffer>()->GetApiHandle() };
 				vkCmdBindVertexBuffers(cmd, 0, 1, VertexBuffers, Offsets);
-				vkCmdBindIndexBuffer(cmd, object.mesh->IndexResource, 0, VK_INDEX_TYPE_UINT32);
+				vkCmdBindIndexBuffer(
+					cmd,
+					object.mesh->IndexResource->As<VulkanBuffer>()->GetApiHandle(),
+					0,
+					VK_INDEX_TYPE_UINT32);
 				lastMesh = object.mesh;
 			}
 			// we can now draw

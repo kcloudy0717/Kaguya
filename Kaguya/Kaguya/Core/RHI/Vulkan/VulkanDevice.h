@@ -1,11 +1,17 @@
 #pragma once
 #include <Core/RHI/RHICommon.h>
+#include <Core/RHI/RHIDevice.h>
+#include <Core/RHI/RHIResourceManager.h>
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
 
-class VulkanDevice
+class VulkanDevice : public IRHIDevice
 {
+public:
+	[[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
+	[[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
+
 public:
 	VulkanDevice();
 	~VulkanDevice();
@@ -96,4 +102,7 @@ private:
 	VmaAllocator Allocator;
 
 	VulkanCommandQueue GraphicsQueue;
+
+	TPool<VulkanBuffer>	 BufferPool;
+	TPool<VulkanTexture> TexturePool;
 };

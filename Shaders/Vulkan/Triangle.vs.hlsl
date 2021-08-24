@@ -13,15 +13,14 @@ struct VSOutput
 
 struct MeshPushConstants
 {
-	float4	 data;
-	float4x4 render_matrix;
+	float4x4 Transform;
 };
 [[vk::push_constant]] MeshPushConstants PushConstants;
 
 VSOutput main(Vertex Vertex)
 {
 	VSOutput output = (VSOutput)0;
-	output.Pos		= mul(float4(Vertex.Position, 1.0f), PushConstants.render_matrix);
+	output.Pos		= mul(float4(Vertex.Position, 1.0f), PushConstants.Transform);
 	output.Color	= Vertex.Normal;
 	return output;
 }

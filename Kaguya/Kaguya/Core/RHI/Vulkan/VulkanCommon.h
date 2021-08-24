@@ -1,5 +1,6 @@
 #pragma once
 #include "vk_mem_alloc.h"
+#include <Core/RHI/RHICommon.h>
 
 class VulkanException : public CoreException
 {

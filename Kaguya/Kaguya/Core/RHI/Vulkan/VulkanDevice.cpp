@@ -97,13 +97,43 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL MessageCallback(
 	return VK_FALSE;
 }
 
+RefCountPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
+{
+	auto BufferCreateInfo = VkStruct<VkBufferCreateInfo>();
+	BufferCreateInfo.size = Desc.SizeInBytes;
+
+	if (Desc.Flags & ERHIBufferFlags::RHIBufferFlag_VertexBuffer)
+	{
+		BufferCreateInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	}
+	if (Desc.Flags & ERHIBufferFlags::RHIBufferFlag_IndexBuffer)
+	{
+		BufferCreateInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	}
+
+	// let the VMA library know that this data should be writeable by CPU, but also readable by GPU
+	VmaAllocationCreateInfo vmaallocInfo = {};
+	vmaallocInfo.usage					 = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+	return RefCountPtr<IRHIBuffer>::Create(BufferPool.Construct(this, BufferCreateInfo, vmaallocInfo));
+}
+
+RefCountPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
+{
+	return nullptr;
+}
+
 VulkanDevice::VulkanDevice()
 	: GraphicsQueue(this)
+	, BufferPool(2048)
+	, TexturePool(2048)
 {
 }
 
 VulkanDevice::~VulkanDevice()
 {
+	TexturePool.Destroy();
+	BufferPool.Destroy();
 	GraphicsQueue.Destroy();
 
 	vmaDestroyAllocator(Allocator);

@@ -1,74 +1,47 @@
 #pragma once
 #include "VulkanCommon.h"
 
-class VulkanResource : public VulkanDeviceChild
-{
-public:
-	VulkanResource() noexcept = default;
-	VulkanResource(VulkanDevice* Parent, VmaAllocationCreateInfo AllocationDesc)
-		: VulkanDeviceChild(Parent)
-		, AllocationDesc(AllocationDesc)
-	{
-	}
-	~VulkanResource();
-
-	VulkanResource(VulkanResource&& VulkanResource)
-		: VulkanDeviceChild(std::exchange(VulkanResource.Parent, {}))
-		, AllocationDesc(std::exchange(VulkanResource.AllocationDesc, {}))
-		, Allocation(std::exchange(VulkanResource.Allocation, {}))
-	{
-	}
-	VulkanResource& operator=(VulkanResource&& VulkanResource)
-	{
-		if (this != &VulkanResource)
-		{
-			Parent		   = std::exchange(VulkanResource.Parent, {});
-			AllocationDesc = std::exchange(VulkanResource.AllocationDesc, {});
-			Allocation	   = std::exchange(VulkanResource.Allocation, {});
-		}
-		return *this;
-	}
-
-	NONCOPYABLE(VulkanResource);
-
-protected:
-	VmaAllocationCreateInfo AllocationDesc = {};
-	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
-};
-
-class VulkanBuffer : public VulkanResource
+class VulkanBuffer : public IRHIBuffer
 {
 public:
 	VulkanBuffer() noexcept = default;
 	VulkanBuffer(VulkanDevice* Parent, VkBufferCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
 	~VulkanBuffer();
 
+	auto GetParentDevice() noexcept -> VulkanDevice*;
+
 	VulkanBuffer(VulkanBuffer&& VulkanBuffer)
-		: VulkanResource(std::forward<VulkanResource>(VulkanBuffer))
+		: IRHIBuffer(std::exchange(VulkanBuffer.Parent, {}))
+		, AllocationDesc(std::exchange(VulkanBuffer.AllocationDesc, {}))
+		, Allocation(std::exchange(VulkanBuffer.Allocation, {}))
 		, Desc(std::exchange(VulkanBuffer.Desc, {}))
-		, Buffer(std::exchange(VulkanBuffer.Buffer, VK_NULL_HANDLE))
+		, Buffer(std::exchange(VulkanBuffer.Buffer, {}))
 	{
 	}
 	VulkanBuffer& operator=(VulkanBuffer&& VulkanBuffer)
 	{
 		if (this != &VulkanBuffer)
 		{
-			VulkanResource::operator=(std::forward<VulkanResource>(VulkanBuffer));
-			Desc					= std::exchange(VulkanBuffer.Desc, {});
-			Buffer					= std::exchange(VulkanBuffer.Buffer, VK_NULL_HANDLE);
+			Parent		   = std::exchange(VulkanBuffer.Parent, {});
+			AllocationDesc = std::exchange(VulkanBuffer.AllocationDesc, {});
+			Allocation	   = std::exchange(VulkanBuffer.Allocation, {});
+			Desc		   = std::exchange(VulkanBuffer.Desc, {});
+			Buffer		   = std::exchange(VulkanBuffer.Buffer, {});
 		}
 		return *this;
 	}
 
 	NONCOPYABLE(VulkanBuffer);
 
-	operator VkBuffer() const noexcept { return Buffer; }
+	VkBuffer GetApiHandle() const noexcept { return Buffer; }
 
 	void Upload(std::function<void(void* CPUVirtualAddress)> Function);
 
 private:
-	VkBufferCreateInfo Desc	  = {};
-	VkBuffer		   Buffer = VK_NULL_HANDLE;
+	VmaAllocationCreateInfo AllocationDesc = {};
+	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
+	VkBufferCreateInfo		Desc		   = {};
+	VkBuffer				Buffer		   = VK_NULL_HANDLE;
 };
 
 inline VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
@@ -104,26 +77,32 @@ inline VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image,
 	return info;
 }
 
-class VulkanTexture : public VulkanResource
+class VulkanTexture : public IRHITexture
 {
 public:
 	VulkanTexture() noexcept = default;
 	VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
 	~VulkanTexture();
 
+	auto GetParentDevice() noexcept -> VulkanDevice*;
+
 	VulkanTexture(VulkanTexture&& VulkanTexture) noexcept
-		: VulkanResource(std::forward<VulkanResource>(VulkanTexture))
+		: IRHITexture(std::exchange(VulkanTexture.Parent, {}))
+		, AllocationDesc(std::exchange(VulkanTexture.AllocationDesc, {}))
+		, Allocation(std::exchange(VulkanTexture.Allocation, {}))
 		, Desc(std::exchange(VulkanTexture.Desc, {}))
-		, Texture(std::exchange(VulkanTexture.Texture, VK_NULL_HANDLE))
+		, Texture(std::exchange(VulkanTexture.Texture, {}))
 	{
 	}
 	VulkanTexture& operator=(VulkanTexture&& VulkanTexture) noexcept
 	{
 		if (this != &VulkanTexture)
 		{
-			VulkanResource::operator=(std::forward<VulkanResource>(VulkanTexture));
-			Desc					= std::exchange(VulkanTexture.Desc, {});
-			Texture					= std::exchange(VulkanTexture.Texture, VK_NULL_HANDLE);
+			Parent		   = std::exchange(VulkanTexture.Parent, {});
+			AllocationDesc = std::exchange(VulkanTexture.AllocationDesc, {});
+			Allocation	   = std::exchange(VulkanTexture.Allocation, {});
+			Desc		   = std::exchange(VulkanTexture.Desc, {});
+			Texture		   = std::exchange(VulkanTexture.Texture, VK_NULL_HANDLE);
 		}
 		return *this;
 	}
@@ -135,6 +114,8 @@ public:
 	operator VkImage() const noexcept { return Texture; }
 
 private:
-	VkImageCreateInfo Desc	  = {};
-	VkImage			  Texture = VK_NULL_HANDLE;
+	VmaAllocationCreateInfo AllocationDesc = {};
+	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
+	VkImageCreateInfo		Desc		   = {};
+	VkImage					Texture		   = VK_NULL_HANDLE;
 };

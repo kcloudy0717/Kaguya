@@ -1,6 +1,10 @@
 #pragma once
 #include "RHICommon.h"
 
+class IRHIObject;
+class IRHIDevice;
+class IRHIDeviceChild;
+
 template<typename T>
 class RefCountPtr
 {
@@ -221,51 +225,101 @@ public:
 	unsigned long Reset() { return InternalRelease(); }
 };
 
-template<class Interface>
-class RefCounter : public Interface
+class IRHIObject
 {
 public:
-	unsigned long AddRef() override { return ++NumReferences; }
+	IRHIObject()		  = default;
+	virtual ~IRHIObject() = default;
 
-	unsigned long Release() override
+	unsigned long AddRef() { return ++NumReferences; }
+
+	unsigned long Release()
 	{
 		unsigned long result = --NumReferences;
 		if (result == 0)
 		{
-			delete this;
+			this->~IRHIObject();
 		}
 		return result;
 	}
+
+	NONCOPYABLE(IRHIObject);
+	NONMOVABLE(IRHIObject);
 
 private:
 	std::atomic<unsigned long> NumReferences = 1;
 };
 
-class IRHIResource
+class IRHIDeviceChild : public IRHIObject
 {
 public:
-	virtual unsigned long AddRef()	= 0;
-	virtual unsigned long Release() = 0;
+	IRHIDeviceChild() noexcept
+		: Parent(nullptr)
+	{
+	}
 
-	NONCOPYABLE(IRHIResource);
-	NONMOVABLE(IRHIResource);
+	IRHIDeviceChild(IRHIDevice* Parent) noexcept
+		: Parent(Parent)
+	{
+	}
+
+	auto GetParentDevice() const noexcept -> IRHIDevice* { return Parent; }
+
+	void SetParentDevice(IRHIDevice* Parent) noexcept
+	{
+		assert(this->Parent == nullptr);
+		this->Parent = Parent;
+	}
 
 protected:
-	IRHIResource()			= default;
-	virtual ~IRHIResource() = default;
+	IRHIDevice* Parent;
+};
+
+class IRHIResource : public IRHIDeviceChild
+{
+public:
+	IRHIResource() noexcept = default;
+	IRHIResource(IRHIDevice* Parent)
+		: IRHIDeviceChild(Parent)
+	{
+	}
 };
 
 class IRHIBuffer : public IRHIResource
 {
+public:
+	IRHIBuffer() noexcept = default;
+	IRHIBuffer(IRHIDevice* Parent)
+		: IRHIResource(Parent)
+	{
+	}
+
+	template<typename T>
+	T* As()
+	{
+		return static_cast<T*>(this);
+	}
 };
 
 class IRHITexture : public IRHIResource
 {
+public:
+	IRHITexture() noexcept = default;
+	IRHITexture(IRHIDevice* Parent)
+		: IRHIResource(Parent)
+	{
+	}
+
+	template<typename T>
+	T* As()
+	{
+		return static_cast<T*>(this);
+	}
 };
 
-class IRHIDevice
+class IRHIDevice : public IRHIObject
 {
 public:
-	virtual [[nodiscard]] IRHIBuffer*  CreateBuffer(const RHIBufferDesc& Desc)	 = 0;
-	virtual [[nodiscard]] IRHITexture* CreateTexture(const RHITextureDesc& Desc) = 0;
+	virtual [[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	 = 0;
+	virtual [[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
 };
