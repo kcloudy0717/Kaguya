@@ -139,3 +139,29 @@ private:
 	std::vector<VkVertexInputAttributeDescription> AttributeDescriptions;
 	VkPipelineVertexInputStateCreateFlags		   StateCreateFlags = 0;
 };
+
+inline VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)
+{
+	switch (LoadOp)
+	{
+	case ELoadOp::Load:
+		return VK_ATTACHMENT_LOAD_OP_LOAD;
+	case ELoadOp::Clear:
+		return VK_ATTACHMENT_LOAD_OP_CLEAR;
+	case ELoadOp::Noop:
+		return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
+	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
+}
+
+inline VkAttachmentStoreOp ToVkStoreOp(EStoreOp StoreOp)
+{
+	switch (StoreOp)
+	{
+	case EStoreOp::Store:
+		return VK_ATTACHMENT_STORE_OP_STORE;
+	case EStoreOp::Noop:
+		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	}
+	return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
+}

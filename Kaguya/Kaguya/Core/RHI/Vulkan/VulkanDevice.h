@@ -6,9 +6,43 @@
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
 
+class VulkanRenderPass : public IRHIRenderPass
+{
+public:
+	VulkanRenderPass() noexcept = default;
+	VulkanRenderPass(VulkanDevice* Parent, VkRenderPassCreateInfo Desc);
+	~VulkanRenderPass();
+
+	auto GetParentDevice() noexcept -> VulkanDevice*;
+
+	VulkanRenderPass(VulkanRenderPass&& VulkanRenderPass)
+		: IRHIRenderPass(std::exchange(VulkanRenderPass.Parent, {}))
+		, RenderPass(std::exchange(VulkanRenderPass.RenderPass, {}))
+	{
+	}
+	VulkanRenderPass& operator=(VulkanRenderPass&& VulkanRenderPass)
+	{
+		if (this != &VulkanRenderPass)
+		{
+			Parent	   = std::exchange(VulkanRenderPass.Parent, {});
+			RenderPass = std::exchange(VulkanRenderPass.RenderPass, {});
+		}
+		return *this;
+	}
+
+	NONCOPYABLE(VulkanRenderPass);
+
+	VkRenderPass GetApiHandle() const noexcept { return RenderPass; }
+
+private:
+	VkRenderPass RenderPass;
+};
+
 class VulkanDevice : public IRHIDevice
 {
 public:
+	[[nodiscard]] RefCountPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) override;
+
 	[[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
 	[[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
 
@@ -103,6 +137,7 @@ private:
 
 	VulkanCommandQueue GraphicsQueue;
 
-	TPool<VulkanBuffer>	 BufferPool;
-	TPool<VulkanTexture> TexturePool;
+	TPool<VulkanRenderPass> RenderPassPool;
+	TPool<VulkanBuffer>		BufferPool;
+	TPool<VulkanTexture>	TexturePool;
 };

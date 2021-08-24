@@ -243,6 +243,12 @@ public:
 		return result;
 	}
 
+	template<typename T>
+	T* As()
+	{
+		return static_cast<T*>(this);
+	}
+
 	NONCOPYABLE(IRHIObject);
 	NONMOVABLE(IRHIObject);
 
@@ -275,6 +281,16 @@ protected:
 	IRHIDevice* Parent;
 };
 
+class IRHIRenderPass : public IRHIDeviceChild
+{
+public:
+	IRHIRenderPass() noexcept = default;
+	IRHIRenderPass(IRHIDevice* Parent)
+		: IRHIDeviceChild(Parent)
+	{
+	}
+};
+
 class IRHIResource : public IRHIDeviceChild
 {
 public:
@@ -293,12 +309,6 @@ public:
 		: IRHIResource(Parent)
 	{
 	}
-
-	template<typename T>
-	T* As()
-	{
-		return static_cast<T*>(this);
-	}
 };
 
 class IRHITexture : public IRHIResource
@@ -309,17 +319,18 @@ public:
 		: IRHIResource(Parent)
 	{
 	}
-
-	template<typename T>
-	T* As()
-	{
-		return static_cast<T*>(this);
-	}
 };
 
 class IRHIDevice : public IRHIObject
 {
 public:
+	virtual [[nodiscard]] RefCountPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) = 0;
+
 	virtual [[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	 = 0;
 	virtual [[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
+};
+
+class IRHICommandList : public IRHIObject
+{
+public:
 };

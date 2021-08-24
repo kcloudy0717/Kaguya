@@ -139,7 +139,7 @@ public:
 		// start the main renderpass.
 		// We will use the clear color from above, and the framebuffer of the index the swapchain gave us
 		auto rpInfo				   = VkStruct<VkRenderPassBeginInfo>();
-		rpInfo.renderPass		   = RenderPass;
+		rpInfo.renderPass		   = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
 		rpInfo.renderArea.offset.x = 0;
 		rpInfo.renderArea.offset.y = 0;
 		rpInfo.renderArea.extent   = SwapChain.GetExtent();
@@ -197,7 +197,6 @@ public:
 		vkDestroySemaphore(Device.GetVkDevice(), RenderSemaphore, nullptr);
 		vkDestroySemaphore(Device.GetVkDevice(), PresentSemaphore, nullptr);
 
-		vkDestroyRenderPass(Device.GetVkDevice(), RenderPass, nullptr);
 		for (auto& Framebuffer : Framebuffers)
 		{
 			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
@@ -211,63 +210,11 @@ public:
 private:
 	void InitDefaultRenderPass()
 	{
-		// the renderpass will use this color attachment.
-		VkAttachmentDescription AttachmentDescription = {};
-		// the attachment will have the format needed by the swapchain
-		AttachmentDescription.format = SwapChain.GetFormat();
-		// 1 sample, we won't be doing MSAA
-		AttachmentDescription.samples = VK_SAMPLE_COUNT_1_BIT;
-		// we Clear when this attachment is loaded
-		AttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		// we keep the attachment stored when the renderpass ends
-		AttachmentDescription.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		// we don't care about stencil
-		AttachmentDescription.stencilLoadOp	 = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		AttachmentDescription.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		RenderPassDesc Desc = {};
+		Desc.AddRenderTarget({ .Format = SwapChain.GetFormat(), .LoadOp = ELoadOp::Clear, .StoreOp = EStoreOp::Store });
+		Desc.SetDepthStencil({ .Format = DepthBuffer.GetDesc().format });
 
-		// we don't know or care about the starting layout of the attachment
-		AttachmentDescription.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-		// after the renderpass ends, the image has to be on a layout ready for display
-		AttachmentDescription.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentDescription depth_attachment = {};
-		depth_attachment.format					 = DepthBuffer.GetDesc().format;
-		depth_attachment.samples				 = VK_SAMPLE_COUNT_1_BIT;
-		depth_attachment.loadOp					 = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depth_attachment.storeOp				 = VK_ATTACHMENT_STORE_OP_STORE;
-		depth_attachment.stencilLoadOp			 = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depth_attachment.stencilStoreOp			 = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depth_attachment.initialLayout			 = VK_IMAGE_LAYOUT_UNDEFINED;
-		depth_attachment.finalLayout			 = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference depth_attachment_ref = {};
-		depth_attachment_ref.attachment			   = 1;
-		depth_attachment_ref.layout				   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference AttachmentReference = {};
-		// attachment number will index into the pAttachments array in the parent renderpass itself
-		AttachmentReference.attachment = 0;
-		AttachmentReference.layout	   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		// we are going to create 1 subpass, which is the minimum you can do
-		VkSubpassDescription SubpassDescription	   = {};
-		SubpassDescription.pipelineBindPoint	   = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		SubpassDescription.colorAttachmentCount	   = 1;
-		SubpassDescription.pColorAttachments	   = &AttachmentReference;
-		SubpassDescription.pDepthStencilAttachment = &depth_attachment_ref;
-
-		VkAttachmentDescription attachments[2] = { AttachmentDescription, depth_attachment };
-
-		auto RenderPassCreateInfo = VkStruct<VkRenderPassCreateInfo>();
-		// connect the color attachment to the info
-		RenderPassCreateInfo.attachmentCount = 2;
-		RenderPassCreateInfo.pAttachments	 = attachments;
-		// connect the subpass to the info
-		RenderPassCreateInfo.subpassCount = 1;
-		RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
-
-		VERIFY_VULKAN_API(vkCreateRenderPass(Device.GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
+		RenderPass = Device.CreateRenderPass(Desc);
 	}
 
 	void InitFrameBuffers()
@@ -275,7 +222,7 @@ private:
 		// create the framebuffers for the swapchain images. This will connect the render-pass to the images for
 		// rendering
 		auto FramebufferCreateInfo		 = VkStruct<VkFramebufferCreateInfo>();
-		FramebufferCreateInfo.renderPass = RenderPass;
+		FramebufferCreateInfo.renderPass = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
 		FramebufferCreateInfo.width		 = SwapChain.GetWidth();
 		FramebufferCreateInfo.height	 = SwapChain.GetHeight();
 		FramebufferCreateInfo.layers	 = 1;
@@ -375,7 +322,7 @@ private:
 
 		// use the triangle layout we created
 		pipelineBuilder.PipelineLayout = RootSignature;
-		pipelineBuilder.RenderPass	   = RenderPass;
+		pipelineBuilder.RenderPass	   = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
 
 		// finally build the pipeline
 		MeshPipeline = VulkanPipelineState(&Device, pipelineBuilder);
@@ -475,8 +422,8 @@ private:
 
 	VulkanSwapChain SwapChain;
 
-	VkRenderPass			   RenderPass = VK_NULL_HANDLE;
-	std::vector<VkFramebuffer> Framebuffers;
+	RefCountPtr<IRHIRenderPass> RenderPass;
+	std::vector<VkFramebuffer>	Framebuffers;
 
 	VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
 

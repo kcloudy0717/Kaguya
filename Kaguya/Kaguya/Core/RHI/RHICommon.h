@@ -7,6 +7,38 @@ struct DeviceOptions
 	bool EnableAutoDebugName;
 };
 
+enum class ELoadOp
+{
+	Load,
+	Clear,
+	Noop
+};
+
+enum class EStoreOp
+{
+	Store,
+	Noop
+};
+
+struct RenderPassAttachment
+{
+	bool IsValid() const noexcept { return Format != VK_FORMAT_UNDEFINED; }
+
+	VkFormat Format = VK_FORMAT_UNDEFINED;
+	ELoadOp	 LoadOp;
+	EStoreOp StoreOp;
+};
+
+struct RenderPassDesc
+{
+	void AddRenderTarget(RenderPassAttachment RenderTarget) { RenderTargets[NumRenderTargets++] = RenderTarget; }
+	void SetDepthStencil(RenderPassAttachment DepthStencil) { this->DepthStencil = DepthStencil; }
+
+	UINT				 NumRenderTargets = 0;
+	RenderPassAttachment RenderTargets[8];
+	RenderPassAttachment DepthStencil;
+};
+
 enum ERHIBufferFlags
 {
 	RHIBufferFlag_None				   = 0,

@@ -102,7 +102,7 @@ public:
 			AllocationDesc = std::exchange(VulkanTexture.AllocationDesc, {});
 			Allocation	   = std::exchange(VulkanTexture.Allocation, {});
 			Desc		   = std::exchange(VulkanTexture.Desc, {});
-			Texture		   = std::exchange(VulkanTexture.Texture, VK_NULL_HANDLE);
+			Texture		   = std::exchange(VulkanTexture.Texture, {});
 		}
 		return *this;
 	}
