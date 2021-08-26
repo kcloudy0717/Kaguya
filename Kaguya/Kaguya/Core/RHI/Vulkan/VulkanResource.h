@@ -1,14 +1,14 @@
 #pragma once
 #include "VulkanCommon.h"
 
-class VulkanBuffer : public IRHIBuffer
+class VulkanBuffer final : public IRHIBuffer
 {
 public:
 	VulkanBuffer() noexcept = default;
 	VulkanBuffer(VulkanDevice* Parent, VkBufferCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
-	~VulkanBuffer();
+	~VulkanBuffer() override;
 
-	auto GetParentDevice() noexcept -> VulkanDevice*;
+	auto GetVulkanDevice() const noexcept -> VulkanDevice*;
 
 	VulkanBuffer(VulkanBuffer&& VulkanBuffer)
 		: IRHIBuffer(std::exchange(VulkanBuffer.Parent, {}))
@@ -33,7 +33,8 @@ public:
 
 	NONCOPYABLE(VulkanBuffer);
 
-	VkBuffer GetApiHandle() const noexcept { return Buffer; }
+	VkBufferCreateInfo GetDesc() const noexcept { return Desc; }
+	VkBuffer		   GetApiHandle() const noexcept { return Buffer; }
 
 	void Upload(std::function<void(void* CPUVirtualAddress)> Function);
 
@@ -77,14 +78,14 @@ inline VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image,
 	return info;
 }
 
-class VulkanTexture : public IRHITexture
+class VulkanTexture final : public IRHITexture
 {
 public:
 	VulkanTexture() noexcept = default;
 	VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
-	~VulkanTexture();
+	~VulkanTexture() override;
 
-	auto GetParentDevice() noexcept -> VulkanDevice*;
+	auto GetVulkanDevice() const noexcept -> VulkanDevice*;
 
 	VulkanTexture(VulkanTexture&& VulkanTexture) noexcept
 		: IRHITexture(std::exchange(VulkanTexture.Parent, {}))
@@ -109,13 +110,14 @@ public:
 
 	NONCOPYABLE(VulkanTexture);
 
-	[[nodiscard]] auto GetDesc() const noexcept -> const VkImageCreateInfo& { return Desc; }
-
-	operator VkImage() const noexcept { return Texture; }
+	VkImageCreateInfo GetDesc() const noexcept { return Desc; }
+	VkImage			  GetApiHandle() const noexcept { return Texture; }
+	VkImageView		  GetImageView() const noexcept { return ImageView; }
 
 private:
 	VmaAllocationCreateInfo AllocationDesc = {};
 	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
 	VkImageCreateInfo		Desc		   = {};
 	VkImage					Texture		   = VK_NULL_HANDLE;
+	VkImageView				ImageView	   = VK_NULL_HANDLE;
 };

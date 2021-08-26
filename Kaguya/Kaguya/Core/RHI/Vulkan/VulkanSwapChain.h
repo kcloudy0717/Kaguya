@@ -38,7 +38,7 @@ public:
 		PresentInfo.pSwapchains		   = Swapchains;
 		PresentInfo.pImageIndices	   = &CurrentImageIndex;
 
-		VERIFY_VULKAN_API(vkQueuePresentKHR(PresentQueue->GetAPIHandle(), &PresentInfo));
+		VERIFY_VULKAN_API(vkQueuePresentKHR(PresentQueue->GetApiHandle(), &PresentInfo));
 	}
 
 private:

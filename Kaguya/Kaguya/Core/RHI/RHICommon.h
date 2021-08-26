@@ -1,10 +1,115 @@
 #pragma once
 
+class IRHIView;
+class IRHIRenderTargetView;
+class IRHIDepthStencilView;
+
 struct DeviceOptions
 {
 	bool EnableDebugLayer;
 	bool EnableGpuBasedValidation;
 	bool EnableAutoDebugName;
+};
+
+enum class ERHIFormat
+{
+	UNKNOWN,
+
+	R8_UINT,
+	R8_SINT,
+	R8_UNORM,
+	R8_SNORM,
+	RG8_UINT,
+	RG8_SINT,
+	RG8_UNORM,
+	RG8_SNORM,
+	R16_UINT,
+	R16_SINT,
+	R16_UNORM,
+	R16_SNORM,
+	R16_FLOAT,
+	BGRA4_UNORM,
+	B5G6R5_UNORM,
+	B5G5R5A1_UNORM,
+	RGBA8_UINT,
+	RGBA8_SINT,
+	RGBA8_UNORM,
+	RGBA8_SNORM,
+	BGRA8_UNORM,
+	SRGBA8_UNORM,
+	SBGRA8_UNORM,
+	R10G10B10A2_UNORM,
+	R11G11B10_FLOAT,
+	RG16_UINT,
+	RG16_SINT,
+	RG16_UNORM,
+	RG16_SNORM,
+	RG16_FLOAT,
+	R32_UINT,
+	R32_SINT,
+	R32_FLOAT,
+	RGBA16_UINT,
+	RGBA16_SINT,
+	RGBA16_FLOAT,
+	RGBA16_UNORM,
+	RGBA16_SNORM,
+	RG32_UINT,
+	RG32_SINT,
+	RG32_FLOAT,
+	RGB32_UINT,
+	RGB32_SINT,
+	RGB32_FLOAT,
+	RGBA32_UINT,
+	RGBA32_SINT,
+	RGBA32_FLOAT,
+
+	D16,
+	D24S8,
+	X24G8_UINT,
+	D32,
+	D32S8,
+	X32G8_UINT,
+
+	BC1_UNORM,
+	BC1_UNORM_SRGB,
+	BC2_UNORM,
+	BC2_UNORM_SRGB,
+	BC3_UNORM,
+	BC3_UNORM_SRGB,
+	BC4_UNORM,
+	BC4_SNORM,
+	BC5_UNORM,
+	BC5_SNORM,
+	BC6H_UFLOAT,
+	BC6H_SFLOAT,
+	BC7_UNORM,
+	BC7_UNORM_SRGB,
+
+	COUNT,
+};
+
+enum class EResourceStates
+{
+	Common,
+	VertexBuffer,
+	ConstantBuffer,
+	IndexBuffer,
+	RenderTarget,
+	UnorderedAccess,
+	DepthWrite,
+	DepthRead,
+	NonPixelShaderResource,
+	PixelShaderResource,
+	StreamOut,
+	IndirectArgument,
+	CopyDest,
+	CopySource,
+	ResolveDest,
+	ResolveSource,
+	RaytracingAccelerationStructure,
+	GenericRead,
+	Present,
+	Predication,
 };
 
 enum class ELoadOp
@@ -20,13 +125,42 @@ enum class EStoreOp
 	Noop
 };
 
-struct RenderPassAttachment
+struct DepthStencilValue
 {
-	bool IsValid() const noexcept { return Format != VK_FORMAT_UNDEFINED; }
+	FLOAT Depth;
+	UINT8 Stencil;
+};
+
+struct ClearValue
+{
+	ClearValue() noexcept = default;
+	ClearValue(VkFormat Format, FLOAT Color[4])
+		: Format(Format)
+	{
+		std::memcpy(this->Color, Color, sizeof(Color));
+	}
+	ClearValue(VkFormat Format, FLOAT Depth, UINT8 Stencil)
+		: Format(Format)
+		, DepthStencil{ Depth, Stencil }
+	{
+	}
 
 	VkFormat Format = VK_FORMAT_UNDEFINED;
-	ELoadOp	 LoadOp;
-	EStoreOp StoreOp;
+	union
+	{
+		FLOAT			  Color[4];
+		DepthStencilValue DepthStencil;
+	};
+};
+
+struct RenderPassAttachment
+{
+	[[nodiscard]] bool IsValid() const noexcept { return Format != VK_FORMAT_UNDEFINED; }
+
+	VkFormat   Format = VK_FORMAT_UNDEFINED;
+	ELoadOp	   LoadOp;
+	EStoreOp   StoreOp;
+	ClearValue ClearValue;
 };
 
 struct RenderPassDesc
@@ -39,13 +173,22 @@ struct RenderPassDesc
 	RenderPassAttachment DepthStencil;
 };
 
+enum class ERHIHeapType
+{
+	DeviceLocal,
+	Upload,
+	Readback
+};
+
 enum ERHIBufferFlags
 {
 	RHIBufferFlag_None				   = 0,
-	RHIBufferFlag_VertexBuffer		   = 1 << 0,
-	RHIBufferFlag_IndexBuffer		   = 1 << 1,
-	RHIBufferFlag_AllowUnorderedAccess = 1 << 2
+	RHIBufferFlag_ConstantBuffer	   = 1 << 0,
+	RHIBufferFlag_VertexBuffer		   = 1 << 1,
+	RHIBufferFlag_IndexBuffer		   = 1 << 2,
+	RHIBufferFlag_AllowUnorderedAccess = 1 << 3
 };
+DEFINE_ENUM_FLAG_OPERATORS(ERHIBufferFlags);
 
 struct RHIBufferDesc
 {
@@ -63,6 +206,7 @@ struct RHIBufferDesc
 	}
 
 	UINT64			SizeInBytes = 0;
+	ERHIHeapType	HeapType	= ERHIHeapType::DeviceLocal;
 	ERHIBufferFlags Flags		= ERHIBufferFlags::RHIBufferFlag_None;
 };
 
@@ -87,7 +231,7 @@ DEFINE_ENUM_FLAG_OPERATORS(ERHITextureFlags);
 struct RHITextureDesc
 {
 	[[nodiscard]] static auto RWTexture2D(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 MipLevels = 1,
@@ -105,7 +249,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto RWTexture2DArray(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 ArraySize,
@@ -124,7 +268,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto RWTexture3D(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 Depth,
@@ -143,7 +287,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture2D(
-		DXGI_FORMAT						 Format,
+		ERHIFormat						 Format,
 		UINT							 Width,
 		UINT							 Height,
 		UINT16							 MipLevels			 = 1,
@@ -161,7 +305,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture2DArray(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 ArraySize,
@@ -180,7 +324,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture3D(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 Depth,
@@ -199,7 +343,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto TextureCube(
-		DXGI_FORMAT		 Format,
+		ERHIFormat		 Format,
 		UINT			 Dimension,
 		UINT16			 MipLevels = 1,
 		ERHITextureFlags Flags	   = RHITextureFlag_None) -> RHITextureDesc
@@ -219,7 +363,7 @@ struct RHITextureDesc
 	bool AllowDepthStencil() const noexcept { return Flags & ERHITextureFlags::RHITextureFlag_AllowDepthStencil; }
 	bool AllowUnorderedAccess() const noexcept { return Flags & ERHITextureFlags::RHITextureFlag_AllowUnorderedAccess; }
 
-	DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
+	ERHIFormat						 Format				 = ERHIFormat::UNKNOWN;
 	ERHITextureType					 Type				 = ERHITextureType::Unknown;
 	UINT							 Width				 = 1;
 	UINT							 Height				 = 1;
@@ -238,6 +382,7 @@ public:
 
 	TPool(std::size_t Size)
 		: Size(Size)
+		, ActiveElements(0)
 	{
 		Pool = std::make_unique<Element[]>(Size);
 
@@ -252,6 +397,7 @@ public:
 		: Pool(std::exchange(TPool.Pool, {}))
 		, FreeStart(std::exchange(TPool.FreeStart, {}))
 		, Size(std::exchange(TPool.Size, {}))
+		, ActiveElements(std::exchange(TPool.ActiveElements, {}))
 	{
 	}
 	TPool& operator=(TPool&& TPool) noexcept
@@ -278,6 +424,7 @@ public:
 		const auto pElement = FreeStart;
 		FreeStart			= pElement->pNext;
 
+		ActiveElements++;
 		return reinterpret_cast<pointer>(&pElement->Storage);
 	}
 
@@ -286,6 +433,7 @@ public:
 		const auto pElement = reinterpret_cast<Element*>(p);
 		pElement->pNext		= FreeStart;
 		FreeStart			= pElement;
+		--ActiveElements;
 	}
 
 	template<typename... TArgs>
@@ -298,7 +446,6 @@ public:
 	{
 		if (p)
 		{
-			p->~T();
 			Deallocate(p);
 		}
 	}
@@ -320,4 +467,21 @@ private:
 	std::unique_ptr<Element[]> Pool;
 	Element*				   FreeStart;
 	std::size_t				   Size;
+	std::size_t				   ActiveElements;
+};
+
+enum class ESRVType
+{
+	Unknown,
+	Buffer,
+	Texture1D,
+	Texture1DArray,
+	Texture2D,
+	Texture2DArray,
+	Texture2DMS,
+	Texture2DMSArray,
+	Texture3D,
+	TextureCube,
+	TextureCubeArray,
+	RaytracingAccelerationStructure
 };

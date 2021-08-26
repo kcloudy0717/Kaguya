@@ -7,8 +7,6 @@
 #include "D3D12Resource.h"
 #include "D3D12Raytracing.h"
 
-// I really want to do mGpu, gotta get myself another 2070 for mGpu
-// or get 2 30 series, I can't get one because they're always out of stock >:(
 class D3D12LinkedDevice : public D3D12DeviceChild
 {
 public:

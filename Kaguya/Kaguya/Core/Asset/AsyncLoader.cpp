@@ -27,21 +27,42 @@ AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMet
 	}
 	else if (Extension == ".tga")
 	{
-		ScratchImage BaseImage;
-		assert(SUCCEEDED((LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage))));
-		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		if (Metadata.GenerateMips)
+		{
+			ScratchImage BaseImage;
+			assert(SUCCEEDED((LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage))));
+			assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		}
+		else
+		{
+			assert(SUCCEEDED((LoadFromTGAFile(Path.c_str(), &TexMetadata, OutImage))));
+		}
 	}
 	else if (Extension == ".hdr")
 	{
-		ScratchImage BaseImage;
-		assert(SUCCEEDED((LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage))));
-		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		if (Metadata.GenerateMips)
+		{
+			ScratchImage BaseImage;
+			assert(SUCCEEDED((LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage))));
+			assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		}
+		else
+		{
+			assert(SUCCEEDED((LoadFromHDRFile(Path.c_str(), &TexMetadata, OutImage))));
+		}
 	}
 	else
 	{
-		ScratchImage BaseImage;
-		assert(SUCCEEDED((LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage))));
-		assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		if (Metadata.GenerateMips)
+		{
+			ScratchImage BaseImage;
+			assert(SUCCEEDED((LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage))));
+			assert(SUCCEEDED((GenerateMipMaps(*BaseImage.GetImage(0, 0, 0), TEX_FILTER_DEFAULT, 0, OutImage, false))));
+		}
+		else
+		{
+			assert(SUCCEEDED((LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, OutImage))));
+		}
 	}
 
 	auto Image		  = std::make_shared<Asset::Image>();

@@ -10,6 +10,7 @@ struct ImageMetadata
 {
 	std::filesystem::path Path;
 	bool				  sRGB;
+	bool				  GenerateMips;
 };
 
 struct Image

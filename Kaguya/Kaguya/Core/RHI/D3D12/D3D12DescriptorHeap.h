@@ -6,7 +6,6 @@ class D3D12DynamicResourceDescriptorHeap : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12DynamicResourceDescriptorHeap() noexcept = default;
-
 	D3D12DynamicResourceDescriptorHeap(D3D12LinkedDevice* Parent) noexcept
 		: D3D12LinkedDeviceChild(Parent)
 	{

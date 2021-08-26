@@ -121,6 +121,16 @@ public:
 		DescriptorTables.push_back(DescriptorTable);
 	}
 
+	template<UINT ShaderRegister, UINT RegisterSpace, typename T>
+	void Add32BitConstants()
+	{
+		static_assert(sizeof(T) % 4 == 0);
+		CD3DX12_ROOT_PARAMETER1 Parameter = {};
+		Parameter.InitAsConstants(sizeof(T) / 4, ShaderRegister, RegisterSpace);
+
+		AddParameter(Parameter);
+	}
+
 	template<UINT ShaderRegister, UINT RegisterSpace>
 	void Add32BitConstants(UINT Num32BitValues)
 	{

@@ -35,5 +35,5 @@ void VulkanCommandQueue::Initialize(uint32_t QueueFamilyIndex)
 
 void VulkanCommandQueue::Destroy()
 {
-	vkDestroyCommandPool(GetParentDevice()->GetVkDevice(), CommandPool, nullptr);
+	vkDestroyCommandPool(GetParentDevice()->GetVkDevice(), std::exchange(CommandPool, {}), nullptr);
 }

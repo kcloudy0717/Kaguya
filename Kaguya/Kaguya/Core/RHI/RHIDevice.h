@@ -6,7 +6,7 @@ class IRHIDevice;
 class IRHIDeviceChild;
 
 template<typename T>
-class RefCountPtr
+class RefPtr
 {
 public:
 	typedef T InterfaceType;
@@ -25,7 +25,7 @@ public:
 protected:
 	InterfaceType* ptr_;
 	template<class U>
-	friend class RefCountPtr;
+	friend class RefPtr;
 
 	void InternalAddRef() const noexcept
 	{
@@ -50,24 +50,24 @@ protected:
 	}
 
 public:
-	RefCountPtr() noexcept
+	RefPtr() noexcept
 		: ptr_(nullptr)
 	{
 	}
 
-	RefCountPtr(std::nullptr_t) noexcept
+	RefPtr(std::nullptr_t) noexcept
 		: ptr_(nullptr)
 	{
 	}
 
 	template<class U>
-	RefCountPtr(U* other) noexcept
+	RefPtr(U* other) noexcept
 		: ptr_(other)
 	{
 		InternalAddRef();
 	}
 
-	RefCountPtr(const RefCountPtr& other) noexcept
+	RefPtr(const RefPtr& other) noexcept
 		: ptr_(other.ptr_)
 	{
 		InternalAddRef();
@@ -75,8 +75,8 @@ public:
 
 	// copy ctor that allows to instanatiate class when U* is convertible to T*
 	template<class U>
-	RefCountPtr(
-		const RefCountPtr<U>& other,
+	RefPtr(
+		const RefPtr<U>& other,
 		typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type* = nullptr) noexcept
 		: ptr_(other.ptr_)
 
@@ -84,10 +84,10 @@ public:
 		InternalAddRef();
 	}
 
-	RefCountPtr(RefCountPtr&& other) noexcept
+	RefPtr(RefPtr&& other) noexcept
 		: ptr_(nullptr)
 	{
-		if (this != reinterpret_cast<RefCountPtr*>(&reinterpret_cast<unsigned char&>(other)))
+		if (this != reinterpret_cast<RefPtr*>(&reinterpret_cast<unsigned char&>(other)))
 		{
 			Swap(other);
 		}
@@ -95,75 +95,75 @@ public:
 
 	// Move ctor that allows instantiation of a class when U* is convertible to T*
 	template<class U>
-	RefCountPtr(
-		RefCountPtr<U>&& other,
+	RefPtr(
+		RefPtr<U>&& other,
 		typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type* = nullptr) noexcept
 		: ptr_(other.ptr_)
 	{
 		other.ptr_ = nullptr;
 	}
 
-	~RefCountPtr() noexcept { InternalRelease(); }
+	~RefPtr() noexcept { InternalRelease(); }
 
-	RefCountPtr& operator=(std::nullptr_t) noexcept
+	RefPtr& operator=(std::nullptr_t) noexcept
 	{
 		InternalRelease();
 		return *this;
 	}
 
-	RefCountPtr& operator=(T* other) noexcept
+	RefPtr& operator=(T* other) noexcept
 	{
 		if (ptr_ != other)
 		{
-			RefCountPtr(other).Swap(*this);
+			RefPtr(other).Swap(*this);
 		}
 		return *this;
 	}
 
 	template<typename U>
-	RefCountPtr& operator=(U* other) noexcept
+	RefPtr& operator=(U* other) noexcept
 	{
-		RefCountPtr(other).Swap(*this);
+		RefPtr(other).Swap(*this);
 		return *this;
 	}
 
-	RefCountPtr& operator=(const RefCountPtr& other) noexcept // NOLINT(bugprone-unhandled-self-assignment)
+	RefPtr& operator=(const RefPtr& other) noexcept
 	{
 		if (ptr_ != other.ptr_)
 		{
-			RefCountPtr(other).Swap(*this);
+			RefPtr(other).Swap(*this);
 		}
 		return *this;
 	}
 
 	template<class U>
-	RefCountPtr& operator=(const RefCountPtr<U>& other) noexcept
+	RefPtr& operator=(const RefPtr<U>& other) noexcept
 	{
-		RefCountPtr(other).Swap(*this);
+		RefPtr(other).Swap(*this);
 		return *this;
 	}
 
-	RefCountPtr& operator=(RefCountPtr&& other) noexcept
+	RefPtr& operator=(RefPtr&& other) noexcept
 	{
-		RefCountPtr(static_cast<RefCountPtr&&>(other)).Swap(*this);
+		RefPtr(static_cast<RefPtr&&>(other)).Swap(*this);
 		return *this;
 	}
 
 	template<class U>
-	RefCountPtr& operator=(RefCountPtr<U>&& other) noexcept
+	RefPtr& operator=(RefPtr<U>&& other) noexcept
 	{
-		RefCountPtr(static_cast<RefCountPtr<U>&&>(other)).Swap(*this);
+		RefPtr(static_cast<RefPtr<U>&&>(other)).Swap(*this);
 		return *this;
 	}
 
-	void Swap(RefCountPtr&& r) noexcept
+	void Swap(RefPtr&& r) noexcept
 	{
 		T* tmp = ptr_;
 		ptr_   = r.ptr_;
 		r.ptr_ = tmp;
 	}
 
-	void Swap(RefCountPtr& r) noexcept
+	void Swap(RefPtr& r) noexcept
 	{
 		T* tmp = ptr_;
 		ptr_   = r.ptr_;
@@ -176,10 +176,7 @@ public:
 
 	InterfaceType* operator->() const noexcept { return ptr_; }
 
-	T** operator&() // NOLINT(google-runtime-operator)
-	{
-		return &ptr_;
-	}
+	T** operator&() { return &ptr_; }
 
 	[[nodiscard]] T* const* GetAddressOf() const noexcept { return &ptr_; }
 
@@ -215,9 +212,9 @@ public:
 	}
 
 	// Create a wrapper around a raw object while keeping the object's reference count unchanged
-	static RefCountPtr<T> Create(T* other)
+	static RefPtr<T> Create(T* other)
 	{
-		RefCountPtr<T> Ptr;
+		RefPtr<T> Ptr;
 		Ptr.Attach(other);
 		return Ptr;
 	}
@@ -291,6 +288,16 @@ public:
 	}
 };
 
+class IRHIRootSignature : public IRHIDeviceChild
+{
+public:
+	IRHIRootSignature() noexcept = default;
+	IRHIRootSignature(IRHIDevice* Parent)
+		: IRHIDeviceChild(Parent)
+	{
+	}
+};
+
 class IRHIResource : public IRHIDeviceChild
 {
 public:
@@ -321,13 +328,43 @@ public:
 	}
 };
 
+enum class EDescriptorType
+{
+	ConstantBuffer,
+	Texture,
+	RWTexture,
+	Sampler
+};
+
+struct DescriptorHandle
+{
+	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
+
+	IRHIResource* Resource = nullptr;
+
+	EDescriptorType Type;
+	UINT			Index = UINT_MAX;
+};
+
+class IRHIDescriptorPool : public IRHIDeviceChild
+{
+public:
+	IRHIDescriptorPool() noexcept = default;
+	IRHIDescriptorPool(IRHIDevice* Parent)
+		: IRHIDeviceChild(Parent)
+	{
+	}
+
+	virtual [[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle = 0;
+};
+
 class IRHIDevice : public IRHIObject
 {
 public:
-	virtual [[nodiscard]] RefCountPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) = 0;
 
-	virtual [[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	 = 0;
-	virtual [[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
+	virtual [[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	= 0;
+	virtual [[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
 };
 
 class IRHICommandList : public IRHIObject

@@ -5,15 +5,16 @@
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
+#include "VulkanDescriptorHeap.h"
 
-class VulkanRenderPass : public IRHIRenderPass
+class VulkanRenderPass final : public IRHIRenderPass
 {
 public:
 	VulkanRenderPass() noexcept = default;
-	VulkanRenderPass(VulkanDevice* Parent, VkRenderPassCreateInfo Desc);
+	VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& Desc);
 	~VulkanRenderPass();
 
-	auto GetParentDevice() noexcept -> VulkanDevice*;
+	auto GetParentDevice() const noexcept -> VulkanDevice*;
 
 	VulkanRenderPass(VulkanRenderPass&& VulkanRenderPass)
 		: IRHIRenderPass(std::exchange(VulkanRenderPass.Parent, {}))
@@ -32,23 +33,18 @@ public:
 
 	NONCOPYABLE(VulkanRenderPass);
 
-	VkRenderPass GetApiHandle() const noexcept { return RenderPass; }
+	[[nodiscard]] VkRenderPass GetApiHandle() const noexcept { return RenderPass; }
 
 private:
-	VkRenderPass RenderPass;
+	VkRenderPass		  RenderPass		  = VK_NULL_HANDLE;
+	VkRenderPassBeginInfo RenderPassBeginInfo = {};
 };
 
-class VulkanDevice : public IRHIDevice
+class VulkanDevice final : public IRHIDevice
 {
 public:
-	[[nodiscard]] RefCountPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) override;
-
-	[[nodiscard]] RefCountPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
-	[[nodiscard]] RefCountPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
-
-public:
 	VulkanDevice();
-	~VulkanDevice();
+	~VulkanDevice() override;
 
 	void Initialize(const DeviceOptions& Options);
 	void InitializeDevice();
@@ -60,6 +56,19 @@ public:
 	[[nodiscard]] auto GetVkDevice() const noexcept -> VkDevice { return VkDevice; }
 	[[nodiscard]] auto GetVkAllocator() const noexcept -> VmaAllocator { return Allocator; }
 	[[nodiscard]] auto GetGraphicsQueue() noexcept -> VulkanCommandQueue& { return GraphicsQueue; }
+	[[nodiscard]] auto GetCopyQueue() noexcept -> VulkanCommandQueue& { return CopyQueue; }
+
+	// clang-format off
+	template<typename T>	[[nodiscard]] auto GetResourcePool() -> TPool<T>&;
+	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanRenderPass>& { return RenderPassPool; }
+	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanBuffer>& { return BufferPool; }
+	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanTexture>& { return TexturePool; }
+	// clang-format on
+
+	[[nodiscard]] RefPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) override;
+
+	[[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
 
 private:
 	std::vector<const char*> GetExtensions(bool EnableDebugLayer)
@@ -94,7 +103,7 @@ private:
 
 	bool IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice);
 
-	QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice PhysicalDevice)
+	QueueFamilyIndices FindQueueFamilies()
 	{
 		QueueFamilyIndices Indices;
 
@@ -104,6 +113,10 @@ private:
 			if (Properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			{
 				Indices.GraphicsFamily = i;
+			}
+			if (Properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
+			{
+				Indices.CopyFamily = i;
 			}
 
 			if (Indices.IsValid())
@@ -117,7 +130,7 @@ private:
 		return Indices;
 	}
 
-	bool CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice);
+	bool CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) const;
 
 private:
 	VkInstance				 Instance			 = VK_NULL_HANDLE;
@@ -126,16 +139,18 @@ private:
 	VkPhysicalDevice		   PhysicalDevice			= VK_NULL_HANDLE;
 	VkPhysicalDeviceProperties PhysicalDeviceProperties = {};
 	VkPhysicalDeviceFeatures   PhysicalDeviceFeatures	= {};
+	VkPhysicalDeviceFeatures2  PhysicalDeviceFeatures2	= {};
 
 	std::vector<VkQueueFamilyProperties> QueueFamilyProperties;
 
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
 	std::vector<VkPresentModeKHR>	PresentModes;
 
-	VkDevice	 VkDevice;
-	VmaAllocator Allocator;
+	VkDevice	 VkDevice  = VK_NULL_HANDLE;
+	VmaAllocator Allocator = VK_NULL_HANDLE;
 
 	VulkanCommandQueue GraphicsQueue;
+	VulkanCommandQueue CopyQueue;
 
 	TPool<VulkanRenderPass> RenderPassPool;
 	TPool<VulkanBuffer>		BufferPool;

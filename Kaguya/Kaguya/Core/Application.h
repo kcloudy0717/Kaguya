@@ -37,8 +37,8 @@ public:
 	static std::filesystem::path SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
 
 	virtual bool Initialize()					 = 0;
-	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Shutdown()						 = 0;
+	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Resize(UINT Width, UINT Height) = 0;
 
 private:

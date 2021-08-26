@@ -6,16 +6,30 @@
 
 #include <iostream>
 
-struct VulkanMesh
+struct UploadContext
 {
-	std::shared_ptr<Asset::Mesh> Mesh;
-	RefCountPtr<IRHIBuffer>		 VertexResource;
-	RefCountPtr<IRHIBuffer>		 IndexResource;
+	VkFence		  _uploadFence;
+	VkCommandPool _commandPool;
 };
 
 struct MeshPushConstants
 {
 	DirectX::XMFLOAT4X4 Transform;
+	UINT				Id;
+};
+
+struct UniformSceneConstants
+{
+	DirectX::XMFLOAT4X4 View;
+	DirectX::XMFLOAT4X4 Projection;
+	DirectX::XMFLOAT4X4 ViewProjection;
+};
+
+struct VulkanMesh
+{
+	std::shared_ptr<Asset::Mesh> Mesh;
+	RefPtr<IRHIBuffer>			 VertexResource;
+	RefPtr<IRHIBuffer>			 IndexResource;
 };
 
 struct VulkanMaterial
@@ -54,36 +68,46 @@ public:
 
 		SwapChain.Initialize(GetWindowHandle(), &Device);
 
-		// depth image size will match the window
-		VkExtent3D depthImageExtent = { WindowWidth, WindowHeight, 1 };
+		RHIBufferDesc BufferDesc = {};
+		BufferDesc.SizeInBytes	 = sizeof(UniformSceneConstants);
+		BufferDesc.Flags		 = RHIBufferFlag_ConstantBuffer;
+		SceneConstants			 = Device.CreateBuffer(BufferDesc);
 
-		// hardcoding the depth format to 32 bit float
-		auto _depthFormat = VK_FORMAT_D32_SFLOAT;
+		RHITextureDesc TextureDesc =
+			RHITextureDesc::Texture2D(ERHIFormat::D32, WindowWidth, WindowHeight, 1, RHITextureFlag_AllowDepthStencil);
 
-		// the depth image will be an image with the format we selected and Depth Attachment usage flag
-		VkImageCreateInfo dimg_info =
-			ImageCreateInfo(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
-
-		// for the depth image, we want to allocate it from GPU local memory
-		VmaAllocationCreateInfo dimg_allocinfo = {};
-		dimg_allocinfo.usage				   = VMA_MEMORY_USAGE_GPU_ONLY;
-		dimg_allocinfo.requiredFlags		   = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		DepthBuffer = VulkanTexture(&Device, dimg_info, dimg_allocinfo);
-
-		// build an image-view for the depth image to use for rendering
-		VkImageViewCreateInfo dview_info = ImageViewCreateInfo(_depthFormat, DepthBuffer, VK_IMAGE_ASPECT_DEPTH_BIT);
-		VERIFY_VULKAN_API(vkCreateImageView(Device.GetVkDevice(), &dview_info, nullptr, &_depthImageView));
+		DepthBuffer = Device.CreateTexture(TextureDesc);
 
 		InitDefaultRenderPass();
 		InitFrameBuffers();
 		InitSyncStructures();
+		InitDescriptors();
 		InitPipelines();
 
 		LoadMeshes();
 		InitScene();
 
 		return true;
+	}
+
+	void Shutdown() override
+	{
+		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
+		vkDestroyFence(Device.GetVkDevice(), _uploadContext._uploadFence, nullptr);
+
+		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
+		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
+
+		vkDestroyFence(Device.GetVkDevice(), RenderFence, nullptr);
+		vkDestroySemaphore(Device.GetVkDevice(), RenderSemaphore, nullptr);
+		vkDestroySemaphore(Device.GetVkDevice(), PresentSemaphore, nullptr);
+
+		for (auto& Framebuffer : Framebuffers)
+		{
+			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
+		}
+
+		PhysicsManager::Shutdown();
 	}
 
 	void Update(float DeltaTime) override
@@ -99,14 +123,14 @@ public:
 			{
 			case VK_ESCAPE:
 				InputHandler.RawInputEnabled = !InputHandler.RawInputEnabled;
+				break;
+			default:
+				break;
 			}
 		}
 
-		world.Update(DeltaTime);
-		Camera& MainCamera = *world.ActiveCamera;
-
-		MeshPushConstants PushConstants = {};
-		XMStoreFloat4x4(&PushConstants.Transform, XMMatrixTranspose(MainCamera.ViewProjectionMatrix));
+		World.Update(DeltaTime);
+		Camera& MainCamera = *World.ActiveCamera;
 
 		// wait until the GPU has finished rendering the last frame. Timeout of 1 second
 		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, 1000000000));
@@ -122,6 +146,18 @@ public:
 		// naming it cmd for shorter writing
 		VkCommandBuffer cmd = CommandBuffer;
 
+		// fill a GPU camera data struct
+		UniformSceneConstants camData = {};
+		XMStoreFloat4x4(&camData.View, XMMatrixTranspose(MainCamera.ViewMatrix));
+		XMStoreFloat4x4(&camData.Projection, XMMatrixTranspose(MainCamera.ProjectionMatrix));
+		XMStoreFloat4x4(&camData.ViewProjection, XMMatrixTranspose(MainCamera.ViewProjectionMatrix));
+
+		SceneConstants->As<VulkanBuffer>()->Upload(
+			[&camData](void* CPUVirtualAddress)
+			{
+				memcpy(CPUVirtualAddress, &camData, sizeof(UniformSceneConstants));
+			});
+
 		// begin the command buffer recording. We will use this command buffer exactly once, so we want to let Vulkan
 		// know that
 		auto CommandBufferBeginInfo	 = VkStruct<VkCommandBufferBeginInfo>();
@@ -129,28 +165,22 @@ public:
 
 		VERIFY_VULKAN_API(vkBeginCommandBuffer(cmd, &CommandBufferBeginInfo));
 
-		// make a clear-color from frame number. This will flash with a 120*pi frame period.
-		VkClearValue clearValue;
-		clearValue.color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-
-		VkClearValue depthClear		  = {};
-		depthClear.depthStencil.depth = 1.0f;
+		VkClearValue ClearValues[2] = {};
+		ClearValues[0].color		= { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		ClearValues[1].depthStencil = { 1.0f, 0 };
 
 		// start the main renderpass.
 		// We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-		auto rpInfo				   = VkStruct<VkRenderPassBeginInfo>();
-		rpInfo.renderPass		   = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
-		rpInfo.renderArea.offset.x = 0;
-		rpInfo.renderArea.offset.y = 0;
-		rpInfo.renderArea.extent   = SwapChain.GetExtent();
-		rpInfo.framebuffer		   = Framebuffers[swapchainImageIndex];
+		auto RenderPassBeginInfo				= VkStruct<VkRenderPassBeginInfo>();
+		RenderPassBeginInfo.renderPass			= RenderPass->As<VulkanRenderPass>()->GetApiHandle();
+		RenderPassBeginInfo.renderArea.offset.x = 0;
+		RenderPassBeginInfo.renderArea.offset.y = 0;
+		RenderPassBeginInfo.renderArea.extent	= SwapChain.GetExtent();
+		RenderPassBeginInfo.framebuffer			= Framebuffers[swapchainImageIndex];
+		RenderPassBeginInfo.clearValueCount		= 2;
+		RenderPassBeginInfo.pClearValues		= ClearValues;
 
-		// connect clear values
-		VkClearValue ClearValues[] = { clearValue, depthClear };
-		rpInfo.clearValueCount	   = 2;
-		rpInfo.pClearValues		   = ClearValues;
-
-		vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(cmd, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		draw_objects(cmd, _renderables.data(), _renderables.size());
 
@@ -179,40 +209,54 @@ public:
 
 		// submit command buffer to the queue and execute it.
 		// _renderFence will now block until the graphic commands finish execution
-		VERIFY_VULKAN_API(vkQueueSubmit(Device.GetGraphicsQueue().GetAPIHandle(), 1, &SubmitInfo, RenderFence));
+		VERIFY_VULKAN_API(vkQueueSubmit(Device.GetGraphicsQueue().GetApiHandle(), 1, &SubmitInfo, RenderFence));
 
 		SwapChain.Present(RenderSemaphore);
-	}
-
-	void Shutdown() override
-	{
-		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &RenderFence, true, UINT64_MAX));
-
-		vkDestroyImageView(Device.GetVkDevice(), _depthImageView, nullptr);
-
-		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
-		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
-
-		vkDestroyFence(Device.GetVkDevice(), RenderFence, nullptr);
-		vkDestroySemaphore(Device.GetVkDevice(), RenderSemaphore, nullptr);
-		vkDestroySemaphore(Device.GetVkDevice(), PresentSemaphore, nullptr);
-
-		for (auto& Framebuffer : Framebuffers)
-		{
-			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
-		}
-
-		PhysicsManager::Shutdown();
 	}
 
 	void Resize(UINT Width, UINT Height) override {}
 
 private:
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
+	{
+		VkCommandBuffer cmd = Device.GetCopyQueue().GetCommandBuffer();
+
+		// begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan
+		// know that
+		auto CommandBufferBeginInfo	 = VkStruct<VkCommandBufferBeginInfo>();
+		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		VERIFY_VULKAN_API(vkBeginCommandBuffer(cmd, &CommandBufferBeginInfo));
+		function(cmd);
+		VERIFY_VULKAN_API(vkEndCommandBuffer(cmd));
+
+		auto SubmitInfo				  = VkStruct<VkSubmitInfo>();
+		SubmitInfo.commandBufferCount = 1;
+		SubmitInfo.pCommandBuffers	  = &cmd;
+
+		VERIFY_VULKAN_API(
+			vkQueueSubmit(Device.GetCopyQueue().GetApiHandle(), 1, &SubmitInfo, _uploadContext._uploadFence));
+
+		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &_uploadContext._uploadFence, true, UINT64_MAX));
+		VERIFY_VULKAN_API(vkResetFences(Device.GetVkDevice(), 1, &_uploadContext._uploadFence));
+
+		// clear the command pool. This will free the command buffer too
+		VERIFY_VULKAN_API(vkResetCommandPool(Device.GetVkDevice(), _uploadContext._commandPool, 0));
+	}
+
 	void InitDefaultRenderPass()
 	{
-		RenderPassDesc Desc = {};
-		Desc.AddRenderTarget({ .Format = SwapChain.GetFormat(), .LoadOp = ELoadOp::Clear, .StoreOp = EStoreOp::Store });
-		Desc.SetDepthStencil({ .Format = DepthBuffer.GetDesc().format });
+		RenderPassDesc Desc		= {};
+		FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		Desc.AddRenderTarget({ .Format	   = SwapChain.GetFormat(),
+							   .LoadOp	   = ELoadOp::Clear,
+							   .StoreOp	   = EStoreOp::Store,
+							   .ClearValue = ClearValue(SwapChain.GetFormat(), Color) });
+		Desc.SetDepthStencil(
+			{ .Format	  = DepthBuffer->As<VulkanTexture>()->GetDesc().format,
+			  .LoadOp	  = ELoadOp::Clear,
+			  .StoreOp	  = EStoreOp::Store,
+			  .ClearValue = ClearValue(DepthBuffer->As<VulkanTexture>()->GetDesc().format, 1.0f, 0xFF) });
 
 		RenderPass = Device.CreateRenderPass(Desc);
 	}
@@ -233,7 +277,8 @@ private:
 		// create framebuffers for each of the swapchain image views
 		for (uint32_t i = 0; i < ImageCount; i++)
 		{
-			const VkImageView Attachment[]		  = { SwapChain.GetImageView(i), _depthImageView };
+			const VkImageView Attachment[]		  = { SwapChain.GetImageView(i),
+												  DepthBuffer->As<VulkanTexture>()->GetImageView() };
 			FramebufferCreateInfo.attachmentCount = std::size(Attachment);
 			FramebufferCreateInfo.pAttachments	  = Attachment;
 			VERIFY_VULKAN_API(
@@ -257,6 +302,45 @@ private:
 
 		VERIFY_VULKAN_API(vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
 		VERIFY_VULKAN_API(vkCreateSemaphore(Device.GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+
+		FenceCreateInfo = VkStruct<VkFenceCreateInfo>();
+
+		VERIFY_VULKAN_API(vkCreateFence(Device.GetVkDevice(), &FenceCreateInfo, nullptr, &_uploadContext._uploadFence));
+
+		_uploadContext._commandPool = Device.GetCopyQueue().GetCommandPool();
+	}
+
+	void InitDescriptors()
+	{
+		VulkanDescriptorSetLayout DescriptorSetLayout(true);
+		DescriptorSetLayout.AddBinding<0>(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096, VK_SHADER_STAGE_ALL);
+		DescriptorSetLayout.AddBinding<1>(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096, VK_SHADER_STAGE_ALL);
+		DescriptorSetLayout.AddBinding<2>(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4096, VK_SHADER_STAGE_ALL);
+		DescriptorSetLayout.AddBinding<3>(VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL);
+
+		{
+			VulkanRootSignatureBuilder Builder;
+			Builder.Add32BitConstants<MeshPushConstants>();
+			Builder.AddDescriptorSetLayout(DescriptorSetLayout);
+
+			RootSignature = VulkanRootSignature(&Device, Builder);
+		}
+
+		DescriptorHeap.Initialize(
+			{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096 },
+			  { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096 },
+			  { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4096 },
+			  { VK_DESCRIPTOR_TYPE_SAMPLER, 1 } },
+			RootSignature.GetDescriptorSetLayout(0));
+
+		DescriptorHandle Handle = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
+		Handle.Resource			= SceneConstants.Get();
+
+		DescriptorHeap.UpdateDescriptor(Handle);
+
+		Handle = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::Sampler);
+
+		DescriptorHeap.UpdateDescriptor(Handle);
 	}
 
 	void InitPipelines()
@@ -269,13 +353,6 @@ private:
 		{
 			std::cout << "Error when building the triangle fragment shader module" << std::endl;
 		}
-
-		// build the pipeline layout that controls the inputs/outputs of the shader
-		// we are not using descriptor sets or other systems yet, so no need to use anything other than empty default
-		VulkanRootSignatureBuilder Builder;
-		Builder.Add32BitConstants<MeshPushConstants>();
-
-		RootSignature = VulkanRootSignature(&Device, Builder);
 
 		// build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader
 		// modules per stage
@@ -367,6 +444,13 @@ private:
 
 		UploadMesh(TriangleMesh);
 		UploadMesh(SphereMesh);
+
+		LoadImageFromPath("Assets/models/bedroom/textures/Teapot.tga");
+
+		TextureDescriptor		   = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::Texture);
+
+		TextureDescriptor.Resource = Texture.Get();
+		DescriptorHeap.UpdateDescriptor(TextureDescriptor);
 	}
 
 	void InitScene()
@@ -394,24 +478,174 @@ private:
 
 	void UploadMesh(VulkanMesh& Mesh)
 	{
-		RHIBufferDesc Desc = {};
+		RefPtr<IRHIBuffer> StagingBuffer;
 
-		Desc.SizeInBytes	= Mesh.Mesh->Vertices.size() * sizeof(Vertex);
-		Desc.Flags			= RHIBufferFlag_VertexBuffer;
-		Mesh.VertexResource = Device.CreateBuffer(Desc);
-		Mesh.VertexResource->As<VulkanBuffer>()->Upload(
+		RHIBufferDesc StagingBufferDesc = {};
+		StagingBufferDesc.HeapType		= ERHIHeapType::Upload;
+
+		StagingBufferDesc.SizeInBytes = Mesh.Mesh->Vertices.size() * sizeof(Vertex);
+		StagingBuffer				  = Device.CreateBuffer(StagingBufferDesc);
+		StagingBuffer->As<VulkanBuffer>()->Upload(
 			[&](void* CPUVirtualAddress)
 			{
-				memcpy(CPUVirtualAddress, Mesh.Mesh->Vertices.data(), Desc.SizeInBytes);
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Vertices.data(), StagingBufferDesc.SizeInBytes);
 			});
 
-		Desc.SizeInBytes   = Mesh.Mesh->Indices.size() * sizeof(unsigned int);
-		Desc.Flags		   = RHIBufferFlag_IndexBuffer;
-		Mesh.IndexResource = Device.CreateBuffer(Desc);
-		Mesh.IndexResource->As<VulkanBuffer>()->Upload(
+		RHIBufferDesc VertexBufferDesc = {};
+		VertexBufferDesc.SizeInBytes   = StagingBufferDesc.SizeInBytes;
+		VertexBufferDesc.HeapType	   = ERHIHeapType::DeviceLocal;
+		VertexBufferDesc.Flags		   = RHIBufferFlag_VertexBuffer;
+		Mesh.VertexResource			   = Device.CreateBuffer(VertexBufferDesc);
+
+		immediate_submit(
+			[&](VkCommandBuffer cmd)
+			{
+				VkBufferCopy copy;
+				copy.dstOffset = 0;
+				copy.srcOffset = 0;
+				copy.size	   = VertexBufferDesc.SizeInBytes;
+				vkCmdCopyBuffer(
+					cmd,
+					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
+					Mesh.VertexResource->As<VulkanBuffer>()->GetApiHandle(),
+					1,
+					&copy);
+			});
+
+		StagingBufferDesc.SizeInBytes = Mesh.Mesh->Indices.size() * sizeof(unsigned int);
+		StagingBuffer				  = Device.CreateBuffer(StagingBufferDesc);
+		StagingBuffer->As<VulkanBuffer>()->Upload(
 			[&](void* CPUVirtualAddress)
 			{
-				memcpy(CPUVirtualAddress, Mesh.Mesh->Indices.data(), Desc.SizeInBytes);
+				memcpy(CPUVirtualAddress, Mesh.Mesh->Indices.data(), StagingBufferDesc.SizeInBytes);
+			});
+
+		RHIBufferDesc IndexBufferDesc = {};
+		IndexBufferDesc.SizeInBytes	  = StagingBufferDesc.SizeInBytes;
+		IndexBufferDesc.HeapType	  = ERHIHeapType::DeviceLocal;
+		IndexBufferDesc.Flags		  = RHIBufferFlag_IndexBuffer;
+		Mesh.IndexResource			  = Device.CreateBuffer(IndexBufferDesc);
+
+		immediate_submit(
+			[&](VkCommandBuffer cmd)
+			{
+				VkBufferCopy copy;
+				copy.dstOffset = 0;
+				copy.srcOffset = 0;
+				copy.size	   = IndexBufferDesc.SizeInBytes;
+				vkCmdCopyBuffer(
+					cmd,
+					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
+					Mesh.IndexResource->As<VulkanBuffer>()->GetApiHandle(),
+					1,
+					&copy);
+			});
+	}
+
+	void LoadImageFromPath(const std::filesystem::path& Path)
+	{
+		Asset::ImageMetadata Metadata = { .Path = ExecutableDirectory / Path };
+
+		auto Image = ImageLoader.AsyncLoad(Metadata);
+
+		void*		 pixel_ptr = Image->Image.GetPixels();
+		VkDeviceSize imageSize = Image->Image.GetPixelsSize();
+
+		VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
+
+		RHIBufferDesc StagingBufferDesc = {};
+		StagingBufferDesc.HeapType		= ERHIHeapType::Upload;
+
+		StagingBufferDesc.SizeInBytes	 = imageSize;
+		RefPtr<IRHIBuffer> StagingBuffer = Device.CreateBuffer(StagingBufferDesc);
+		StagingBuffer->As<VulkanBuffer>()->Upload(
+			[&](void* CPUVirtualAddress)
+			{
+				memcpy(CPUVirtualAddress, pixel_ptr, StagingBufferDesc.SizeInBytes);
+			});
+
+		RHITextureDesc TextureDesc = RHITextureDesc::Texture2D(
+			ERHIFormat::RGBA8_UNORM,
+			Image->Image.GetMetadata().width,
+			Image->Image.GetMetadata().height,
+			Image->Image.GetMetadata().mipLevels);
+
+		Texture = Device.CreateTexture(TextureDesc);
+
+		immediate_submit(
+			[&](VkCommandBuffer cmd)
+			{
+				VkImageSubresourceRange range;
+				range.aspectMask	 = VK_IMAGE_ASPECT_COLOR_BIT;
+				range.baseMipLevel	 = 0;
+				range.levelCount	 = 1;
+				range.baseArrayLayer = 0;
+				range.layerCount	 = 1;
+
+				VkImageMemoryBarrier imageBarrier_toTransfer = {};
+				imageBarrier_toTransfer.sType				 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+				imageBarrier_toTransfer.oldLayout		 = VK_IMAGE_LAYOUT_UNDEFINED;
+				imageBarrier_toTransfer.newLayout		 = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				imageBarrier_toTransfer.image			 = Texture->As<VulkanTexture>()->GetApiHandle();
+				imageBarrier_toTransfer.subresourceRange = range;
+
+				imageBarrier_toTransfer.srcAccessMask = 0;
+				imageBarrier_toTransfer.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+				// barrier the image into the transfer-receive layout
+				vkCmdPipelineBarrier(
+					cmd,
+					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0,
+					nullptr,
+					0,
+					nullptr,
+					1,
+					&imageBarrier_toTransfer);
+
+				VkBufferImageCopy copyRegion = {};
+				copyRegion.bufferOffset		 = 0;
+				copyRegion.bufferRowLength	 = 0;
+				copyRegion.bufferImageHeight = 0;
+
+				copyRegion.imageSubresource.aspectMask	   = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.imageSubresource.mipLevel	   = 0;
+				copyRegion.imageSubresource.baseArrayLayer = 0;
+				copyRegion.imageSubresource.layerCount	   = 1;
+				copyRegion.imageExtent = { TextureDesc.Width, TextureDesc.Height, TextureDesc.DepthOrArraySize };
+
+				// copy the buffer into the image
+				vkCmdCopyBufferToImage(
+					cmd,
+					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
+					Texture->As<VulkanTexture>()->GetApiHandle(),
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1,
+					&copyRegion);
+
+				VkImageMemoryBarrier imageBarrier_toReadable = imageBarrier_toTransfer;
+
+				imageBarrier_toReadable.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				imageBarrier_toReadable.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+				imageBarrier_toReadable.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				imageBarrier_toReadable.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+				// barrier the image into the shader readable layout
+				vkCmdPipelineBarrier(
+					cmd,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					0,
+					0,
+					nullptr,
+					0,
+					nullptr,
+					1,
+					&imageBarrier_toReadable);
 			});
 	}
 
@@ -422,26 +656,32 @@ private:
 
 	VulkanSwapChain SwapChain;
 
-	RefCountPtr<IRHIRenderPass> RenderPass;
-	std::vector<VkFramebuffer>	Framebuffers;
+	RefPtr<IRHIRenderPass>	   RenderPass;
+	std::vector<VkFramebuffer> Framebuffers;
 
 	VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
+	UploadContext	_uploadContext;
 
 	VkSemaphore PresentSemaphore = VK_NULL_HANDLE, RenderSemaphore = VK_NULL_HANDLE;
 	VkFence		RenderFence = VK_NULL_HANDLE;
 
 	VkShaderModule VS, PS;
 
+	VulkanDescriptorPool DescriptorHeap{ &Device };
+	RefPtr<IRHIBuffer>	 SceneConstants;
+	RefPtr<IRHITexture>	 Texture;
+	DescriptorHandle	 TextureDescriptor;
+
 	VulkanRootSignature RootSignature;
 	VulkanPipelineState MeshPipeline;
 	VulkanMesh			TriangleMesh;
 	VulkanMesh			SphereMesh;
 
-	VulkanTexture DepthBuffer;
-	VkImageView	  _depthImageView;
+	RefPtr<IRHITexture> DepthBuffer;
 
-	World			world;
-	AsyncMeshLoader MeshLoader;
+	World			 World;
+	AsyncMeshLoader	 MeshLoader;
+	AsyncImageLoader ImageLoader;
 
 	// default array of renderable objects
 	std::vector<RenderObject> _renderables;
@@ -504,15 +744,23 @@ private:
 			if (object.material != lastMaterial)
 			{
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->PipelineState);
+
+				VkDescriptorSet DescriptorSets[] = { DescriptorHeap.GetDescriptorSet() };
+				vkCmdBindDescriptorSets(
+					cmd,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					*object.material->RootSignature,
+					0,
+					1,
+					DescriptorSets,
+					0,
+					nullptr);
 				lastMaterial = object.material;
 			}
 
-			MeshPushConstants constants;
-			XMStoreFloat4x4(
-				&constants.Transform,
-				XMMatrixTranspose(XMMatrixMultiply(
-					XMLoadFloat4x4(&object.transformMatrix),
-					world.ActiveCamera->ViewProjectionMatrix)));
+			MeshPushConstants constants = {};
+			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
+			constants.Id = TextureDescriptor.Index;
 
 			// upload the mesh to the GPU via push constants
 			vkCmdPushConstants(
