@@ -4,6 +4,8 @@
 class IRHIObject;
 class IRHIDevice;
 class IRHIDeviceChild;
+class IRHIResource;
+class IRHIDescriptorTable;
 
 template<typename T>
 class RefPtr
@@ -260,7 +262,6 @@ public:
 		: Parent(nullptr)
 	{
 	}
-
 	IRHIDeviceChild(IRHIDevice* Parent) noexcept
 		: Parent(Parent)
 	{
@@ -281,93 +282,62 @@ protected:
 class IRHIRenderPass : public IRHIDeviceChild
 {
 public:
-	IRHIRenderPass() noexcept = default;
-	IRHIRenderPass(IRHIDevice* Parent)
-		: IRHIDeviceChild(Parent)
-	{
-	}
+	using IRHIDeviceChild::IRHIDeviceChild;
+};
+
+class IRHIDescriptorTable : public IRHIDeviceChild
+{
+public:
+	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
 class IRHIRootSignature : public IRHIDeviceChild
 {
 public:
-	IRHIRootSignature() noexcept = default;
-	IRHIRootSignature(IRHIDevice* Parent)
-		: IRHIDeviceChild(Parent)
-	{
-	}
+	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
 class IRHIResource : public IRHIDeviceChild
 {
 public:
-	IRHIResource() noexcept = default;
-	IRHIResource(IRHIDevice* Parent)
-		: IRHIDeviceChild(Parent)
-	{
-	}
+	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
 class IRHIBuffer : public IRHIResource
 {
 public:
-	IRHIBuffer() noexcept = default;
-	IRHIBuffer(IRHIDevice* Parent)
-		: IRHIResource(Parent)
-	{
-	}
+	using IRHIResource::IRHIResource;
 };
 
 class IRHITexture : public IRHIResource
 {
 public:
-	IRHITexture() noexcept = default;
-	IRHITexture(IRHIDevice* Parent)
-		: IRHIResource(Parent)
-	{
-	}
-};
-
-enum class EDescriptorType
-{
-	ConstantBuffer,
-	Texture,
-	RWTexture,
-	Sampler
-};
-
-struct DescriptorHandle
-{
-	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
-
-	IRHIResource* Resource = nullptr;
-
-	EDescriptorType Type;
-	UINT			Index = UINT_MAX;
+	using IRHIResource::IRHIResource;
 };
 
 class IRHIDescriptorPool : public IRHIDeviceChild
 {
 public:
-	IRHIDescriptorPool() noexcept = default;
-	IRHIDescriptorPool(IRHIDevice* Parent)
-		: IRHIDeviceChild(Parent)
-	{
-	}
+	using IRHIDeviceChild::IRHIDeviceChild;
 
 	virtual [[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle = 0;
+
+	virtual void UpdateDescriptor(const DescriptorHandle& Handle) const = 0;
 };
 
 class IRHIDevice : public IRHIObject
 {
 public:
-	virtual [[nodiscard]] RefPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc)			 = 0;
+	virtual [[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc)	 = 0;
+	virtual [[nodiscard]] RefPtr<IRHIDescriptorPool>  CreateDescriptorPool(const DescriptorPoolDesc& Desc)	 = 0;
 
 	virtual [[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	= 0;
 	virtual [[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
 };
 
-class IRHICommandList : public IRHIObject
+class IRHICommandList : public IRHIDeviceChild
 {
 public:
 };

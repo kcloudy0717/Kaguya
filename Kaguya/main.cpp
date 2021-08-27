@@ -312,35 +312,40 @@ private:
 
 	void InitDescriptors()
 	{
-		VulkanDescriptorSetLayout DescriptorSetLayout(true);
-		DescriptorSetLayout.AddBinding<0>(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096, VK_SHADER_STAGE_ALL);
-		DescriptorSetLayout.AddBinding<1>(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096, VK_SHADER_STAGE_ALL);
-		DescriptorSetLayout.AddBinding<2>(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4096, VK_SHADER_STAGE_ALL);
-		DescriptorSetLayout.AddBinding<3>(VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL);
-
 		{
-			VulkanRootSignatureBuilder Builder;
-			Builder.Add32BitConstants<MeshPushConstants>();
-			Builder.AddDescriptorSetLayout(DescriptorSetLayout);
+			DescriptorTableDesc Desc = {};
+			Desc.AddDescriptorRange({ .Type = EDescriptorType::ConstantBuffer, .NumDescriptors = 4096, .Binding = 0 });
+			Desc.AddDescriptorRange({ .Type = EDescriptorType::Texture, .NumDescriptors = 4096, .Binding = 1 });
+			Desc.AddDescriptorRange({ .Type = EDescriptorType::RWTexture, .NumDescriptors = 4096, .Binding = 2 });
+			Desc.AddDescriptorRange({ .Type = EDescriptorType::Sampler, .NumDescriptors = 4096, .Binding = 3 });
 
-			RootSignature = VulkanRootSignature(&Device, Builder);
+			DescriptorTable = Device.CreateDescriptorTable(Desc);
 		}
 
-		DescriptorHeap.Initialize(
-			{ { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 4096 },
-			  { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 4096 },
-			  { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 4096 },
-			  { VK_DESCRIPTOR_TYPE_SAMPLER, 1 } },
-			RootSignature.GetDescriptorSetLayout(0));
+		{
+			RootSignatureDesc Desc = {};
+			Desc.AddPushConstant<MeshPushConstants>();
+			Desc.DescriptorTables[0] = DescriptorTable.Get();
+			Desc.NumDescriptorTables = 1;
+			RootSignature			 = Device.CreateRootSignature(Desc);
+		}
 
-		DescriptorHandle Handle = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
+		DescriptorPoolDesc Desc = { .NumConstantBufferDescriptors  = 4096,
+									.NumShaderResourceDescriptors  = 4096,
+									.NumUnorderedAccessDescriptors = 4096,
+									.NumSamplers				   = 4096,
+									.DescriptorTable			   = DescriptorTable.Get() };
+
+		DescriptorPool = Device.CreateDescriptorPool(Desc);
+
+		DescriptorHandle Handle = DescriptorPool->AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
 		Handle.Resource			= SceneConstants.Get();
 
-		DescriptorHeap.UpdateDescriptor(Handle);
+		DescriptorPool->UpdateDescriptor(Handle);
 
-		Handle = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::Sampler);
+		Handle = DescriptorPool->AllocateDescriptorHandle(EDescriptorType::Sampler);
 
-		DescriptorHeap.UpdateDescriptor(Handle);
+		DescriptorPool->UpdateDescriptor(Handle);
 	}
 
 	void InitPipelines()
@@ -354,8 +359,6 @@ private:
 			std::cout << "Error when building the triangle fragment shader module" << std::endl;
 		}
 
-		// build the stage-create-info for both vertex and fragment stages. This lets the pipeline know the shader
-		// modules per stage
 		VulkanPipelineStateBuilder pipelineBuilder;
 
 		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, VS));
@@ -398,13 +401,13 @@ private:
 		pipelineBuilder.ColorBlendAttachmentState = InitPipelineColorBlendAttachmentState();
 
 		// use the triangle layout we created
-		pipelineBuilder.PipelineLayout = RootSignature;
+		pipelineBuilder.PipelineLayout = RootSignature->As<VulkanRootSignature>()->GetApiHandle();
 		pipelineBuilder.RenderPass	   = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
 
 		// finally build the pipeline
 		MeshPipeline = VulkanPipelineState(&Device, pipelineBuilder);
 
-		create_material(&RootSignature, std::move(MeshPipeline), "Default");
+		create_material(RootSignature->As<VulkanRootSignature>(), std::move(MeshPipeline), "Default");
 	}
 
 	bool LoadShaderModule(EShaderType ShaderType, const std::filesystem::path& Path, VkShaderModule* pShaderModule)
@@ -428,29 +431,18 @@ private:
 
 	void LoadMeshes()
 	{
-		TriangleMesh.Mesh = std::make_shared<Asset::Mesh>();
-		TriangleMesh.Mesh->Vertices.resize(3);
-		TriangleMesh.Mesh->Vertices[0].Position = { 1.f, 1.f, 0.5f };
-		TriangleMesh.Mesh->Vertices[1].Position = { -1.f, 1.f, 0.5f };
-		TriangleMesh.Mesh->Vertices[2].Position = { 0.f, -1.f, 0.5f };
-		TriangleMesh.Mesh->Vertices[0].Normal	= { 0.f, 1.f, 0.0f }; // pure green
-		TriangleMesh.Mesh->Vertices[1].Normal	= { 0.f, 1.f, 0.0f }; // pure green
-		TriangleMesh.Mesh->Vertices[2].Normal	= { 0.f, 1.f, 0.0f }; // pure green
-		TriangleMesh.Mesh->Indices				= { 0, 1, 2 };
-
 		Asset::MeshMetadata MeshMetadata = {};
 		MeshMetadata.Path				 = ExecutableDirectory / "Assets/models/Sphere.obj";
 		SphereMesh.Mesh					 = MeshLoader.AsyncLoad(MeshMetadata);
 
-		UploadMesh(TriangleMesh);
 		UploadMesh(SphereMesh);
 
 		LoadImageFromPath("Assets/models/bedroom/textures/Teapot.tga");
 
-		TextureDescriptor		   = DescriptorHeap.AllocateDescriptorHandle(EDescriptorType::Texture);
+		TextureDescriptor = DescriptorPool->AllocateDescriptorHandle(EDescriptorType::Texture);
 
 		TextureDescriptor.Resource = Texture.Get();
-		DescriptorHeap.UpdateDescriptor(TextureDescriptor);
+		DescriptorPool->UpdateDescriptor(TextureDescriptor);
 	}
 
 	void InitScene()
@@ -466,10 +458,12 @@ private:
 		{
 			for (int y = -20; y <= 20; y++)
 			{
-				RenderObject tri;
-				tri.mesh	 = &TriangleMesh;
-				tri.material = get_material("Default");
-				XMStoreFloat4x4(&tri.transformMatrix, DirectX::XMMatrixTranslation(x, 0, y));
+				RenderObject tri = {};
+				tri.mesh		 = &SphereMesh;
+				tri.material	 = get_material("Default");
+				XMStoreFloat4x4(
+					&tri.transformMatrix,
+					DirectX::XMMatrixTranslation(float(x) * 2.5f, 0, float(y) * 2.5f));
 
 				_renderables.push_back(tri);
 			}
@@ -667,17 +661,17 @@ private:
 
 	VkShaderModule VS, PS;
 
-	VulkanDescriptorPool DescriptorHeap{ &Device };
-	RefPtr<IRHIBuffer>	 SceneConstants;
-	RefPtr<IRHITexture>	 Texture;
-	DescriptorHandle	 TextureDescriptor;
-
-	VulkanRootSignature RootSignature;
-	VulkanPipelineState MeshPipeline;
-	VulkanMesh			TriangleMesh;
-	VulkanMesh			SphereMesh;
+	RefPtr<IRHIDescriptorTable> DescriptorTable;
+	RefPtr<IRHIDescriptorPool>	DescriptorPool;
+	RefPtr<IRHIRootSignature>	RootSignature;
+	VulkanPipelineState			MeshPipeline;
+	VulkanMesh					SphereMesh;
 
 	RefPtr<IRHITexture> DepthBuffer;
+
+	RefPtr<IRHIBuffer>	SceneConstants;
+	RefPtr<IRHITexture> Texture;
+	DescriptorHandle	TextureDescriptor;
 
 	World			 World;
 	AsyncMeshLoader	 MeshLoader;
@@ -745,11 +739,11 @@ private:
 			{
 				vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, object.material->PipelineState);
 
-				VkDescriptorSet DescriptorSets[] = { DescriptorHeap.GetDescriptorSet() };
+				VkDescriptorSet DescriptorSets[] = { DescriptorPool->As<VulkanDescriptorPool>()->GetDescriptorSet() };
 				vkCmdBindDescriptorSets(
 					cmd,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					*object.material->RootSignature,
+					object.material->RootSignature->GetApiHandle(),
 					0,
 					1,
 					DescriptorSets,
@@ -765,7 +759,7 @@ private:
 			// upload the mesh to the GPU via push constants
 			vkCmdPushConstants(
 				cmd,
-				*object.material->RootSignature,
+				object.material->RootSignature->GetApiHandle(),
 				VK_SHADER_STAGE_ALL,
 				0,
 				sizeof(MeshPushConstants),

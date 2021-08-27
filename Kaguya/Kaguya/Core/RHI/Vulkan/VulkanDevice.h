@@ -1,43 +1,37 @@
 #pragma once
 #include <Core/RHI/RHICommon.h>
 #include <Core/RHI/RHIDevice.h>
-#include <Core/RHI/RHIResourceManager.h>
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
 #include "VulkanDescriptorHeap.h"
+#include "VulkanRootSignature.h"
 
 class VulkanRenderPass final : public IRHIRenderPass
 {
 public:
 	VulkanRenderPass() noexcept = default;
 	VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& Desc);
-	~VulkanRenderPass();
-
-	auto GetParentDevice() const noexcept -> VulkanDevice*;
-
-	VulkanRenderPass(VulkanRenderPass&& VulkanRenderPass)
-		: IRHIRenderPass(std::exchange(VulkanRenderPass.Parent, {}))
-		, RenderPass(std::exchange(VulkanRenderPass.RenderPass, {}))
-	{
-	}
-	VulkanRenderPass& operator=(VulkanRenderPass&& VulkanRenderPass)
-	{
-		if (this != &VulkanRenderPass)
-		{
-			Parent	   = std::exchange(VulkanRenderPass.Parent, {});
-			RenderPass = std::exchange(VulkanRenderPass.RenderPass, {});
-		}
-		return *this;
-	}
-
-	NONCOPYABLE(VulkanRenderPass);
+	~VulkanRenderPass() override;
 
 	[[nodiscard]] VkRenderPass GetApiHandle() const noexcept { return RenderPass; }
 
 private:
 	VkRenderPass		  RenderPass		  = VK_NULL_HANDLE;
 	VkRenderPassBeginInfo RenderPassBeginInfo = {};
+};
+
+class VulkanDescriptorTable final : public IRHIDescriptorTable
+{
+public:
+	VulkanDescriptorTable() noexcept = default;
+	VulkanDescriptorTable(VulkanDevice* Parent, const DescriptorTableDesc& Desc);
+	~VulkanDescriptorTable() override;
+
+	[[nodiscard]] VkDescriptorSetLayout GetApiHandle() const noexcept { return DescriptorSetLayout; }
+
+private:
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
 };
 
 class VulkanDevice final : public IRHIDevice
@@ -65,7 +59,10 @@ public:
 	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanTexture>& { return TexturePool; }
 	// clang-format on
 
-	[[nodiscard]] RefPtr<IRHIRenderPass> CreateRenderPass(const RenderPassDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIDescriptorPool>  CreateDescriptorPool(const DescriptorPoolDesc& Desc) override;
 
 	[[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
@@ -152,7 +149,10 @@ private:
 	VulkanCommandQueue GraphicsQueue;
 	VulkanCommandQueue CopyQueue;
 
-	TPool<VulkanRenderPass> RenderPassPool;
-	TPool<VulkanBuffer>		BufferPool;
-	TPool<VulkanTexture>	TexturePool;
+	TPool<VulkanRenderPass>		 RenderPassPool;
+	TPool<VulkanDescriptorTable> DescriptorTablePool;
+	TPool<VulkanRootSignature>	 RootSignaturePool;
+	TPool<VulkanDescriptorPool>	 DescriptorPoolAllocator;
+	TPool<VulkanBuffer>			 BufferPool;
+	TPool<VulkanTexture>		 TexturePool;
 };

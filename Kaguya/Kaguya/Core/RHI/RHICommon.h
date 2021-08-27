@@ -1,8 +1,7 @@
 #pragma once
 
-class IRHIView;
-class IRHIRenderTargetView;
-class IRHIDepthStencilView;
+class IRHIResource;
+class IRHIDescriptorTable;
 
 struct DeviceOptions
 {
@@ -86,6 +85,69 @@ enum class ERHIFormat
 	BC7_UNORM_SRGB,
 
 	COUNT,
+};
+
+enum class EDescriptorType
+{
+	ConstantBuffer,
+	Texture,
+	RWTexture,
+	Sampler,
+
+	NumDescriptorTypes
+};
+
+struct DescriptorHandle
+{
+	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
+
+	IRHIResource* Resource = nullptr;
+
+	EDescriptorType Type;
+	UINT			Index = UINT_MAX;
+};
+
+struct DescriptorRange
+{
+	EDescriptorType Type;
+	UINT			NumDescriptors;
+	UINT			Binding;
+};
+
+struct DescriptorTableDesc
+{
+	void AddDescriptorRange(const DescriptorRange& Range) { Ranges.emplace_back(Range); }
+
+	std::vector<DescriptorRange> Ranges;
+};
+
+struct PushConstant
+{
+	UINT Size;
+};
+
+struct RootSignatureDesc
+{
+	template<typename T>
+	void AddPushConstant()
+	{
+		PushConstant& PushConstant = PushConstants.emplace_back();
+		PushConstant.Size		   = sizeof(T);
+	}
+
+	UINT					  NumDescriptorTables = 0;
+	IRHIDescriptorTable*	  DescriptorTables[32];
+	std::vector<PushConstant> PushConstants;
+};
+
+struct DescriptorPoolDesc
+{
+	UINT NumConstantBufferDescriptors;
+	UINT NumShaderResourceDescriptors;
+	UINT NumUnorderedAccessDescriptors;
+	UINT NumSamplers;
+
+	IRHIDescriptorTable* DescriptorTable;
 };
 
 enum class EResourceStates

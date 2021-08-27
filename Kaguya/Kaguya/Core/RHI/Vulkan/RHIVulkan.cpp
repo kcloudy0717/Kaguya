@@ -6,7 +6,7 @@ struct VulkanFormatMapping
 	VkFormat   VulkanFormat;
 };
 
-static const std::array<VulkanFormatMapping, size_t(ERHIFormat::COUNT)> c_FormatMap = { {
+static constexpr std::array<VulkanFormatMapping, size_t(ERHIFormat::COUNT)> FormatTable = { {
 	{ ERHIFormat::UNKNOWN, VK_FORMAT_UNDEFINED },
 	{ ERHIFormat::R8_UINT, VK_FORMAT_R8_UINT },
 	{ ERHIFormat::R8_SINT, VK_FORMAT_R8_SINT },
@@ -80,6 +80,6 @@ static const std::array<VulkanFormatMapping, size_t(ERHIFormat::COUNT)> c_Format
 VkFormat ToVkFormat(ERHIFormat RHIFormat)
 {
 	assert(RHIFormat < ERHIFormat::COUNT);
-	assert(c_FormatMap[uint32_t(RHIFormat)].RHIFormat == RHIFormat);
-	return c_FormatMap[uint32_t(RHIFormat)].VulkanFormat;
+	assert(FormatTable[uint32_t(RHIFormat)].RHIFormat == RHIFormat);
+	return FormatTable[uint32_t(RHIFormat)].VulkanFormat;
 }

@@ -1,26 +1,8 @@
 #include "VulkanDescriptorHeap.h"
 
-VkDescriptorType ToVkDescriptorType(EDescriptorType DescriptorType)
-{
-	switch (DescriptorType)
-	{
-	case EDescriptorType::ConstantBuffer:
-		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	case EDescriptorType::Texture:
-		return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case EDescriptorType::RWTexture:
-		return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	case EDescriptorType::Sampler:
-		return VK_DESCRIPTOR_TYPE_SAMPLER;
-	default:
-		break;
-	}
-	return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-}
-
 auto VulkanDescriptorPool::AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle
 {
-	const UINT Index = DescriptorHeap.Allocate(static_cast<size_t>(DescriptorType));
+	const UINT Index = IndexPoolArray[static_cast<size_t>(DescriptorType)].Allocate();
 
 	return { .Resource = nullptr, .Type = DescriptorType, .Index = Index };
 }
@@ -98,53 +80,47 @@ void VulkanDescriptorPool::UpdateDescriptor(const DescriptorHandle& Handle) cons
 	vkUpdateDescriptorSets(Parent->As<VulkanDevice>()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
 }
 
+VulkanDescriptorPool::VulkanDescriptorPool(IRHIDevice* Parent, const DescriptorPoolDesc& Desc)
+	: IRHIDescriptorPool(Parent)
+{
+	VkDescriptorPoolSize PoolSizes[] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Desc.NumConstantBufferDescriptors },
+										 { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, Desc.NumShaderResourceDescriptors },
+										 { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, Desc.NumUnorderedAccessDescriptors },
+										 { VK_DESCRIPTOR_TYPE_SAMPLER, 1 } };
+
+	auto DescriptorPoolCreateInfo		   = VkStruct<VkDescriptorPoolCreateInfo>();
+	DescriptorPoolCreateInfo.flags		   = 0;
+	DescriptorPoolCreateInfo.maxSets	   = 1;
+	DescriptorPoolCreateInfo.poolSizeCount = 4;
+	DescriptorPoolCreateInfo.pPoolSizes	   = PoolSizes;
+	VERIFY_VULKAN_API(vkCreateDescriptorPool(
+		Parent->As<VulkanDevice>()->GetVkDevice(),
+		&DescriptorPoolCreateInfo,
+		nullptr,
+		&DescriptorPool));
+
+	const VkDescriptorSetLayout DescriptorSetLayouts[] = {
+		Desc.DescriptorTable->As<VulkanDescriptorTable>()->GetApiHandle()
+	};
+	auto DescriptorSetAllocateInfo				 = VkStruct<VkDescriptorSetAllocateInfo>();
+	DescriptorSetAllocateInfo.descriptorPool	 = this->GetApiHandle();
+	DescriptorSetAllocateInfo.descriptorSetCount = 1;
+	DescriptorSetAllocateInfo.pSetLayouts		 = DescriptorSetLayouts;
+	VERIFY_VULKAN_API(vkAllocateDescriptorSets(
+		Parent->As<VulkanDevice>()->GetVkDevice(),
+		&DescriptorSetAllocateInfo,
+		&DescriptorSet));
+
+	IndexPoolArray[0] = IndexPool(Desc.NumConstantBufferDescriptors);
+	IndexPoolArray[1] = IndexPool(Desc.NumConstantBufferDescriptors);
+	IndexPoolArray[2] = IndexPool(Desc.NumConstantBufferDescriptors);
+	IndexPoolArray[3] = IndexPool(Desc.NumConstantBufferDescriptors);
+}
+
 VulkanDescriptorPool::~VulkanDescriptorPool()
 {
 	if (Parent && DescriptorPool)
 	{
 		vkDestroyDescriptorPool(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(DescriptorPool, {}), nullptr);
 	}
-}
-
-void VulkanDescriptorPool::Initialize(
-	std::vector<VkDescriptorPoolSize> PoolSizes,
-	VkDescriptorSetLayout			  DescriptorSetLayout)
-{
-	Desc			   = VkStruct<VkDescriptorPoolCreateInfo>();
-	Desc.flags		   = 0;
-	Desc.maxSets	   = 1;
-	Desc.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
-	Desc.pPoolSizes	   = PoolSizes.data();
-	VERIFY_VULKAN_API(
-		vkCreateDescriptorPool(Parent->As<VulkanDevice>()->GetVkDevice(), &Desc, nullptr, &DescriptorPool));
-
-	auto DescriptorSetAllocateInfo				 = VkStruct<VkDescriptorSetAllocateInfo>();
-	DescriptorSetAllocateInfo.descriptorPool	 = this->GetApiHandle();
-	DescriptorSetAllocateInfo.descriptorSetCount = 1;
-	DescriptorSetAllocateInfo.pSetLayouts		 = &DescriptorSetLayout;
-	VERIFY_VULKAN_API(vkAllocateDescriptorSets(
-		Parent->As<VulkanDevice>()->GetVkDevice(),
-		&DescriptorSetAllocateInfo,
-		&DescriptorSet));
-
-	DescriptorHeap.Initialize(PoolSizes);
-}
-
-void VulkanDescriptorHeap::Initialize(const std::vector<VkDescriptorPoolSize>& PoolSizes)
-{
-	IndexPools.resize(PoolSizes.size());
-	for (size_t i = 0; i < IndexPools.size(); ++i)
-	{
-		IndexPools[i] = IndexPool(PoolSizes[i].descriptorCount);
-	}
-}
-
-UINT VulkanDescriptorHeap::Allocate(size_t PoolIndex)
-{
-	return static_cast<UINT>(IndexPools[PoolIndex].Allocate());
-}
-
-void VulkanDescriptorHeap::Release(size_t PoolIndex, UINT Index)
-{
-	IndexPools[PoolIndex].Release(static_cast<size_t>(Index));
 }

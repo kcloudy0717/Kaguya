@@ -1,38 +1,28 @@
 #include "VulkanRootSignature.h"
 
-VkPipelineLayoutCreateInfo VulkanRootSignatureBuilder::Build(VkDevice Device)
+VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatureDesc& Desc)
+	: IRHIRootSignature(Parent)
 {
-	DescriptorSetLayouts.resize(BindingLayouts.size());
-	for (size_t i = 0; i < BindingLayouts.size(); ++i)
+	std::vector<VkDescriptorSetLayout> Layouts(Desc.NumDescriptorTables);
+	std::vector<VkPushConstantRange>   PushConstantRanges;
+	PushConstantRanges.reserve(Desc.PushConstants.size());
+	for (UINT i = 0; i < Desc.NumDescriptorTables; ++i)
 	{
-		auto BindingFlagsInfo		   = VkStruct<VkDescriptorSetLayoutBindingFlagsCreateInfoEXT>();
-		BindingFlagsInfo.bindingCount  = static_cast<uint32_t>(BindingLayouts[i].BindingFlags.size());
-		BindingFlagsInfo.pBindingFlags = BindingLayouts[i].BindingFlags.data();
-
-		auto DescriptorSetLayoutDesc		 = VkStruct<VkDescriptorSetLayoutCreateInfo>();
-		DescriptorSetLayoutDesc.pNext		 = BindingLayouts[i].Bindless ? &BindingFlagsInfo : nullptr;
-		DescriptorSetLayoutDesc.flags		 = 0;
-		DescriptorSetLayoutDesc.bindingCount = static_cast<uint32_t>(BindingLayouts[i].Bindings.size());
-		DescriptorSetLayoutDesc.pBindings	 = BindingLayouts[i].Bindings.data();
-
-		VERIFY_VULKAN_API(
-			vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutDesc, nullptr, &DescriptorSetLayouts[i]));
+		Layouts[i] = Desc.DescriptorTables[i]->As<VulkanDescriptorTable>()->GetApiHandle();
+	}
+	for (size_t i = 0; i < Desc.PushConstants.size(); ++i)
+	{
+		VkPushConstantRange& PushConstant = PushConstantRanges.emplace_back();
+		PushConstant.stageFlags			  = VK_SHADER_STAGE_ALL;
+		PushConstant.offset				  = 0;
+		PushConstant.size				  = Desc.PushConstants[i].Size;
 	}
 
 	auto PipelineLayoutCreateInfo					= VkStruct<VkPipelineLayoutCreateInfo>();
-	PipelineLayoutCreateInfo.setLayoutCount			= static_cast<uint32_t>(DescriptorSetLayouts.size());
-	PipelineLayoutCreateInfo.pSetLayouts			= DescriptorSetLayouts.data();
+	PipelineLayoutCreateInfo.setLayoutCount			= static_cast<uint32_t>(Layouts.size());
+	PipelineLayoutCreateInfo.pSetLayouts			= Layouts.data();
 	PipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32_t>(PushConstantRanges.size());
 	PipelineLayoutCreateInfo.pPushConstantRanges	= PushConstantRanges.data();
-	return PipelineLayoutCreateInfo;
-}
-
-VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, VulkanRootSignatureBuilder& Builder)
-	: VulkanDeviceChild(Parent)
-{
-	VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = Builder.Build(Parent->GetVkDevice());
-
-	DescriptorSetLayouts = Builder.DescriptorSetLayouts;
 
 	VERIFY_VULKAN_API(
 		vkCreatePipelineLayout(Parent->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
@@ -42,10 +32,6 @@ VulkanRootSignature::~VulkanRootSignature()
 {
 	if (Parent && PipelineLayout)
 	{
-		for (auto& DescriptorLayout : DescriptorSetLayouts)
-		{
-			vkDestroyDescriptorSetLayout(Parent->GetVkDevice(), std::exchange(DescriptorLayout, {}), nullptr);
-		}
-		vkDestroyPipelineLayout(Parent->GetVkDevice(), std::exchange(PipelineLayout, {}), nullptr);
+		vkDestroyPipelineLayout(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(PipelineLayout, {}), nullptr);
 	}
 }

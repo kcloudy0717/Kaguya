@@ -27,8 +27,12 @@ struct UniformSceneConstants
 };
 [[vk::binding(0, 0)]] ConstantBuffer<UniformSceneConstants> SceneConstants : register(b0);
 
-[[vk::binding(1, 0)]] Texture2D			  Texture2DTable[] : register(t0, space100);
+[[vk::binding(1, 0)]] Texture2D			Texture2DTable[] : register(t0, space100);
+[[vk::binding(1, 0)]] Texture2D<float4> Texture2D_float4_Table[] : register(t0, space101);
+
 [[vk::binding(2, 0)]] RWTexture2D<float4> RWTexture2DTable[] : register(u0, space101);
+
+[[vk::binding(3, 0)]] SamplerState Sampler : register(s0, space102);
 
 VSOutput main(Vertex Vertex)
 {

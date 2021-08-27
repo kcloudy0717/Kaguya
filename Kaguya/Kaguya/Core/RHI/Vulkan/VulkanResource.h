@@ -45,39 +45,6 @@ private:
 	VkBuffer				Buffer		   = VK_NULL_HANDLE;
 };
 
-inline VkImageCreateInfo ImageCreateInfo(VkFormat format, VkImageUsageFlags usageFlags, VkExtent3D extent)
-{
-	auto info	   = VkStruct<VkImageCreateInfo>();
-	info.imageType = VK_IMAGE_TYPE_2D;
-
-	info.format = format;
-	info.extent = extent;
-
-	info.mipLevels	 = 1;
-	info.arrayLayers = 1;
-	info.samples	 = VK_SAMPLE_COUNT_1_BIT;
-	info.tiling		 = VK_IMAGE_TILING_OPTIMAL;
-	info.usage		 = usageFlags;
-
-	return info;
-}
-
-inline VkImageViewCreateInfo ImageViewCreateInfo(VkFormat format, VkImage image, VkImageAspectFlags aspectFlags)
-{
-	// build a image-view for the depth image to use for rendering
-	auto info							 = VkStruct<VkImageViewCreateInfo>();
-	info.viewType						 = VK_IMAGE_VIEW_TYPE_2D;
-	info.image							 = image;
-	info.format							 = format;
-	info.subresourceRange.baseMipLevel	 = 0;
-	info.subresourceRange.levelCount	 = 1;
-	info.subresourceRange.baseArrayLayer = 0;
-	info.subresourceRange.layerCount	 = 1;
-	info.subresourceRange.aspectMask	 = aspectFlags;
-
-	return info;
-}
-
 class VulkanTexture final : public IRHITexture
 {
 public:
@@ -93,6 +60,7 @@ public:
 		, Allocation(std::exchange(VulkanTexture.Allocation, {}))
 		, Desc(std::exchange(VulkanTexture.Desc, {}))
 		, Texture(std::exchange(VulkanTexture.Texture, {}))
+		, ImageView(std::exchange(VulkanTexture.ImageView, {}))
 	{
 	}
 	VulkanTexture& operator=(VulkanTexture&& VulkanTexture) noexcept
@@ -104,6 +72,7 @@ public:
 			Allocation	   = std::exchange(VulkanTexture.Allocation, {});
 			Desc		   = std::exchange(VulkanTexture.Desc, {});
 			Texture		   = std::exchange(VulkanTexture.Texture, {});
+			ImageView	   = std::exchange(VulkanTexture.ImageView, {});
 		}
 		return *this;
 	}

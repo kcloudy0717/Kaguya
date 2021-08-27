@@ -108,6 +108,21 @@ RefPtr<IRHIRenderPass> VulkanDevice::CreateRenderPass(const RenderPassDesc& Desc
 	return RefPtr<IRHIRenderPass>::Create(RenderPassPool.Construct(this, Desc));
 }
 
+RefPtr<IRHIDescriptorTable> VulkanDevice::CreateDescriptorTable(const DescriptorTableDesc& Desc)
+{
+	return RefPtr<IRHIDescriptorTable>::Create(DescriptorTablePool.Construct(this, Desc));
+}
+
+RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureDesc& Desc)
+{
+	return RefPtr<IRHIRootSignature>::Create(RootSignaturePool.Construct(this, Desc));
+}
+
+RefPtr<IRHIDescriptorPool> VulkanDevice::CreateDescriptorPool(const DescriptorPoolDesc& Desc)
+{
+	return RefPtr<IRHIDescriptorPool>::Create(DescriptorPoolAllocator.Construct(this, Desc));
+}
+
 RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
 {
 	auto					BufferCreateInfo	 = VkStruct<VkBufferCreateInfo>();
@@ -151,24 +166,6 @@ RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
 	return RefPtr<IRHIBuffer>::Create(BufferPool.Construct(this, BufferCreateInfo, AllocationCreateInfo));
 }
 
-VkImageType ToVkImageType(ERHITextureType RHITextureType)
-{
-	switch (RHITextureType)
-	{
-	case ERHITextureType::Texture2D:
-	case ERHITextureType::Texture2DArray:
-	case ERHITextureType::TextureCube:
-		return VK_IMAGE_TYPE_2D;
-
-	case ERHITextureType::Texture3D:
-		return VK_IMAGE_TYPE_3D;
-
-	case ERHITextureType::Unknown:
-	default:
-		return VK_IMAGE_TYPE_MAX_ENUM;
-	}
-}
-
 RefPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
 {
 	auto					ImageCreateInfo		 = VkStruct<VkImageCreateInfo>();
@@ -208,7 +205,10 @@ RefPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
 VulkanDevice::VulkanDevice()
 	: GraphicsQueue(this)
 	, CopyQueue(this)
-	, RenderPassPool(1024)
+	, RenderPassPool(64)
+	, DescriptorTablePool(64)
+	, RootSignaturePool(64)
+	, DescriptorPoolAllocator(64)
 	, BufferPool(2048)
 	, TexturePool(2048)
 {
@@ -251,7 +251,6 @@ void VulkanDevice::Initialize(const DeviceOptions& Options)
 	DebugUtilsMessengerCreateInfo.pfnUserCallback = MessageCallback;
 
 	auto ApplicationInfo			   = VkStruct<VkApplicationInfo>();
-	ApplicationInfo.pNext			   = nullptr;
 	ApplicationInfo.pApplicationName   = "Vulkan Engine";
 	ApplicationInfo.applicationVersion = 0;
 	ApplicationInfo.pEngineName		   = nullptr;
@@ -494,18 +493,55 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 	RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
 
 	VERIFY_VULKAN_API(
-		vkCreateRenderPass(GetParentDevice()->GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
+		vkCreateRenderPass(Parent->As<VulkanDevice>()->GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
 }
 
 VulkanRenderPass::~VulkanRenderPass()
 {
 	if (Parent && RenderPass)
 	{
-		vkDestroyRenderPass(GetParentDevice()->GetVkDevice(), RenderPass, nullptr);
+		vkDestroyRenderPass(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(RenderPass, {}), nullptr);
 	}
 }
 
-auto VulkanRenderPass::GetParentDevice() const noexcept -> VulkanDevice*
+VulkanDescriptorTable::VulkanDescriptorTable(VulkanDevice* Parent, const DescriptorTableDesc& Desc)
+	: IRHIDescriptorTable(Parent)
 {
-	return static_cast<VulkanDevice*>(Parent);
+	std::vector<VkDescriptorSetLayoutBinding> Bindings;
+	std::vector<VkDescriptorBindingFlagsEXT>  BindingFlags;
+
+	for (auto [Type, NumDescriptors, Binding] : Desc.Ranges)
+	{
+		VkDescriptorSetLayoutBinding& VkBinding = Bindings.emplace_back();
+		VkBinding.binding						= Binding;
+		VkBinding.descriptorType				= ToVkDescriptorType(Type);
+		VkBinding.descriptorCount				= NumDescriptors;
+		VkBinding.stageFlags					= VK_SHADER_STAGE_ALL;
+		BindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
+	}
+
+	auto BindingFlagsInfo				 = VkStruct<VkDescriptorSetLayoutBindingFlagsCreateInfoEXT>();
+	BindingFlagsInfo.bindingCount		 = static_cast<uint32_t>(BindingFlags.size());
+	BindingFlagsInfo.pBindingFlags		 = BindingFlags.data();
+	auto DescriptorSetLayoutDesc		 = VkStruct<VkDescriptorSetLayoutCreateInfo>();
+	DescriptorSetLayoutDesc.pNext		 = &BindingFlagsInfo;
+	DescriptorSetLayoutDesc.flags		 = 0;
+	DescriptorSetLayoutDesc.bindingCount = static_cast<uint32_t>(Bindings.size());
+	DescriptorSetLayoutDesc.pBindings	 = Bindings.data();
+	VERIFY_VULKAN_API(vkCreateDescriptorSetLayout(
+		Parent->As<VulkanDevice>()->GetVkDevice(),
+		&DescriptorSetLayoutDesc,
+		nullptr,
+		&DescriptorSetLayout));
+}
+
+VulkanDescriptorTable::~VulkanDescriptorTable()
+{
+	if (Parent && DescriptorSetLayout)
+	{
+		vkDestroyDescriptorSetLayout(
+			Parent->As<VulkanDevice>()->GetVkDevice(),
+			std::exchange(DescriptorSetLayout, {}),
+			nullptr);
+	}
 }

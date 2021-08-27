@@ -114,7 +114,6 @@ template<>				inline [[nodiscard]] auto VkStruct() -> VkWin32SurfaceCreateInfoKH
 
 
 template<>				inline [[nodiscard]] auto VkStruct() -> VkDebugUtilsMessengerCreateInfoEXT				{ return { .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT }; }
-
 // clang-format on
 
 struct QueueFamilyIndices
@@ -147,7 +146,7 @@ private:
 	VkPipelineVertexInputStateCreateFlags		   StateCreateFlags = 0;
 };
 
-inline VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)
+constexpr VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)
 {
 	switch (LoadOp)
 	{
@@ -161,7 +160,7 @@ inline VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)
 	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 }
 
-inline VkAttachmentStoreOp ToVkStoreOp(EStoreOp StoreOp)
+constexpr VkAttachmentStoreOp ToVkStoreOp(EStoreOp StoreOp)
 {
 	switch (StoreOp)
 	{

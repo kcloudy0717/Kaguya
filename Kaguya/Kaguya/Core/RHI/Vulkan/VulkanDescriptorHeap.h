@@ -1,14 +1,20 @@
 #pragma once
 #include "VulkanCommon.h"
 
-class VulkanDescriptorHeap
+class VulkanDescriptorPool final : public IRHIDescriptorPool
 {
 public:
-	void Initialize(const std::vector<VkDescriptorPoolSize>& PoolSizes);
+	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle override;
 
-	UINT Allocate(size_t PoolIndex);
+	void UpdateDescriptor(const DescriptorHandle& Handle) const override;
 
-	void Release(size_t PoolIndex, UINT Index);
+public:
+	VulkanDescriptorPool() noexcept = default;
+	explicit VulkanDescriptorPool(IRHIDevice* Parent, const DescriptorPoolDesc& Desc);
+	~VulkanDescriptorPool() override;
+
+	[[nodiscard]] auto GetApiHandle() const noexcept -> VkDescriptorPool { return DescriptorPool; }
+	[[nodiscard]] auto GetDescriptorSet() const noexcept -> VkDescriptorSet { return DescriptorSet; }
 
 private:
 	struct IndexPool
@@ -57,32 +63,8 @@ private:
 	};
 
 private:
-	std::vector<IndexPool> IndexPools;
-};
+	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	VkDescriptorSet	 DescriptorSet	= VK_NULL_HANDLE;
 
-class VulkanDescriptorPool final : public IRHIDescriptorPool
-{
-public:
-	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle override;
-
-	void UpdateDescriptor(const DescriptorHandle& Handle) const;
-
-public:
-	explicit VulkanDescriptorPool(IRHIDevice* Parent) noexcept
-		: IRHIDescriptorPool(Parent)
-	{
-	}
-	~VulkanDescriptorPool() override;
-
-	[[nodiscard]] auto GetApiHandle() const noexcept -> VkDescriptorPool { return DescriptorPool; }
-	[[nodiscard]] auto GetDescriptorSet() const noexcept -> VkDescriptorSet { return DescriptorSet; }
-
-	void Initialize(std::vector<VkDescriptorPoolSize> PoolSizes, VkDescriptorSetLayout DescriptorSetLayout);
-
-private:
-	VkDescriptorPoolCreateInfo Desc			  = {};
-	VkDescriptorPool		   DescriptorPool = VK_NULL_HANDLE;
-	VkDescriptorSet			   DescriptorSet  = VK_NULL_HANDLE;
-
-	VulkanDescriptorHeap DescriptorHeap;
+	IndexPool IndexPoolArray[static_cast<size_t>(EDescriptorType::NumDescriptorTypes)];
 };
