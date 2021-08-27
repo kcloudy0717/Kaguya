@@ -2,6 +2,7 @@
 
 VulkanSwapChain::~VulkanSwapChain()
 {
+	Backbuffers.clear();
 	for (auto ImageView : ImageViews)
 	{
 		vkDestroyImageView(Device, ImageView, nullptr);
@@ -107,6 +108,13 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 		ImageViewCreateInfo.subresourceRange.layerCount		= 1;
 
 		VERIFY_VULKAN_API(vkCreateImageView(Device->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViews[i]))
+	}
+
+	Backbuffers.resize(ImageCount);
+	for (uint32_t i = 0; i < ImageCount; ++i)
+	{
+		Backbuffers[i].Texture = Images[i];
+		Backbuffers[i].ImageView = ImageViews[i];
 	}
 }
 

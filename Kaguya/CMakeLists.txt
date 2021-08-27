@@ -159,8 +159,8 @@ set(PhysX_SDK
 include_directories("${DEPOFFLINEDIR}/PhysX-4.0.1/include")
 target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 
-include_directories("${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/Include/WinPixEventRuntime")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.lib)
+include_directories("${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
+target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
 # Linking
 include_directories(Vulkan::Headers)
@@ -178,7 +178,7 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
 	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
 
-	${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.dll
+	${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
 
 	${CMAKE_SOURCE_DIR}/imgui.ini
 

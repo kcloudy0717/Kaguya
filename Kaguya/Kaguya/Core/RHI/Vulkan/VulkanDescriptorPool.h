@@ -4,17 +4,16 @@
 class VulkanDescriptorPool final : public IRHIDescriptorPool
 {
 public:
-	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle override;
-
-	void UpdateDescriptor(const DescriptorHandle& Handle) const override;
-
-public:
 	VulkanDescriptorPool() noexcept = default;
 	explicit VulkanDescriptorPool(IRHIDevice* Parent, const DescriptorPoolDesc& Desc);
 	~VulkanDescriptorPool() override;
 
 	[[nodiscard]] auto GetApiHandle() const noexcept -> VkDescriptorPool { return DescriptorPool; }
 	[[nodiscard]] auto GetDescriptorSet() const noexcept -> VkDescriptorSet { return DescriptorSet; }
+
+	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle override;
+
+	void UpdateDescriptor(const DescriptorHandle& Handle) const override;
 
 private:
 	struct IndexPool

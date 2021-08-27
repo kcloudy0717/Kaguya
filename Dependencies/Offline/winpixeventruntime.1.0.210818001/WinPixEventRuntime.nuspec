@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>WinPixEventRuntime</id>
-    <version>1.0.210209001</version>
+    <version>1.0.210818001</version>
     <title>WinPixEventRuntime</title>
     <authors>Microsoft</authors>
     <owners>pix,microsoft</owners>

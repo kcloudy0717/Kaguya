@@ -2,11 +2,11 @@
 #include "dxcapi.h"
 #include "d3d12shader.h"
 
-class DxcException : public CoreException
+class DxcException : public Exception
 {
 public:
 	DxcException(const char* File, int Line, HRESULT ErrorCode)
-		: CoreException(File, Line)
+		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}

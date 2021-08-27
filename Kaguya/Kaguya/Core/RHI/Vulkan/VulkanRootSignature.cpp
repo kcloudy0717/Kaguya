@@ -25,13 +25,13 @@ VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatu
 	PipelineLayoutCreateInfo.pPushConstantRanges	= PushConstantRanges.data();
 
 	VERIFY_VULKAN_API(
-		vkCreatePipelineLayout(Parent->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
+		vkCreatePipelineLayout(Parent->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &Handle));
 }
 
 VulkanRootSignature::~VulkanRootSignature()
 {
-	if (Parent && PipelineLayout)
+	if (Parent && Handle)
 	{
-		vkDestroyPipelineLayout(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(PipelineLayout, {}), nullptr);
+		vkDestroyPipelineLayout(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(Handle, {}), nullptr);
 	}
 }

@@ -3,7 +3,7 @@
   <dc:creator>Microsoft</dc:creator>
   <dc:description>Allows applications to be instrumented with marker events, for use with Microsoft PIX.</dc:description>
   <dc:identifier>WinPixEventRuntime</dc:identifier>
-  <version>1.0.210209001</version>
+  <version>1.0.210818001</version>
   <keywords>PIX Direct3D graphics 3D</keywords>
   <lastModifiedBy>NuGet, Version=5.4.0.3, Culture=neutral, PublicKeyToken=31bf3856ad364e35;Microsoft Windows NT 6.2.9200.0;.NET Framework 4.7.2</lastModifiedBy>
 </coreProperties>

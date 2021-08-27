@@ -107,8 +107,7 @@ void D3D12CommandQueue::WaitForFence(UINT64 FenceValue)
 
 void D3D12CommandQueue::Wait(D3D12CommandQueue* CommandQueue)
 {
-	UINT64 Value = CommandQueue->FenceValue - 1;
-	VERIFY_D3D12_API(CommandQueue->GetCommandQueue()->Wait(CommandQueue->Fence.Get(), Value));
+	WaitForSyncPoint(CommandQueue->SyncPoint);
 }
 
 void D3D12CommandQueue::WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
@@ -146,7 +145,6 @@ void D3D12CommandQueue::ExecuteCommandLists(
 	D3D12CommandListHandle* CommandListHandles,
 	bool					WaitForCompletion)
 {
-	D3D12CommandSyncPoint  SyncPoint;
 	CommandListBatch	   Batch;
 	D3D12CommandListHandle BarrierCommandList[64];
 	UINT				   NumBarrierCommandList = 0;
@@ -156,8 +154,7 @@ void D3D12CommandQueue::ExecuteCommandLists(
 		D3D12CommandListHandle& hCmdList = CommandListHandles[i];
 		D3D12CommandListHandle	hBarrierCmdList;
 
-		bool Resolved = ResolveResourceBarrierCommandList(hCmdList, hBarrierCmdList);
-		if (Resolved)
+		if (ResolveResourceBarrierCommandList(hCmdList, hBarrierCmdList))
 		{
 			BarrierCommandList[NumBarrierCommandList++] = hBarrierCmdList;
 

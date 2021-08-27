@@ -29,7 +29,7 @@ struct ShaderIdentifier
 	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
 };
 
-inline DXGI_FORMAT GetValidDepthStencilViewFormat(DXGI_FORMAT Format)
+constexpr DXGI_FORMAT GetValidDepthStencilViewFormat(DXGI_FORMAT Format)
 {
 	// TODO: Add more
 	switch (Format)
@@ -41,7 +41,7 @@ inline DXGI_FORMAT GetValidDepthStencilViewFormat(DXGI_FORMAT Format)
 	};
 }
 
-inline DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
+constexpr DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
 {
 	// TODO: Add more
 	switch (Format)
@@ -62,14 +62,6 @@ public:
 		DXGI_FORMAT		 Format,
 		UINT			 InputSlot,
 		UINT			 AlignedByteOffset);
-
-	void AddInstanceLayoutElement(
-		std::string_view SemanticName,
-		UINT			 SemanticIndex,
-		DXGI_FORMAT		 Format,
-		UINT			 InputSlot,
-		UINT			 AlignedByteOffset,
-		UINT			 InstanceDataStepRate);
 
 	operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
 

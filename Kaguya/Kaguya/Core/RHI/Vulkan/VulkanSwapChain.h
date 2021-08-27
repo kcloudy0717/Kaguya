@@ -56,11 +56,12 @@ private:
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
 	std::vector<VkPresentModeKHR>	PresentModes;
 
-	VkSwapchainKHR			 VkSwapchain = VK_NULL_HANDLE;
-	VkFormat				 Format		 = VK_FORMAT_UNDEFINED;
-	VkExtent2D				 Extent		 = { 0, 0 };
-	std::vector<VkImage>	 Images;
-	std::vector<VkImageView> ImageViews;
+	VkSwapchainKHR			   VkSwapchain = VK_NULL_HANDLE;
+	VkFormat				   Format	   = VK_FORMAT_UNDEFINED;
+	VkExtent2D				   Extent	   = { 0, 0 };
+	std::vector<VulkanTexture> Backbuffers;
+	std::vector<VkImage>	   Images;
+	std::vector<VkImageView>   ImageViews;
 
 	VulkanCommandQueue* PresentQueue = nullptr;
 	uint32_t			CurrentImageIndex;

@@ -9,6 +9,7 @@ class D3D12CommandQueue;
 class D3D12CommandAllocator
 {
 public:
+	D3D12CommandAllocator() noexcept = default;
 	D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND_LIST_TYPE Type);
 
 	operator ID3D12CommandAllocator*() { return CommandAllocator.Get(); }

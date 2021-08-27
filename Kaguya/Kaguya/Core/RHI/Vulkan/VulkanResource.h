@@ -8,8 +8,6 @@ public:
 	VulkanBuffer(VulkanDevice* Parent, VkBufferCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
 	~VulkanBuffer() override;
 
-	auto GetVulkanDevice() const noexcept -> VulkanDevice*;
-
 	VulkanBuffer(VulkanBuffer&& VulkanBuffer)
 		: IRHIBuffer(std::exchange(VulkanBuffer.Parent, {}))
 		, AllocationDesc(std::exchange(VulkanBuffer.AllocationDesc, {}))
@@ -38,7 +36,6 @@ public:
 
 	void Upload(std::function<void(void* CPUVirtualAddress)> Function);
 
-private:
 	VmaAllocationCreateInfo AllocationDesc = {};
 	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
 	VkBufferCreateInfo		Desc		   = {};
@@ -51,8 +48,6 @@ public:
 	VulkanTexture() noexcept = default;
 	VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc);
 	~VulkanTexture() override;
-
-	auto GetVulkanDevice() const noexcept -> VulkanDevice*;
 
 	VulkanTexture(VulkanTexture&& VulkanTexture) noexcept
 		: IRHITexture(std::exchange(VulkanTexture.Parent, {}))
@@ -83,7 +78,6 @@ public:
 	VkImage			  GetApiHandle() const noexcept { return Texture; }
 	VkImageView		  GetImageView() const noexcept { return ImageView; }
 
-private:
 	VmaAllocationCreateInfo AllocationDesc = {};
 	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
 	VkImageCreateInfo		Desc		   = {};

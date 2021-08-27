@@ -110,6 +110,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence>		   Fence;
 	CriticalSection							   FenceMutex;
 	UINT64									   FenceValue = 1;
+	D3D12CommandSyncPoint					   SyncPoint;
 
 	// Command allocators used exclusively for resolving resource barriers
 	D3D12CommandAllocatorPool ResourceBarrierCommandAllocatorPool;

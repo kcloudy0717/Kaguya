@@ -12,9 +12,9 @@ LPCWSTR GetCommandQueueTypeString(ED3D12CommandQueueType CommandQueueType)
 		return L"Copy 1";
 	case ED3D12CommandQueueType::Copy2:
 		return L"Copy 2";
+	default:
+		return nullptr;
 	}
-
-	return nullptr;
 }
 
 LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType)
@@ -29,9 +29,9 @@ LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType)
 		return L"Copy 1 Fence";
 	case ED3D12CommandQueueType::Copy2:
 		return L"Copy 2 Fence";
+	default:
+		return nullptr;
 	}
-
-	return nullptr;
 }
 
 const char* D3D12Exception::GetErrorType() const noexcept
@@ -41,7 +41,7 @@ const char* D3D12Exception::GetErrorType() const noexcept
 
 std::string D3D12Exception::GetError() const
 {
-#define DXCERR(x)                                                                                                       \
+#define DXERR(x)                                                                                                       \
 	case x:                                                                                                            \
 		Error = #x;                                                                                                    \
 		break
@@ -50,41 +50,41 @@ std::string D3D12Exception::GetError() const
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/d3d12-graphics-reference-returnvalues
 	switch (ErrorCode)
 	{
-		DXCERR(D3D12_ERROR_ADAPTER_NOT_FOUND);
-		DXCERR(D3D12_ERROR_DRIVER_VERSION_MISMATCH);
-		DXCERR(DXGI_ERROR_INVALID_CALL);
-		DXCERR(DXGI_ERROR_WAS_STILL_DRAWING);
-		DXCERR(E_FAIL);
-		DXCERR(E_INVALIDARG);
-		DXCERR(E_OUTOFMEMORY);
-		DXCERR(E_NOTIMPL);
-		DXCERR(E_NOINTERFACE);
+		DXERR(D3D12_ERROR_ADAPTER_NOT_FOUND);
+		DXERR(D3D12_ERROR_DRIVER_VERSION_MISMATCH);
+		DXERR(DXGI_ERROR_INVALID_CALL);
+		DXERR(DXGI_ERROR_WAS_STILL_DRAWING);
+		DXERR(E_FAIL);
+		DXERR(E_INVALIDARG);
+		DXERR(E_OUTOFMEMORY);
+		DXERR(E_NOTIMPL);
+		DXERR(E_NOINTERFACE);
 
 		// This just follows the documentation
 		// DXGI
-		DXCERR(DXGI_ERROR_ACCESS_DENIED);
-		DXCERR(DXGI_ERROR_ACCESS_LOST);
-		DXCERR(DXGI_ERROR_ALREADY_EXISTS);
-		DXCERR(DXGI_ERROR_CANNOT_PROTECT_CONTENT);
-		DXCERR(DXGI_ERROR_DEVICE_HUNG);
-		DXCERR(DXGI_ERROR_DEVICE_REMOVED);
-		DXCERR(DXGI_ERROR_DEVICE_RESET);
-		DXCERR(DXGI_ERROR_DRIVER_INTERNAL_ERROR);
-		DXCERR(DXGI_ERROR_FRAME_STATISTICS_DISJOINT);
-		DXCERR(DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE);
+		DXERR(DXGI_ERROR_ACCESS_DENIED);
+		DXERR(DXGI_ERROR_ACCESS_LOST);
+		DXERR(DXGI_ERROR_ALREADY_EXISTS);
+		DXERR(DXGI_ERROR_CANNOT_PROTECT_CONTENT);
+		DXERR(DXGI_ERROR_DEVICE_HUNG);
+		DXERR(DXGI_ERROR_DEVICE_REMOVED);
+		DXERR(DXGI_ERROR_DEVICE_RESET);
+		DXERR(DXGI_ERROR_DRIVER_INTERNAL_ERROR);
+		DXERR(DXGI_ERROR_FRAME_STATISTICS_DISJOINT);
+		DXERR(DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE);
 		// DXERR(DXGI_ERROR_INVALID_CALL); // Already defined
-		DXCERR(DXGI_ERROR_MORE_DATA);
-		DXCERR(DXGI_ERROR_NAME_ALREADY_EXISTS);
-		DXCERR(DXGI_ERROR_NONEXCLUSIVE);
-		DXCERR(DXGI_ERROR_NOT_CURRENTLY_AVAILABLE);
-		DXCERR(DXGI_ERROR_NOT_FOUND);
+		DXERR(DXGI_ERROR_MORE_DATA);
+		DXERR(DXGI_ERROR_NAME_ALREADY_EXISTS);
+		DXERR(DXGI_ERROR_NONEXCLUSIVE);
+		DXERR(DXGI_ERROR_NOT_CURRENTLY_AVAILABLE);
+		DXERR(DXGI_ERROR_NOT_FOUND);
 		// DXERR(DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED); // Reserved
 		// DXERR(DXGI_ERROR_REMOTE_OUTOFMEMORY); // Reserved
-		DXCERR(DXGI_ERROR_RESTRICT_TO_OUTPUT_STALE);
-		DXCERR(DXGI_ERROR_SDK_COMPONENT_MISSING);
-		DXCERR(DXGI_ERROR_SESSION_DISCONNECTED);
-		DXCERR(DXGI_ERROR_UNSUPPORTED);
-		DXCERR(DXGI_ERROR_WAIT_TIMEOUT);
+		DXERR(DXGI_ERROR_RESTRICT_TO_OUTPUT_STALE);
+		DXERR(DXGI_ERROR_SDK_COMPONENT_MISSING);
+		DXERR(DXGI_ERROR_SESSION_DISCONNECTED);
+		DXERR(DXGI_ERROR_UNSUPPORTED);
+		DXERR(DXGI_ERROR_WAIT_TIMEOUT);
 		// DXERR(DXGI_ERROR_WAS_STILL_DRAWING); // Already defined
 	default:
 	{

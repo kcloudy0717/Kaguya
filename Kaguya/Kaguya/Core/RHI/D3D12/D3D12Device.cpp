@@ -112,10 +112,10 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Device.As(&Device5);
 	Device.As(&InfoQueue1);
 
-	D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-										   D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-										   D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-										   D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
+	constexpr D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
 	for (size_t i = 0; i < std::size(Types); ++i)
 	{
 		DescriptorHandleIncrementSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
@@ -246,8 +246,8 @@ D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(
 
 void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 {
-	ID3D12Device* D3D12Device	= static_cast<ID3D12Device*>(Context);
-	HRESULT		  RemovedReason = D3D12Device->GetDeviceRemovedReason();
+	auto	D3D12Device	  = static_cast<ID3D12Device*>(Context);
+	HRESULT RemovedReason = D3D12Device->GetDeviceRemovedReason();
 	if (FAILED(RemovedReason))
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedData> DRED;
@@ -259,6 +259,12 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 		// TODO: Log breadcrumbs and page fault, right now is not logged because im too lazy to implement it, i just
 		// used Watch window to see breadcrumbs and page fault lol..
+
+		for (const D3D12_AUTO_BREADCRUMB_NODE* Current = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+			 Current != nullptr;
+			 Current = Current->pNext)
+		{
+		}
 	}
 }
 
@@ -278,7 +284,7 @@ void D3D12Device::InitializeDXGIObjects(bool Debug)
 	{
 		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 		{
-			Adapter4 = pAdapter4;
+			Adapter4 = std::move(pAdapter4);
 			break;
 		}
 

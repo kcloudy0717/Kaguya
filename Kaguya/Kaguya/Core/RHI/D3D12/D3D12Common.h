@@ -36,18 +36,16 @@ enum class ED3D12CommandQueueType
 
 	Copy1, // High frequency copies from upload to default heap
 	Copy2, // Data initialization during resource creation
-
-	NumCommandQueues
 };
 
 LPCWSTR GetCommandQueueTypeString(ED3D12CommandQueueType CommandQueueType);
 LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType);
 
-class D3D12Exception : public CoreException
+class D3D12Exception : public Exception
 {
 public:
 	D3D12Exception(const char* File, int Line, HRESULT ErrorCode)
-		: CoreException(File, Line)
+		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}

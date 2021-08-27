@@ -8,7 +8,8 @@ struct VSOutput
 struct MeshPushConstants
 {
 	float4x4 Transform;
-	uint	 Id;
+	uint	 Id1;
+	uint	 Id2;
 };
 [[vk::push_constant]] MeshPushConstants PushConstants;
 
@@ -20,11 +21,7 @@ struct UniformSceneConstants
 };
 [[vk::binding(0, 0)]] ConstantBuffer<UniformSceneConstants> SceneConstants : register(b0);
 
-[[vk::binding(1, 0)]] Texture2D			Texture2DTable[] : register(t0, space100);
-[[vk::binding(1, 0)]] Texture2D<uint4>	Texture2DUINT4Table[] : register(t0, space101);
-[[vk::binding(1, 0)]] Texture2DArray	Texture2DArrayTable[] : register(t0, space102);
-[[vk::binding(1, 0)]] TextureCube		TextureCubeTable[] : register(t0, space103);
-[[vk::binding(1, 0)]] ByteAddressBuffer ByteAddressBufferTable[] : register(t0, space104);
+[[vk::binding(1, 0)]] Texture2D Texture2DTable[] : register(t0, space100);
 
 [[vk::binding(2, 0)]] RWTexture2D<float4> RWTexture2DTable[] : register(u0, space101);
 
@@ -33,6 +30,6 @@ struct UniformSceneConstants
 float4 main(VSOutput Input)
 	: SV_TARGET
 {
-	Texture2D<float4> t = Texture2DTable[PushConstants.Id];
+	Texture2D t = Texture2DTable[PushConstants.Id1];
 	return t.Sample(Sampler, Input.TextureCoord);
 }

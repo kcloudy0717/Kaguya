@@ -35,26 +35,6 @@ void D3D12InputLayout::AddVertexLayoutElement(
 	Desc.InstanceDataStepRate	   = 0;
 }
 
-void D3D12InputLayout::AddInstanceLayoutElement(
-	std::string_view SemanticName,
-	UINT			 SemanticIndex,
-	DXGI_FORMAT		 Format,
-	UINT			 InputSlot,
-	UINT			 AlignedByteOffset,
-	UINT			 InstanceDataStepRate)
-{
-	SemanticNames.emplace_back(SemanticName);
-
-	D3D12_INPUT_ELEMENT_DESC& Desc = InputElements.emplace_back();
-	Desc.SemanticName			   = nullptr; // Will be resolved later
-	Desc.SemanticIndex			   = SemanticIndex;
-	Desc.Format					   = Format;
-	Desc.InputSlot				   = InputSlot;
-	Desc.AlignedByteOffset		   = AlignedByteOffset;
-	Desc.InputSlotClass			   = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-	Desc.InstanceDataStepRate	   = InstanceDataStepRate;
-}
-
 D3D12InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
 {
 	for (size_t i = 0; i < InputElements.size(); ++i)

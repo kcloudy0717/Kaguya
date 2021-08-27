@@ -2,10 +2,10 @@
 #include <cassert>
 #include <stdexcept>
 
-class CoreException : public std::exception
+class Exception : public std::exception
 {
 public:
-	CoreException(const char* File, int Line);
+	Exception(const char* File, int Line);
 
 	virtual const char* GetErrorType() const noexcept;
 	virtual std::string GetError() const;

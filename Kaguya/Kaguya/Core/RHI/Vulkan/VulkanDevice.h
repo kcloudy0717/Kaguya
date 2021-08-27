@@ -4,7 +4,7 @@
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
-#include "VulkanDescriptorHeap.h"
+#include "VulkanDescriptorPool.h"
 #include "VulkanRootSignature.h"
 
 class VulkanRenderPass final : public IRHIRenderPass

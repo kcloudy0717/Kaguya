@@ -1,6 +1,6 @@
 #pragma once
 #include "CoreDefines.h"
-#include "CoreException.h"
+#include "Exception.h"
 
 #include "Log.h"
 #include "Console.h"

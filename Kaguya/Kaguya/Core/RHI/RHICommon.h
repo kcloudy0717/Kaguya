@@ -135,9 +135,14 @@ struct RootSignatureDesc
 		PushConstant.Size		   = sizeof(T);
 	}
 
+	void AddDescriptorTable(IRHIDescriptorTable* DescriptorTable)
+	{
+		DescriptorTables[NumDescriptorTables++] = DescriptorTable;
+	}
+
+	std::vector<PushConstant> PushConstants;
 	UINT					  NumDescriptorTables = 0;
 	IRHIDescriptorTable*	  DescriptorTables[32];
-	std::vector<PushConstant> PushConstants;
 };
 
 struct DescriptorPoolDesc

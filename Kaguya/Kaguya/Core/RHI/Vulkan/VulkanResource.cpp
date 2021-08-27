@@ -34,28 +34,26 @@ VulkanBuffer::VulkanBuffer(VulkanDevice* Parent, VkBufferCreateInfo Desc, VmaAll
 void VulkanBuffer::Upload(std::function<void(void* CPUVirtualAddress)> Function)
 {
 	void* CPUVirtualAddress = nullptr;
-	VERIFY_VULKAN_API(vmaMapMemory(GetVulkanDevice()->GetVkAllocator(), Allocation, &CPUVirtualAddress));
+	VERIFY_VULKAN_API(vmaMapMemory(Parent->As<VulkanDevice>()->GetVkAllocator(), Allocation, &CPUVirtualAddress));
 	{
 		if (CPUVirtualAddress)
 		{
 			Function(CPUVirtualAddress);
 		}
 	}
-	vmaUnmapMemory(GetVulkanDevice()->GetVkAllocator(), Allocation);
+	vmaUnmapMemory(Parent->As<VulkanDevice>()->GetVkAllocator(), Allocation);
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
 	if (Parent && Allocation && Buffer)
 	{
-		vmaDestroyBuffer(GetVulkanDevice()->GetVkAllocator(), std::exchange(Buffer, {}), std::exchange(Allocation, {}));
-		GetVulkanDevice()->GetResourcePool<VulkanBuffer>().Destruct(this);
+		vmaDestroyBuffer(
+			Parent->As<VulkanDevice>()->GetVkAllocator(),
+			std::exchange(Buffer, {}),
+			std::exchange(Allocation, {}));
+		Parent->As<VulkanDevice>()->GetResourcePool<VulkanBuffer>().Destruct(this);
 	}
-}
-
-auto VulkanBuffer::GetVulkanDevice() const noexcept -> VulkanDevice*
-{
-	return static_cast<VulkanDevice*>(Parent);
 }
 
 VulkanTexture::VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAllocationCreateInfo AllocationDesc)
@@ -80,15 +78,13 @@ VulkanTexture::VulkanTexture(VulkanDevice* Parent, VkImageCreateInfo Desc, VmaAl
 
 VulkanTexture::~VulkanTexture()
 {
-	if (Parent && Allocation && Texture)
+	if (Parent && Allocation && Texture && ImageView)
 	{
-		vkDestroyImageView(GetVulkanDevice()->GetVkDevice(), std::exchange(ImageView, {}), nullptr);
-		vmaDestroyImage(GetVulkanDevice()->GetVkAllocator(), std::exchange(Texture, {}), std::exchange(Allocation, {}));
-		GetVulkanDevice()->GetResourcePool<VulkanTexture>().Destruct(this);
+		vkDestroyImageView(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(ImageView, {}), nullptr);
+		vmaDestroyImage(
+			Parent->As<VulkanDevice>()->GetVkAllocator(),
+			std::exchange(Texture, {}),
+			std::exchange(Allocation, {}));
+		Parent->As<VulkanDevice>()->GetResourcePool<VulkanTexture>().Destruct(this);
 	}
-}
-
-auto VulkanTexture::GetVulkanDevice() const noexcept -> VulkanDevice*
-{
-	return static_cast<VulkanDevice*>(Parent);
 }

@@ -3,11 +3,11 @@
 #include <Core/RHI/RHICommon.h>
 #include <Core/RHI/Vulkan/RHIVulkan.h>
 
-class VulkanException : public CoreException
+class VulkanException : public Exception
 {
 public:
 	VulkanException(const char* File, int Line, VkResult ErrorCode)
-		: CoreException(File, Line)
+		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}

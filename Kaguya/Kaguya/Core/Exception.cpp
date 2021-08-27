@@ -1,36 +1,36 @@
-#include "CoreException.h"
+#include "Exception.h"
 #include <sstream>
 
-CoreException::CoreException(const char* File, int Line)
+Exception::Exception(const char* File, int Line)
 	: File(File)
 	, Line(Line)
 {
 }
 
-const char* CoreException::what() const noexcept
+const char* Exception::what() const noexcept
 {
 	Error = GetErrorString();
 	return Error.data();
 }
 
-const char* CoreException::GetErrorType() const noexcept
+const char* Exception::GetErrorType() const noexcept
 {
 	return "[Core]";
 }
 
-std::string CoreException::GetError() const
+std::string Exception::GetError() const
 {
-	return "Unknown Exception";
+	return "<unknown>";
 }
 
-std::string CoreException::GetExceptionOrigin() const
+std::string Exception::GetExceptionOrigin() const
 {
 	std::ostringstream oss;
 	oss << "[File] " << File << std::endl << "[Line] " << Line;
 	return oss.str();
 }
 
-std::string CoreException::GetErrorString() const
+std::string Exception::GetErrorString() const
 {
 	std::ostringstream oss;
 	oss << GetErrorType() << std::endl << GetExceptionOrigin() << std::endl << GetError();
