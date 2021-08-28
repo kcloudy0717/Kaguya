@@ -55,13 +55,6 @@ public:
 	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return ResourceDescriptorHeap; }
 	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return SamplerDescriptorHeap; }
 
-	// clang-format off
-	template<typename T>	[[nodiscard]] auto GetResourcePool() -> TPool<T>&;
-	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanRenderPass>& { return RenderPassPool; }
-	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanBuffer>& { return BufferPool; }
-	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanTexture>& { return TexturePool; }
-	// clang-format on
-
 	[[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc) override;
@@ -153,10 +146,4 @@ private:
 
 	VulkanDescriptorHeap ResourceDescriptorHeap;
 	VulkanDescriptorHeap SamplerDescriptorHeap;
-
-	TPool<VulkanRenderPass>		 RenderPassPool;
-	TPool<VulkanDescriptorTable> DescriptorTablePool;
-	TPool<VulkanRootSignature>	 RootSignaturePool;
-	TPool<VulkanBuffer>			 BufferPool;
-	TPool<VulkanTexture>		 TexturePool;
 };

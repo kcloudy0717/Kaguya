@@ -59,7 +59,6 @@ private:
 	VkSwapchainKHR			   VkSwapchain = VK_NULL_HANDLE;
 	VkFormat				   Format	   = VK_FORMAT_UNDEFINED;
 	VkExtent2D				   Extent	   = { 0, 0 };
-	std::vector<VulkanTexture> Backbuffers;
 	std::vector<VkImage>	   Images;
 	std::vector<VkImageView>   ImageViews;
 

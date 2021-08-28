@@ -106,17 +106,17 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL MessageCallback(
 
 RefPtr<IRHIRenderPass> VulkanDevice::CreateRenderPass(const RenderPassDesc& Desc)
 {
-	return RefPtr<IRHIRenderPass>::Create(RenderPassPool.Construct(this, Desc));
+	return RefPtr<IRHIRenderPass>::Create(new VulkanRenderPass(this, Desc));
 }
 
 RefPtr<IRHIDescriptorTable> VulkanDevice::CreateDescriptorTable(const DescriptorTableDesc& Desc)
 {
-	return RefPtr<IRHIDescriptorTable>::Create(DescriptorTablePool.Construct(this, Desc));
+	return RefPtr<IRHIDescriptorTable>::Create(new VulkanDescriptorTable(this, Desc));
 }
 
 RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureDesc& Desc)
 {
-	return RefPtr<IRHIRootSignature>::Create(RootSignaturePool.Construct(this, Desc));
+	return RefPtr<IRHIRootSignature>::Create(new VulkanRootSignature(this, Desc));
 }
 
 RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
@@ -159,7 +159,7 @@ RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
 		BufferCreateInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 	}
 
-	return RefPtr<IRHIBuffer>::Create(BufferPool.Construct(this, BufferCreateInfo, AllocationCreateInfo));
+	return RefPtr<IRHIBuffer>::Create(new VulkanBuffer(this, BufferCreateInfo, AllocationCreateInfo));
 }
 
 RefPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
@@ -195,25 +195,17 @@ RefPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
 		ImageCreateInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 	}
 
-	return RefPtr<IRHITexture>::Create(TexturePool.Construct(this, ImageCreateInfo, AllocationCreateInfo));
+	return RefPtr<IRHITexture>::Create(new VulkanTexture(this, ImageCreateInfo, AllocationCreateInfo));
 }
 
 VulkanDevice::VulkanDevice()
 	: GraphicsQueue(this)
 	, CopyQueue(this)
-	, RenderPassPool(64)
-	, DescriptorTablePool(64)
-	, RootSignaturePool(64)
-	, BufferPool(2048)
-	, TexturePool(2048)
 {
 }
 
 VulkanDevice::~VulkanDevice()
 {
-	TexturePool.Destroy();
-	BufferPool.Destroy();
-
 	SamplerDescriptorHeap.Destroy();
 	ResourceDescriptorHeap.Destroy();
 	CopyQueue.Destroy();

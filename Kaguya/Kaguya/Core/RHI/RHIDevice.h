@@ -237,7 +237,7 @@ public:
 		unsigned long result = --NumReferences;
 		if (result == 0)
 		{
-			this->~IRHIObject();
+			delete this;
 		}
 		return result;
 	}
@@ -247,9 +247,6 @@ public:
 	{
 		return static_cast<T*>(this);
 	}
-
-	NONCOPYABLE(IRHIObject);
-	NONMOVABLE(IRHIObject);
 
 private:
 	std::atomic<unsigned long> NumReferences = 1;

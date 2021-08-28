@@ -1,6 +1,6 @@
 #include "VulkanResource.h"
 
-// infer aspect flags for a given image format
+// Infer aspect flags for a given image format
 VkImageAspectFlags InferImageAspectFlags(VkFormat Format)
 {
 	switch (Format) // NOLINT(clang-diagnostic-switch-enum)
@@ -52,7 +52,6 @@ VulkanBuffer::~VulkanBuffer()
 			Parent->As<VulkanDevice>()->GetVkAllocator(),
 			std::exchange(Buffer, {}),
 			std::exchange(Allocation, {}));
-		Parent->As<VulkanDevice>()->GetResourcePool<VulkanBuffer>().Destruct(this);
 	}
 }
 
@@ -85,6 +84,5 @@ VulkanTexture::~VulkanTexture()
 			Parent->As<VulkanDevice>()->GetVkAllocator(),
 			std::exchange(Texture, {}),
 			std::exchange(Allocation, {}));
-		Parent->As<VulkanDevice>()->GetResourcePool<VulkanTexture>().Destruct(this);
 	}
 }
