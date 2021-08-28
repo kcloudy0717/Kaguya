@@ -44,7 +44,6 @@ private:
 
 	VkSemaphore			 PresentSemaphore	= VK_NULL_HANDLE;
 	VkSemaphore			 RenderSemaphore	= VK_NULL_HANDLE;
-	VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VulkanCommandQueue* PresentQueue = nullptr;
 	uint32_t			CurrentImageIndex;

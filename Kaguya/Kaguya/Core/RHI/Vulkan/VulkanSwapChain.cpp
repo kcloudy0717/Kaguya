@@ -63,7 +63,6 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 	PresentQueue								  = Device->InitializePresentQueue(Surface);
 	PresentQueue->SubmitInfo.waitSemaphoreCount	  = 1;
 	PresentQueue->SubmitInfo.pWaitSemaphores	  = &PresentSemaphore;
-	PresentQueue->SubmitInfo.pWaitDstStageMask	  = &PipelineStageFlags;
 	PresentQueue->SubmitInfo.signalSemaphoreCount = 1;
 	PresentQueue->SubmitInfo.pSignalSemaphores	  = &RenderSemaphore;
 

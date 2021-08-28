@@ -35,12 +35,12 @@ public:
 
 	[[nodiscard]] bool IsFenceComplete(UINT64 FenceValue) const;
 
-	void WaitForFence(UINT64 FenceValue);
+	void HostWaitForValue(UINT64 FenceValue);
 
 	void Wait(D3D12CommandQueue* CommandQueue);
 	void WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint);
 
-	void Flush() { WaitForFence(AdvanceGpu()); }
+	void Flush() { HostWaitForValue(AdvanceGpu()); }
 
 	[[nodiscard]] D3D12CommandListHandle RequestCommandList(D3D12CommandAllocator* CommandAllocator)
 	{

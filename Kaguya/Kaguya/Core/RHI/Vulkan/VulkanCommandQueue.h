@@ -1,24 +1,7 @@
 #pragma once
 #include "VulkanCommon.h"
+#include "VulkanFence.h"
 #include "VulkanCommandContext.h"
-
-class VulkanFence final : public VulkanDeviceChild
-{
-public:
-	using VulkanDeviceChild::VulkanDeviceChild;
-
-	[[nodiscard]] auto GetApiHandle() const noexcept -> VkSemaphore { return Semaphore; }
-
-	void Initialize(UINT64 InitialValue);
-	void Destroy();
-
-	UINT64 GetCompletedValue() const;
-
-	void Signal(UINT64 Value);
-
-private:
-	VkSemaphore Semaphore = VK_NULL_HANDLE;
-};
 
 class VulkanCommandQueue final : public VulkanDeviceChild
 {
@@ -41,12 +24,12 @@ public:
 
 	[[nodiscard]] bool IsFenceComplete(UINT64 FenceValue) const;
 
-	void WaitForFence(UINT64 FenceValue);
+	void HostWaitForValue(UINT64 FenceValue);
 
 	void Wait(VulkanCommandQueue* CommandQueue);
 	void WaitForSyncPoint(const VulkanCommandSyncPoint& SyncPoint);
 
-	void Flush() { WaitForFence(AdvanceGpu()); }
+	void Flush() { HostWaitForValue(AdvanceGpu()); }
 
 	VulkanCommandSyncPoint ExecuteCommandLists(
 		UINT				  NumCommandListHandles,

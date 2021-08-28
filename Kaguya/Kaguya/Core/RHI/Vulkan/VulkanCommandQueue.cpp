@@ -84,22 +84,14 @@ bool VulkanCommandQueue::IsFenceComplete(UINT64 FenceValue) const
 	return Fence.GetCompletedValue() >= FenceValue;
 }
 
-void VulkanCommandQueue::WaitForFence(UINT64 FenceValue)
+void VulkanCommandQueue::HostWaitForValue(UINT64 FenceValue)
 {
 	if (IsFenceComplete(FenceValue))
 	{
 		return;
 	}
 
-	VkSemaphore Semaphores[] = { Fence.GetApiHandle() };
-
-	auto SemaphoreWaitInfo			 = VkStruct<VkSemaphoreWaitInfo>();
-	SemaphoreWaitInfo.flags			 = 0;
-	SemaphoreWaitInfo.semaphoreCount = 1;
-	SemaphoreWaitInfo.pSemaphores	 = Semaphores;
-	SemaphoreWaitInfo.pValues		 = &FenceValue;
-
-	VERIFY_VULKAN_API(vkWaitSemaphores(Parent->GetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX));
+	Fence.Wait(FenceValue);
 }
 
 void VulkanCommandQueue::Wait(VulkanCommandQueue* CommandQueue)
@@ -140,6 +132,9 @@ VulkanCommandSyncPoint VulkanCommandQueue::ExecuteCommandLists(
 		CommandLists[NumCommandLists++] = CommandListHandles[i].CommandBuffer;
 	}
 
+	constexpr VkPipelineStageFlags Stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+	SubmitInfo.pWaitDstStageMask  = &Stage;
 	SubmitInfo.commandBufferCount = NumCommandLists;
 	SubmitInfo.pCommandBuffers	  = CommandLists;
 	VERIFY_VULKAN_API(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
@@ -148,37 +143,4 @@ VulkanCommandSyncPoint VulkanCommandQueue::ExecuteCommandLists(
 	SyncPoint		  = VulkanCommandSyncPoint(&Fence, FenceValue);
 
 	return SyncPoint;
-}
-
-void VulkanFence::Initialize(UINT64 InitialValue)
-{
-	auto SemaphoreTypeCreateInfo		  = VkStruct<VkSemaphoreTypeCreateInfo>();
-	SemaphoreTypeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-	SemaphoreTypeCreateInfo.initialValue  = InitialValue;
-
-	auto SemaphoreCreateInfo  = VkStruct<VkSemaphoreCreateInfo>();
-	SemaphoreCreateInfo.pNext = &SemaphoreTypeCreateInfo;
-	SemaphoreCreateInfo.flags = 0;
-
-	VERIFY_VULKAN_API(vkCreateSemaphore(Parent->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &Semaphore));
-}
-
-void VulkanFence::Destroy()
-{
-	vkDestroySemaphore(Parent->GetVkDevice(), std::exchange(Semaphore, {}), nullptr);
-}
-
-UINT64 VulkanFence::GetCompletedValue() const
-{
-	UINT64 Value = 0;
-	VERIFY_VULKAN_API(vkGetSemaphoreCounterValue(Parent->GetVkDevice(), Semaphore, &Value));
-	return Value;
-}
-
-void VulkanFence::Signal(UINT64 Value)
-{
-	auto SemaphoreSignalInfo	  = VkStruct<VkSemaphoreSignalInfo>();
-	SemaphoreSignalInfo.semaphore = Semaphore;
-	SemaphoreSignalInfo.value	  = Value;
-	VERIFY_VULKAN_API(vkSignalSemaphore(Parent->GetVkDevice(), &SemaphoreSignalInfo));
 }

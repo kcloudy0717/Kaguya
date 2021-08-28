@@ -94,7 +94,7 @@ bool D3D12CommandQueue::IsFenceComplete(UINT64 FenceValue) const
 	return Fence->GetCompletedValue() >= FenceValue;
 }
 
-void D3D12CommandQueue::WaitForFence(UINT64 FenceValue)
+void D3D12CommandQueue::HostWaitForValue(UINT64 FenceValue)
 {
 	if (IsFenceComplete(FenceValue))
 	{
@@ -195,7 +195,7 @@ void D3D12CommandQueue::ExecuteCommandLists(
 
 	if (WaitForCompletion)
 	{
-		WaitForFence(FenceValue);
+		HostWaitForValue(FenceValue);
 		assert(SyncPoint.IsComplete());
 	}
 }
