@@ -3,33 +3,10 @@
 #include "D3D12Common.h"
 #include "D3D12CommandList.h"
 
-struct CommandListBatch
-{
-	enum
-	{
-		BatchLimit = 64
-	};
-
-	CommandListBatch()
-	{
-		std::memset(CommandLists, NULL, sizeof(CommandLists));
-		NumCommandLists = 0;
-	}
-
-	void Add(ID3D12CommandList* CommandList)
-	{
-		CommandLists[NumCommandLists] = CommandList;
-		NumCommandLists++;
-	}
-
-	ID3D12CommandList* CommandLists[BatchLimit];
-	UINT			   NumCommandLists;
-};
-
 class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 {
 public:
-	D3D12CommandAllocatorPool(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
+	explicit D3D12CommandAllocatorPool(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
 
 	D3D12CommandAllocator* RequestCommandAllocator();
 
@@ -46,7 +23,7 @@ private:
 class D3D12CommandQueue : public D3D12LinkedDeviceChild
 {
 public:
-	D3D12CommandQueue(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
+	explicit D3D12CommandQueue(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
 
 	void Initialize(ED3D12CommandQueueType CommandQueueType, UINT NumCommandLists = 1);
 

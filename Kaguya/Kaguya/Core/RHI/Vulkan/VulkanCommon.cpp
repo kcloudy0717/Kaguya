@@ -89,3 +89,34 @@ VulkanInputLayout::operator VkPipelineVertexInputStateCreateInfo() const noexcep
 	Desc.pVertexAttributeDescriptions	 = AttributeDescriptions.data();
 	return Desc;
 }
+
+auto VulkanCommandSyncPoint::IsValid() const noexcept -> bool
+{
+	return Fence != nullptr;
+}
+
+auto VulkanCommandSyncPoint::GetValue() const noexcept -> UINT64
+{
+	assert(IsValid());
+	return Value;
+}
+
+auto VulkanCommandSyncPoint::IsComplete() const -> bool
+{
+	assert(IsValid());
+	return Fence->GetCompletedValue() >= Value;
+}
+
+auto VulkanCommandSyncPoint::WaitForCompletion() const -> void
+{
+	assert(IsValid());
+	const VkSemaphore Semaphores[] = { Fence->GetApiHandle() };
+
+	auto SemaphoreWaitInfo			 = VkStruct<VkSemaphoreWaitInfo>();
+	SemaphoreWaitInfo.flags			 = 0;
+	SemaphoreWaitInfo.semaphoreCount = 1;
+	SemaphoreWaitInfo.pSemaphores	 = Semaphores;
+	SemaphoreWaitInfo.pValues		 = &Value;
+
+	VERIFY_VULKAN_API(vkWaitSemaphores(Fence->GetParentDevice()->GetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX));
+}

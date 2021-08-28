@@ -55,6 +55,33 @@ protected:
 	VulkanDevice* Parent;
 };
 
+class VulkanFence;
+class VulkanCommandSyncPoint
+{
+public:
+	VulkanCommandSyncPoint() noexcept
+		: Fence(nullptr)
+		, Value(0)
+	{
+	}
+	VulkanCommandSyncPoint(VulkanFence* Fence, UINT64 Value) noexcept
+		: Fence(Fence)
+		, Value(Value)
+	{
+	}
+
+	auto IsValid() const noexcept -> bool;
+	auto GetValue() const noexcept -> UINT64;
+	auto IsComplete() const -> bool;
+	auto WaitForCompletion() const -> void;
+
+private:
+	friend class VulkanCommandQueue;
+
+	VulkanFence* Fence;
+	UINT64		 Value;
+};
+
 // clang-format off
 template<typename T>	inline [[nodiscard]] auto VkStruct() -> T												{ static_assert("Not implemented"); return T(); }
 template<>				inline [[nodiscard]] auto VkStruct() -> VkApplicationInfo								{ return { .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO }; }
@@ -105,13 +132,19 @@ template<>				inline [[nodiscard]] auto VkStruct() -> VkBufferMemoryBarrier					
 template<>				inline [[nodiscard]] auto VkStruct() -> VkImageMemoryBarrier							{ return { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER }; }
 template<>				inline [[nodiscard]] auto VkStruct() -> VkMemoryBarrier									{ return { .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER }; }
 
+template<>				inline [[nodiscard]] auto VkStruct() -> VkPhysicalDeviceVulkan12Features				{ return { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES }; }
+
 template<>				inline [[nodiscard]] auto VkStruct() -> VkDescriptorSetLayoutBindingFlagsCreateInfo		{ return { .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO }; }
 template<>				inline [[nodiscard]] auto VkStruct() -> VkPhysicalDeviceDescriptorIndexingFeatures		{ return { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES }; }
+
+template<>				inline [[nodiscard]] auto VkStruct() -> VkSemaphoreTypeCreateInfo						{ return { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO }; }
+template<>				inline [[nodiscard]] auto VkStruct() -> VkTimelineSemaphoreSubmitInfo					{ return { .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO }; }
+template<>				inline [[nodiscard]] auto VkStruct() -> VkSemaphoreWaitInfo								{ return { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO }; }
+template<>				inline [[nodiscard]] auto VkStruct() -> VkSemaphoreSignalInfo							{ return { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO }; }
 
 template<>				inline [[nodiscard]] auto VkStruct() -> VkSwapchainCreateInfoKHR						{ return { .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR }; }
 template<>				inline [[nodiscard]] auto VkStruct() -> VkPresentInfoKHR								{ return { .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR }; }
 template<>				inline [[nodiscard]] auto VkStruct() -> VkWin32SurfaceCreateInfoKHR						{ return { .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR }; }
-
 
 template<>				inline [[nodiscard]] auto VkStruct() -> VkDebugUtilsMessengerCreateInfoEXT				{ return { .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT }; }
 // clang-format on

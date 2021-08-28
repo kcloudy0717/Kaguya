@@ -10,6 +10,8 @@ VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatu
 	{
 		Layouts[i] = Desc.DescriptorTables[i]->As<VulkanDescriptorTable>()->GetApiHandle();
 	}
+	Layouts.push_back(Parent->As<VulkanDevice>()->GetResourceDescriptorHeap().DescriptorSetLayout);
+	Layouts.push_back(Parent->As<VulkanDevice>()->GetSamplerDescriptorHeap().DescriptorSetLayout);
 	for (size_t i = 0; i < Desc.PushConstants.size(); ++i)
 	{
 		VkPushConstantRange& PushConstant = PushConstantRanges.emplace_back();
@@ -24,8 +26,7 @@ VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatu
 	PipelineLayoutCreateInfo.pushConstantRangeCount = static_cast<uint32_t>(PushConstantRanges.size());
 	PipelineLayoutCreateInfo.pPushConstantRanges	= PushConstantRanges.data();
 
-	VERIFY_VULKAN_API(
-		vkCreatePipelineLayout(Parent->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &Handle));
+	VERIFY_VULKAN_API(vkCreatePipelineLayout(Parent->GetVkDevice(), &PipelineLayoutCreateInfo, nullptr, &Handle));
 }
 
 VulkanRootSignature::~VulkanRootSignature()

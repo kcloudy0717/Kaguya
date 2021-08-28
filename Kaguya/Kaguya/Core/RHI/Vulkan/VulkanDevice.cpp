@@ -5,7 +5,8 @@
 static constexpr const char* ValidationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
 static constexpr const char* LogicalExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-													 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME };
+													 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+													 VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME };
 
 static const char* GetMessageSeverity(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity)
 {
@@ -118,11 +119,6 @@ RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureD
 	return RefPtr<IRHIRootSignature>::Create(RootSignaturePool.Construct(this, Desc));
 }
 
-RefPtr<IRHIDescriptorPool> VulkanDevice::CreateDescriptorPool(const DescriptorPoolDesc& Desc)
-{
-	return RefPtr<IRHIDescriptorPool>::Create(DescriptorPoolAllocator.Construct(this, Desc));
-}
-
 RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
 {
 	auto					BufferCreateInfo	 = VkStruct<VkBufferCreateInfo>();
@@ -208,7 +204,6 @@ VulkanDevice::VulkanDevice()
 	, RenderPassPool(64)
 	, DescriptorTablePool(64)
 	, RootSignaturePool(64)
-	, DescriptorPoolAllocator(64)
 	, BufferPool(2048)
 	, TexturePool(2048)
 {
@@ -218,6 +213,9 @@ VulkanDevice::~VulkanDevice()
 {
 	TexturePool.Destroy();
 	BufferPool.Destroy();
+
+	SamplerDescriptorHeap.Destroy();
+	ResourceDescriptorHeap.Destroy();
 	CopyQueue.Destroy();
 	GraphicsQueue.Destroy();
 
@@ -255,7 +253,7 @@ void VulkanDevice::Initialize(const DeviceOptions& Options)
 	ApplicationInfo.applicationVersion = 0;
 	ApplicationInfo.pEngineName		   = nullptr;
 	ApplicationInfo.engineVersion	   = 0;
-	ApplicationInfo.apiVersion		   = VK_API_VERSION_1_0;
+	ApplicationInfo.apiVersion		   = VK_API_VERSION_1_2;
 
 	auto InstanceCreateInfo				= VkStruct<VkInstanceCreateInfo>();
 	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
@@ -268,7 +266,7 @@ void VulkanDevice::Initialize(const DeviceOptions& Options)
 
 	InstanceCreateInfo.pNext = &DebugUtilsMessengerCreateInfo;
 
-	auto Extensions							   = GetExtensions(Options.EnableDebugLayer);
+	const auto Extensions					   = GetExtensions(Options.EnableDebugLayer);
 	InstanceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(Extensions.size());
 	InstanceCreateInfo.ppEnabledExtensionNames = Extensions.data();
 
@@ -323,12 +321,13 @@ void VulkanDevice::InitializeDevice()
 	}
 
 	// Bindless
-	auto PhysicalDeviceDescriptorIndexingFeatures = VkStruct<VkPhysicalDeviceDescriptorIndexingFeatures>();
-	PhysicalDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-	PhysicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray			 = VK_TRUE;
+	auto PhysicalDeviceVulkan12Features							   = VkStruct<VkPhysicalDeviceVulkan12Features>();
+	PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
+	PhysicalDeviceVulkan12Features.runtimeDescriptorArray		   = VK_TRUE;
+	PhysicalDeviceVulkan12Features.timelineSemaphore			   = VK_TRUE;
 
 	auto DeviceCreateInfo					 = VkStruct<VkDeviceCreateInfo>();
-	DeviceCreateInfo.pNext					 = &PhysicalDeviceDescriptorIndexingFeatures;
+	DeviceCreateInfo.pNext					 = &PhysicalDeviceVulkan12Features;
 	DeviceCreateInfo.queueCreateInfoCount	 = static_cast<uint32_t>(DeviceQueueCreateInfos.size());
 	DeviceCreateInfo.pQueueCreateInfos		 = DeviceQueueCreateInfos.data();
 	DeviceCreateInfo.enabledExtensionCount	 = static_cast<uint32_t>(std::size(LogicalExtensions));
@@ -345,6 +344,18 @@ void VulkanDevice::InitializeDevice()
 
 	GraphicsQueue.Initialize(Indices.GraphicsFamily.value());
 	CopyQueue.Initialize(Indices.CopyFamily.value());
+
+	DescriptorHeapDesc Desc					   = {};
+	Desc.Type								   = DescriptorHeapType::Resource;
+	Desc.Resource.NumConstantBufferDescriptors = 4096;
+	Desc.Resource.NumTextureDescriptors		   = 4096;
+	Desc.Resource.NumRWTextureDescriptors	   = 4096;
+
+	ResourceDescriptorHeap = VulkanDescriptorHeap(this, Desc);
+
+	Desc.Type					= DescriptorHeapType::Sampler;
+	Desc.Sampler.NumDescriptors = 2048;
+	SamplerDescriptorHeap		= VulkanDescriptorHeap(this, Desc);
 }
 
 VulkanCommandQueue* VulkanDevice::InitializePresentQueue(VkSurfaceKHR Surface)
@@ -447,7 +458,7 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 		// we don't know or care about the starting layout of the attachment
 		RenderTargets[i].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		/////////////////////////////////// TODO FIX THIS
+		// TODO FIX THIS
 		// after the renderpass ends, the image has to be on a layout ready for display
 		RenderTargets[i].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 

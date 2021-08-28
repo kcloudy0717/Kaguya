@@ -1,21 +1,18 @@
 #pragma once
 #include "VulkanCommon.h"
 
-class VulkanDescriptorPool final : public IRHIDescriptorPool
+class VulkanDescriptorHeap : public VulkanDeviceChild
 {
 public:
-	VulkanDescriptorPool() noexcept = default;
-	explicit VulkanDescriptorPool(IRHIDevice* Parent, const DescriptorPoolDesc& Desc);
-	~VulkanDescriptorPool() override;
+	VulkanDescriptorHeap() noexcept = default;
+	explicit VulkanDescriptorHeap(VulkanDevice* Parent, const DescriptorHeapDesc& Desc);
 
-	[[nodiscard]] auto GetApiHandle() const noexcept -> VkDescriptorPool { return DescriptorPool; }
-	[[nodiscard]] auto GetDescriptorSet() const noexcept -> VkDescriptorSet { return DescriptorSet; }
+	void Destroy();
 
-	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle override;
+	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle;
 
-	void UpdateDescriptor(const DescriptorHandle& Handle) const override;
+	void UpdateDescriptor(const DescriptorHandle& Handle) const;
 
-private:
 	struct IndexPool
 	{
 		IndexPool() = default;
@@ -61,9 +58,8 @@ private:
 		size_t				NumActiveElements;
 	};
 
-private:
-	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
-	VkDescriptorSet	 DescriptorSet	= VK_NULL_HANDLE;
-
-	IndexPool IndexPoolArray[static_cast<size_t>(EDescriptorType::NumDescriptorTypes)];
+	VkDescriptorSetLayout  DescriptorSetLayout = VK_NULL_HANDLE;
+	VkDescriptorPool	   DescriptorPool	   = VK_NULL_HANDLE;
+	VkDescriptorSet		   DescriptorSet	   = VK_NULL_HANDLE;
+	std::vector<IndexPool> IndexPoolArray;
 };

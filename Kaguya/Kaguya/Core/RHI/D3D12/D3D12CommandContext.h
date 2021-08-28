@@ -16,17 +16,8 @@ public:
 
 	D3D12CommandListHandle& operator->() { return CommandListHandle; }
 
-	void OpenCommandList()
-	{
-		if (!CommandAllocator)
-		{
-			CommandAllocator = CommandAllocatorPool.RequestCommandAllocator();
-		}
-
-		CommandListHandle = GetCommandQueue()->RequestCommandList(CommandAllocator);
-	}
-
-	void CloseCommandList() { CommandListHandle.Close(); }
+	void OpenCommandList();
+	void CloseCommandList();
 
 	// Returns CommandSyncPoint, may be ignored if WaitForCompletion is true
 	D3D12CommandSyncPoint Execute(bool WaitForCompletion);
@@ -41,8 +32,6 @@ public:
 	void UAVBarrier(D3D12Resource* Resource);
 
 	void FlushResourceBarriers();
-
-	void BindResourceViewHeaps();
 
 	// These version of the API calls should be used as it needs to flush resource barriers before any work
 	void DrawInstanced(UINT VertexCount, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation);

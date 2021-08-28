@@ -145,14 +145,28 @@ struct RootSignatureDesc
 	IRHIDescriptorTable*	  DescriptorTables[32];
 };
 
-struct DescriptorPoolDesc
+enum class DescriptorHeapType
 {
-	UINT NumConstantBufferDescriptors;
-	UINT NumShaderResourceDescriptors;
-	UINT NumUnorderedAccessDescriptors;
-	UINT NumSamplers;
+	Resource,
+	Sampler
+};
 
-	IRHIDescriptorTable* DescriptorTable;
+struct DescriptorHeapDesc
+{
+	DescriptorHeapType Type;
+	union
+	{
+		struct
+		{
+			UINT NumConstantBufferDescriptors;
+			UINT NumTextureDescriptors;
+			UINT NumRWTextureDescriptors;
+		} Resource;
+		struct
+		{
+			UINT NumDescriptors;
+		} Sampler;
+	};
 };
 
 enum class EResourceStates

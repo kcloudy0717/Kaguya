@@ -2,6 +2,9 @@
 
 VulkanSwapChain::~VulkanSwapChain()
 {
+	vkDestroySemaphore(Device, RenderSemaphore, nullptr);
+	vkDestroySemaphore(Device, PresentSemaphore, nullptr);
+
 	Backbuffers.clear();
 	for (auto ImageView : ImageViews)
 	{
@@ -53,7 +56,17 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 			PresentModes.data()));
 	}
 
-	PresentQueue = Device->InitializePresentQueue(Surface);
+	auto SemaphoreCreateInfo  = VkStruct<VkSemaphoreCreateInfo>();
+	SemaphoreCreateInfo.flags = 0;
+	VERIFY_VULKAN_API(vkCreateSemaphore(Device->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+	VERIFY_VULKAN_API(vkCreateSemaphore(Device->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+
+	PresentQueue								  = Device->InitializePresentQueue(Surface);
+	PresentQueue->SubmitInfo.waitSemaphoreCount	  = 1;
+	PresentQueue->SubmitInfo.pWaitSemaphores	  = &PresentSemaphore;
+	PresentQueue->SubmitInfo.pWaitDstStageMask	  = &PipelineStageFlags;
+	PresentQueue->SubmitInfo.signalSemaphoreCount = 1;
+	PresentQueue->SubmitInfo.pSignalSemaphores	  = &RenderSemaphore;
 
 	VkSurfaceFormatKHR SurfaceFormat = GetPreferredSurfaceFormat();
 	VkPresentModeKHR   PresentMode	 = GetPreferredPresentMode();
@@ -113,7 +126,7 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 	Backbuffers.resize(ImageCount);
 	for (uint32_t i = 0; i < ImageCount; ++i)
 	{
-		Backbuffers[i].Texture = Images[i];
+		Backbuffers[i].Texture	 = Images[i];
 		Backbuffers[i].ImageView = ImageViews[i];
 	}
 }

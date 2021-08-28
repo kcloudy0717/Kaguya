@@ -315,23 +315,12 @@ public:
 	using IRHIResource::IRHIResource;
 };
 
-class IRHIDescriptorPool : public IRHIDeviceChild
-{
-public:
-	using IRHIDeviceChild::IRHIDeviceChild;
-
-	virtual [[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle = 0;
-
-	virtual void UpdateDescriptor(const DescriptorHandle& Handle) const = 0;
-};
-
 class IRHIDevice : public IRHIObject
 {
 public:
 	virtual [[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc)			 = 0;
 	virtual [[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) = 0;
 	virtual [[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc)	 = 0;
-	virtual [[nodiscard]] RefPtr<IRHIDescriptorPool>  CreateDescriptorPool(const DescriptorPoolDesc& Desc)	 = 0;
 
 	virtual [[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	= 0;
 	virtual [[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;
@@ -339,5 +328,4 @@ public:
 
 class IRHICommandList : public IRHIDeviceChild
 {
-public:
 };

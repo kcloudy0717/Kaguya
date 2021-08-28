@@ -24,11 +24,11 @@ public:
 	CResourceState(UINT NumSubresources)
 		: CResourceState()
 	{
-		SubresourceState.resize(NumSubresources);
+		SubresourceStates.resize(NumSubresources);
 	}
 
-	auto begin() { return SubresourceState.begin(); }
-	auto end() { return SubresourceState.end(); }
+	auto begin() { return SubresourceStates.begin(); }
+	auto end() { return SubresourceStates.end(); }
 
 	bool IsResourceStateUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
 	bool IsResourceStateUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
@@ -43,13 +43,13 @@ public:
 			return ResourceState;
 		}
 
-		return SubresourceState[Subresource];
+		return SubresourceStates[Subresource];
 	}
 
 	void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State)
 	{
 		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceState.size() == 1)
+		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceStates.size() == 1)
 		{
 			TrackingMode  = ETrackingMode::PerResource;
 			ResourceState = State;
@@ -61,19 +61,19 @@ public:
 			if (TrackingMode == ETrackingMode::PerResource)
 			{
 				TrackingMode = ETrackingMode::PerSubresource;
-				for (auto& State : SubresourceState)
+				for (auto& SubresourceState : SubresourceStates)
 				{
-					State = ResourceState;
+					SubresourceState = ResourceState;
 				}
 			}
-			SubresourceState[Subresource] = State;
+			SubresourceStates[Subresource] = State;
 		}
 	}
 
 private:
 	ETrackingMode					   TrackingMode;
 	D3D12_RESOURCE_STATES			   ResourceState;
-	std::vector<D3D12_RESOURCE_STATES> SubresourceState;
+	std::vector<D3D12_RESOURCE_STATES> SubresourceStates;
 };
 
 class D3D12Resource : public D3D12LinkedDeviceChild

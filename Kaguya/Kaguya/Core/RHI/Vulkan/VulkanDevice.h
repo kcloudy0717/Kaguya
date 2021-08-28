@@ -4,7 +4,7 @@
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
 #include "VulkanResource.h"
-#include "VulkanDescriptorPool.h"
+#include "VulkanDescriptorHeap.h"
 #include "VulkanRootSignature.h"
 
 class VulkanRenderPass final : public IRHIRenderPass
@@ -52,6 +52,9 @@ public:
 	[[nodiscard]] auto GetGraphicsQueue() noexcept -> VulkanCommandQueue& { return GraphicsQueue; }
 	[[nodiscard]] auto GetCopyQueue() noexcept -> VulkanCommandQueue& { return CopyQueue; }
 
+	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return ResourceDescriptorHeap; }
+	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return SamplerDescriptorHeap; }
+
 	// clang-format off
 	template<typename T>	[[nodiscard]] auto GetResourcePool() -> TPool<T>&;
 	template<>				[[nodiscard]] auto GetResourcePool() -> TPool<VulkanRenderPass>& { return RenderPassPool; }
@@ -62,7 +65,6 @@ public:
 	[[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc) override;
-	[[nodiscard]] RefPtr<IRHIDescriptorPool>  CreateDescriptorPool(const DescriptorPoolDesc& Desc) override;
 
 	[[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
@@ -149,10 +151,12 @@ private:
 	VulkanCommandQueue GraphicsQueue;
 	VulkanCommandQueue CopyQueue;
 
+	VulkanDescriptorHeap ResourceDescriptorHeap;
+	VulkanDescriptorHeap SamplerDescriptorHeap;
+
 	TPool<VulkanRenderPass>		 RenderPassPool;
 	TPool<VulkanDescriptorTable> DescriptorTablePool;
 	TPool<VulkanRootSignature>	 RootSignaturePool;
-	TPool<VulkanDescriptorPool>	 DescriptorPoolAllocator;
 	TPool<VulkanBuffer>			 BufferPool;
 	TPool<VulkanTexture>		 TexturePool;
 };

@@ -19,6 +19,28 @@ D3D12CommandQueue* D3D12CommandContext::GetCommandQueue()
 	return GetParentLinkedDevice()->GetCommandQueue(Type);
 }
 
+void D3D12CommandContext::OpenCommandList()
+{
+	if (!CommandAllocator)
+	{
+		CommandAllocator = CommandAllocatorPool.RequestCommandAllocator();
+	}
+
+	CommandListHandle = GetCommandQueue()->RequestCommandList(CommandAllocator);
+
+	ID3D12DescriptorHeap* DescriptorHeaps[2] = {
+		GetParentLinkedDevice()->GetResourceDescriptorHeap(),
+		GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
+	};
+
+	CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
+}
+
+void D3D12CommandContext::CloseCommandList()
+{
+	CommandListHandle.Close();
+}
+
 D3D12CommandSyncPoint D3D12CommandContext::Execute(bool WaitForCompletion)
 {
 	D3D12CommandQueue* CommandQueue = GetCommandQueue();
@@ -56,16 +78,6 @@ void D3D12CommandContext::UAVBarrier(D3D12Resource* Resource)
 void D3D12CommandContext::FlushResourceBarriers()
 {
 	CommandListHandle.FlushResourceBarriers();
-}
-
-void D3D12CommandContext::BindResourceViewHeaps()
-{
-	ID3D12DescriptorHeap* DescriptorHeaps[2] = {
-		GetParentLinkedDevice()->GetResourceDescriptorHeap(),
-		GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
-	};
-
-	CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
 }
 
 void D3D12CommandContext::DrawInstanced(

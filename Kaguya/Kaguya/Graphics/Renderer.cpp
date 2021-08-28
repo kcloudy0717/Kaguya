@@ -95,7 +95,6 @@ void Renderer::OnRender()
 
 	D3D12CommandContext& Context = RenderCore::pDevice->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
-	Context.BindResourceViewHeaps();
 
 	Render(Context);
 

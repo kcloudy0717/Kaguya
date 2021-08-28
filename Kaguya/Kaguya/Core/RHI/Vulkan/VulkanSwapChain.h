@@ -18,25 +18,25 @@ public:
 	[[nodiscard]] auto GetImageCount() const noexcept -> uint32_t { return static_cast<uint32_t>(Images.size()); }
 	[[nodiscard]] auto GetImageView(size_t i) const noexcept -> VkImageView;
 
-	uint32_t AcquireNextImage(VkSemaphore Semaphore)
+	uint32_t AcquireNextImage()
 	{
 		VERIFY_VULKAN_API(
-			vkAcquireNextImageKHR(Device, VkSwapchain, 1000000000, Semaphore, nullptr, &CurrentImageIndex));
+			vkAcquireNextImageKHR(Device, VkSwapchain, 1000000000, PresentSemaphore, nullptr, &CurrentImageIndex));
 		return CurrentImageIndex;
 	}
 
-	void Present(VkSemaphore RenderSemaphore)
+	void Present()
 	{
 		// this will put the image we just rendered into the visible window.
 		// we want to wait on the _renderSemaphore for that,
 		// as it's necessary that drawing commands have finished before the image is displayed to the user
-		VkSwapchainKHR Swapchains[]	   = { VkSwapchain };
-		auto		   PresentInfo	   = VkStruct<VkPresentInfoKHR>();
-		PresentInfo.waitSemaphoreCount = 1;
-		PresentInfo.pWaitSemaphores	   = &RenderSemaphore;
-		PresentInfo.swapchainCount	   = static_cast<uint32_t>(std::size(Swapchains));
-		PresentInfo.pSwapchains		   = Swapchains;
-		PresentInfo.pImageIndices	   = &CurrentImageIndex;
+		const VkSwapchainKHR Swapchains[] = { VkSwapchain };
+		auto				 PresentInfo  = VkStruct<VkPresentInfoKHR>();
+		PresentInfo.waitSemaphoreCount	  = 1;
+		PresentInfo.pWaitSemaphores		  = &RenderSemaphore;
+		PresentInfo.swapchainCount		  = static_cast<uint32_t>(std::size(Swapchains));
+		PresentInfo.pSwapchains			  = Swapchains;
+		PresentInfo.pImageIndices		  = &CurrentImageIndex;
 
 		VERIFY_VULKAN_API(vkQueuePresentKHR(PresentQueue->GetApiHandle(), &PresentInfo));
 	}
@@ -62,6 +62,10 @@ private:
 	std::vector<VulkanTexture> Backbuffers;
 	std::vector<VkImage>	   Images;
 	std::vector<VkImageView>   ImageViews;
+
+	VkSemaphore			 PresentSemaphore	= VK_NULL_HANDLE;
+	VkSemaphore			 RenderSemaphore	= VK_NULL_HANDLE;
+	VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
 	VulkanCommandQueue* PresentQueue = nullptr;
 	uint32_t			CurrentImageIndex;

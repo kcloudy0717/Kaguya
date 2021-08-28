@@ -125,7 +125,7 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle.ResolveResourceBarriers();
 	UINT								NumBarriers		 = static_cast<UINT>(ResourceBarriers.size());
 
-	bool AnyResolved = NumBarriers > 0;
+	const bool AnyResolved = NumBarriers > 0;
 	if (AnyResolved)
 	{
 		if (!ResourceBarrierCommandAllocator)
@@ -135,6 +135,7 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 
 		ResourceBarrierCommandListHandle = RequestCommandList(ResourceBarrierCommandAllocator);
 		ResourceBarrierCommandListHandle->ResourceBarrier(NumBarriers, ResourceBarriers.data());
+		ResourceBarrierCommandListHandle.Close();
 	}
 
 	return AnyResolved;
@@ -145,52 +146,51 @@ void D3D12CommandQueue::ExecuteCommandLists(
 	D3D12CommandListHandle* CommandListHandles,
 	bool					WaitForCompletion)
 {
-	CommandListBatch	   Batch;
-	D3D12CommandListHandle BarrierCommandList[64];
+	UINT			   NumCommandLists	= 0;
+	ID3D12CommandList* CommandLists[64] = {};
+
+	D3D12CommandListHandle BarrierCommandLists[64];
 	UINT				   NumBarrierCommandList = 0;
 
+	// Resolve resource barriers
 	for (UINT i = 0; i < NumCommandListHandles; ++i)
 	{
-		D3D12CommandListHandle& hCmdList = CommandListHandles[i];
-		D3D12CommandListHandle	hBarrierCmdList;
+		D3D12CommandListHandle& CommandListHandle = CommandListHandles[i];
+		D3D12CommandListHandle	BarrierCommandListHandle;
 
-		if (ResolveResourceBarrierCommandList(hCmdList, hBarrierCmdList))
+		if (ResolveResourceBarrierCommandList(CommandListHandle, BarrierCommandListHandle))
 		{
-			BarrierCommandList[NumBarrierCommandList++] = hBarrierCmdList;
+			BarrierCommandLists[NumBarrierCommandList++] = BarrierCommandListHandle;
 
-			hBarrierCmdList.Close();
-
-			Batch.Add(hBarrierCmdList.GetCommandList());
+			CommandLists[NumCommandLists++] = BarrierCommandListHandle.GetCommandList();
 		}
 
-		Batch.Add(hCmdList.GetCommandList());
+		CommandLists[NumCommandLists++] = CommandListHandle.GetCommandList();
 	}
 
-	CommandQueue->ExecuteCommandLists(Batch.NumCommandLists, Batch.CommandLists);
+	CommandQueue->ExecuteCommandLists(NumCommandLists, CommandLists);
 	UINT64 FenceValue = AdvanceGpu();
 	SyncPoint		  = D3D12CommandSyncPoint(Fence.Get(), FenceValue);
 
+	// Discard command lists
 	for (UINT i = 0; i < NumCommandListHandles; ++i)
 	{
-		D3D12CommandListHandle& hCmdList = CommandListHandles[i];
-		hCmdList.SetSyncPoint(SyncPoint);
-
-		DiscardCommandList(hCmdList);
+		D3D12CommandListHandle& CommandListHandle = CommandListHandles[i];
+		CommandListHandle.SetSyncPoint(SyncPoint);
+		DiscardCommandList(CommandListHandle);
 	}
-
 	for (UINT i = 0; i < NumBarrierCommandList; ++i)
 	{
-		D3D12CommandListHandle& hCmdList = BarrierCommandList[i];
-		hCmdList.SetSyncPoint(SyncPoint);
-
-		DiscardCommandList(hCmdList);
+		D3D12CommandListHandle& CommandListHandle = BarrierCommandLists[i];
+		CommandListHandle.SetSyncPoint(SyncPoint);
+		DiscardCommandList(CommandListHandle);
 	}
 
+	// Discard command allocator used exclusively to resolve resource barriers
 	if (NumBarrierCommandList > 0)
 	{
 		ResourceBarrierCommandAllocator->SetSyncPoint(SyncPoint);
-		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(ResourceBarrierCommandAllocator);
-		ResourceBarrierCommandAllocator = nullptr;
+		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(std::exchange(ResourceBarrierCommandAllocator, {}));
 	}
 
 	if (WaitForCompletion)
