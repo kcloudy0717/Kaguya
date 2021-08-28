@@ -128,7 +128,30 @@ auto VulkanSwapChain::GetImageView(size_t i) const noexcept -> VkImageView
 	return ImageViews[i];
 }
 
-VkSurfaceFormatKHR VulkanSwapChain::GetPreferredSurfaceFormat()
+uint32_t VulkanSwapChain::AcquireNextImage()
+{
+	VERIFY_VULKAN_API(
+		vkAcquireNextImageKHR(Device, VkSwapchain, UINT64_MAX, PresentSemaphore, nullptr, &CurrentImageIndex));
+	return CurrentImageIndex;
+}
+
+void VulkanSwapChain::Present()
+{
+	// this will put the image we just rendered into the visible window.
+	// we want to wait on the _renderSemaphore for that,
+	// as it's necessary that drawing commands have finished before the image is displayed to the user
+	const VkSwapchainKHR Swapchains[] = { VkSwapchain };
+	auto				 PresentInfo  = VkStruct<VkPresentInfoKHR>();
+	PresentInfo.waitSemaphoreCount	  = 1;
+	PresentInfo.pWaitSemaphores		  = &RenderSemaphore;
+	PresentInfo.swapchainCount		  = static_cast<uint32_t>(std::size(Swapchains));
+	PresentInfo.pSwapchains			  = Swapchains;
+	PresentInfo.pImageIndices		  = &CurrentImageIndex;
+
+	VERIFY_VULKAN_API(vkQueuePresentKHR(PresentQueue->GetApiHandle(), &PresentInfo));
+}
+
+auto VulkanSwapChain::GetPreferredSurfaceFormat() const noexcept -> VkSurfaceFormatKHR
 {
 	for (const auto& SurfaceFormat : SurfaceFormats)
 	{
@@ -142,7 +165,7 @@ VkSurfaceFormatKHR VulkanSwapChain::GetPreferredSurfaceFormat()
 	return SurfaceFormats[0];
 }
 
-VkPresentModeKHR VulkanSwapChain::GetPreferredPresentMode()
+auto VulkanSwapChain::GetPreferredPresentMode() const noexcept -> VkPresentModeKHR
 {
 	for (const auto& PresentMode : PresentModes)
 	{
@@ -155,7 +178,7 @@ VkPresentModeKHR VulkanSwapChain::GetPreferredPresentMode()
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D VulkanSwapChain::GetPreferredExtent()
+auto VulkanSwapChain::GetPreferredExtent() const noexcept -> VkExtent2D
 {
 	if (SurfaceCapabilities.currentExtent.width != UINT32_MAX && SurfaceCapabilities.currentExtent.height != UINT32_MAX)
 	{
@@ -163,8 +186,8 @@ VkExtent2D VulkanSwapChain::GetPreferredExtent()
 	}
 	else
 	{
-		int		   Width		= Application::GetWidth();
-		int		   Height		= Application::GetHeight();
+		const int  Width		= Application::GetWidth();
+		const int  Height		= Application::GetHeight();
 		VkExtent2D ActualExtent = { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) };
 
 		ActualExtent.width = std::clamp(

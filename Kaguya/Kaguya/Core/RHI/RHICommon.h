@@ -1,4 +1,5 @@
 #pragma once
+#include "RefPtr.h"
 
 class IRHIResource;
 class IRHIDescriptorTable;
@@ -452,103 +453,6 @@ struct RHITextureDesc
 	UINT16							 MipLevels			 = 1;
 	ERHITextureFlags				 Flags				 = ERHITextureFlags::RHITextureFlag_None;
 	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
-};
-
-template<typename T>
-class TPool
-{
-public:
-	using value_type = T;
-	using pointer	 = T*;
-
-	TPool(std::size_t Size)
-		: Size(Size)
-		, ActiveElements(0)
-	{
-		Pool = std::make_unique<Element[]>(Size);
-
-		for (std::size_t i = 1; i < Size; ++i)
-		{
-			Pool[i - 1].pNext = &Pool[i];
-		}
-		FreeStart = &Pool[0];
-	}
-
-	TPool(TPool&& TPool) noexcept
-		: Pool(std::exchange(TPool.Pool, {}))
-		, FreeStart(std::exchange(TPool.FreeStart, {}))
-		, Size(std::exchange(TPool.Size, {}))
-		, ActiveElements(std::exchange(TPool.ActiveElements, {}))
-	{
-	}
-	TPool& operator=(TPool&& TPool) noexcept
-	{
-		if (this != &TPool)
-		{
-			Pool	  = std::exchange(TPool.Pool, {});
-			FreeStart = std::exchange(TPool.FreeStart, {});
-			Size	  = std::exchange(TPool.Size, {});
-		}
-		return *this;
-	}
-
-	TPool(const TPool&) = delete;
-	TPool& operator=(const TPool&) = delete;
-
-	[[nodiscard]] pointer Allocate()
-	{
-		if (!FreeStart)
-		{
-			throw std::bad_alloc();
-		}
-
-		const auto pElement = FreeStart;
-		FreeStart			= pElement->pNext;
-
-		ActiveElements++;
-		return reinterpret_cast<pointer>(&pElement->Storage);
-	}
-
-	void Deallocate(pointer p) noexcept
-	{
-		const auto pElement = reinterpret_cast<Element*>(p);
-		pElement->pNext		= FreeStart;
-		FreeStart			= pElement;
-		--ActiveElements;
-	}
-
-	template<typename... TArgs>
-	[[nodiscard]] pointer Construct(TArgs&&... Args)
-	{
-		return new (Allocate()) value_type(std::forward<TArgs>(Args)...);
-	}
-
-	void Destruct(pointer p) noexcept
-	{
-		if (p)
-		{
-			Deallocate(p);
-		}
-	}
-
-	void Destroy()
-	{
-		Pool.reset();
-		FreeStart = nullptr;
-		Size	  = 0;
-	}
-
-private:
-	union Element
-	{
-		std::aligned_storage_t<sizeof(value_type), alignof(value_type)> Storage;
-		Element*														pNext;
-	};
-
-	std::unique_ptr<Element[]> Pool;
-	Element*				   FreeStart;
-	std::size_t				   Size;
-	std::size_t				   ActiveElements;
 };
 
 enum class ESRVType

@@ -56,6 +56,7 @@ protected:
 };
 
 class VulkanFence;
+
 class VulkanCommandSyncPoint
 {
 public:

@@ -1,38 +1,13 @@
 #pragma once
-#include <Core/RHI/RHICommon.h>
-#include <Core/RHI/RHIDevice.h>
+#include <Core/RHI/RHICore.h>
 #include "VulkanCommon.h"
 #include "VulkanCommandQueue.h"
-#include "VulkanResource.h"
 #include "VulkanDescriptorHeap.h"
+
+#include "VulkanRenderPass.h"
+#include "VulkanDescriptorTable.h"
 #include "VulkanRootSignature.h"
-
-class VulkanRenderPass final : public IRHIRenderPass
-{
-public:
-	VulkanRenderPass() noexcept = default;
-	VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& Desc);
-	~VulkanRenderPass() override;
-
-	[[nodiscard]] VkRenderPass GetApiHandle() const noexcept { return RenderPass; }
-
-private:
-	VkRenderPass		  RenderPass		  = VK_NULL_HANDLE;
-	VkRenderPassBeginInfo RenderPassBeginInfo = {};
-};
-
-class VulkanDescriptorTable final : public IRHIDescriptorTable
-{
-public:
-	VulkanDescriptorTable() noexcept = default;
-	VulkanDescriptorTable(VulkanDevice* Parent, const DescriptorTableDesc& Desc);
-	~VulkanDescriptorTable() override;
-
-	[[nodiscard]] VkDescriptorSetLayout GetApiHandle() const noexcept { return DescriptorSetLayout; }
-
-private:
-	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-};
+#include "VulkanResource.h"
 
 class VulkanDevice final : public IRHIDevice
 {
@@ -63,21 +38,6 @@ public:
 	[[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
 
 private:
-	std::vector<const char*> GetExtensions(bool EnableDebugLayer)
-	{
-		std::vector<const char*> Extensions;
-
-		if (EnableDebugLayer)
-		{
-			Extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		}
-
-		Extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-		Extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-
-		return Extensions;
-	}
-
 	VkResult CreateDebugUtilsMessengerEXT(
 		VkInstance								  instance,
 		const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
