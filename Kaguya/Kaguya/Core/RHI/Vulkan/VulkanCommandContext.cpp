@@ -29,6 +29,37 @@ void VulkanCommandContext::SetComputeRootSignature(VulkanRootSignature* pRootSig
 	RootSignature	  = pRootSignature;
 }
 
+void VulkanCommandContext::SetGraphicsPipelineState(VulkanPipelineState* pPipelineState)
+{
+	PipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+	const VkPipeline Pipeline = pPipelineState->GetApiHandle();
+	vkCmdBindPipeline(CommandBuffer, PipelineBindPoint, Pipeline);
+}
+
+void VulkanCommandContext::SetViewports(UINT NumViewports, RHIViewport* pViewports, RHIRect* pScissorRects)
+{
+	VkViewport VkViewports[8]	 = {};
+	VkRect2D   VkScissorRects[8] = {};
+
+	for (UINT ViewportIndex = 0; ViewportIndex < NumViewports; ++ViewportIndex)
+	{
+		VkViewports[ViewportIndex].x		= pViewports[ViewportIndex].TopLeftX;
+		VkViewports[ViewportIndex].y		= pViewports[ViewportIndex].TopLeftY;
+		VkViewports[ViewportIndex].width	= pViewports[ViewportIndex].Width;
+		VkViewports[ViewportIndex].height	= pViewports[ViewportIndex].Height;
+		VkViewports[ViewportIndex].minDepth = pViewports[ViewportIndex].MinDepth;
+		VkViewports[ViewportIndex].maxDepth = pViewports[ViewportIndex].MaxDepth;
+
+		VkScissorRects[ViewportIndex].offset.x		= pScissorRects[ViewportIndex].Left;
+		VkScissorRects[ViewportIndex].offset.y		= pScissorRects[ViewportIndex].Top;
+		VkScissorRects[ViewportIndex].extent.width	= pScissorRects[ViewportIndex].Right;
+		VkScissorRects[ViewportIndex].extent.height = pScissorRects[ViewportIndex].Bottom;
+	}
+	vkCmdSetViewport(CommandBuffer, 0, NumViewports, VkViewports);
+	vkCmdSetScissor(CommandBuffer, 0, NumViewports, VkScissorRects);
+}
+
 void VulkanCommandContext::SetPushConstants(UINT Size, const void* pSrcData)
 {
 	const VkPipelineLayout PipelineLayout = RootSignature->GetApiHandle();

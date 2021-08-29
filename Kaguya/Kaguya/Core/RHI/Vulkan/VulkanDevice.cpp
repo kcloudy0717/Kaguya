@@ -128,6 +128,11 @@ RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureD
 	return RefPtr<IRHIRootSignature>::Create(new VulkanRootSignature(this, Desc));
 }
 
+RefPtr<IRHIPipelineState> VulkanDevice::CreatePipelineState(const PipelineStateStreamDesc& Desc)
+{
+	return RefPtr<IRHIPipelineState>::Create(new VulkanPipelineState(this, Desc));
+}
+
 RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
 {
 	auto					BufferCreateInfo	 = VkStruct<VkBufferCreateInfo>();

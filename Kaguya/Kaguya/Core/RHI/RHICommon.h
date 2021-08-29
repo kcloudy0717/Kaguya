@@ -15,6 +15,39 @@ struct DeviceOptions
 	bool EnableAutoDebugName;
 };
 
+struct RHIViewport
+{
+	RHIViewport() noexcept = default;
+	RHIViewport(FLOAT TopLeftX, FLOAT TopLeftY, FLOAT Width, FLOAT Height, FLOAT MinDepth, FLOAT MaxDepth) noexcept
+		: TopLeftX(TopLeftX)
+		, TopLeftY(TopLeftY)
+		, Width(Width)
+		, Height(Height)
+		, MinDepth(MinDepth)
+		, MaxDepth(MaxDepth)
+	{
+	}
+	RHIViewport(FLOAT Width, FLOAT Height)
+		: RHIViewport(0.0f, 0.0f, Width, Height, 0.0f, 1.0f)
+	{
+	}
+
+	FLOAT TopLeftX;
+	FLOAT TopLeftY;
+	FLOAT Width;
+	FLOAT Height;
+	FLOAT MinDepth;
+	FLOAT MaxDepth;
+};
+
+struct RHIRect
+{
+	LONG Left;
+	LONG Top;
+	LONG Right;
+	LONG Bottom;
+};
+
 enum class PrimitiveTopology
 {
 	Undefined,
@@ -592,23 +625,22 @@ public:
 		BlendOp BlendOpAlpha);
 	void AddRenderTargetForLogicOp(LogicOp LogicOpRGB);
 
-private:
-	bool		 m_AlphaToCoverageEnable;
-	bool		 m_IndependentBlendEnable;
-	UINT		 m_NumRenderTargets;
-	RenderTarget m_RenderTargets[8];
+	bool		 AlphaToCoverageEnable;
+	bool		 IndependentBlendEnable;
+	UINT		 NumRenderTargets;
+	RenderTarget RenderTargets[8];
 };
 
 class RasterizerState
 {
 public:
-	enum class FillMode
+	enum class EFillMode
 	{
 		Wireframe, // Draw lines connecting the vertices.
 		Solid	   // Fill the triangles formed by the vertices
 	};
 
-	enum class CullMode
+	enum class ECullMode
 	{
 		None,  // Always draw all triangles
 		Front, // Do not draw triangles that are front-facing
@@ -617,9 +649,9 @@ public:
 
 	RasterizerState();
 
-	void SetFillMode(FillMode FillMode);
+	void SetFillMode(EFillMode FillMode);
 
-	void SetCullMode(CullMode CullMode);
+	void SetCullMode(ECullMode CullMode);
 
 	// Determines how to interpret triangle direction
 	void SetFrontCounterClockwise(bool FrontCounterClockwise);
@@ -640,17 +672,17 @@ public:
 
 	void SetConservativeRaster(bool ConservativeRaster);
 
-	FillMode	 m_FillMode;
-	CullMode	 m_CullMode;
-	bool		 m_FrontCounterClockwise;
-	int			 m_DepthBias;
-	float		 m_DepthBiasClamp;
-	float		 m_SlopeScaledDepthBias;
-	bool		 m_DepthClipEnable;
-	bool		 m_MultisampleEnable;
-	bool		 m_AntialiasedLineEnable;
-	unsigned int m_ForcedSampleCount;
-	bool		 m_ConservativeRaster;
+	EFillMode	 FillMode;
+	ECullMode	 CullMode;
+	bool		 FrontCounterClockwise;
+	int			 DepthBias;
+	float		 DepthBiasClamp;
+	float		 SlopeScaledDepthBias;
+	bool		 DepthClipEnable;
+	bool		 MultisampleEnable;
+	bool		 AntialiasedLineEnable;
+	unsigned int ForcedSampleCount;
+	bool		 ConservativeRaster;
 };
 
 class DepthStencilState
@@ -707,14 +739,14 @@ public:
 
 	void SetStencilFunc(Face Face, ComparisonFunc StencilFunc);
 
-	bool		   m_DepthEnable;
-	bool		   m_DepthWrite;
-	ComparisonFunc m_DepthFunc;
-	bool		   m_StencilEnable;
-	UINT8		   m_StencilReadMask;
-	UINT8		   m_StencilWriteMask;
-	Stencil		   m_FrontFace;
-	Stencil		   m_BackFace;
+	bool		   DepthEnable;
+	bool		   DepthWrite;
+	ComparisonFunc DepthFunc;
+	bool		   StencilEnable;
+	UINT8		   StencilReadMask;
+	UINT8		   StencilWriteMask;
+	Stencil		   FrontFace;
+	Stencil		   BackFace;
 };
 
 class InputLayout
@@ -761,10 +793,6 @@ enum class PipelineStateSubobjectType
 template<typename T, PipelineStateSubobjectType Type>
 class alignas(void*) PipelineStateStreamSubobject
 {
-private:
-	PipelineStateSubobjectType _Type;
-	T						   _Desc;
-
 public:
 	PipelineStateStreamSubobject() noexcept
 		: _Type(Type)
@@ -788,6 +816,10 @@ public:
 	const T* operator&() const noexcept { return &_Desc; }
 
 	T& operator->() noexcept { return _Desc; }
+
+private:
+	PipelineStateSubobjectType _Type;
+	T						   _Desc;
 };
 
 // clang-format off

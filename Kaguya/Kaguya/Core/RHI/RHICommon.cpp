@@ -4,17 +4,17 @@ BlendState::BlendState()
 {
 	SetAlphaToCoverageEnable(false);
 	SetIndependentBlendEnable(false);
-	m_NumRenderTargets = 0;
+	NumRenderTargets = 0;
 }
 
 void BlendState::SetAlphaToCoverageEnable(bool AlphaToCoverageEnable)
 {
-	m_AlphaToCoverageEnable = AlphaToCoverageEnable;
+	this->AlphaToCoverageEnable = AlphaToCoverageEnable;
 }
 
 void BlendState::SetIndependentBlendEnable(bool IndependentBlendEnable)
 {
-	m_IndependentBlendEnable = IndependentBlendEnable;
+	this->IndependentBlendEnable = IndependentBlendEnable;
 }
 
 void BlendState::AddRenderTargetForBlendOp(
@@ -25,35 +25,35 @@ void BlendState::AddRenderTargetForBlendOp(
 	Factor	DstBlendAlpha,
 	BlendOp BlendOpAlpha)
 {
-	if (m_NumRenderTargets >= 8)
+	if (NumRenderTargets >= 8)
 		return;
 
-	RenderTarget RenderTarget			  = {};
-	RenderTarget.Operation				  = Operation::Blend;
-	RenderTarget.SrcBlendRGB			  = SrcBlendRGB;
-	RenderTarget.DstBlendRGB			  = DstBlendAlpha;
-	RenderTarget.BlendOpRGB				  = BlendOpRGB;
-	RenderTarget.SrcBlendAlpha			  = SrcBlendRGB;
-	RenderTarget.DstBlendAlpha			  = DstBlendAlpha;
-	RenderTarget.BlendOpAlpha			  = BlendOpRGB;
-	m_RenderTargets[m_NumRenderTargets++] = RenderTarget;
+	RenderTarget RenderTarget		  = {};
+	RenderTarget.Operation			  = Operation::Blend;
+	RenderTarget.SrcBlendRGB		  = SrcBlendRGB;
+	RenderTarget.DstBlendRGB		  = DstBlendAlpha;
+	RenderTarget.BlendOpRGB			  = BlendOpRGB;
+	RenderTarget.SrcBlendAlpha		  = SrcBlendRGB;
+	RenderTarget.DstBlendAlpha		  = DstBlendAlpha;
+	RenderTarget.BlendOpAlpha		  = BlendOpRGB;
+	RenderTargets[NumRenderTargets++] = RenderTarget;
 }
 
 void BlendState::AddRenderTargetForLogicOp(LogicOp LogicOpRGB)
 {
-	if (m_NumRenderTargets >= 8)
+	if (NumRenderTargets >= 8)
 		return;
 
-	RenderTarget RenderTarget			  = {};
-	RenderTarget.Operation				  = Operation::Logic;
-	RenderTarget.LogicOpRGB				  = LogicOpRGB;
-	m_RenderTargets[m_NumRenderTargets++] = RenderTarget;
+	RenderTarget RenderTarget		  = {};
+	RenderTarget.Operation			  = Operation::Logic;
+	RenderTarget.LogicOpRGB			  = LogicOpRGB;
+	RenderTargets[NumRenderTargets++] = RenderTarget;
 }
 
 RasterizerState::RasterizerState()
 {
-	SetFillMode(FillMode::Solid);
-	SetCullMode(CullMode::Back);
+	SetFillMode(EFillMode::Solid);
+	SetCullMode(ECullMode::Back);
 	SetFrontCounterClockwise(false);
 	SetDepthBias(0);
 	SetDepthBiasClamp(0.0f);
@@ -65,59 +65,59 @@ RasterizerState::RasterizerState()
 	SetConservativeRaster(false);
 }
 
-void RasterizerState::SetFillMode(FillMode FillMode)
+void RasterizerState::SetFillMode(EFillMode FillMode)
 {
-	m_FillMode = FillMode;
+	this->FillMode = FillMode;
 }
 
-void RasterizerState::SetCullMode(CullMode CullMode)
+void RasterizerState::SetCullMode(ECullMode CullMode)
 {
-	m_CullMode = CullMode;
+	this->CullMode = CullMode;
 }
 
 void RasterizerState::SetFrontCounterClockwise(bool FrontCounterClockwise)
 {
-	m_FrontCounterClockwise = FrontCounterClockwise;
+	this->FrontCounterClockwise = FrontCounterClockwise;
 }
 
 void RasterizerState::SetDepthBias(int DepthBias)
 {
-	m_DepthBias = DepthBias;
+	this->DepthBias = DepthBias;
 }
 
 void RasterizerState::SetDepthBiasClamp(float DepthBiasClamp)
 {
-	m_DepthBiasClamp = DepthBiasClamp;
+	this->DepthBiasClamp = DepthBiasClamp;
 }
 
 void RasterizerState::SetSlopeScaledDepthBias(float SlopeScaledDepthBias)
 {
-	m_SlopeScaledDepthBias = SlopeScaledDepthBias;
+	this->SlopeScaledDepthBias = SlopeScaledDepthBias;
 }
 
 void RasterizerState::SetDepthClipEnable(bool DepthClipEnable)
 {
-	m_DepthClipEnable = DepthClipEnable;
+	this->DepthClipEnable = DepthClipEnable;
 }
 
 void RasterizerState::SetMultisampleEnable(bool MultisampleEnable)
 {
-	m_MultisampleEnable = MultisampleEnable;
+	this->MultisampleEnable = MultisampleEnable;
 }
 
 void RasterizerState::SetAntialiasedLineEnable(bool AntialiasedLineEnable)
 {
-	m_AntialiasedLineEnable = AntialiasedLineEnable;
+	this->AntialiasedLineEnable = AntialiasedLineEnable;
 }
 
 void RasterizerState::SetForcedSampleCount(unsigned int ForcedSampleCount)
 {
-	m_ForcedSampleCount = ForcedSampleCount;
+	this->ForcedSampleCount = ForcedSampleCount;
 }
 
 void RasterizerState::SetConservativeRaster(bool ConservativeRaster)
 {
-	m_ConservativeRaster = ConservativeRaster;
+	this->ConservativeRaster = ConservativeRaster;
 }
 
 DepthStencilState::DepthStencilState()
@@ -133,32 +133,32 @@ DepthStencilState::DepthStencilState()
 
 void DepthStencilState::SetDepthEnable(bool DepthEnable)
 {
-	m_DepthEnable = DepthEnable;
+	this->DepthEnable = DepthEnable;
 }
 
 void DepthStencilState::SetDepthWrite(bool DepthWrite)
 {
-	m_DepthWrite = DepthWrite;
+	this->DepthWrite = DepthWrite;
 }
 
 void DepthStencilState::SetDepthFunc(ComparisonFunc DepthFunc)
 {
-	m_DepthFunc = DepthFunc;
+	this->DepthFunc = DepthFunc;
 }
 
 void DepthStencilState::SetStencilEnable(bool StencilEnable)
 {
-	m_StencilEnable = StencilEnable;
+	this->StencilEnable = StencilEnable;
 }
 
 void DepthStencilState::SetStencilReadMask(UINT8 StencilReadMask)
 {
-	m_StencilReadMask = StencilReadMask;
+	this->StencilReadMask = StencilReadMask;
 }
 
 void DepthStencilState::SetStencilWriteMask(UINT8 StencilWriteMask)
 {
-	m_StencilWriteMask = StencilWriteMask;
+	this->StencilWriteMask = StencilWriteMask;
 }
 
 void DepthStencilState::SetStencilOp(
@@ -172,7 +172,7 @@ void DepthStencilState::SetStencilOp(
 		SetStencilOp(Face::Front, StencilFailOp, StencilDepthFailOp, StencilPassOp);
 		SetStencilOp(Face::Back, StencilFailOp, StencilDepthFailOp, StencilPassOp);
 	}
-	Stencil& Stencil		   = Face == Face::Front ? m_FrontFace : m_BackFace;
+	Stencil& Stencil		   = Face == Face::Front ? FrontFace : BackFace;
 	Stencil.StencilFailOp	   = StencilFailOp;
 	Stencil.StencilDepthFailOp = StencilDepthFailOp;
 	Stencil.StencilPassOp	   = StencilPassOp;
@@ -185,7 +185,7 @@ void DepthStencilState::SetStencilFunc(Face Face, ComparisonFunc StencilFunc)
 		SetStencilFunc(Face::Front, StencilFunc);
 		SetStencilFunc(Face::Back, StencilFunc);
 	}
-	Stencil& Stencil	= Face == Face::Front ? m_FrontFace : m_BackFace;
+	Stencil& Stencil	= Face == Face::Front ? FrontFace : BackFace;
 	Stencil.StencilFunc = StencilFunc;
 }
 

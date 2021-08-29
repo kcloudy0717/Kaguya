@@ -46,24 +46,24 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 		RasterizationStateCreateInfo						 = VkStruct<VkPipelineRasterizationStateCreateInfo>();
 		RasterizationStateCreateInfo.depthClampEnable		 = VK_FALSE; // ?
 		RasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE; // ?
-		RasterizationStateCreateInfo.polygonMode			 = ToVkFillMode(RasterizerState.m_FillMode);
-		RasterizationStateCreateInfo.cullMode				 = ToVkCullMode(RasterizerState.m_CullMode);
-		RasterizationStateCreateInfo.lineWidth				 = 1.0f;					// ?
-		RasterizationStateCreateInfo.frontFace				 = VK_FRONT_FACE_CLOCKWISE; // ?
-		RasterizationStateCreateInfo.depthBiasEnable		 = VK_FALSE;				// ?
-		RasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;					// ?
-		RasterizationStateCreateInfo.depthBiasClamp			 = 0.0f;					// ?
-		RasterizationStateCreateInfo.depthBiasSlopeFactor	 = 0.0f;					// ?
-		RasterizationStateCreateInfo.lineWidth				 = 1.0f;					// ?
+		RasterizationStateCreateInfo.polygonMode			 = ToVkFillMode(RasterizerState.FillMode);
+		RasterizationStateCreateInfo.cullMode				 = ToVkCullMode(RasterizerState.CullMode);
+		RasterizationStateCreateInfo.lineWidth				 = 1.0f;							// ?
+		RasterizationStateCreateInfo.frontFace				 = VK_FRONT_FACE_COUNTER_CLOCKWISE; // ?
+		RasterizationStateCreateInfo.depthBiasEnable		 = VK_FALSE;						// ?
+		RasterizationStateCreateInfo.depthBiasConstantFactor = 0.0f;							// ?
+		RasterizationStateCreateInfo.depthBiasClamp			 = 0.0f;							// ?
+		RasterizationStateCreateInfo.depthBiasSlopeFactor	 = 0.0f;							// ?
+		RasterizationStateCreateInfo.lineWidth				 = 1.0f;							// ?
 	}
 
 	void DepthStencilStateCb(const DepthStencilState& DepthStencilState) override
 	{
 		DepthStencilStateCreateInfo						  = VkStruct<VkPipelineDepthStencilStateCreateInfo>();
 		DepthStencilStateCreateInfo.flags				  = 0;
-		DepthStencilStateCreateInfo.depthTestEnable		  = DepthStencilState.m_DepthEnable ? VK_TRUE : VK_FALSE;
-		DepthStencilStateCreateInfo.depthWriteEnable	  = DepthStencilState.m_DepthWrite ? VK_TRUE : VK_FALSE;
-		DepthStencilStateCreateInfo.depthCompareOp		  = ToVkCompareOp(DepthStencilState.m_DepthFunc);
+		DepthStencilStateCreateInfo.depthTestEnable		  = DepthStencilState.DepthEnable ? VK_TRUE : VK_FALSE;
+		DepthStencilStateCreateInfo.depthWriteEnable	  = DepthStencilState.DepthWrite ? VK_TRUE : VK_FALSE;
+		DepthStencilStateCreateInfo.depthCompareOp		  = ToVkCompareOp(DepthStencilState.DepthFunc);
 		DepthStencilStateCreateInfo.depthBoundsTestEnable = VK_FALSE;
 		DepthStencilStateCreateInfo.minDepthBounds		  = 0.0f; // Optional
 		DepthStencilStateCreateInfo.maxDepthBounds		  = 1.0f; // Optional
@@ -128,25 +128,6 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 	VkRenderPass VkRenderPass = VK_NULL_HANDLE;
 };
 
-VulkanPipelineState::VulkanPipelineState(VulkanDevice* Parent, VulkanPipelineStateBuilder& Builder)
-	: VulkanDeviceChild(Parent)
-{
-	auto DynamicState			   = VkStruct<VkPipelineDynamicStateCreateInfo>();
-	DynamicState.dynamicStateCount = std::size(DynamicStates);
-	DynamicState.pDynamicStates	   = DynamicStates;
-
-	VkGraphicsPipelineCreateInfo GraphicsPipelineCreateInfo = Builder.Create();
-	GraphicsPipelineCreateInfo.pDynamicState				= &DynamicState;
-
-	VERIFY_VULKAN_API(vkCreateGraphicsPipelines(
-		Parent->GetVkDevice(),
-		VK_NULL_HANDLE,
-		1,
-		&GraphicsPipelineCreateInfo,
-		nullptr,
-		&Pipeline));
-}
-
 VulkanPipelineState::VulkanPipelineState(VulkanDevice* Parent, const PipelineStateStreamDesc& Desc)
 {
 	auto DynamicState			   = VkStruct<VkPipelineDynamicStateCreateInfo>();
@@ -167,6 +148,8 @@ VulkanPipelineState::VulkanPipelineState(VulkanDevice* Parent, const PipelineSta
 	MultisampleState.alphaToCoverageEnable = VK_FALSE;
 	MultisampleState.alphaToOneEnable	   = VK_FALSE;
 
+	// setup dummy color blending. We aren't using transparent objects yet
+	// the blending is just "no blend", but we do write to the color attachment
 	VkPipelineColorBlendAttachmentState ColorBlendAttachmentState = {};
 	ColorBlendAttachmentState.colorWriteMask =
 		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -213,6 +196,6 @@ VulkanPipelineState::~VulkanPipelineState()
 {
 	if (Parent && Pipeline)
 	{
-		vkDestroyPipeline(Parent->GetVkDevice(), Pipeline, nullptr);
+		vkDestroyPipeline(Parent->As<VulkanDevice>()->GetVkDevice(), Pipeline, nullptr);
 	}
 }

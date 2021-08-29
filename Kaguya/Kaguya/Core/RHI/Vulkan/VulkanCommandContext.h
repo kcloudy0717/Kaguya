@@ -2,6 +2,7 @@
 #include "VulkanCommon.h"
 
 class VulkanRootSignature;
+class VulkanPipelineState;
 
 class VulkanCommandContext : public VulkanDeviceChild
 {
@@ -13,6 +14,10 @@ public:
 
 	void SetGraphicsRootSignature(VulkanRootSignature* pRootSignature);
 	void SetComputeRootSignature(VulkanRootSignature* pRootSignature);
+
+	void SetGraphicsPipelineState(VulkanPipelineState* pPipelineState);
+
+	void SetViewports(UINT NumViewports, RHIViewport* pViewports, RHIRect* pScissorRects);
 
 	void SetPushConstants(UINT Size, const void* pSrcData);
 	void SetDescriptorSets();

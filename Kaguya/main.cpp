@@ -36,7 +36,7 @@ struct VulkanMesh
 struct VulkanMaterial
 {
 	VulkanRootSignature* RootSignature;
-	VulkanPipelineState	 PipelineState;
+	VulkanPipelineState* PipelineState;
 };
 
 struct RenderObject
@@ -158,20 +158,9 @@ public:
 
 		Context.BeginRenderPass(RenderPassBeginInfo);
 
-		VkViewport Viewport = {};
-		Viewport.x			= 0.0f;
-		Viewport.y			= 0.0f;
-		Viewport.width		= (float)SwapChain.GetWidth();
-		Viewport.height		= (float)SwapChain.GetHeight();
-		Viewport.minDepth	= 0.0f;
-		Viewport.maxDepth	= 1.0f;
-
-		VkRect2D ScissorRect = {};
-		ScissorRect.offset	 = { 0, 0 };
-		ScissorRect.extent	 = SwapChain.GetExtent();
-
-		vkCmdSetViewport(Context.CommandBuffer, 0, 1, &Viewport);
-		vkCmdSetScissor(Context.CommandBuffer, 0, 1, &ScissorRect);
+		RHIViewport Viewport	= RHIViewport((float)SwapChain.GetWidth(), (float)SwapChain.GetHeight());
+		RHIRect		ScissorRect = { 0, 0, SwapChain.GetWidth(), SwapChain.GetHeight() };
+		Context.SetViewports(1, &Viewport, &ScissorRect);
 
 		draw_objects(Context, _renderables.data(), _renderables.size());
 
@@ -314,10 +303,9 @@ private:
 		} Stream;
 
 		RasterizerState RasterizerState;
-		RasterizerState.m_CullMode = RasterizerState::CullMode::None;
 
 		DepthStencilState DepthStencilState;
-		DepthStencilState.m_DepthFunc = ComparisonFunc::LessEqual;
+		DepthStencilState.DepthFunc = ComparisonFunc::LessEqual;
 
 		InputLayout InputLayout;
 		InputLayout.AddVertexLayoutElement("POSITION", 0, 0, ERHIFormat::RGB32_FLOAT, sizeof(Vertex::Position));
@@ -332,11 +320,10 @@ private:
 		Stream.PrimitiveTopology = PrimitiveTopology::Triangle;
 		Stream.RenderPass		 = RenderPass.Get();
 
-		MeshPipeline = VulkanPipelineState(
-			&Device,
+		MeshPipeline = Device.CreatePipelineState(
 			{ .SizeInBytes = sizeof(PipelineStateStream), .pPipelineStateSubobjectStream = &Stream });
 
-		create_material(RootSignature->As<VulkanRootSignature>(), std::move(MeshPipeline), "Default");
+		create_material(RootSignature->As<VulkanRootSignature>(), MeshPipeline->As<VulkanPipelineState>(), "Default");
 	}
 
 	void LoadMeshes()
@@ -569,7 +556,7 @@ private:
 	UploadContext _uploadContext;
 
 	RefPtr<IRHIRootSignature> RootSignature;
-	VulkanPipelineState		  MeshPipeline;
+	RefPtr<IRHIPipelineState> MeshPipeline;
 	VulkanMesh				  SphereMesh;
 
 	RefPtr<IRHITexture> DepthBuffer;
@@ -591,13 +578,13 @@ private:
 
 	// create material and add it to the map
 	VulkanMaterial* create_material(
-		VulkanRootSignature*  RootSignature,
-		VulkanPipelineState&& PipelineState,
-		const std::string&	  name)
+		VulkanRootSignature* RootSignature,
+		VulkanPipelineState* PipelineState,
+		const std::string&	 name)
 	{
 		VulkanMaterial mat;
 		mat.RootSignature = RootSignature;
-		mat.PipelineState = std::move(PipelineState);
+		mat.PipelineState = PipelineState;
 		_materials[name]  = std::move(mat);
 		return &_materials[name];
 	}
@@ -643,10 +630,7 @@ private:
 			// only bind the pipeline if it doesn't match with the already bound one
 			if (object.material != lastMaterial)
 			{
-				vkCmdBindPipeline(
-					Context.CommandBuffer,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					object.material->PipelineState);
+				Context.SetGraphicsPipelineState(object.material->PipelineState);
 				Context.SetGraphicsRootSignature(object.material->RootSignature);
 				Context.SetDescriptorSets();
 

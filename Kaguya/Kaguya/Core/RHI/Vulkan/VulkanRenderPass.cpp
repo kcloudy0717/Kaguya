@@ -71,8 +71,7 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 	RenderPassCreateInfo.subpassCount = 1;
 	RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
 
-	VERIFY_VULKAN_API(
-		vkCreateRenderPass(Parent->As<VulkanDevice>()->GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
+	VERIFY_VULKAN_API(vkCreateRenderPass(Parent->GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
 }
 
 VulkanRenderPass::~VulkanRenderPass()

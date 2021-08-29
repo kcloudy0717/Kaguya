@@ -86,28 +86,28 @@ constexpr VkImageType ToVkImageType(ERHITextureType RHITextureType)
 	}
 }
 
-constexpr VkPolygonMode ToVkFillMode(RasterizerState::FillMode FillMode)
+constexpr VkPolygonMode ToVkFillMode(RasterizerState::EFillMode FillMode)
 {
 	switch (FillMode)
 	{
-	case RasterizerState::FillMode::Wireframe:
+	case RasterizerState::EFillMode::Wireframe:
 		return VK_POLYGON_MODE_LINE;
-	case RasterizerState::FillMode::Solid:
+	case RasterizerState::EFillMode::Solid:
 		return VK_POLYGON_MODE_FILL;
 	default:
 		return VK_POLYGON_MODE_MAX_ENUM;
 	}
 }
 
-constexpr VkCullModeFlags ToVkCullMode(RasterizerState::CullMode CullMode)
+constexpr VkCullModeFlags ToVkCullMode(RasterizerState::ECullMode CullMode)
 {
 	switch (CullMode)
 	{
-	case RasterizerState::CullMode::None:
+	case RasterizerState::ECullMode::None:
 		return VK_CULL_MODE_NONE;
-	case RasterizerState::CullMode::Front:
+	case RasterizerState::ECullMode::Front:
 		return VK_CULL_MODE_FRONT_BIT;
-	case RasterizerState::CullMode::Back:
+	case RasterizerState::ECullMode::Back:
 		return VK_CULL_MODE_BACK_BIT;
 	default:
 		return VK_CULL_MODE_FLAG_BITS_MAX_ENUM;
