@@ -177,7 +177,6 @@ public:
 private:
 	std::vector<VkVertexInputBindingDescription>   BindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> AttributeDescriptions;
-	VkPipelineVertexInputStateCreateFlags		   StateCreateFlags = 0;
 };
 
 constexpr VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)

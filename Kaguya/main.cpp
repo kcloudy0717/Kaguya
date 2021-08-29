@@ -93,9 +93,6 @@ public:
 	{
 		vkDestroyFence(Device.GetVkDevice(), _uploadContext._uploadFence, nullptr);
 
-		vkDestroyShaderModule(Device.GetVkDevice(), PS, nullptr);
-		vkDestroyShaderModule(Device.GetVkDevice(), VS, nullptr);
-
 		for (auto& Framebuffer : Framebuffers)
 		{
 			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
@@ -161,20 +158,26 @@ public:
 
 		Context.BeginRenderPass(RenderPassBeginInfo);
 
+		VkViewport Viewport = {};
+		Viewport.x			= 0.0f;
+		Viewport.y			= 0.0f;
+		Viewport.width		= (float)SwapChain.GetWidth();
+		Viewport.height		= (float)SwapChain.GetHeight();
+		Viewport.minDepth	= 0.0f;
+		Viewport.maxDepth	= 1.0f;
+
+		VkRect2D ScissorRect = {};
+		ScissorRect.offset	 = { 0, 0 };
+		ScissorRect.extent	 = SwapChain.GetExtent();
+
+		vkCmdSetViewport(Context.CommandBuffer, 0, 1, &Viewport);
+		vkCmdSetScissor(Context.CommandBuffer, 0, 1, &ScissorRect);
+
 		draw_objects(Context, _renderables.data(), _renderables.size());
 
 		Context.EndRenderPass();
 
 		Context.CloseCommandList();
-
-		// prepare the submission to the queue.
-		// we want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain is ready
-		// we will signal the _renderSemaphore, to signal that rendering has finished
-
-		VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-		auto SubmitInfo				 = VkStruct<VkSubmitInfo>();
-		SubmitInfo.pWaitDstStageMask = &waitStage;
 
 		VulkanCommandSyncPoint SyncPoint = Device.GetGraphicsQueue().ExecuteCommandLists(1, &Context, false);
 
@@ -266,19 +269,9 @@ private:
 
 	void InitDescriptors()
 	{
-		//{
-		//	DescriptorTableDesc Desc = {};
-		//	Desc.AddDescriptorRange({ .Type = EDescriptorType::ConstantBuffer, .NumDescriptors = 4096, .Binding = 0 });
-		//	Desc.AddDescriptorRange({ .Type = EDescriptorType::Texture, .NumDescriptors = 4096, .Binding = 1 });
-		//	Desc.AddDescriptorRange({ .Type = EDescriptorType::RWTexture, .NumDescriptors = 4096, .Binding = 2 });
-		//	Desc.AddDescriptorRange({ .Type = EDescriptorType::Sampler, .NumDescriptors = 4096, .Binding = 3 });
-		//
-		//	DescriptorTable = Device.CreateDescriptorTable(Desc);
-		//}
 		{
 			RootSignatureDesc Desc = {};
 			Desc.AddPushConstant<MeshPushConstants>();
-			// Desc.AddDescriptorTable(DescriptorTable.Get());
 			RootSignature = Device.CreateRootSignature(Desc);
 		}
 
@@ -295,82 +288,55 @@ private:
 
 	void InitPipelines()
 	{
-		if (!LoadShaderModule(EShaderType::Vertex, ExecutableDirectory / "Shaders/Vulkan/Triangle.vs.hlsl", &VS))
+		Shader VS = ShaderCompiler.SpirVCodeGen(
+			Device.GetVkDevice(),
+			EShaderType::Vertex,
+			ExecutableDirectory / "Shaders/Vulkan/Triangle.vs.hlsl",
+			L"main",
+			{});
+		Shader PS = ShaderCompiler.SpirVCodeGen(
+			Device.GetVkDevice(),
+			EShaderType::Pixel,
+			ExecutableDirectory / "Shaders/Vulkan/Triangle.ps.hlsl",
+			L"main",
+			{});
+
+		struct PipelineStateStream
 		{
-			std::cout << "Error when building the triangle vertex shader module" << std::endl;
-		}
-		if (!LoadShaderModule(EShaderType::Pixel, ExecutableDirectory / "Shaders/Vulkan/Triangle.ps.hlsl", &PS))
-		{
-			std::cout << "Error when building the triangle fragment shader module" << std::endl;
-		}
+			PipelineStateStreamRootSignature	 RootSignature;
+			PipelineStateStreamVS				 VS;
+			PipelineStateStreamPS				 PS;
+			PipelineStateStreamRasterizerState	 RasterizerState;
+			PipelineStateStreamDepthStencilState DepthStencilState;
+			PipelineStateStreamInputLayout		 InputLayout;
+			PipelineStateStreamPrimitiveTopology PrimitiveTopology;
+			PipelineStateStreamRenderPass		 RenderPass;
+		} Stream;
 
-		VulkanPipelineStateBuilder pipelineBuilder;
+		RasterizerState RasterizerState;
+		RasterizerState.m_CullMode = RasterizerState::CullMode::None;
 
-		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_VERTEX_BIT, VS));
-		pipelineBuilder.ShaderStages.push_back(InitPipelineShaderStageCreateInfo(VK_SHADER_STAGE_FRAGMENT_BIT, PS));
+		DepthStencilState DepthStencilState;
+		DepthStencilState.m_DepthFunc = ComparisonFunc::LessEqual;
 
-		VulkanInputLayout InputLayout(sizeof(Vertex));
-		InputLayout.AddVertexLayoutElement(0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, Position));
-		InputLayout.AddVertexLayoutElement(1, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, TextureCoord));
-		InputLayout.AddVertexLayoutElement(2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, Normal));
+		InputLayout InputLayout;
+		InputLayout.AddVertexLayoutElement("POSITION", 0, 0, ERHIFormat::RGB32_FLOAT, sizeof(Vertex::Position));
+		InputLayout.AddVertexLayoutElement("TEXCOORD", 0, 1, ERHIFormat::RG32_FLOAT, sizeof(Vertex::TextureCoord));
+		InputLayout.AddVertexLayoutElement("NORMAL", 0, 2, ERHIFormat::RGB32_FLOAT, sizeof(Vertex::Normal));
 
-		pipelineBuilder.VertexInputState = InputLayout;
+		Stream.RootSignature	 = RootSignature.Get();
+		Stream.VS				 = &VS;
+		Stream.PS				 = &PS;
+		Stream.RasterizerState	 = RasterizerState;
+		Stream.InputLayout		 = InputLayout;
+		Stream.PrimitiveTopology = PrimitiveTopology::Triangle;
+		Stream.RenderPass		 = RenderPass.Get();
 
-		// input assembly is the configuration for drawing triangle lists, strips, or individual points.
-		// we are just going to draw triangle list
-		pipelineBuilder.InputAssemblyState =
-			InitPipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-
-		// build viewport and scissor from the swapchain extents
-		pipelineBuilder.Viewport.x		  = 0.0f;
-		pipelineBuilder.Viewport.y		  = 0.0f;
-		pipelineBuilder.Viewport.width	  = (float)SwapChain.GetWidth();
-		pipelineBuilder.Viewport.height	  = (float)SwapChain.GetHeight();
-		pipelineBuilder.Viewport.minDepth = 0.0f;
-		pipelineBuilder.Viewport.maxDepth = 1.0f;
-
-		pipelineBuilder.ScissorRect.offset = { 0, 0 };
-		pipelineBuilder.ScissorRect.extent = SwapChain.GetExtent();
-
-		// configure the rasterizer to draw filled triangles
-		pipelineBuilder.RasterizationState = InitPipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL);
-
-		// we don't use multisampling, so just run the default one
-		pipelineBuilder.MultisampleState = InitPipelineMultisampleStateCreateInfo();
-
-		pipelineBuilder.DepthStencilState =
-			InitPipelineDepthStencilStateCreateInfo(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
-		// a single blend attachment with no blending and writing to RGBA
-		pipelineBuilder.ColorBlendAttachmentState = InitPipelineColorBlendAttachmentState();
-
-		// use the triangle layout we created
-		pipelineBuilder.PipelineLayout = RootSignature->As<VulkanRootSignature>()->GetApiHandle();
-		pipelineBuilder.RenderPass	   = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
-
-		// finally build the pipeline
-		MeshPipeline = VulkanPipelineState(&Device, pipelineBuilder);
+		MeshPipeline = VulkanPipelineState(
+			&Device,
+			{ .SizeInBytes = sizeof(PipelineStateStream), .pPipelineStateSubobjectStream = &Stream });
 
 		create_material(RootSignature->As<VulkanRootSignature>(), std::move(MeshPipeline), "Default");
-	}
-
-	bool LoadShaderModule(EShaderType ShaderType, const std::filesystem::path& Path, VkShaderModule* pShaderModule)
-	{
-		Shader Shader = ShaderCompiler.SpirVCodeGen(ShaderType, ExecutableDirectory / Path, L"main", {});
-
-		// create a new shader module, using the buffer we loaded
-		auto ShaderModuleCreateInfo		= VkStruct<VkShaderModuleCreateInfo>();
-		ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
-		ShaderModuleCreateInfo.pCode	= (uint32_t*)Shader.GetBufferPointer();
-
-		// check that the creation goes well.
-		VkShaderModule ShaderModule = VK_NULL_HANDLE;
-		if (vkCreateShaderModule(Device.GetVkDevice(), &ShaderModuleCreateInfo, nullptr, &ShaderModule) != VK_SUCCESS)
-		{
-			return false;
-		}
-		*pShaderModule = ShaderModule;
-		return true;
 	}
 
 	void LoadMeshes()
@@ -601,8 +567,6 @@ private:
 	std::vector<VkFramebuffer> Framebuffers;
 
 	UploadContext _uploadContext;
-
-	VkShaderModule VS, PS;
 
 	RefPtr<IRHIRootSignature> RootSignature;
 	VulkanPipelineState		  MeshPipeline;

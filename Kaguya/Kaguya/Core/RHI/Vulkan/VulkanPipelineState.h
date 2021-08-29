@@ -1,39 +1,6 @@
 #pragma once
 #include "VulkanCommon.h"
 
-inline VkPipelineShaderStageCreateInfo InitPipelineShaderStageCreateInfo(
-	VkShaderStageFlagBits ShaderStage,
-	VkShaderModule		  ShaderModule)
-{
-	auto PipelineShaderStageCreateInfo = VkStruct<VkPipelineShaderStageCreateInfo>();
-	// shader stage
-	PipelineShaderStageCreateInfo.stage = ShaderStage;
-	// module containing the code for this shader stage
-	PipelineShaderStageCreateInfo.module = ShaderModule;
-	// the entry point of the shader
-	PipelineShaderStageCreateInfo.pName = "main";
-	return PipelineShaderStageCreateInfo;
-}
-
-inline VkPipelineVertexInputStateCreateInfo InitPipelineVertexInputStateCreateInfo()
-{
-	auto PipelineVertexInputStateCreateInfo = VkStruct<VkPipelineVertexInputStateCreateInfo>();
-	// no vertex bindings or attributes
-	PipelineVertexInputStateCreateInfo.vertexBindingDescriptionCount   = 0;
-	PipelineVertexInputStateCreateInfo.vertexAttributeDescriptionCount = 0;
-	return PipelineVertexInputStateCreateInfo;
-}
-
-inline VkPipelineInputAssemblyStateCreateInfo InitPipelineInputAssemblyStateCreateInfo(
-	VkPrimitiveTopology PrimitiveTopology)
-{
-	auto PipelineInputAssemblyStateCreateInfo	  = VkStruct<VkPipelineInputAssemblyStateCreateInfo>();
-	PipelineInputAssemblyStateCreateInfo.topology = PrimitiveTopology;
-	// we are not going to use primitive restart on the entire tutorial so leave it on false
-	PipelineInputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
-	return PipelineInputAssemblyStateCreateInfo;
-}
-
 inline VkPipelineRasterizationStateCreateInfo InitPipelineRasterizationStateCreateInfo(VkPolygonMode PolygonMode)
 {
 	auto PipelineRasterizationStateCreateInfo			  = VkStruct<VkPipelineRasterizationStateCreateInfo>();
@@ -111,32 +78,32 @@ public:
 	std::vector<VkPipelineShaderStageCreateInfo> ShaderStages;
 	VkPipelineVertexInputStateCreateInfo		 VertexInputState;
 	VkPipelineInputAssemblyStateCreateInfo		 InputAssemblyState;
-	VkViewport									 Viewport;
-	VkRect2D									 ScissorRect;
+	VkPipelineViewportStateCreateInfo			 ViewportState;
 	VkPipelineRasterizationStateCreateInfo		 RasterizationState;
 	VkPipelineColorBlendAttachmentState			 ColorBlendAttachmentState;
 	VkPipelineMultisampleStateCreateInfo		 MultisampleState;
 	VkPipelineDepthStencilStateCreateInfo		 DepthStencilState;
+	VkPipelineColorBlendStateCreateInfo			 ColorBlendState;
 	VkPipelineLayout							 PipelineLayout;
-	VkRenderPass								 RenderPass;
+	VkRenderPass								 RenderPass = VK_NULL_HANDLE;
 
-	VkPipeline Create(VkDevice Device)
+	VkGraphicsPipelineCreateInfo Create()
 	{
-		// make viewport state from our stored viewport and scissor.
-		// at the moment we won't support multiple viewports or scissors
-		auto ViewportStateCreateInfo		  = VkStruct<VkPipelineViewportStateCreateInfo>();
-		ViewportStateCreateInfo.viewportCount = 1;
-		ViewportStateCreateInfo.pViewports	  = &Viewport;
-		ViewportStateCreateInfo.scissorCount  = 1;
-		ViewportStateCreateInfo.pScissors	  = &ScissorRect;
+		// This is a dummy ViewportState, all VulkanPipelineState will have dynamic viewport/scissor rects
+		// this is needed to by pass validation layer
+		ViewportState				= VkStruct<VkPipelineViewportStateCreateInfo>();
+		ViewportState.viewportCount = 1;
+		ViewportState.pViewports	= nullptr;
+		ViewportState.scissorCount	= 1;
+		ViewportState.pScissors		= nullptr;
 
 		// setup dummy color blending. We aren't using transparent objects yet
 		// the blending is just "no blend", but we do write to the color attachment
-		auto ColorBlendStateCreateInfo			  = VkStruct<VkPipelineColorBlendStateCreateInfo>();
-		ColorBlendStateCreateInfo.logicOpEnable	  = VK_FALSE;
-		ColorBlendStateCreateInfo.logicOp		  = VK_LOGIC_OP_COPY;
-		ColorBlendStateCreateInfo.attachmentCount = 1;
-		ColorBlendStateCreateInfo.pAttachments	  = &ColorBlendAttachmentState;
+		ColorBlendState					= VkStruct<VkPipelineColorBlendStateCreateInfo>();
+		ColorBlendState.logicOpEnable	= VK_FALSE;
+		ColorBlendState.logicOp			= VK_LOGIC_OP_COPY;
+		ColorBlendState.attachmentCount = 1;
+		ColorBlendState.pAttachments	= &ColorBlendAttachmentState;
 
 		// build the actual pipeline
 		// we now use all of the info structs we have been writing into into this one to create the pipeline
@@ -147,30 +114,18 @@ public:
 		GraphicsPipelineCreateInfo.pVertexInputState   = &VertexInputState;
 		GraphicsPipelineCreateInfo.pInputAssemblyState = &InputAssemblyState;
 		GraphicsPipelineCreateInfo.pTessellationState  = nullptr;
-		GraphicsPipelineCreateInfo.pViewportState	   = &ViewportStateCreateInfo;
+		GraphicsPipelineCreateInfo.pViewportState	   = &ViewportState;
 		GraphicsPipelineCreateInfo.pRasterizationState = &RasterizationState;
 		GraphicsPipelineCreateInfo.pMultisampleState   = &MultisampleState;
 		GraphicsPipelineCreateInfo.pDepthStencilState  = &DepthStencilState;
-		GraphicsPipelineCreateInfo.pColorBlendState	   = &ColorBlendStateCreateInfo;
+		GraphicsPipelineCreateInfo.pColorBlendState	   = &ColorBlendState;
 		GraphicsPipelineCreateInfo.pDynamicState	   = nullptr;
 		GraphicsPipelineCreateInfo.layout			   = PipelineLayout;
 		GraphicsPipelineCreateInfo.renderPass		   = RenderPass;
 		GraphicsPipelineCreateInfo.subpass			   = 0;
 		GraphicsPipelineCreateInfo.basePipelineHandle  = VK_NULL_HANDLE;
 		GraphicsPipelineCreateInfo.basePipelineIndex   = 0;
-
-		// it's easy to error out on create graphics pipeline, so we handle it a bit better than the common VK_CHECK
-		// case
-		VkPipeline Pipeline;
-		if (vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, 1, &GraphicsPipelineCreateInfo, nullptr, &Pipeline) !=
-			VK_SUCCESS)
-		{
-			return VK_NULL_HANDLE; // failed to create graphics pipeline
-		}
-		else
-		{
-			return Pipeline;
-		}
+		return GraphicsPipelineCreateInfo;
 	}
 };
 
@@ -179,6 +134,7 @@ class VulkanPipelineState : public VulkanDeviceChild
 public:
 	VulkanPipelineState() noexcept = default;
 	VulkanPipelineState(VulkanDevice* Parent, VulkanPipelineStateBuilder& Builder);
+	VulkanPipelineState(VulkanDevice* Parent, const PipelineStateStreamDesc& Desc);
 	~VulkanPipelineState();
 
 	VulkanPipelineState(VulkanPipelineState&& VulkanPipelineState) noexcept

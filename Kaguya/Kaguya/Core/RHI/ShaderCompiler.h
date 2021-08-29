@@ -1,6 +1,7 @@
 #pragma once
 #include "dxcapi.h"
 #include "d3d12shader.h"
+#include "D3D12/Aftermath/AftermathShaderDatabase.h"
 
 class DxcException : public Exception
 {
@@ -67,6 +68,8 @@ public:
 	[[nodiscard]] auto GetBufferPointer() -> LPVOID const { return Blob->GetBufferPointer(); }
 	[[nodiscard]] auto GetBufferSize() -> SIZE_T const { return Blob->GetBufferSize(); }
 
+	VkShaderModule ShaderModule = VK_NULL_HANDLE;
+
 private:
 	EShaderType						 ShaderType;
 	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
@@ -127,6 +130,7 @@ public:
 	Library CompileLibrary(const std::filesystem::path& Path) const;
 
 	Shader SpirVCodeGen(
+		VkDevice					  Device,
 		EShaderType					  ShaderType,
 		const std::filesystem::path&  Path,
 		std::wstring_view			  EntryPoint,

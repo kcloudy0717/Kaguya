@@ -6,7 +6,7 @@ class RefPtr
 public:
 	using InterfaceType = T;
 
-	template<bool b, typename U = void>
+	template<bool, typename U = void>
 	struct EnableIf
 	{
 	};
@@ -90,9 +90,7 @@ public:
 
 	// Move ctor that allows instantiation of a class when U* is convertible to T*
 	template<class U>
-	RefPtr(
-		RefPtr<U>&& other,
-		typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type* = nullptr) noexcept
+	RefPtr(RefPtr<U>&& other, typename std::enable_if<std::is_convertible_v<U*, T*>, void*>::type* = nullptr) noexcept
 		: Ptr(other.Ptr)
 	{
 		other.Ptr = nullptr;
@@ -183,12 +181,7 @@ public:
 		return &Ptr;
 	}
 
-	T* Detach() noexcept
-	{
-		T* ptr = Ptr;
-		Ptr	   = nullptr;
-		return ptr;
-	}
+	T* Detach() noexcept { return std::exchange(Ptr, {}); }
 
 	// Set the pointer while keeping the object's reference count unchanged
 	void Attach(InterfaceType* other)

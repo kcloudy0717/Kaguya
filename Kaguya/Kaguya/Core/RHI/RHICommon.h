@@ -1,6 +1,10 @@
 #pragma once
 #include "RefPtr.h"
+#include "ShaderCompiler.h"
+#include "D3D12/d3dx12.h"
 
+class IRHIRenderPass;
+class IRHIRootSignature;
 class IRHIResource;
 class IRHIDescriptorTable;
 
@@ -9,6 +13,27 @@ struct DeviceOptions
 	bool EnableDebugLayer;
 	bool EnableGpuBasedValidation;
 	bool EnableAutoDebugName;
+};
+
+enum class PrimitiveTopology
+{
+	Undefined,
+	Point,
+	Line,
+	Triangle,
+	Patch
+};
+
+enum class ComparisonFunc
+{
+	Never,		  // Comparison always fails
+	Less,		  // Passes if source is less than the destination
+	Equal,		  // Passes if source is equal to the destination
+	LessEqual,	  // Passes if source is less than or equal to the destination
+	Greater,	  // Passes if source is greater than to the destination
+	NotEqual,	  // Passes if source is not equal to the destination
+	GreaterEqual, // Passes if source is greater than or equal to the destination
+	Always		  // Comparison always succeeds
 };
 
 enum class ERHIFormat
@@ -470,3 +495,432 @@ enum class ESRVType
 	TextureCubeArray,
 	RaytracingAccelerationStructure
 };
+
+class BlendState
+{
+public:
+	enum Operation
+	{
+		None,
+		Blend,
+		Logic
+	};
+
+	/* Defines how to combine the blend inputs */
+	enum class BlendOp
+	{
+		Add,			  // Add src1 and src2
+		Subtract,		  // Subtract src1 from src2
+		ReverseSubstract, // Subtract src2 from src1
+		Min,			  // Find the minimum between the sources (per-channel)
+		Max				  // Find the maximum between the sources (per-channel)
+	};
+
+	enum class LogicOp
+	{
+		Clear,		  // Clears the render target (0)
+		Set,		  // Sets the render target (1)
+		Copy,		  // Copys the render target (s source from Pixel Shader output)
+		CopyInverted, // Performs an inverted-copy of the render target (~s)
+		NoOperation,  // No operation is performed on the render target (d destination in the Render Target View)
+		Invert,		  // Inverts the render target (~d)
+		And,		  // Performs a logical AND operation on the render target (s & d)
+		Nand,		  // Performs a logical NAND operation on the render target (~(s & d))
+		Or,			  // Performs a logical OR operation on the render target (s | d)
+		Nor,		  // Performs a logical NOR operation on the render target ~(s | d)
+		Xor,		  // Performs a logical XOR operation on the render target (s ^ d)
+		Equivalence,  // Performs a logical equal operation on the render target (~(s ^ d))
+		AndReverse,	  // Performs a logical AND and reverse operation on the render target (s & ~d)
+		AndInverted,  // Performs a logical AND and invert operation on the render target (~s & d)
+		OrReverse,	  // Performs a logical OR and reverse operation on the render target (s	| ~d)
+		OrInverted	  // Performs a logical OR and invert operation on the render target (~s	| d)
+	};
+
+	/* Defines how to modulate the pixel-shader and render-target pixel values */
+	enum class Factor
+	{
+		Zero,				 // (0, 0, 0, 0)
+		One,				 // (1, 1, 1, 1)
+		SrcColor,			 // The pixel-shader output color
+		OneMinusSrcColor,	 // One minus the pixel-shader output color
+		DstColor,			 // The render-target color
+		OneMinusDstColor,	 // One minus the render-target color
+		SrcAlpha,			 // The pixel-shader output alpha value
+		OneMinusSrcAlpha,	 // One minus the pixel-shader output alpha value
+		DstAlpha,			 // The render-target alpha value
+		OneMinusDstAlpha,	 // One minus the render-target alpha value
+		BlendFactor,		 // Constant color, set using Desc#SetBlendFactor()
+		OneMinusBlendFactor, // One minus constant color, set using Desc#SetBlendFactor()
+		SrcAlphaSaturate,	 // (f, f, f, 1), where f = min(pixel shader output alpha, 1 - render-target pixel alpha)
+		Src1Color,			 // Fragment-shader output color 1
+		OneMinusSrc1Color,	 // One minus pixel-shader output color 1
+		Src1Alpha,			 // Fragment-shader output alpha 1
+		OneMinusSrc1Alpha	 // One minus pixel-shader output alpha 1
+	};
+
+	struct RenderTarget
+	{
+		Operation Operation		= Operation::None;
+		Factor	  SrcBlendRGB	= Factor::One;
+		Factor	  DstBlendRGB	= Factor::Zero;
+		BlendOp	  BlendOpRGB	= BlendOp::Add;
+		Factor	  SrcBlendAlpha = Factor::One;
+		Factor	  DstBlendAlpha = Factor::Zero;
+		BlendOp	  BlendOpAlpha	= BlendOp::Add;
+		LogicOp	  LogicOpRGB	= LogicOp::NoOperation;
+
+		struct WriteMask
+		{
+			bool WriteRed	= true;
+			bool WriteGreen = true;
+			bool WriteBlue	= true;
+			bool WriteAlpha = true;
+		} WriteMask;
+	};
+
+	BlendState();
+
+	void SetAlphaToCoverageEnable(bool AlphaToCoverageEnable);
+	void SetIndependentBlendEnable(bool IndependentBlendEnable);
+
+	void AddRenderTargetForBlendOp(
+		Factor	SrcBlendRGB,
+		Factor	DstBlendRGB,
+		BlendOp BlendOpRGB,
+		Factor	SrcBlendAlpha,
+		Factor	DstBlendAlpha,
+		BlendOp BlendOpAlpha);
+	void AddRenderTargetForLogicOp(LogicOp LogicOpRGB);
+
+private:
+	bool		 m_AlphaToCoverageEnable;
+	bool		 m_IndependentBlendEnable;
+	UINT		 m_NumRenderTargets;
+	RenderTarget m_RenderTargets[8];
+};
+
+class RasterizerState
+{
+public:
+	enum class FillMode
+	{
+		Wireframe, // Draw lines connecting the vertices.
+		Solid	   // Fill the triangles formed by the vertices
+	};
+
+	enum class CullMode
+	{
+		None,  // Always draw all triangles
+		Front, // Do not draw triangles that are front-facing
+		Back   // Do not draw triangles that are back-facing
+	};
+
+	RasterizerState();
+
+	void SetFillMode(FillMode FillMode);
+
+	void SetCullMode(CullMode CullMode);
+
+	// Determines how to interpret triangle direction
+	void SetFrontCounterClockwise(bool FrontCounterClockwise);
+
+	void SetDepthBias(int DepthBias);
+
+	void SetDepthBiasClamp(float DepthBiasClamp);
+
+	void SetSlopeScaledDepthBias(float SlopeScaledDepthBias);
+
+	void SetDepthClipEnable(bool DepthClipEnable);
+
+	void SetMultisampleEnable(bool MultisampleEnable);
+
+	void SetAntialiasedLineEnable(bool AntialiasedLineEnable);
+
+	void SetForcedSampleCount(unsigned int ForcedSampleCount);
+
+	void SetConservativeRaster(bool ConservativeRaster);
+
+	FillMode	 m_FillMode;
+	CullMode	 m_CullMode;
+	bool		 m_FrontCounterClockwise;
+	int			 m_DepthBias;
+	float		 m_DepthBiasClamp;
+	float		 m_SlopeScaledDepthBias;
+	bool		 m_DepthClipEnable;
+	bool		 m_MultisampleEnable;
+	bool		 m_AntialiasedLineEnable;
+	unsigned int m_ForcedSampleCount;
+	bool		 m_ConservativeRaster;
+};
+
+class DepthStencilState
+{
+public:
+	enum class Face
+	{
+		Front,
+		Back,
+		FrontAndBack
+	};
+
+	enum class StencilOperation
+	{
+		Keep,			  // Keep the stencil value
+		Zero,			  // Set the stencil value to zero
+		Replace,		  // Replace the stencil value with the reference value
+		IncreaseSaturate, // Increase the stencil value by one, clamp if necessary
+		DecreaseSaturate, // Decrease the stencil value by one, clamp if necessary
+		Invert,			  // Invert the stencil data (bitwise not)
+		Increase,		  // Increase the stencil value by one, wrap if necessary
+		Decrease		  // Decrease the stencil value by one, wrap if necessary
+	};
+
+	struct Stencil
+	{
+		StencilOperation StencilFailOp = StencilOperation::Keep; // Stencil operation in case stencil test fails
+		StencilOperation StencilDepthFailOp =
+			StencilOperation::Keep; // Stencil operation in case stencil test passes but depth test fails
+		StencilOperation StencilPassOp =
+			StencilOperation::Keep;							 // Stencil operation in case stencil and depth tests pass
+		ComparisonFunc StencilFunc = ComparisonFunc::Always; // Stencil comparison function
+	};
+
+	DepthStencilState();
+
+	void SetDepthEnable(bool DepthEnable);
+
+	void SetDepthWrite(bool DepthWrite);
+
+	void SetDepthFunc(ComparisonFunc DepthFunc);
+
+	void SetStencilEnable(bool StencilEnable);
+
+	void SetStencilReadMask(UINT8 StencilReadMask);
+
+	void SetStencilWriteMask(UINT8 StencilWriteMask);
+
+	void SetStencilOp(
+		Face			 Face,
+		StencilOperation StencilFailOp,
+		StencilOperation StencilDepthFailOp,
+		StencilOperation StencilPassOp);
+
+	void SetStencilFunc(Face Face, ComparisonFunc StencilFunc);
+
+	bool		   m_DepthEnable;
+	bool		   m_DepthWrite;
+	ComparisonFunc m_DepthFunc;
+	bool		   m_StencilEnable;
+	UINT8		   m_StencilReadMask;
+	UINT8		   m_StencilWriteMask;
+	Stencil		   m_FrontFace;
+	Stencil		   m_BackFace;
+};
+
+class InputLayout
+{
+public:
+	void AddVertexLayoutElement(
+		std::string_view SemanticName,
+		UINT			 SemanticIndex,
+		UINT			 Location,
+		ERHIFormat		 Format,
+		UINT			 Stride);
+
+	struct Element
+	{
+		std::string SemanticName;
+		UINT		SemanticIndex;
+		UINT		Location;
+		ERHIFormat	Format;
+		UINT		Stride;
+	};
+
+	std::vector<Element> m_InputElements;
+};
+
+enum class PipelineStateSubobjectType
+{
+	RootSignature,
+	VS,
+	PS,
+	DS,
+	HS,
+	GS,
+	CS,
+	BlendState,
+	RasterizerState,
+	DepthStencilState,
+	InputLayout,
+	PrimitiveTopology,
+	RenderPass,
+
+	NumTypes
+};
+
+template<typename T, PipelineStateSubobjectType Type>
+class alignas(void*) PipelineStateStreamSubobject
+{
+private:
+	PipelineStateSubobjectType _Type;
+	T						   _Desc;
+
+public:
+	PipelineStateStreamSubobject() noexcept
+		: _Type(Type)
+		, _Desc(T())
+	{
+	}
+	PipelineStateStreamSubobject(const T& Desc) noexcept
+		: _Type(Type)
+		, _Desc(Desc)
+	{
+	}
+	PipelineStateStreamSubobject& operator=(const T& Desc) noexcept
+	{
+		_Type = Type;
+		_Desc = Desc;
+		return *this;
+	}
+			 operator const T&() const noexcept { return _Desc; }
+			 operator T&() noexcept { return _Desc; }
+	T*		 operator&() noexcept { return &_Desc; }
+	const T* operator&() const noexcept { return &_Desc; }
+
+	T& operator->() noexcept { return _Desc; }
+};
+
+// clang-format off
+using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<IRHIRootSignature*, PipelineStateSubobjectType::RootSignature>;
+using PipelineStateStreamVS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::VS>;
+using PipelineStateStreamPS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::PS>;
+using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::DS>;
+using PipelineStateStreamHS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::HS>;
+using PipelineStateStreamGS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::GS>;
+using PipelineStateStreamCS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::CS>;
+using PipelineStateStreamBlendState			= PipelineStateStreamSubobject<BlendState, PipelineStateSubobjectType::BlendState>;
+using PipelineStateStreamRasterizerState	= PipelineStateStreamSubobject<RasterizerState, PipelineStateSubobjectType::RasterizerState>;
+using PipelineStateStreamDepthStencilState	= PipelineStateStreamSubobject<DepthStencilState, PipelineStateSubobjectType::DepthStencilState>;
+using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<InputLayout, PipelineStateSubobjectType::InputLayout>;
+using PipelineStateStreamPrimitiveTopology	= PipelineStateStreamSubobject<PrimitiveTopology, PipelineStateSubobjectType::PrimitiveTopology>;
+using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<IRHIRenderPass*, PipelineStateSubobjectType::RenderPass>;
+// clang-format on
+
+struct IPipelineParserCallbacks
+{
+	virtual ~IPipelineParserCallbacks() = default;
+
+	// Subobject Callbacks
+	virtual void RootSignatureCb(IRHIRootSignature*) {}
+	virtual void VSCb(Shader*) {}
+	virtual void PSCb(Shader*) {}
+	virtual void DSCb(Shader*) {}
+	virtual void HSCb(Shader*) {}
+	virtual void GSCb(Shader*) {}
+	virtual void CSCb(Shader*) {}
+	virtual void BlendStateCb(const BlendState&) {}
+	virtual void RasterizerStateCb(const RasterizerState&) {}
+	virtual void DepthStencilStateCb(const DepthStencilState&) {}
+	virtual void InputLayoutCb(const InputLayout&) {}
+	virtual void PrimitiveTopologyTypeCb(PrimitiveTopology) {}
+	virtual void RenderPassCb(IRHIRenderPass*) {}
+
+	// Error Callbacks
+	virtual void ErrorBadInputParameter(UINT /*ParameterIndex*/) {}
+	virtual void ErrorDuplicateSubobject(PipelineStateSubobjectType /*DuplicateType*/) {}
+	virtual void ErrorUnknownSubobject(UINT /*UnknownTypeValue*/) {}
+};
+
+struct PipelineStateStreamDesc
+{
+	SIZE_T SizeInBytes;
+	void*  pPipelineStateSubobjectStream;
+};
+
+inline void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* pCallbacks)
+{
+	if (Desc.SizeInBytes == 0 || Desc.pPipelineStateSubobjectStream == nullptr)
+	{
+		pCallbacks->ErrorBadInputParameter(1); // first parameter issue
+		return;
+	}
+
+	bool SubobjectSeen[static_cast<size_t>(PipelineStateSubobjectType::NumTypes)] = {};
+	for (SIZE_T CurOffset = 0, SizeOfSubobject = 0; CurOffset < Desc.SizeInBytes; CurOffset += SizeOfSubobject)
+	{
+		BYTE*  pStream		 = static_cast<BYTE*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
+		auto   SubobjectType = *reinterpret_cast<PipelineStateSubobjectType*>(pStream);
+		size_t Index		 = static_cast<size_t>(SubobjectType);
+
+		if (Index < 0 || Index >= static_cast<size_t>(PipelineStateSubobjectType::NumTypes))
+		{
+			pCallbacks->ErrorUnknownSubobject(Index);
+			return;
+		}
+		if (SubobjectSeen[Index])
+		{
+			pCallbacks->ErrorDuplicateSubobject(SubobjectType);
+			return; // disallow subobject duplicates in a stream
+		}
+		SubobjectSeen[Index] = true;
+
+		switch (SubobjectType)
+		{
+		case PipelineStateSubobjectType::RootSignature:
+			pCallbacks->RootSignatureCb(*reinterpret_cast<PipelineStateStreamRootSignature*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRootSignature);
+			break;
+		case PipelineStateSubobjectType::VS:
+			pCallbacks->VSCb(*reinterpret_cast<PipelineStateStreamVS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamVS);
+			break;
+		case PipelineStateSubobjectType::PS:
+			pCallbacks->PSCb(*reinterpret_cast<PipelineStateStreamPS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPS);
+			break;
+		case PipelineStateSubobjectType::DS:
+			pCallbacks->DSCb(*reinterpret_cast<PipelineStateStreamDS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPS);
+			break;
+		case PipelineStateSubobjectType::HS:
+			pCallbacks->HSCb(*reinterpret_cast<PipelineStateStreamHS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamHS);
+			break;
+		case PipelineStateSubobjectType::GS:
+			pCallbacks->GSCb(*reinterpret_cast<PipelineStateStreamGS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamGS);
+			break;
+		case PipelineStateSubobjectType::CS:
+			pCallbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamCS);
+			break;
+		case PipelineStateSubobjectType::BlendState:
+			pCallbacks->BlendStateCb(*reinterpret_cast<PipelineStateStreamBlendState*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamBlendState);
+			break;
+		case PipelineStateSubobjectType::RasterizerState:
+			pCallbacks->RasterizerStateCb(*reinterpret_cast<PipelineStateStreamRasterizerState*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRasterizerState);
+			break;
+		case PipelineStateSubobjectType::DepthStencilState:
+			pCallbacks->DepthStencilStateCb(*reinterpret_cast<PipelineStateStreamDepthStencilState*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamDepthStencilState);
+			break;
+		case PipelineStateSubobjectType::InputLayout:
+			pCallbacks->InputLayoutCb(*reinterpret_cast<PipelineStateStreamInputLayout*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamInputLayout);
+			break;
+		case PipelineStateSubobjectType::PrimitiveTopology:
+			pCallbacks->PrimitiveTopologyTypeCb(*reinterpret_cast<PipelineStateStreamPrimitiveTopology*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPrimitiveTopology);
+			break;
+		case PipelineStateSubobjectType::RenderPass:
+			pCallbacks->RenderPassCb(*reinterpret_cast<PipelineStateStreamRenderPass*>(pStream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRenderPass);
+			break;
+		default:
+			pCallbacks->ErrorUnknownSubobject(Index);
+			return;
+		}
+	}
+}

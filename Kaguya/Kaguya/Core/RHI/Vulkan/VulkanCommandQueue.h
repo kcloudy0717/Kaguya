@@ -44,6 +44,8 @@ public:
 	UINT64				   FenceValue = 1;
 	VulkanCommandSyncPoint SyncPoint;
 
+	// The wait/signal semaphore will be filled when there is a swapchain and this queue happens
+	// to be a present queue
 	VkSubmitInfo SubmitInfo = VkStruct<VkSubmitInfo>();
 
 	VkCommandPool					  CommandPool = VK_NULL_HANDLE;
