@@ -28,7 +28,7 @@ void D3D12CommandContext::OpenCommandList()
 
 	CommandListHandle = GetCommandQueue()->RequestCommandList(CommandAllocator);
 
-	if (Type == ED3D12CommandQueueType::Direct)
+	if (Type == ED3D12CommandQueueType::Direct || Type == ED3D12CommandQueueType::AsyncCompute)
 	{
 		ID3D12DescriptorHeap* DescriptorHeaps[2] = {
 			GetParentLinkedDevice()->GetResourceDescriptorHeap(),
