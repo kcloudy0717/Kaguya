@@ -28,12 +28,15 @@ void D3D12CommandContext::OpenCommandList()
 
 	CommandListHandle = GetCommandQueue()->RequestCommandList(CommandAllocator);
 
-	ID3D12DescriptorHeap* DescriptorHeaps[2] = {
-		GetParentLinkedDevice()->GetResourceDescriptorHeap(),
-		GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
-	};
+	if (Type == ED3D12CommandQueueType::Direct)
+	{
+		ID3D12DescriptorHeap* DescriptorHeaps[2] = {
+			GetParentLinkedDevice()->GetResourceDescriptorHeap(),
+			GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
+		};
 
-	CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
+		CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
+	}
 }
 
 void D3D12CommandContext::CloseCommandList()

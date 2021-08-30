@@ -54,8 +54,8 @@ public:
 		}
 
 		std::vector<size_t> Elements;
-		size_t				FreeStart;
-		size_t				NumActiveElements;
+		size_t				FreeStart		  = 0;
+		size_t				NumActiveElements = 0;
 	};
 
 	VkDescriptorSetLayout  DescriptorSetLayout = VK_NULL_HANDLE;

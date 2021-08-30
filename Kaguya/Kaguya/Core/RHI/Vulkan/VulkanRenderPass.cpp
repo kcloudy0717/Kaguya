@@ -2,6 +2,7 @@
 
 VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& Desc)
 	: IRHIRenderPass(Parent)
+	, Desc(Desc)
 {
 	bool ValidDepthStencilAttachment = Desc.DepthStencil.IsValid();
 
@@ -48,9 +49,8 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 	}
 
 	VkAttachmentReference ReferenceRenderTargets = {};
-	ReferenceRenderTargets.attachment =
-		0; // attachment number will index into the pAttachments array in the parent renderpass itself
-	ReferenceRenderTargets.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	ReferenceRenderTargets.attachment			 = 0;
+	ReferenceRenderTargets.layout				 = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference ReferenceDepthStencil = {};
 	ReferenceDepthStencil.attachment			= NumAttachments - 1;

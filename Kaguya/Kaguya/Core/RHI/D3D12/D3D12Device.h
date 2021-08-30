@@ -152,6 +152,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device>  Device;
 	Microsoft::WRL::ComPtr<ID3D12Device5> Device5;
 
+	CD3DX12FeatureSupport FeatureSupport;
+
 	UINT DescriptorHandleIncrementSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> InfoQueue1;

@@ -7,6 +7,37 @@ static constexpr VkDynamicState DynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT,
 
 struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 {
+	VulkanPipelineParserCallbacks() noexcept
+	{
+		ColorBlendStateCreateInfo				  = VkStruct<VkPipelineColorBlendStateCreateInfo>();
+		ColorBlendStateCreateInfo.flags			  = 0;
+		ColorBlendStateCreateInfo.logicOpEnable	  = VK_FALSE;
+		ColorBlendStateCreateInfo.logicOp		  = VK_LOGIC_OP_MAX_ENUM;
+		ColorBlendStateCreateInfo.attachmentCount = 8;
+		ColorBlendStateCreateInfo.pAttachments	  = BlendStates;
+
+		RasterizationStateCreateInfo = VkStruct<VkPipelineRasterizationStateCreateInfo>();
+
+		DepthStencilStateCreateInfo = VkStruct<VkPipelineDepthStencilStateCreateInfo>();
+
+		VertexInputStateCreateInfo = VkStruct<VkPipelineVertexInputStateCreateInfo>();
+
+		InputAssemblyStateCreateInfo = VkStruct<VkPipelineInputAssemblyStateCreateInfo>();
+
+		MultisampleStateCreateInfo						 = VkStruct<VkPipelineMultisampleStateCreateInfo>();
+		MultisampleStateCreateInfo.sampleShadingEnable	 = VK_FALSE;
+		MultisampleStateCreateInfo.rasterizationSamples	 = VK_SAMPLE_COUNT_1_BIT;
+		MultisampleStateCreateInfo.minSampleShading		 = 1.0f;
+		MultisampleStateCreateInfo.pSampleMask			 = nullptr;
+		MultisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
+		MultisampleStateCreateInfo.alphaToOneEnable		 = VK_FALSE;
+
+		// We default initialize for different states here in case they are not present in the stream
+		BlendStateCb(BlendState());
+		RasterizerStateCb(RasterizerState());
+		DepthStencilStateCb(DepthStencilState());
+	}
+
 	void RootSignatureCb(IRHIRootSignature* RootSignature) override
 	{
 		Layout = RootSignature->As<VulkanRootSignature>()->GetApiHandle();
@@ -36,14 +67,29 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 
 	void CSCb(Shader* Shader) override { throw std::logic_error("The method or operation is not implemented."); }
 
-	void BlendStateCb(const BlendState&) override
+	void BlendStateCb(const BlendState& BlendState) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		for (size_t i = 0; i < std::size(BlendState.RenderTargets); ++i)
+		{
+			const auto& RenderTarget		   = BlendState.RenderTargets[i];
+			BlendStates[i].blendEnable		   = RenderTarget.BlendEnable ? VK_TRUE : VK_FALSE;
+			BlendStates[i].srcColorBlendFactor = ToVkBlendFactor(RenderTarget.SrcBlendRGB);
+			BlendStates[i].dstColorBlendFactor = ToVkBlendFactor(RenderTarget.DstBlendRGB);
+			BlendStates[i].colorBlendOp		   = ToVkBlendOp(RenderTarget.BlendOpRGB);
+			BlendStates[i].srcAlphaBlendFactor = ToVkBlendFactor(RenderTarget.SrcBlendAlpha);
+			BlendStates[i].dstAlphaBlendFactor = ToVkBlendFactor(RenderTarget.DstBlendAlpha);
+			BlendStates[i].alphaBlendOp		   = ToVkBlendOp(RenderTarget.BlendOpAlpha);
+			BlendStates[i].colorWriteMask |= RenderTarget.WriteMask.R ? VK_COLOR_COMPONENT_R_BIT : 0;
+			BlendStates[i].colorWriteMask |= RenderTarget.WriteMask.G ? VK_COLOR_COMPONENT_G_BIT : 0;
+			BlendStates[i].colorWriteMask |= RenderTarget.WriteMask.B ? VK_COLOR_COMPONENT_B_BIT : 0;
+			BlendStates[i].colorWriteMask |= RenderTarget.WriteMask.A ? VK_COLOR_COMPONENT_A_BIT : 0;
+		}
+
+		MultisampleStateCreateInfo.alphaToCoverageEnable = BlendState.AlphaToCoverageEnable ? VK_TRUE : VK_FALSE;
 	}
 
 	void RasterizerStateCb(const RasterizerState& RasterizerState) override
 	{
-		RasterizationStateCreateInfo						 = VkStruct<VkPipelineRasterizationStateCreateInfo>();
 		RasterizationStateCreateInfo.depthClampEnable		 = VK_FALSE; // ?
 		RasterizationStateCreateInfo.rasterizerDiscardEnable = VK_FALSE; // ?
 		RasterizationStateCreateInfo.polygonMode			 = ToVkFillMode(RasterizerState.FillMode);
@@ -59,7 +105,6 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 
 	void DepthStencilStateCb(const DepthStencilState& DepthStencilState) override
 	{
-		DepthStencilStateCreateInfo						  = VkStruct<VkPipelineDepthStencilStateCreateInfo>();
 		DepthStencilStateCreateInfo.flags				  = 0;
 		DepthStencilStateCreateInfo.depthTestEnable		  = DepthStencilState.DepthEnable ? VK_TRUE : VK_FALSE;
 		DepthStencilStateCreateInfo.depthWriteEnable	  = DepthStencilState.DepthWrite ? VK_TRUE : VK_FALSE;
@@ -72,8 +117,6 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 
 	void InputLayoutCb(const InputLayout& InputLayout) override
 	{
-		VertexInputStateCreateInfo = VkStruct<VkPipelineVertexInputStateCreateInfo>();
-
 		UINT CurrentOffset = 0;
 		for (const auto& Element : InputLayout.m_InputElements)
 		{
@@ -100,7 +143,6 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 
 	void PrimitiveTopologyTypeCb(PrimitiveTopology PrimitiveTopology) override
 	{
-		InputAssemblyStateCreateInfo						= VkStruct<VkPipelineInputAssemblyStateCreateInfo>();
 		InputAssemblyStateCreateInfo.flags					= 0;
 		InputAssemblyStateCreateInfo.topology				= ToVkPrimitiveTopology(PrimitiveTopology);
 		InputAssemblyStateCreateInfo.primitiveRestartEnable = VK_FALSE;
@@ -109,57 +151,46 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 	void RenderPassCb(IRHIRenderPass* RenderPass) override
 	{
 		VkRenderPass = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
+
+		ColorBlendStateCreateInfo.attachmentCount = RenderPass->As<VulkanRenderPass>()->GetDesc().NumRenderTargets;
 	}
 
 	VkPipelineLayout Layout = VK_NULL_HANDLE;
 
 	std::vector<VkPipelineShaderStageCreateInfo> ShaderStages;
 
+	VkPipelineColorBlendAttachmentState BlendStates[8] = {};
+	VkPipelineColorBlendStateCreateInfo ColorBlendStateCreateInfo;
+
 	VkPipelineRasterizationStateCreateInfo RasterizationStateCreateInfo;
 
 	VkPipelineDepthStencilStateCreateInfo DepthStencilStateCreateInfo;
 
-	VkVertexInputBindingDescription				   BindingDescription;
+	VkVertexInputBindingDescription				   BindingDescription = {};
 	std::vector<VkVertexInputAttributeDescription> AttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo		   VertexInputStateCreateInfo;
 
 	VkPipelineInputAssemblyStateCreateInfo InputAssemblyStateCreateInfo;
 
+	VkPipelineMultisampleStateCreateInfo MultisampleStateCreateInfo;
+
 	VkRenderPass VkRenderPass = VK_NULL_HANDLE;
 };
 
 VulkanPipelineState::VulkanPipelineState(VulkanDevice* Parent, const PipelineStateStreamDesc& Desc)
+	: IRHIPipelineState(Parent)
 {
 	auto DynamicState			   = VkStruct<VkPipelineDynamicStateCreateInfo>();
-	DynamicState.dynamicStateCount = std::size(DynamicStates);
+	DynamicState.dynamicStateCount = static_cast<uint32_t>(std::size(DynamicStates));
 	DynamicState.pDynamicStates	   = DynamicStates;
 
+	// Dummy viewport structure because Vulkan validation layer complains about
+	// having valid viewportCount/scissorCount for dynamic viewport
 	auto ViewportState			= VkStruct<VkPipelineViewportStateCreateInfo>();
 	ViewportState.viewportCount = 1;
 	ViewportState.pViewports	= nullptr;
 	ViewportState.scissorCount	= 1;
 	ViewportState.pScissors		= nullptr;
-
-	auto MultisampleState				   = VkStruct<VkPipelineMultisampleStateCreateInfo>();
-	MultisampleState.sampleShadingEnable   = VK_FALSE;
-	MultisampleState.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
-	MultisampleState.minSampleShading	   = 1.0f;
-	MultisampleState.pSampleMask		   = nullptr;
-	MultisampleState.alphaToCoverageEnable = VK_FALSE;
-	MultisampleState.alphaToOneEnable	   = VK_FALSE;
-
-	// setup dummy color blending. We aren't using transparent objects yet
-	// the blending is just "no blend", but we do write to the color attachment
-	VkPipelineColorBlendAttachmentState ColorBlendAttachmentState = {};
-	ColorBlendAttachmentState.colorWriteMask =
-		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	ColorBlendAttachmentState.blendEnable = VK_FALSE;
-
-	auto ColorBlendState			= VkStruct<VkPipelineColorBlendStateCreateInfo>();
-	ColorBlendState.logicOpEnable	= VK_FALSE;
-	ColorBlendState.logicOp			= VK_LOGIC_OP_COPY;
-	ColorBlendState.attachmentCount = 1;
-	ColorBlendState.pAttachments	= &ColorBlendAttachmentState;
 
 	VulkanPipelineParserCallbacks Parser;
 	RHIParsePipelineStream(Desc, &Parser);
@@ -173,9 +204,9 @@ VulkanPipelineState::VulkanPipelineState(VulkanDevice* Parent, const PipelineSta
 	GraphicsPipelineCreateInfo.pTessellationState  = nullptr;
 	GraphicsPipelineCreateInfo.pViewportState	   = &ViewportState;
 	GraphicsPipelineCreateInfo.pRasterizationState = &Parser.RasterizationStateCreateInfo;
-	GraphicsPipelineCreateInfo.pMultisampleState   = &MultisampleState;
+	GraphicsPipelineCreateInfo.pMultisampleState   = &Parser.MultisampleStateCreateInfo;
 	GraphicsPipelineCreateInfo.pDepthStencilState  = &Parser.DepthStencilStateCreateInfo;
-	GraphicsPipelineCreateInfo.pColorBlendState	   = &ColorBlendState;
+	GraphicsPipelineCreateInfo.pColorBlendState	   = &Parser.ColorBlendStateCreateInfo;
 	GraphicsPipelineCreateInfo.pDynamicState	   = &DynamicState;
 	GraphicsPipelineCreateInfo.layout			   = Parser.Layout;
 	GraphicsPipelineCreateInfo.renderPass		   = Parser.VkRenderPass;
@@ -196,6 +227,6 @@ VulkanPipelineState::~VulkanPipelineState()
 {
 	if (Parent && Pipeline)
 	{
-		vkDestroyPipeline(Parent->As<VulkanDevice>()->GetVkDevice(), Pipeline, nullptr);
+		vkDestroyPipeline(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(Pipeline, {}), nullptr);
 	}
 }

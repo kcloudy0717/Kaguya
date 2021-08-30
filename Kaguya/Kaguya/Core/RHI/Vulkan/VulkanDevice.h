@@ -25,6 +25,7 @@ public:
 	[[nodiscard]] auto GetVkDevice() const noexcept -> VkDevice { return VkDevice; }
 	[[nodiscard]] auto GetVkAllocator() const noexcept -> VmaAllocator { return Allocator; }
 	[[nodiscard]] auto GetGraphicsQueue() noexcept -> VulkanCommandQueue& { return GraphicsQueue; }
+	[[nodiscard]] auto GetComputeQueue() noexcept -> VulkanCommandQueue& { return AsyncComputeQueue; }
 	[[nodiscard]] auto GetCopyQueue() noexcept -> VulkanCommandQueue& { return CopyQueue; }
 
 	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return ResourceDescriptorHeap; }
@@ -56,33 +57,6 @@ private:
 
 	bool IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice);
 
-	QueueFamilyIndices FindQueueFamilies()
-	{
-		QueueFamilyIndices Indices;
-
-		int i = 0;
-		for (const auto& Properties : QueueFamilyProperties)
-		{
-			if (Properties.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			{
-				Indices.GraphicsFamily = i;
-			}
-			if (Properties.queueFlags & VK_QUEUE_TRANSFER_BIT)
-			{
-				Indices.CopyFamily = i;
-			}
-
-			if (Indices.IsValid())
-			{
-				break;
-			}
-
-			i++;
-		}
-
-		return Indices;
-	}
-
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) const;
 
 private:
@@ -102,7 +76,12 @@ private:
 	VkDevice	 VkDevice  = VK_NULL_HANDLE;
 	VmaAllocator Allocator = VK_NULL_HANDLE;
 
+	std::optional<uint32_t> GraphicsFamily;
+	std::optional<uint32_t> ComputeFamily;
+	std::optional<uint32_t> CopyFamily;
+
 	VulkanCommandQueue GraphicsQueue;
+	VulkanCommandQueue AsyncComputeQueue;
 	VulkanCommandQueue CopyQueue;
 
 	VulkanDescriptorHeap ResourceDescriptorHeap;

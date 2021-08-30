@@ -4,7 +4,6 @@ BlendState::BlendState()
 {
 	SetAlphaToCoverageEnable(false);
 	SetIndependentBlendEnable(false);
-	NumRenderTargets = 0;
 }
 
 void BlendState::SetAlphaToCoverageEnable(bool AlphaToCoverageEnable)
@@ -17,7 +16,8 @@ void BlendState::SetIndependentBlendEnable(bool IndependentBlendEnable)
 	this->IndependentBlendEnable = IndependentBlendEnable;
 }
 
-void BlendState::AddRenderTargetForBlendOp(
+void BlendState::SetRenderTargetBlendDesc(
+	UINT	Index,
 	Factor	SrcBlendRGB,
 	Factor	DstBlendRGB,
 	BlendOp BlendOpRGB,
@@ -25,29 +25,15 @@ void BlendState::AddRenderTargetForBlendOp(
 	Factor	DstBlendAlpha,
 	BlendOp BlendOpAlpha)
 {
-	if (NumRenderTargets >= 8)
-		return;
-
-	RenderTarget RenderTarget		  = {};
-	RenderTarget.Operation			  = Operation::Blend;
-	RenderTarget.SrcBlendRGB		  = SrcBlendRGB;
-	RenderTarget.DstBlendRGB		  = DstBlendAlpha;
-	RenderTarget.BlendOpRGB			  = BlendOpRGB;
-	RenderTarget.SrcBlendAlpha		  = SrcBlendRGB;
-	RenderTarget.DstBlendAlpha		  = DstBlendAlpha;
-	RenderTarget.BlendOpAlpha		  = BlendOpRGB;
-	RenderTargets[NumRenderTargets++] = RenderTarget;
-}
-
-void BlendState::AddRenderTargetForLogicOp(LogicOp LogicOpRGB)
-{
-	if (NumRenderTargets >= 8)
-		return;
-
-	RenderTarget RenderTarget		  = {};
-	RenderTarget.Operation			  = Operation::Logic;
-	RenderTarget.LogicOpRGB			  = LogicOpRGB;
-	RenderTargets[NumRenderTargets++] = RenderTarget;
+	RenderTarget RenderTarget  = {};
+	RenderTarget.BlendEnable   = true;
+	RenderTarget.SrcBlendRGB   = SrcBlendRGB;
+	RenderTarget.DstBlendRGB   = DstBlendRGB;
+	RenderTarget.BlendOpRGB	   = BlendOpRGB;
+	RenderTarget.SrcBlendAlpha = SrcBlendAlpha;
+	RenderTarget.DstBlendAlpha = DstBlendAlpha;
+	RenderTarget.BlendOpAlpha  = BlendOpAlpha;
+	RenderTargets[Index]	   = RenderTarget;
 }
 
 RasterizerState::RasterizerState()

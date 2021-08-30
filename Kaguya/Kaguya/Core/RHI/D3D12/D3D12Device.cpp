@@ -112,6 +112,11 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Device.As(&Device5);
 	Device.As(&InfoQueue1);
 
+	if (FAILED(FeatureSupport.Init(Device.Get())))
+	{
+		LOG_WARN("Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
+	}
+
 	constexpr D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 													 D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 													 D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
@@ -169,25 +174,17 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 
 	if (Features.WaveOperation)
 	{
-		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS1> Options1 = {};
-		if (SUCCEEDED(Device->CheckFeatureSupport(Options1.Feature, &Options1.FeatureSupportData, sizeof(Options1))))
+		if (!FeatureSupport.WaveOps())
 		{
-			if (!Options1->WaveOps)
-			{
-				throw std::runtime_error("Wave operation not supported on device");
-			}
+			throw std::runtime_error("Wave operation not supported on device");
 		}
 	}
 
 	if (Features.Raytracing)
 	{
-		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS5> Options5 = {};
-		if (SUCCEEDED(Device->CheckFeatureSupport(Options5.Feature, &Options5.FeatureSupportData, sizeof(Options5))))
+		if (FeatureSupport.RaytracingTier() < D3D12_RAYTRACING_TIER_1_0)
 		{
-			if (Options5->RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
-			{
-				throw std::runtime_error("Raytracing not supported on device");
-			}
+			throw std::runtime_error("Raytracing not supported on device");
 		}
 	}
 
@@ -195,24 +192,10 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
 	if (Features.DynamicResources)
 	{
-		D3D12Feature<D3D12_FEATURE_SHADER_MODEL> ShaderModel;
-		ShaderModel.FeatureSupportData.HighestShaderModel = D3D_SHADER_MODEL_6_6;
-		if (SUCCEEDED(
-				Device->CheckFeatureSupport(ShaderModel.Feature, &ShaderModel.FeatureSupportData, sizeof(ShaderModel))))
+		if (FeatureSupport.HighestShaderModel() < D3D_SHADER_MODEL_6_6 ||
+			FeatureSupport.ResourceBindingTier() < D3D12_RESOURCE_BINDING_TIER_3)
 		{
-			if (ShaderModel->HighestShaderModel < D3D_SHADER_MODEL_6_6)
-			{
-				throw std::runtime_error("Dynamic resources not supported on device");
-			}
-		}
-
-		D3D12Feature<D3D12_FEATURE_D3D12_OPTIONS> Options;
-		if (SUCCEEDED(Device->CheckFeatureSupport(Options.Feature, &Options.FeatureSupportData, sizeof(Options))))
-		{
-			if (Options->ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_3)
-			{
-				throw std::runtime_error("Dynamic resources not supported on device");
-			}
+			throw std::runtime_error("Dynamic resources not supported on device");
 		}
 	}
 
@@ -257,12 +240,8 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 		VERIFY_D3D12_API(DRED->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput));
 		VERIFY_D3D12_API(DRED->GetPageFaultAllocationOutput(&PageFaultOutput));
 
-		// TODO: Log breadcrumbs and page fault, right now is not logged because im too lazy to implement it, i just
-		// used Watch window to see breadcrumbs and page fault lol..
-
-		for (const D3D12_AUTO_BREADCRUMB_NODE* Current = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
-			 Current != nullptr;
-			 Current = Current->pNext)
+		for (const D3D12_AUTO_BREADCRUMB_NODE* Current = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode; Current;
+			 Current								   = Current->pNext)
 		{
 		}
 	}
@@ -300,30 +279,23 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	// ShaderResource
 	D3D12DescriptorTable SRVTable;
 	{
-		// constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
-		// D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
 
 		SRVTable.AddSRVRange<0, 100>(UINT_MAX, Flags, 0); // g_Texture2DTable
-		SRVTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DUINT4Table
-		SRVTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
-		SRVTable.AddSRVRange<0, 103>(UINT_MAX, Flags, 0); // g_TextureCubeTable
-		SRVTable.AddSRVRange<0, 104>(UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
+		SRVTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
+		SRVTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_TextureCubeTable
 	}
 	RootSignatureBuilder.AddDescriptorTable(SRVTable);
 
 	// UnorderedAccess
 	D3D12DescriptorTable UAVTable;
 	{
-		// constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE |
-		// D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
 
 		UAVTable.AddUAVRange<0, 100>(UINT_MAX, Flags, 0); // g_RWTexture2DTable
 		UAVTable.AddUAVRange<0, 101>(UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
-		UAVTable.AddUAVRange<0, 102>(UINT_MAX, Flags, 0); // g_RWByteAddressBufferTable
 	}
 	RootSignatureBuilder.AddDescriptorTable(UAVTable);
 

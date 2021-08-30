@@ -45,7 +45,7 @@ void Initialize()
 		   LPCSTR				  pDescription,
 		   void*				  pContext)
 		{
-			LOG_INFO("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
+			LOG_ERROR("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
 		});
 
 	pSwapChain = new D3D12SwapChain(

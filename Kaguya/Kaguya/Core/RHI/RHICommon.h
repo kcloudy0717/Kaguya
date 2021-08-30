@@ -532,41 +532,14 @@ enum class ESRVType
 class BlendState
 {
 public:
-	enum Operation
-	{
-		None,
-		Blend,
-		Logic
-	};
-
 	/* Defines how to combine the blend inputs */
 	enum class BlendOp
 	{
-		Add,			  // Add src1 and src2
-		Subtract,		  // Subtract src1 from src2
-		ReverseSubstract, // Subtract src2 from src1
-		Min,			  // Find the minimum between the sources (per-channel)
-		Max				  // Find the maximum between the sources (per-channel)
-	};
-
-	enum class LogicOp
-	{
-		Clear,		  // Clears the render target (0)
-		Set,		  // Sets the render target (1)
-		Copy,		  // Copys the render target (s source from Pixel Shader output)
-		CopyInverted, // Performs an inverted-copy of the render target (~s)
-		NoOperation,  // No operation is performed on the render target (d destination in the Render Target View)
-		Invert,		  // Inverts the render target (~d)
-		And,		  // Performs a logical AND operation on the render target (s & d)
-		Nand,		  // Performs a logical NAND operation on the render target (~(s & d))
-		Or,			  // Performs a logical OR operation on the render target (s | d)
-		Nor,		  // Performs a logical NOR operation on the render target ~(s | d)
-		Xor,		  // Performs a logical XOR operation on the render target (s ^ d)
-		Equivalence,  // Performs a logical equal operation on the render target (~(s ^ d))
-		AndReverse,	  // Performs a logical AND and reverse operation on the render target (s & ~d)
-		AndInverted,  // Performs a logical AND and invert operation on the render target (~s & d)
-		OrReverse,	  // Performs a logical OR and reverse operation on the render target (s	| ~d)
-		OrInverted	  // Performs a logical OR and invert operation on the render target (~s	| d)
+		Add,			 // Add src1 and src2
+		Subtract,		 // Subtract src1 from src2
+		ReverseSubtract, // Subtract src2 from src1
+		Min,			 // Find the minimum between the sources (per-channel)
+		Max				 // Find the maximum between the sources (per-channel)
 	};
 
 	/* Defines how to modulate the pixel-shader and render-target pixel values */
@@ -593,21 +566,20 @@ public:
 
 	struct RenderTarget
 	{
-		Operation Operation		= Operation::None;
-		Factor	  SrcBlendRGB	= Factor::One;
-		Factor	  DstBlendRGB	= Factor::Zero;
-		BlendOp	  BlendOpRGB	= BlendOp::Add;
-		Factor	  SrcBlendAlpha = Factor::One;
-		Factor	  DstBlendAlpha = Factor::Zero;
-		BlendOp	  BlendOpAlpha	= BlendOp::Add;
-		LogicOp	  LogicOpRGB	= LogicOp::NoOperation;
+		bool	BlendEnable	  = false;
+		Factor	SrcBlendRGB	  = Factor::One;
+		Factor	DstBlendRGB	  = Factor::Zero;
+		BlendOp BlendOpRGB	  = BlendOp::Add;
+		Factor	SrcBlendAlpha = Factor::One;
+		Factor	DstBlendAlpha = Factor::Zero;
+		BlendOp BlendOpAlpha  = BlendOp::Add;
 
 		struct WriteMask
 		{
-			bool WriteRed	= true;
-			bool WriteGreen = true;
-			bool WriteBlue	= true;
-			bool WriteAlpha = true;
+			bool R = true;
+			bool G = true;
+			bool B = true;
+			bool A = true;
 		} WriteMask;
 	};
 
@@ -616,18 +588,17 @@ public:
 	void SetAlphaToCoverageEnable(bool AlphaToCoverageEnable);
 	void SetIndependentBlendEnable(bool IndependentBlendEnable);
 
-	void AddRenderTargetForBlendOp(
+	void SetRenderTargetBlendDesc(
+		UINT	Index,
 		Factor	SrcBlendRGB,
 		Factor	DstBlendRGB,
 		BlendOp BlendOpRGB,
 		Factor	SrcBlendAlpha,
 		Factor	DstBlendAlpha,
 		BlendOp BlendOpAlpha);
-	void AddRenderTargetForLogicOp(LogicOp LogicOpRGB);
 
 	bool		 AlphaToCoverageEnable;
 	bool		 IndependentBlendEnable;
-	UINT		 NumRenderTargets;
 	RenderTarget RenderTargets[8];
 };
 
