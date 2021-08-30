@@ -8,18 +8,39 @@
 
 static const char* DefaultEntityName = "GameObject";
 
-Entity World::GetMainCamera()
+auto World::CreateEntity(std::string_view Name /*= {}*/) -> Entity
 {
-	auto CameraView = Registry.view<Camera>();
-	for (entt::entity Handle : CameraView)
+	Entity Entity = { Registry.create(), this };
+	Entity.AddComponent<Tag>(Name.empty() ? DefaultEntityName : Name);
+	Entity.AddComponent<Transform>();
+	return Entity;
+}
+
+auto World::GetMainCamera() -> Entity
+{
+	auto View = Registry.view<Camera>();
+	for (entt::entity Handle : View)
 	{
-		const auto& Component = CameraView.get<Camera>(Handle);
+		const auto& Component = View.get<Camera>(Handle);
 		if (Component.Main)
 		{
 			return Entity(Handle, this);
 		}
 	}
+	return Entity(entt::null, this);
+}
 
+auto World::GetEntityByTag(std::string_view Name) -> Entity
+{
+	auto View = Registry.view<Tag>();
+	for (entt::entity Handle : View)
+	{
+		const auto& Component = View.get<Tag>(Handle);
+		if (Component.Name == Name)
+		{
+			return Entity(Handle, this);
+		}
+	}
 	return Entity(entt::null, this);
 }
 
@@ -34,33 +55,9 @@ void World::Clear(bool bAddDefaultEntities /*= true*/)
 	}
 }
 
-Entity World::CreateEntity(std::string_view Name /*= {}*/)
-{
-	Entity NewEntity	= { Registry.create(), this };
-	auto&  TagComponent = NewEntity.AddComponent<Tag>(Name.empty() ? DefaultEntityName : Name);
-	NewEntity.AddComponent<Transform>();
-
-	return NewEntity;
-}
-
 void World::DestroyEntity(Entity Entity)
 {
 	Registry.destroy(Entity);
-}
-
-Entity World::GetEntityByTag(std::string_view Name)
-{
-	auto TagView = Registry.view<Tag>();
-	for (entt::entity Handle : TagView)
-	{
-		const auto& Component = TagView.get<Tag>(Handle);
-		if (Component.Name == Name)
-		{
-			return Entity(Handle, this);
-		}
-	}
-
-	return Entity(entt::null, this);
 }
 
 void World::Update(float dt)
@@ -89,12 +86,14 @@ void World::ResolveComponentDependencies()
 		[](auto&& MeshFilter)
 		{
 			MeshFilter.Mesh = AssetManager::GetMeshCache().Load(MeshFilter.Key);
-			std::string RelativePath =
-				MeshFilter.Mesh
-					? std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory)
-						  .string()
-					: "NULL";
-			MeshFilter.Path = RelativePath;
+			if (MeshFilter.Mesh)
+			{
+				MeshFilter.Path = std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string();
+			}
+			else
+			{
+				MeshFilter.Path = "<unknown>";
+			}
 		});
 
 	// Update all mesh renderers
@@ -105,13 +104,14 @@ void World::ResolveComponentDependencies()
 
 			auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.Albedo.Key);
 
-			MeshRenderer.Material.Albedo.Path =
-				Texture ? std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string()
-						: "NULL";
-
 			if (Texture)
 			{
+				MeshRenderer.Material.Albedo.Path		= std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string();
 				MeshRenderer.Material.TextureIndices[0] = Texture->SRV.GetIndex();
+			}
+			else
+			{
+				MeshRenderer.Material.Albedo.Path = "<unknown>";
 			}
 		});
 }

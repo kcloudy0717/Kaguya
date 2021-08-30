@@ -1,6 +1,5 @@
 #pragma once
 #include <World/Vertex.h>
-#include <Core/D3D12/Adapter.h>
 
 namespace Asset
 {
@@ -29,12 +28,12 @@ struct Mesh
 
 	std::vector<Submesh> Submeshes;
 
-	Buffer							 VertexResource;
-	Buffer							 IndexResource;
-	D3D12_GPU_VIRTUAL_ADDRESS		 AccelerationStructure;
-	BottomLevelAccelerationStructure BLAS;
-	UINT64							 BLASIndex	   = UINT64_MAX;
-	bool							 BLASValid	   = false;
-	bool							 BLASCompacted = false;
+	D3D12Buffer				  VertexResource;
+	D3D12Buffer				  IndexResource;
+	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
+	D3D12RaytracingGeometry	  BLAS;
+	UINT64					  BLASIndex		= UINT64_MAX;
+	bool					  BLASValid		= false;
+	bool					  BLASCompacted = false;
 };
 } // namespace Asset

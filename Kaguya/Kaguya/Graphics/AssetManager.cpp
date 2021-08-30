@@ -27,9 +27,8 @@ void AssetManager::Initialize()
 	{
 		static unsigned int WINAPI thunk(LPVOID lpParameter)
 		{
-			auto& RenderDevice = RenderDevice::Instance();
-
-			ResourceUploader uploader(RenderDevice.GetDevice());
+			D3D12LinkedDevice*			 Device = RenderCore::pDevice->GetDevice();
+			D3D12ResourceUploader uploader(Device);
 
 			while (true)
 			{
@@ -43,7 +42,7 @@ void AssetManager::Initialize()
 
 				uploader.Begin();
 
-				std::vector<std::shared_ptr<Resource>> TrackedScratchBuffers;
+				std::vector<std::shared_ptr<D3D12Resource>> TrackedScratchBuffers;
 
 				// container to store assets after it has been uploaded to be added to the AssetCache
 				std::vector<std::shared_ptr<Asset::Image>> uploadedImages;
@@ -91,8 +90,8 @@ void AssetManager::Initialize()
 							break;
 						}
 
-						assetImage->Texture = Texture(RenderDevice.GetDevice(), resourceDesc, {});
-						assetImage->SRV		= ShaderResourceView(RenderDevice.GetDevice());
+						assetImage->Texture = D3D12Texture(RenderCore::pDevice->GetDevice(), resourceDesc, {});
+						assetImage->SRV		= D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
 						assetImage->Texture.CreateShaderResourceView(assetImage->SRV);
 
 						std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());
@@ -120,14 +119,14 @@ void AssetManager::Initialize()
 						UINT64 vertexBufferSizeInBytes = assetMesh->Vertices.size() * sizeof(Vertex);
 						UINT64 indexBufferSizeInBytes  = assetMesh->Indices.size() * sizeof(unsigned int);
 
-						Buffer vertexBuffer = Buffer(
-							RenderDevice.GetDevice(),
+						D3D12Buffer vertexBuffer = D3D12Buffer(
+							Device,
 							vertexBufferSizeInBytes,
 							sizeof(Vertex),
 							D3D12_HEAP_TYPE_DEFAULT,
 							D3D12_RESOURCE_FLAG_NONE);
-						Buffer indexBuffer = Buffer(
-							RenderDevice.GetDevice(),
+						D3D12Buffer indexBuffer = D3D12Buffer(
+							Device,
 							indexBufferSizeInBytes,
 							sizeof(unsigned int),
 							D3D12_HEAP_TYPE_DEFAULT,

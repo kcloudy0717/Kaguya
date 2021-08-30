@@ -1,6 +1,5 @@
 #pragma once
-#include "RenderDevice.h"
-#include "RaytracingAccelerationStructure.h"
+#include "Renderer.h"
 
 struct PathIntegratorState
 {
@@ -11,49 +10,60 @@ struct PathIntegratorState
 	UINT  MaxDepth	   = 16;
 };
 
-class PathIntegrator_DXR_1_0
+enum class EFSRQualityMode
+{
+	Ultra,
+	Standard,
+	Balanced,
+	Performance
+};
+
+struct FSRState
+{
+	bool Enable = true;
+
+	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
+
+	int ViewportWidth;
+	int ViewportHeight;
+
+	int	  RenderWidth;
+	int	  RenderHeight;
+	float RCASAttenuation = 0.0f;
+};
+
+class PathIntegrator : public Renderer
 {
 public:
+	PathIntegrator(World* pWorld)
+		: Renderer(pWorld)
+	{
+	}
+
+	void* GetViewportDescriptor() override;
+
+private:
+	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
+	void Initialize() override;
+	void Render(D3D12CommandContext& Context) override;
+
+private:
+	RaytracingAccelerationStructure AccelerationStructure;
+
+	D3D12RaytracingAccelerationStructureManager Manager;
+
 	struct Settings
 	{
 		inline static UINT NumAccumulatedSamples = 0;
 	};
+	PathIntegratorState PathIntegratorState;
+	FSRState			FSRState;
 
-	static constexpr UINT NumHitGroups = 1;
-
-	PathIntegrator_DXR_1_0() noexcept = default;
-
-	void Initialize(RenderDevice& RenderDevice);
-
-	void SetResolution(UINT Width, UINT Height);
-
-	void Reset();
-
-	void UpdateShaderTable(
-		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		CommandContext&						   Context);
-
-	void Render(
-		const PathIntegratorState&			   State,
-		D3D12_GPU_VIRTUAL_ADDRESS			   SystemConstants,
-		const RaytracingAccelerationStructure& RaytracingAccelerationStructure,
-		D3D12_GPU_VIRTUAL_ADDRESS			   Materials,
-		D3D12_GPU_VIRTUAL_ADDRESS			   Lights,
-		CommandContext&						   Context);
-
-	const ShaderResourceView& GetSRV() const { return SRV; }
-	ID3D12Resource*			  GetRenderTarget() const { return RenderTarget.GetResource(); }
-
-private:
-	UINT Width = 0, Height = 0;
-
-	RootSignature			GlobalRS, LocalHitGroupRS;
-	RaytracingPipelineState RTPSO;
-
-	Texture RenderTarget;
-
-	UnorderedAccessView UAV;
-	ShaderResourceView	SRV;
+	D3D12Buffer			Materials;
+	HLSL::Material* pMaterials = nullptr;
+	D3D12Buffer			Lights;
+	HLSL::Light*	pLights		 = nullptr;
+	UINT			NumMaterials = 0, NumLights = 0;
 
 	// Pad local root arguments explicitly
 	struct RootArgument
@@ -64,12 +74,8 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	RaytracingShaderBindingTable		 ShaderBindingTable;
-	RaytracingShaderTable<void>*		 RayGenerationShaderTable;
-	RaytracingShaderTable<void>*		 MissShaderTable;
-	RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
-};
-
-class PathIntegrator_DXR_1_1
-{
+	D3D12RaytracingShaderBindingTable		 ShaderBindingTable;
+	D3D12RaytracingShaderTable<void>*		 RayGenerationShaderTable;
+	D3D12RaytracingShaderTable<void>*		 MissShaderTable;
+	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };

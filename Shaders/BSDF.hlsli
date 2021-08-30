@@ -176,7 +176,7 @@ struct BSDF
 			BxDF.T	  = Material.T;
 			BxDF.etaA = Material.etaA;
 			BxDF.etaB = Material.etaB;
-			
+
 			success = BxDF.Samplef(wo, Xi, bsdfSample);
 		}
 
@@ -251,13 +251,21 @@ struct Interaction
 {
 	RayDesc SpawnRayTo(Interaction Interaction)
 	{
-		float3 d = Interaction.p - p;
+		const float ShadowEpsilon = 0.0001f;
 
-		RayDesc ray	  = (RayDesc)0;
-		ray.Origin	  = OffsetRay(p, n);
-		ray.TMin	  = 0.001f;
-		ray.Direction = normalize(d);
-		ray.TMax	  = length(d);
+		float3 d	= Interaction.p - p;
+		float  tmax = length(d);
+		d			= normalize(d);
+
+		RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
+
+		// float3 d = Interaction.p - p;
+		//
+		// RayDesc ray	  = (RayDesc)0;
+		// ray.Origin	  = OffsetRay(p, n);
+		// ray.TMin	  = 0.001f;
+		// ray.Direction = normalize(d);
+		// ray.TMax	  = length(d);
 		return ray;
 	}
 
@@ -278,12 +286,15 @@ struct SurfaceInteraction
 
 	RayDesc SpawnRay(float3 d)
 	{
-		RayDesc ray	  = (RayDesc)0;
-		ray.Origin	  = OffsetRay(p, n);
-		ray.TMin	  = 0.001f;
-		ray.Direction = normalize(d);
-		ray.TMax	  = 10000.0f;
+		RayDesc ray = { p, 0.001f, normalize(d), 100000.0f };
 		return ray;
+
+		// RayDesc ray	  = (RayDesc)0;
+		// ray.Origin	  = OffsetRay(p, n);
+		// ray.TMin	  = 0.001f;
+		// ray.Direction = normalize(d);
+		// ray.TMax	  = 10000.0f;
+		// return ray;
 	}
 };
 

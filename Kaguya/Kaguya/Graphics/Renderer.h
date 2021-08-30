@@ -1,53 +1,40 @@
 #pragma once
 #include "RaytracingAccelerationStructure.h"
-#include "PathIntegrator.h"
-#include "ToneMapper.h"
-#include "FSRFilter.h"
+#include "RenderGraph/RenderGraph.h"
+#include "World/World.h"
 
 class Renderer
 {
 public:
-	Renderer();
-
-	void SetViewportMousePosition(float MouseX, float MouseY);
-
-	void SetViewportResolution(uint32_t Width, uint32_t Height);
-
-	const ShaderResourceView& GetViewportDescriptor()
+	Renderer(World* pWorld)
+		: pWorld(pWorld)
 	{
-		return FSRState.Enable ? FSRFilter.GetSRV() : ToneMapper.GetSRV();
 	}
+	virtual ~Renderer() = default;
+
+	void OnSetViewportResolution(uint32_t Width, uint32_t Height);
 
 	void OnInitialize();
 
-	void OnRender(World& World);
+	void OnRender();
 
 	void OnResize(uint32_t Width, uint32_t Height);
 
 	void OnDestroy();
 
-	void RequestCapture();
+	virtual void* GetViewportDescriptor() = 0;
 
-private:
-	float ViewportMouseX, ViewportMouseY;
-	UINT  ViewportWidth, ViewportHeight;
-	UINT  RenderWidth, RenderHeight;
+protected:
+	virtual void SetViewportResolution(uint32_t Width, uint32_t Height) = 0;
+	virtual void Initialize()											= 0;
+	virtual void Render(D3D12CommandContext& Context)					= 0;
 
-	D3D12_VIEWPORT Viewport;
-	D3D12_RECT	   ScissorRect;
+protected:
+	World* pWorld;
 
-	RaytracingAccelerationStructure AccelerationStructure;
-	PathIntegrator_DXR_1_0			PathIntegrator;
-	ToneMapper						ToneMapper;
-	FSRFilter						FSRFilter;
+	UINT ViewportWidth = 0, ViewportHeight = 0;
+	UINT RenderWidth = 0, RenderHeight = 0;
 
-	RaytracingAccelerationStructureManager Manager;
-
-	PathIntegratorState PathIntegratorState;
-	FSRState			FSRState;
-
-	Buffer			Materials;
-	HLSL::Material* pMaterials = nullptr;
-	Buffer			Lights;
-	HLSL::Light*	pLights = nullptr;
+	RenderDevice RenderDevice;
+	RenderGraph	 RenderGraph;
 };

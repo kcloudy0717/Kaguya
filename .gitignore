@@ -1,3 +1,5 @@
 [Aa]ssets/
-!ext/*
 [Bb]uild/
+[Bb]in/
+
+!Dependencies/*

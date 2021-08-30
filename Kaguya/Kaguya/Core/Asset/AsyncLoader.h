@@ -93,7 +93,7 @@ private:
 
 class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>
 {
-private:
+public:
 	TResourcePtr AsyncLoad(const Asset::ImageMetadata& Metadata);
 
 	friend class AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>;
@@ -101,7 +101,7 @@ private:
 
 class AsyncMeshLoader : public AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>
 {
-private:
+public:
 	TResourcePtr AsyncLoad(const Asset::MeshMetadata& Metadata);
 
 	friend class AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>;

@@ -21,63 +21,71 @@ cbuffer RootConstants : register(b0, space1)
 StructuredBuffer<Vertex> VertexBuffer : register(t0, space1);
 StructuredBuffer<uint>	 IndexBuffer : register(t1, space1);
 
-struct VertexAttributes
-{
-	float3 p;
-	float3 Ng;
-	float3 Ns;
-	float2 uv;
-};
-
-VertexAttributes GetVertexAttributes(BuiltInTriangleIntersectionAttributes Attributes)
+SurfaceInteraction GetSurfaceInteraction(in BuiltInTriangleIntersectionAttributes Attributes)
 {
 	// Fetch indices
-	uint Idx0 = IndexBuffer[PrimitiveIndex() * 3 + 0];
-	uint Idx1 = IndexBuffer[PrimitiveIndex() * 3 + 1];
-	uint Idx2 = IndexBuffer[PrimitiveIndex() * 3 + 2];
+	unsigned int idx0 = IndexBuffer[PrimitiveIndex() * 3 + 0];
+	unsigned int idx1 = IndexBuffer[PrimitiveIndex() * 3 + 1];
+	unsigned int idx2 = IndexBuffer[PrimitiveIndex() * 3 + 2];
 
 	// Fetch vertices
-	Vertex vtx0 = VertexBuffer[Idx0];
-	Vertex vtx1 = VertexBuffer[Idx1];
-	Vertex vtx2 = VertexBuffer[Idx2];
-	
+	Vertex vtx0 = VertexBuffer[idx0];
+	Vertex vtx1 = VertexBuffer[idx1];
+	Vertex vtx2 = VertexBuffer[idx2];
+
 	float3 p0 = vtx0.Position, p1 = vtx1.Position, p2 = vtx2.Position;
 	// Compute 2 edges of the triangle
 	float3 e0 = p1 - p0;
 	float3 e1 = p2 - p0;
-	float3 n = normalize(cross(e0, e1));
-	n = normalize(mul(n, transpose((float3x3) ObjectToWorld3x4())));
+	float3 n  = normalize(cross(e0, e1));
+	n		  = normalize(mul(n, transpose((float3x3)ObjectToWorld3x4())));
 
 	float3 barycentrics = float3(
 		1.f - Attributes.barycentrics.x - Attributes.barycentrics.y,
 		Attributes.barycentrics.x,
 		Attributes.barycentrics.y);
 	Vertex vertex = BarycentricInterpolation(vtx0, vtx1, vtx2, barycentrics);
-	vertex.Normal = normalize(mul(vertex.Normal, transpose((float3x3) ObjectToWorld3x4())));
-	
-	VertexAttributes vertexAttributes;
-	vertexAttributes.p = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
-	vertexAttributes.Ng = n;
-	vertexAttributes.Ns = vertex.Normal;
-	vertexAttributes.uv = vertex.TextureCoord;
+	vertex.Normal = normalize(mul(vertex.Normal, transpose((float3x3)ObjectToWorld3x4())));
 
-	return vertexAttributes;
+	SurfaceInteraction si;
+	si.p  = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
+	si.wo = -WorldRayDirection();
+	si.n  = n;
+	si.uv = vertex.TextureCoord;
+
+	// Compute geometry basis and shading basis
+	si.GeometryFrame = InitFrameFromZ(n);
+	si.ShadingFrame	 = InitFrameFromZ(vertex.Normal);
+
+	// Update BSDF's internal data
+	Material material = g_Materials[MaterialIndex];
+
+	if (material.Albedo != -1)
+	{
+		// Texture2D Texture = ResourceDescriptorHeap[material.Albedo];
+		Texture2D Texture  = g_Texture2DTable[material.Albedo];
+		material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
+	}
+
+	si.BSDF = InitBSDF(si.GeometryFrame.z, si.ShadingFrame, material);
+
+	return si;
 }
-
-#define INVALID_ID -1
 
 struct RayPayload
 {
-	bool IsValid()
+	RayDesc SpawnRay(float3 d)
 	{
-		return materialID != INVALID_ID;
+		RayDesc ray = { p, 0.001f, normalize(d), 100000.0f };
+		return ray;
 	}
 
+	float3 L;
+	float3 beta;
 	float3 p;
-	uint materialID;
-	float2 uv;
-	OctahedralVector Ng;
-	OctahedralVector Ns;
+	float3 wi;
+	uint   Seed;
+	uint   Depth;
 };
 
 struct ShadowRayPayload
@@ -91,19 +99,25 @@ enum RayType
 	NumRayTypes
 };
 
-float TraceShadowRay(RayDesc Ray)
+float TraceShadowRay(RayDesc DXRRay)
 {
 	ShadowRayPayload RayPayload = { 0.0f };
 
 	// Trace the ray
+	const uint RayFlags =
+		RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER;
+	const uint InstanceInclusionMask							= 0xffffffff;
+	const uint RayContributionToHitGroupIndex					= RayTypePrimary;
+	const uint MultiplierForGeometryContributionToHitGroupIndex = NumRayTypes;
+	const uint MissShaderIndex									= 1;
 	TraceRay(
 		g_Scene,
-		RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-		0xffffffff,
-		RayTypePrimary,
-		NumRayTypes,
-		1,
-		Ray,
+		RayFlags,
+		InstanceInclusionMask,
+		RayContributionToHitGroupIndex,
+		MultiplierForGeometryContributionToHitGroupIndex,
+		MissShaderIndex,
+		DXRRay,
 		RayPayload);
 
 	return RayPayload.Visibility;
@@ -165,97 +179,42 @@ float3 UniformSampleOneLight(SurfaceInteraction si, inout uint seed)
 	return EstimateDirect(si, light, XiLight) / lightPdf;
 }
 
-float3 Li(RayDesc ray, inout uint Seed)
+void TerminateRay(inout RayPayload rayPayload)
 {
-	float3 L	= float3(0.0f, 0.0f, 0.0f);
-	float3 beta = float3(1.0f, 1.0f, 1.0f);
+    rayPayload.Depth = g_SystemConstants.MaxDepth;
+}
 
-	RayPayload payload = (RayPayload)0;
+float3 Li(RayDesc DXRRay, inout uint Seed)
+{
+	RayPayload RayPayload = {
+		float3(0.0f, 0.0f, 0.0f), float3(1.0f, 1.0f, 1.0f), DXRRay.Origin, DXRRay.Direction, Seed, 0
+	};
 
-	for (int bounce = 0; ; ++bounce)
+    while (RayPayload.Depth < g_SystemConstants.MaxDepth)
 	{
 		// Trace the ray
-		TraceRay(g_Scene, RAY_FLAG_NONE, 0xffffffff, RayTypePrimary, NumRayTypes, 0, ray, payload);
-
-		// Ray missed
-		if (!payload.IsValid() || bounce >= g_RenderPassData.MaxDepth)
-		{
-			float t = 0.5f * (ray.Direction.y + 1.0f);
-			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_RenderPassData.SkyIntensity;
-			break;
-		}
-
-		float3 Ng, Ns;
-		Ng = payload.Ng.Decode();
-		Ns = payload.Ns.Decode();
-		
-		float3 wo = -ray.Direction;
-
-		//if (dot(Ng, wo) < 0.0f)
-		//	Ng = -Ng;
-		//if (dot(Ns, wo) < 0.0f)
-		//	Ns = -Ns;
-
-		SurfaceInteraction si;
-		si.p  = payload.p;
-		si.wo = wo;
-		si.n  = Ng;
-		si.uv = payload.uv;
-
-		// Compute geometry basis and shading basis
-		si.GeometryFrame = InitFrameFromZ(Ng);
-		si.ShadingFrame	 = InitFrameFromZ(Ns);
-
-		// Update BSDF's internal data
-		Material material = g_Materials[payload.materialID];
-
-		if (material.Albedo != -1)
-		{
-			// Texture2D Texture = ResourceDescriptorHeap[material.Albedo];
-			Texture2D Texture  = g_Texture2DTable[material.Albedo];
-			material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
-		}
-
-		si.BSDF = InitBSDF(si.GeometryFrame.z, si.ShadingFrame, material);
-
-		// Sample illumination from lights to find path contribution.
-		// (But skip this for perfectly specular BSDFs.)
-		if (si.BSDF.IsNonSpecular())
-		{
-			L += beta * UniformSampleOneLight(si, Seed);
-		}
-
-		// Sample BSDF to get new path direction
-		BSDFSample bsdfSample = (BSDFSample)0;
-		bool	   success =
-			si.BSDF.Samplef(si.wo, float2(RandomFloat01(Seed), RandomFloat01(Seed)), bsdfSample);
-		if (!success)
-		{
-			// Used to debug
-			// L = bsdfSample.f;
-			break;
-		}
-
-		beta *= bsdfSample.f * abs(dot(bsdfSample.wi, si.ShadingFrame.z)) / bsdfSample.pdf;
+		const uint RayFlags											= RAY_FLAG_NONE;
+		const uint InstanceInclusionMask							= 0xffffffff;
+		const uint RayContributionToHitGroupIndex					= RayTypePrimary;
+		const uint MultiplierForGeometryContributionToHitGroupIndex = NumRayTypes;
+		const uint MissShaderIndex									= 0;
+		TraceRay(
+			g_Scene,
+			RayFlags,
+			InstanceInclusionMask,
+			RayContributionToHitGroupIndex,
+			MultiplierForGeometryContributionToHitGroupIndex,
+			MissShaderIndex,
+			DXRRay,
+			RayPayload);
 
 		// Spawn a new ray based on the sampled direction from the BSDF
-		ray = si.SpawnRay(bsdfSample.wi);
+		DXRRay = RayPayload.SpawnRay(RayPayload.wi);
 
-		const float rrThreshold			= 1.0f;
-		float3		rr					= beta;
-		float		rrMaxComponentValue = max(rr.x, max(rr.y, rr.z));
-		if (rrMaxComponentValue < rrThreshold && bounce > 1)
-		{
-			float q = max(0.0f, 1.0f - rrMaxComponentValue);
-			if (RandomFloat01(Seed) < q)
-			{
-				break;
-			}
-			beta /= 1.0f - q;
-		}
+		RayPayload.Depth++;
 	}
 
-	return L;
+	return RayPayload.L;
 }
 
 [shader("raygeneration")]
@@ -290,14 +249,14 @@ void RayGeneration()
 	L.g = isnan(L.g) ? 0.0f : L.g;
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
-	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_RenderPassData.RenderTarget];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_RenderPassData.RenderTarget];
+	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_SystemConstants.RenderTarget];
+    RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_SystemConstants.RenderTarget];
 
 	// Progressive accumulation
-	if (g_RenderPassData.NumAccumulatedSamples > 0)
+    if (g_SystemConstants.NumAccumulatedSamples > 0)
 	{
-		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_RenderPassData.NumAccumulatedSamples));
-	}
+        L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_SystemConstants.NumAccumulatedSamples));
+    }
 
 	RenderTarget[launchIndex] = float4(L, 1);
 }
@@ -305,7 +264,9 @@ void RayGeneration()
 [shader("miss")]
 void Miss(inout RayPayload rayPayload : SV_RayPayload)
 {
-	rayPayload.materialID = INVALID_ID;
+    float t = 0.5f * (WorldRayDirection().y + 1.0f);
+    rayPayload.L += rayPayload.beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_SystemConstants.SkyIntensity;
+	TerminateRay(rayPayload);
 }
 
 [shader("miss")]
@@ -318,11 +279,44 @@ void ShadowMiss(inout ShadowRayPayload rayPayload : SV_RayPayload)
 [shader("closesthit")]
 void ClosestHit(inout RayPayload rayPayload : SV_RayPayload, in BuiltInTriangleIntersectionAttributes Attributes)
 {
-	VertexAttributes vertexAttributes = GetVertexAttributes(Attributes);
+	SurfaceInteraction si = GetSurfaceInteraction(Attributes);
 
-	rayPayload.p		  = vertexAttributes.p;
-	rayPayload.materialID = MaterialIndex;
-	rayPayload.uv		  = vertexAttributes.uv;
-	rayPayload.Ng		  = InitOctahedralVector(vertexAttributes.Ng);
-	rayPayload.Ns		  = InitOctahedralVector(vertexAttributes.Ns);
+	// Sample illumination from lights to find path contribution.
+	// (But skip this for perfectly specular BSDFs.)
+	if (si.BSDF.IsNonSpecular())
+	{
+		rayPayload.L += rayPayload.beta * UniformSampleOneLight(si, rayPayload.Seed);
+	}
+
+	// Sample BSDF to get new path direction
+	float3	   wo		  = -WorldRayDirection();
+	BSDFSample bsdfSample = (BSDFSample)0;
+	bool	   success =
+		si.BSDF.Samplef(wo, float2(RandomFloat01(rayPayload.Seed), RandomFloat01(rayPayload.Seed)), bsdfSample);
+	if (!success)
+	{
+		// Used to debug
+		// rayPayload.L = bsdfSample.f;
+		TerminateRay(rayPayload);
+		return;
+	}
+
+	rayPayload.beta *= bsdfSample.f * abs(dot(bsdfSample.wi, si.ShadingFrame.z)) / bsdfSample.pdf;
+
+	// Spawn new ray
+	rayPayload.p  = si.p;
+	rayPayload.wi = bsdfSample.wi;
+
+	const float rrThreshold			= 1.0f;
+	float3		rr					= rayPayload.beta;
+	float		rrMaxComponentValue = max(rr.x, max(rr.y, rr.z));
+	if (rrMaxComponentValue < rrThreshold && rayPayload.Depth > 1)
+	{
+		float q = max(0.0f, 1.0f - rrMaxComponentValue);
+		if (RandomFloat01(rayPayload.Seed) < q)
+		{
+			TerminateRay(rayPayload);
+		}
+		rayPayload.beta /= 1.0f - q;
+	}
 }

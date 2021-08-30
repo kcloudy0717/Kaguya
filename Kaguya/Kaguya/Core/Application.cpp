@@ -1,15 +1,15 @@
 #include "Application.h"
 
 #if defined(_DEBUG)
-// memory leak
-#define _CRTDBG_MAP_ALLOC
-#include <cstdlib>
-#include <crtdbg.h>
-#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
-#define SET_LEAK_BREAKPOINT(x)	_CrtSetBreakAlloc(x)
+	// memory leak
+	#define _CRTDBG_MAP_ALLOC
+	#include <cstdlib>
+	#include <crtdbg.h>
+	#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
+	#define SET_LEAK_BREAKPOINT(x)	_CrtSetBreakAlloc(x)
 #else
-#define ENABLE_LEAK_DETECTION() 0
-#define SET_LEAK_BREAKPOINT(X)	X
+	#define ENABLE_LEAK_DETECTION() 0
+	#define SET_LEAK_BREAKPOINT(X)	X
 #endif
 
 #include <shellapi.h>
@@ -49,7 +49,7 @@ public:
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void Application::InitializeComponents()
+void Application::InitializeComponents(const std::string& LoggerName)
 {
 #if defined(_DEBUG)
 	ENABLE_LEAK_DETECTION();
@@ -66,7 +66,8 @@ void Application::InitializeComponents()
 	}
 
 	// Initialize Log
-	Log::Initialize();
+	Log::Initialize(LoggerName);
+	LOG_INFO("Log Initialized");
 }
 
 int Application::Run(Application& Application, const ApplicationOptions& Options)
@@ -148,8 +149,6 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	Stopwatch.Restart();
 	do
 	{
-		Stopwatch.Signal();
-		Application.Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 	} while (ProcessMessages());
 
 	Application.Shutdown();
@@ -274,6 +273,13 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	{
 		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
 		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
+	}
+	break;
+
+	case WM_PAINT:
+	{
+		Stopwatch.Signal();
+		App->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 	}
 	break;
 

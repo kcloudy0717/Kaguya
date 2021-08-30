@@ -21,15 +21,13 @@ public:
 
 	World() { AddDefaultEntities(); }
 
-	Entity GetMainCamera();
+	[[nodiscard]] auto CreateEntity(std::string_view Name = {}) -> Entity;
+	[[nodiscard]] auto GetMainCamera() -> Entity;
+	[[nodiscard]] auto GetEntityByTag(std::string_view Name) -> Entity;
 
 	void Clear(bool bAddDefaultEntities = true);
 
-	Entity CreateEntity(std::string_view Name = {});
-
 	void DestroyEntity(Entity Entity);
-
-	Entity GetEntityByTag(std::string_view Name);
 
 	template<typename T>
 	void OnComponentAdded(Entity Entity, T& Component);

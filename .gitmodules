@@ -1,18 +1,18 @@
-[submodule "ext/ImGuizmo"]
-	path = ext/ImGuizmo
+[submodule "Dependencies/Online/ImGuizmo"]
+	path = Dependencies/Online/ImGuizmo
 	url = https://github.com/CedricGuillemet/ImGuizmo.git
-[submodule "ext/imgui"]
-	path = ext/imgui
-	url = https://github.com/ocornut/imgui.git
-[submodule "ext/spdlog"]
-	path = ext/spdlog
-	url = https://github.com/gabime/spdlog.git
-[submodule "ext/entt"]
-	path = ext/entt
+[submodule "Dependencies/Online/entt"]
+	path = Dependencies/Online/entt
 	url = https://github.com/skypjack/entt.git
-[submodule "ext/wil"]
-	path = ext/wil
-	url = https://github.com/microsoft/wil.git
-[submodule "ext/json"]
-	path = ext/json
+[submodule "Dependencies/Online/imgui"]
+	path = Dependencies/Online/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "Dependencies/Online/json"]
+	path = Dependencies/Online/json
 	url = https://github.com/nlohmann/json.git
+[submodule "Dependencies/Online/spdlog"]
+	path = Dependencies/Online/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "Dependencies/Online/wil"]
+	path = Dependencies/Online/wil
+	url = https://github.com/microsoft/wil.git

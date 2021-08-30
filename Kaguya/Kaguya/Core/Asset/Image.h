@@ -1,6 +1,6 @@
 #pragma once
 #include <DirectXTex.h>
-#include <Core/D3D12/Adapter.h>
+#include <Core/RHI/D3D12/D3D12Device.h>
 
 namespace Asset
 {
@@ -10,6 +10,7 @@ struct ImageMetadata
 {
 	std::filesystem::path Path;
 	bool				  sRGB;
+	bool				  GenerateMips;
 };
 
 struct Image
@@ -21,7 +22,7 @@ struct Image
 	std::string			  Name;
 	DirectX::ScratchImage Image;
 
-	Texture			   Texture;
-	ShaderResourceView SRV;
+	D3D12Texture			Texture;
+	D3D12ShaderResourceView SRV;
 };
 } // namespace Asset

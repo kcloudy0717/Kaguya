@@ -1,14 +1,15 @@
 #include "RaytracingAccelerationStructure.h"
-
-#include "RenderDevice.h"
+#include <RenderCore/RenderCore.h>
 
 RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGroups)
 	: NumHitGroups(NumHitGroups)
 {
-	auto& RenderDevice = RenderDevice::Instance();
+}
 
-	InstanceDescs = Buffer(
-		RenderDevice.GetDevice(),
+void RaytracingAccelerationStructure::Initialize()
+{
+	InstanceDescs = D3D12Buffer(
+		RenderCore::pDevice->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -36,10 +37,8 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 		static_cast<UINT>(pMeshRenderer->pMeshFilter->Mesh->BLAS.size()) * NumHitGroups;
 }
 
-void RaytracingAccelerationStructure::Build(CommandContext& Context)
+void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 {
-	auto& RenderDevice = RenderDevice::Instance();
-
 	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"TLAS");
 
 	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
@@ -51,15 +50,15 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 
 	UINT64 ScratchSize, ResultSize;
 	TopLevelAccelerationStructure.ComputeMemoryRequirements(
-		RenderDevice.GetDevice()->GetDevice5(),
+		RenderCore::pDevice->GetD3D12Device5(),
 		&ScratchSize,
 		&ResultSize);
 
 	if (!TLASScratch || TLASScratch.GetDesc().Width < ScratchSize)
 	{
 		// TLAS Scratch
-		TLASScratch = Buffer(
-			RenderDevice.GetDevice(),
+		TLASScratch = D3D12Buffer(
+			RenderCore::pDevice->GetDevice(),
 			ScratchSize,
 			0,
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -69,7 +68,7 @@ void RaytracingAccelerationStructure::Build(CommandContext& Context)
 	if (!TLASResult || TLASResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TLASResult = ASBuffer(RenderDevice.GetDevice(), ResultSize);
+		TLASResult = D3D12ASBuffer(RenderCore::pDevice->GetDevice(), ResultSize);
 	}
 
 	// Create the description for each instance

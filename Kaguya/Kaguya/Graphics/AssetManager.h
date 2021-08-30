@@ -1,7 +1,6 @@
 #pragma once
-#include "RenderDevice.h"
-
 #include <Core/Asset/AsyncLoader.h>
+#include <RenderCore/RenderCore.h>
 
 class AssetManager
 {

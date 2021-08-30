@@ -8,12 +8,12 @@ UseCRLF:         false
 UseTab:          Always
 AccessModifierOffset: -4
 AlignAfterOpenBracket: AlwaysBreak
-AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 AlignConsecutiveAssignments: Consecutive
 AlignConsecutiveBitFields: AcrossEmptyLinesAndComments
 AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 AlignEscapedNewlines: Right
-AlignOperands:   Align
+AlignOperands: Align
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: false
 # AllowAllConstructorInitializersOnNextLine: true
@@ -30,9 +30,7 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
-ExperimentalAutoDetectBinPacking: false
 BitFieldColonSpacing: Both
-BreakBeforeBraces: Custom
 BraceWrapping:
   AfterCaseLabel:  true
   AfterClass:      true
@@ -52,14 +50,16 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
+# BreakAfterJavaFieldAnnotations: false
 BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
 BreakBeforeConceptDeclarations: true
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
 BreakStringLiterals: false
-ColumnLimit:     120
-CommentPragmas:  '^ IWYU pragma:'
+ColumnLimit: 120
+CommentPragmas: '^ IWYU pragma:'
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 4
@@ -67,13 +67,15 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: false
 DeriveLineEnding: true
 DerivePointerAlignment: false
-DisableFormat:   false
+DisableFormat: false
+EmptyLineBeforeAccessModifier: Always
+# ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
 ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
-IncludeBlocks:   Preserve
+IncludeBlocks: Preserve
 IncludeCategories:
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
     Priority:        2
@@ -86,15 +88,14 @@ IncludeCategories:
     SortPriority:    0
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
-IndentCaseLabels: false
 IndentCaseBlocks: false
-IndentGotoLabels: true
-IndentPPDirectives: None
+IndentCaseLabels: false
 IndentExternBlock: AfterExternBlock
+IndentGotoLabels: false
+IndentPPDirectives: BeforeHash
+IndentRequires: false
 IndentWrappedFunctionNames: false
 InsertTrailingCommas: None
-JavaScriptQuotes: Leave
-JavaScriptWrapImports: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
@@ -145,4 +146,5 @@ WhitespaceSensitiveMacros:
   - PP_STRINGIZE
   - BOOST_PP_STRINGIZE
 ...
+
 

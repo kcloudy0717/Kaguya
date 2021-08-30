@@ -402,6 +402,47 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
+		RenderComponent<Camera, false>(
+			"Camera",
+			SelectedEntity,
+			[&](Camera& Component)
+			{
+				bool IsEdited = false;
+
+				IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, 45.0f, 45.0f, 85.0f);
+				IsEdited |= RenderFloatControl("Near", &Component.NearZ, 0.1f, 0.1f, 1.0f);
+				IsEdited |= RenderFloatControl("Far", &Component.FarZ, 10.0f, 10.0f, 1000.0f);
+
+				return IsEdited;
+			});
+
+		RenderComponent<Light, false>(
+			"Light",
+			SelectedEntity,
+			[&](Light& Component)
+			{
+				bool IsEdited = false;
+
+				auto pType = (int*)&Component.Type;
+
+				const char* LightTypes[] = { "Point", "Quad" };
+				IsEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
+
+				switch (Component.Type)
+				{
+				case ELightTypes::Point:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
+					break;
+				case ELightTypes::Quad:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
+					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
+					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
+					break;
+				}
+
+				return IsEdited;
+			});
+
 		RenderComponent<MeshFilter, false>(
 			"Mesh Filter",
 			SelectedEntity,
@@ -491,7 +532,7 @@ void InspectorWindow::OnRender()
 						break;
 					}
 
-					auto ImageBox = [&](ETextureTypes TextureType, UINT64& Key, std::string_view Name)
+					auto ImageBox = [&](ETextureTypes Type, UINT64& Key, std::string_view Name)
 					{
 						auto handle = AssetManager::GetImageCache().Load(Key);
 
@@ -500,12 +541,12 @@ void InspectorWindow::OnRender()
 						if (handle)
 						{
 							ImGui::Button(handle->Name.data());
-							Material.TextureIndices[TextureType] = handle->SRV.GetIndex();
+							Material.TextureIndices[Type] = handle->SRV.GetIndex();
 						}
 						else
 						{
 							ImGui::Button("NULL");
-							Material.TextureIndices[TextureType] = -1;
+							Material.TextureIndices[Type] = -1;
 						}
 
 						if (ImGui::BeginDragDropTarget())
@@ -524,33 +565,6 @@ void InspectorWindow::OnRender()
 					ImageBox(ETextureTypes::AlbedoIdx, Material.Albedo.Key, "Albedo: ");
 
 					ImGui::TreePop();
-				}
-
-				return IsEdited;
-			});
-
-		RenderComponent<Light, false>(
-			"Light",
-			SelectedEntity,
-			[&](Light& Component)
-			{
-				bool IsEdited = false;
-
-				auto pType = (int*)&Component.Type;
-
-				const char* LightTypes[] = { "Point", "Quad" };
-				IsEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
-
-				switch (Component.Type)
-				{
-				case ELightTypes::Point:
-					IsEdited |= RenderFloat3Control("I", &Component.I.x);
-					break;
-				case ELightTypes::Quad:
-					IsEdited |= RenderFloat3Control("I", &Component.I.x);
-					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
-					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
-					break;
 				}
 
 				return IsEdited;

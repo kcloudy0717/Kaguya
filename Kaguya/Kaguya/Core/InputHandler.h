@@ -6,9 +6,9 @@ class InputHandler
 {
 public:
 	InputHandler() noexcept = default;
-	InputHandler(_In_ HWND hWnd);
+	InputHandler(HWND hWnd);
 
-	void Process(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
+	void Process(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	void EnableCursor();
 	void DisableCursor();
@@ -19,9 +19,9 @@ public:
 	void HideCursor();
 
 private:
-	void HandleRawInput(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
+	void HandleRawInput(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	void HandleStandardInput(_In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
+	void HandleStandardInput(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
 	HWND	 hWnd = nullptr;
