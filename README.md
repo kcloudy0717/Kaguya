@@ -54,6 +54,11 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Add environment lights ([Portal-masked environment map sampling](https://cs.dartmouth.edu/wjarosz/publications/bitterli15portal.html)) and geometry area lights ([Spherical triangle sampling](https://www.graphics.cornell.edu/pubs/1995/Arv95c.pdf))
 - Upgrade from DXR 1.0 to DXR 1.1 (inline raytracing)
 
+# Work in progress
+
+- RenderGraph rendering approach
+- Learning Vulkan
+
 # Build
 
 - Visual Studio 2019
