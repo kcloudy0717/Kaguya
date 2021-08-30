@@ -23,7 +23,7 @@ struct GlobalConstants
 	float SkyIntensity;
 };
 
-ConstantBuffer<GlobalConstants> g_SystemConstants : register(b0, space0);
+ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);
 
 RaytracingAccelerationStructure g_Scene : register(t0, space0);
 StructuredBuffer<Material>		g_Materials : register(t1, space0);

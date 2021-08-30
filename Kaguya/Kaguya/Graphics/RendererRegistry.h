@@ -263,12 +263,18 @@ struct RaytracingPipelineStates
 
 				Builder.SetGlobalRootSignature(Device.GetRootSignature(GlobalRS));
 
-				constexpr UINT PayloadSize = sizeof(float) * 3		 // L
-											 + sizeof(float) * 3	 // beta
-											 + sizeof(float) * 3	 // p
-											 + sizeof(float) * 3	 // wi
-											 + sizeof(unsigned int)	 // Seed
-											 + sizeof(unsigned int); // Depth
+				constexpr UINT PayloadSize = 12	  // p
+											 + 4  // materialID
+											 + 8  // uv
+											 + 8  // Ng
+											 + 8; // Ns
+
+				// constexpr UINT PayloadSize = sizeof(float) * 3		 // L
+				//							 + sizeof(float) * 3	 // beta
+				//							 + sizeof(float) * 3	 // p
+				//							 + sizeof(float) * 3	 // wi
+				//							 + sizeof(unsigned int)	 // Seed
+				//							 + sizeof(unsigned int); // Depth
 				Builder.SetRaytracingShaderConfig(PayloadSize, D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES);
 
 				// +1 for Primary, +1 for Shadow

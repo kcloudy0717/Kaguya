@@ -1,5 +1,4 @@
 #include "PathIntegrator.h"
-#include "World/Entity.h"
 #include "RendererRegistry.h"
 
 // CAS
@@ -241,13 +240,13 @@ void PathIntegrator::Initialize()
 				FLOAT white[] = { 1, 1, 1, 1 };
 				Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
 
-				struct Settings
+				struct RootConstants
 				{
 					unsigned int InputIndex;
-				} settings			= {};
-				settings.InputIndex = Registry.GetTextureIndex(PathTraceInput);
+				} Constants;
+				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
 
-				Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
+				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
 
 				Context.DrawInstanced(3, 1, 0, 0);
 			};
@@ -302,8 +301,8 @@ void PathIntegrator::Initialize()
 						static_cast<AF1>(FSRState.RenderHeight),
 						static_cast<AF1>(FSRState.RenderWidth),
 						static_cast<AF1>(FSRState.RenderHeight),
-						(AF1)ViewData.ViewportWidth,
-						(AF1)ViewData.ViewportHeight);
+						static_cast<AF1>(ViewData.ViewportWidth),
+						static_cast<AF1>(ViewData.ViewportHeight));
 					FsrEasu.Sample.x = 0;
 
 					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));

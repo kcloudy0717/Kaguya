@@ -1,10 +1,14 @@
 // main.cpp : Defines the entry point for the application.
 
-#include <Core/Application.h>
-#include <World/World.h>
-#include <Physics/PhysicsManager.h>
+#define VULKAN_PLAYGROUND 0
 
-#include <iostream>
+#if VULKAN_PLAYGROUND
+
+	#include <Core/Application.h>
+	#include <World/World.h>
+	#include <Physics/PhysicsManager.h>
+
+	#include <iostream>
 
 struct UploadContext
 {
@@ -672,7 +676,8 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-#if 0
+#else
+
 // main.cpp : Defines the entry point for the application.
 //
 	#include <Core/Application.h>

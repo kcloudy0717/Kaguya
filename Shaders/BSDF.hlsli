@@ -283,6 +283,19 @@ struct SurfaceInteraction
 	Frame  GeometryFrame;
 	Frame  ShadingFrame;
 	BSDF   BSDF;
+
+	RayDesc SpawnRay(float3 d)
+	{
+		RayDesc ray = { p, 0.001f, normalize(d), 10000.0f };
+		return ray;
+
+		// RayDesc ray	  = (RayDesc)0;
+		// ray.Origin	  = OffsetRay(p, n);
+		// ray.TMin	  = 0.001f;
+		// ray.Direction = normalize(d);
+		// ray.TMax	  = 10000.0f;
+		// return ray;
+	}
 };
 
 struct VisibilityTester

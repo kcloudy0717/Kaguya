@@ -21,6 +21,7 @@ struct Material
 	float3 T;
 	float  etaA, etaB;
 
+	// Texture indices
 	int Albedo;
 };
 
