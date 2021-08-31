@@ -30,6 +30,8 @@ set(imgui
 	${DEPONLINEDIR}/imgui/imstb_textedit.h
 	${DEPONLINEDIR}/imgui/imstb_truetype.h
 	# Backend
+	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.cpp
+	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.h
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.cpp
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.h
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_win32.cpp

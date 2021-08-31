@@ -190,7 +190,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 
 		float3 wo = -ray.Direction;
 
-		if (material.BSDFType != 2 /* Mirror */)
+        if (material.BSDFType != 2 /* Glass */)
 		{
 			if (dot(Ng, wo) < 0.0f)
 				Ng = -Ng;
