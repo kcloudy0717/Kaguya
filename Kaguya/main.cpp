@@ -10,12 +10,6 @@
 
 	#include <iostream>
 
-struct UploadContext
-{
-	VkFence		  _uploadFence;
-	VkCommandPool _commandPool;
-};
-
 struct MeshPushConstants
 {
 	DirectX::XMFLOAT4X4 Transform;
@@ -83,7 +77,6 @@ public:
 
 		InitDefaultRenderPass();
 		InitFrameBuffers();
-		InitSyncStructures();
 		InitDescriptors();
 		InitPipelines();
 
@@ -122,14 +115,11 @@ public:
 		init_info.MSAASamples				= VK_SAMPLE_COUNT_1_BIT;
 
 		ImGui_ImplVulkan_Init(&init_info, RenderPass->As<VulkanRenderPass>()->GetApiHandle());
-
-		// execute a gpu command to upload imgui font textures
-		immediate_submit(
-			[&](VkCommandBuffer cmd)
+		GraphicsImmediate(
+			[&](VkCommandBuffer CommandBuffer)
 			{
-				ImGui_ImplVulkan_CreateFontsTexture(cmd);
+				ImGui_ImplVulkan_CreateFontsTexture(CommandBuffer);
 			});
-
 		// clear font textures from cpu data
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
@@ -142,8 +132,6 @@ public:
 	void Shutdown() override
 	{
 		ImGui_ImplVulkan_Shutdown();
-
-		vkDestroyFence(Device.GetVkDevice(), _uploadContext._uploadFence, nullptr);
 
 		for (auto& Framebuffer : Framebuffers)
 		{
@@ -159,7 +147,7 @@ public:
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 
-		//ImGui::DockSpaceOverViewport();
+		// ImGui::DockSpaceOverViewport();
 
 		ImGui::ShowDemoWindow();
 
@@ -183,7 +171,6 @@ public:
 		World.Update(DeltaTime);
 		Camera& MainCamera = *World.ActiveCamera;
 
-		// request image from the swapchain, one second timeout
 		uint32_t swapchainImageIndex = SwapChain.AcquireNextImage();
 
 		VulkanCommandContext& Context = Device.GetGraphicsQueue().GetCommandContext(0);
@@ -241,31 +228,22 @@ public:
 	void Resize(UINT Width, UINT Height) override {}
 
 private:
-	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function)
+	void Upload(std::function<void(VkCommandBuffer CommandBuffer)>&& Function)
 	{
-		VkCommandBuffer cmd = Device.GetCopyQueue().GetCommandContext(0).CommandBuffer;
+		VulkanCommandContext& Context = Device.GetCopyQueue().GetCommandContext(0);
+		Context.OpenCommandList();
+		Function(Context.CommandBuffer);
+		Context.CloseCommandList();
+		Device.GetCopyQueue().ExecuteCommandLists(1, &Context, true);
+	}
 
-		// begin the command buffer recording. We will use this command buffer exactly once, so we want to let vulkan
-		// know that
-		auto CommandBufferBeginInfo	 = VkStruct<VkCommandBufferBeginInfo>();
-		CommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		VERIFY_VULKAN_API(vkBeginCommandBuffer(cmd, &CommandBufferBeginInfo));
-		function(cmd);
-		VERIFY_VULKAN_API(vkEndCommandBuffer(cmd));
-
-		auto SubmitInfo				  = VkStruct<VkSubmitInfo>();
-		SubmitInfo.commandBufferCount = 1;
-		SubmitInfo.pCommandBuffers	  = &cmd;
-
-		VERIFY_VULKAN_API(
-			vkQueueSubmit(Device.GetCopyQueue().GetApiHandle(), 1, &SubmitInfo, _uploadContext._uploadFence));
-
-		VERIFY_VULKAN_API(vkWaitForFences(Device.GetVkDevice(), 1, &_uploadContext._uploadFence, true, UINT64_MAX));
-		VERIFY_VULKAN_API(vkResetFences(Device.GetVkDevice(), 1, &_uploadContext._uploadFence));
-
-		// clear the command pool. This will free the command buffer too
-		VERIFY_VULKAN_API(vkResetCommandPool(Device.GetVkDevice(), _uploadContext._commandPool, 0));
+	void GraphicsImmediate(std::function<void(VkCommandBuffer CommandBuffer)>&& Function)
+	{
+		VulkanCommandContext& Context = Device.GetGraphicsQueue().GetCommandContext(0);
+		Context.OpenCommandList();
+		Function(Context.CommandBuffer);
+		Context.CloseCommandList();
+		Device.GetGraphicsQueue().ExecuteCommandLists(1, &Context, true);
 	}
 
 	void InitDefaultRenderPass()
@@ -308,15 +286,6 @@ private:
 			VERIFY_VULKAN_API(
 				vkCreateFramebuffer(Device.GetVkDevice(), &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
 		}
-	}
-
-	void InitSyncStructures()
-	{
-		// create synchronization structures
-		auto FenceCreateInfo = VkStruct<VkFenceCreateInfo>();
-		VERIFY_VULKAN_API(vkCreateFence(Device.GetVkDevice(), &FenceCreateInfo, nullptr, &_uploadContext._uploadFence));
-
-		_uploadContext._commandPool = Device.GetCopyQueue().GetCommandPool();
 	}
 
 	void InitDescriptors()
@@ -445,15 +414,15 @@ private:
 		VertexBufferDesc.Flags		   = RHIBufferFlag_VertexBuffer;
 		Mesh.VertexResource			   = Device.CreateBuffer(VertexBufferDesc);
 
-		immediate_submit(
-			[&](VkCommandBuffer cmd)
+		Upload(
+			[&](VkCommandBuffer CommandBuffer)
 			{
 				VkBufferCopy copy;
 				copy.dstOffset = 0;
 				copy.srcOffset = 0;
 				copy.size	   = VertexBufferDesc.SizeInBytes;
 				vkCmdCopyBuffer(
-					cmd,
+					CommandBuffer,
 					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
 					Mesh.VertexResource->As<VulkanBuffer>()->GetApiHandle(),
 					1,
@@ -474,15 +443,15 @@ private:
 		IndexBufferDesc.Flags		  = RHIBufferFlag_IndexBuffer;
 		Mesh.IndexResource			  = Device.CreateBuffer(IndexBufferDesc);
 
-		immediate_submit(
-			[&](VkCommandBuffer cmd)
+		Upload(
+			[&](VkCommandBuffer CommandBuffer)
 			{
 				VkBufferCopy copy;
 				copy.dstOffset = 0;
 				copy.srcOffset = 0;
 				copy.size	   = IndexBufferDesc.SizeInBytes;
 				vkCmdCopyBuffer(
-					cmd,
+					CommandBuffer,
 					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
 					Mesh.IndexResource->As<VulkanBuffer>()->GetApiHandle(),
 					1,
@@ -518,8 +487,8 @@ private:
 
 		Texture = Device.CreateTexture(TextureDesc);
 
-		immediate_submit(
-			[&](VkCommandBuffer cmd)
+		Upload(
+			[&](VkCommandBuffer CommandBuffer)
 			{
 				VkImageSubresourceRange range;
 				range.aspectMask	 = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -540,7 +509,7 @@ private:
 
 				// barrier the image into the transfer-receive layout
 				vkCmdPipelineBarrier(
-					cmd,
+					CommandBuffer,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					0,
@@ -564,7 +533,7 @@ private:
 
 				// copy the buffer into the image
 				vkCmdCopyBufferToImage(
-					cmd,
+					CommandBuffer,
 					StagingBuffer->As<VulkanBuffer>()->GetApiHandle(),
 					Texture->As<VulkanTexture>()->GetApiHandle(),
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -578,7 +547,7 @@ private:
 
 				// barrier the image into the shader readable layout
 				vkCmdPipelineBarrier(
-					cmd,
+					CommandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
@@ -600,8 +569,6 @@ private:
 
 	RefPtr<IRHIRenderPass>	   RenderPass;
 	std::vector<VkFramebuffer> Framebuffers;
-
-	UploadContext _uploadContext;
 
 	RefPtr<IRHIRootSignature> RootSignature;
 	RefPtr<IRHIPipelineState> MeshPipeline;

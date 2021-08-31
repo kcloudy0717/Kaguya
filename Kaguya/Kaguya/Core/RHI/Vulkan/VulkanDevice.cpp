@@ -310,7 +310,7 @@ void VulkanDevice::Initialize(const DeviceOptions& Options)
 	QueueFamilyProperties.resize(QueueFamilyPropertyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueFamilyProperties.data());
 
-	for (size_t i = 0; i < QueueFamilyProperties.size(); ++i)
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i)
 	{
 		VkQueueFlags QueueFlags = QueueFamilyProperties[i].queueFlags;
 
@@ -345,6 +345,7 @@ void VulkanDevice::InitializeDevice()
 	}
 
 	auto PhysicalDeviceVulkan12Features							   = VkStruct<VkPhysicalDeviceVulkan12Features>();
+	PhysicalDeviceVulkan12Features.descriptorIndexing			   = VK_TRUE;
 	PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
 	PhysicalDeviceVulkan12Features.runtimeDescriptorArray		   = VK_TRUE;
 	PhysicalDeviceVulkan12Features.timelineSemaphore			   = VK_TRUE;

@@ -60,11 +60,7 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 	VERIFY_VULKAN_API(vkCreateSemaphore(Device->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
 	VERIFY_VULKAN_API(vkCreateSemaphore(Device->GetVkDevice(), &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
 
-	PresentQueue								  = Device->InitializePresentQueue(Surface);
-	PresentQueue->SubmitInfo.waitSemaphoreCount	  = 1;
-	PresentQueue->SubmitInfo.pWaitSemaphores	  = &PresentSemaphore;
-	PresentQueue->SubmitInfo.signalSemaphoreCount = 1;
-	PresentQueue->SubmitInfo.pSignalSemaphores	  = &RenderSemaphore;
+	PresentQueue = Device->InitializePresentQueue(Surface);
 
 	VkSurfaceFormatKHR SurfaceFormat = GetPreferredSurfaceFormat();
 	VkPresentModeKHR   PresentMode	 = GetPreferredPresentMode();
@@ -121,8 +117,8 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 		VERIFY_VULKAN_API(vkCreateImageView(Device->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViews[i]))
 	}
 
-	//Backbuffers.resize(ImageCount);
-	//for (uint32_t i = 0; i < ImageCount; ++i)
+	// Backbuffers.resize(ImageCount);
+	// for (uint32_t i = 0; i < ImageCount; ++i)
 	//{
 	//	auto Desc		 = VkStruct<VkImageCreateInfo>();
 	//	Desc.format		 = Format;
@@ -143,6 +139,11 @@ auto VulkanSwapChain::GetImageView(size_t i) const noexcept -> VkImageView
 
 uint32_t VulkanSwapChain::AcquireNextImage()
 {
+	PresentQueue->SubmitInfo.waitSemaphoreCount	  = 1;
+	PresentQueue->SubmitInfo.pWaitSemaphores	  = &PresentSemaphore;
+	PresentQueue->SubmitInfo.signalSemaphoreCount = 1;
+	PresentQueue->SubmitInfo.pSignalSemaphores	  = &RenderSemaphore;
+
 	VERIFY_VULKAN_API(
 		vkAcquireNextImageKHR(Device, VkSwapchain, UINT64_MAX, PresentSemaphore, nullptr, &CurrentImageIndex));
 	return CurrentImageIndex;
@@ -162,6 +163,11 @@ void VulkanSwapChain::Present()
 	PresentInfo.pImageIndices		  = &CurrentImageIndex;
 
 	VERIFY_VULKAN_API(vkQueuePresentKHR(PresentQueue->GetApiHandle(), &PresentInfo));
+
+	PresentQueue->SubmitInfo.waitSemaphoreCount	  = 0;
+	PresentQueue->SubmitInfo.pWaitSemaphores	  = nullptr;
+	PresentQueue->SubmitInfo.signalSemaphoreCount = 0;
+	PresentQueue->SubmitInfo.pSignalSemaphores	  = nullptr;
 }
 
 auto VulkanSwapChain::GetPreferredSurfaceFormat() const noexcept -> VkSurfaceFormatKHR

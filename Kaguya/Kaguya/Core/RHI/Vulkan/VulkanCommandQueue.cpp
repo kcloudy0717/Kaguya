@@ -142,5 +142,11 @@ VulkanCommandSyncPoint VulkanCommandQueue::ExecuteCommandLists(
 	UINT64 FenceValue = AdvanceGpu();
 	SyncPoint		  = VulkanCommandSyncPoint(&Fence, FenceValue);
 
+	if (WaitForCompletion)
+	{
+		HostWaitForValue(FenceValue);
+		assert(SyncPoint.IsComplete());
+	}
+
 	return SyncPoint;
 }
