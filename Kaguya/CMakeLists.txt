@@ -100,32 +100,32 @@ add_dependencies(${PROJECTNAME} Shaders)
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
-include_directories(${PROJECTDIR})
+target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})
 
 # Online
-include_directories("${DEPONLINEDIR}/entt/single_include/entt")
-include_directories("${DEPONLINEDIR}/imgui")
-include_directories("${DEPONLINEDIR}/ImGuizmo")
-include_directories("${DEPONLINEDIR}/json/single_include")
-include_directories("${DEPONLINEDIR}/spdlog/include")
-include_directories("${DEPONLINEDIR}/wil/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/entt/single_include/entt")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/imgui")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/ImGuizmo")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/json/single_include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/spdlog/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/wil/include")
 
 # Offline
-include_directories("${DEPOFFLINEDIR}/assimp/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/assimp/include")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
 
-include_directories("${DEPOFFLINEDIR}/DirectXTex/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/DirectXTex/include")
 target_link_libraries(${PROJECTNAME} debug ${DEPOFFLINEDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} optimized ${DEPOFFLINEDIR}/DirectXTex/lib/Release/DirectXTex.lib)
 
-include_directories("${DEPOFFLINEDIR}/dxc")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/dxc")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/dxc/dxcompiler.lib)
 
-include_directories("${DEPOFFLINEDIR}/google/cityhash")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/google/cityhash")
 
-include_directories("${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 
-include_directories("${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 
 set(PhysX_SDK
@@ -158,14 +158,14 @@ set(PhysX_SDK
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
-include_directories("${DEPOFFLINEDIR}/PhysX-4.0.1/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/PhysX-4.0.1/include")
 target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 
-include_directories("${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
 # Linking
-include_directories(Vulkan::Headers)
+target_include_directories(${PROJECTNAME} PUBLIC Vulkan::Headers)
 target_link_libraries(${PROJECTNAME} Vulkan::Vulkan)
 
 # Offline DLL
