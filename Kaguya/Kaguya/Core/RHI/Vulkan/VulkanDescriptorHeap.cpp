@@ -98,6 +98,11 @@ VulkanDescriptorHeap::VulkanDescriptorHeap(VulkanDevice* Parent, const Descripto
 
 void VulkanDescriptorHeap::Destroy()
 {
+	for (auto Sampler : SamplerTable | std::views::values)
+	{
+		vkDestroySampler(Parent->As<VulkanDevice>()->GetVkDevice(), Sampler, nullptr);
+	}
+
 	if (DescriptorPool)
 	{
 		vkDestroyDescriptorPool(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(DescriptorPool, {}), nullptr);
@@ -118,7 +123,7 @@ auto VulkanDescriptorHeap::AllocateDescriptorHandle(EDescriptorType DescriptorTy
 	return { .Resource = nullptr, .Type = DescriptorType, .Index = Index };
 }
 
-void VulkanDescriptorHeap::UpdateDescriptor(const DescriptorHandle& Handle) const
+void VulkanDescriptorHeap::UpdateDescriptor(const DescriptorHandle& Handle)
 {
 	VkDescriptorImageInfo  DescriptorImageInfo	= {};
 	VkDescriptorBufferInfo DescriptorBufferInfo = {};
@@ -146,8 +151,16 @@ void VulkanDescriptorHeap::UpdateDescriptor(const DescriptorHandle& Handle) cons
 	if (Handle.Type == EDescriptorType::Sampler)
 	{
 		VkSamplerCreateInfo samplerInfo = sampler_create_info(VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-		VkSampler			blockySampler;
+		UINT64				Hash = CityHash64(reinterpret_cast<char*>(&samplerInfo), sizeof(VkSamplerCreateInfo));
+		if (auto iter = SamplerTable.find(Hash); iter != SamplerTable.end())
+		{
+			return;
+		}
+
+		VkSampler blockySampler;
 		vkCreateSampler(Parent->As<VulkanDevice>()->GetVkDevice(), &samplerInfo, nullptr, &blockySampler);
+
+		SamplerTable[Hash] = blockySampler;
 
 		DescriptorImageInfo.sampler = blockySampler;
 	}

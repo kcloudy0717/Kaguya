@@ -16,9 +16,9 @@
 
 #pragma comment(lib, "runtimeobject.lib")
 
+using Microsoft::WRL::ComPtr;
+
 // https://www.gamedev.net/forums/topic/693260-vk_snapshot-and-keydown/
-// All credit goes to Wicked Engine, I can't for the sake of me figure out how VK_SNAPSHOT works, seems like WM_KEYDOWN
-// doesnt generate keycode
 enum Hotkeys
 {
 	UNUSED		= 0,
@@ -114,7 +114,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	int y		 = Options.y.value_or(CW_USEDEFAULT);
 	WindowWidth	 = WindowRect.right - WindowRect.left;
 	WindowHeight = WindowRect.bottom - WindowRect.top;
-	AspectRatio	 = float(WindowWidth) / float(WindowHeight);
+	AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
 	hWnd = wil::unique_hwnd(::CreateWindowW(
 		wcexw.lpszClassName,
@@ -157,34 +157,31 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	return !b;
 }
 
-std::filesystem::path Application::OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs)
+std::filesystem::path Application::OpenDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs)
 {
 	// COMDLG_FILTERSPEC ComDlgFS[3] = { { L"C++ code files", L"*.cpp;*.h;*.rc" },
 	//								  { L"Executable Files", L"*.exe;*.dll" },
 	//								  { L"All Files (*.*)", L"*.*" } };
-	using Microsoft::WRL::ComPtr;
-
 	std::filesystem::path	Path;
-	ComPtr<IFileOpenDialog> pFileOpen;
-
+	ComPtr<IFileOpenDialog> FileOpen;
 	if (SUCCEEDED(CoCreateInstance(
 			CLSID_FileOpenDialog,
 			nullptr,
 			CLSCTX_ALL,
-			IID_PPV_ARGS(pFileOpen.ReleaseAndGetAddressOf()))))
+			IID_PPV_ARGS(FileOpen.ReleaseAndGetAddressOf()))))
 	{
-		pFileOpen->SetFileTypes(NumFilters, pFilterSpecs);
+		FileOpen->SetFileTypes(NumFilters, FilterSpecs);
 
 		// Show the Open dialog box.
 		// Get the file name from the dialog box.
-		if (SUCCEEDED(pFileOpen->Show(nullptr)))
+		if (SUCCEEDED(FileOpen->Show(nullptr)))
 		{
-			ComPtr<IShellItem> pItem;
-			if (SUCCEEDED(pFileOpen->GetResult(&pItem)))
+			ComPtr<IShellItem> Item;
+			if (SUCCEEDED(FileOpen->GetResult(&Item)))
 			{
 				PWSTR pszFilePath;
 				// Display the file name to the user.
-				if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
 				{
 					Path = pszFilePath;
 					CoTaskMemFree(pszFilePath);
@@ -196,31 +193,28 @@ std::filesystem::path Application::OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC
 	return Path;
 }
 
-std::filesystem::path Application::SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs)
+std::filesystem::path Application::SaveDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs)
 {
-	using Microsoft::WRL::ComPtr;
-
 	std::filesystem::path	Path;
-	ComPtr<IFileSaveDialog> pFileSave;
-
+	ComPtr<IFileSaveDialog> FileSave;
 	if (SUCCEEDED(CoCreateInstance(
 			CLSID_FileSaveDialog,
 			nullptr,
 			CLSCTX_ALL,
-			IID_PPV_ARGS(pFileSave.ReleaseAndGetAddressOf()))))
+			IID_PPV_ARGS(FileSave.ReleaseAndGetAddressOf()))))
 	{
-		pFileSave->SetFileTypes(NumFilters, pFilterSpecs);
+		FileSave->SetFileTypes(NumFilters, FilterSpecs);
 
 		// Show the Save dialog box.
 		// Get the file name from the dialog box.
-		if (SUCCEEDED(pFileSave->Show(nullptr)))
+		if (SUCCEEDED(FileSave->Show(nullptr)))
 		{
-			ComPtr<IShellItem> pItem;
-			if (SUCCEEDED(pFileSave->GetResult(&pItem)))
+			ComPtr<IShellItem> Item;
+			if (SUCCEEDED(FileSave->GetResult(&Item)))
 			{
 				PWSTR pszFilePath;
 				// Display the file name to the user.
-				if (SUCCEEDED(pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
 				{
 					Path = pszFilePath;
 					CoTaskMemFree(pszFilePath);
@@ -255,7 +249,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		return true;
 	}
 
-	Application* App = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+	auto pApplication = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	InputHandler.Process(uMsg, wParam, lParam);
 
@@ -264,8 +258,8 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	case WM_CREATE:
 	{
 		// Save the Application* passed in to CreateWindow.
-		LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+		auto CreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(CreateStruct->lpCreateParams));
 	}
 	break;
 
@@ -279,7 +273,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	case WM_PAINT:
 	{
 		Stopwatch.Signal();
-		App->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+		pApplication->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 	}
 	break;
 
@@ -292,7 +286,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 		WindowWidth	 = LOWORD(lParam);
 		WindowHeight = HIWORD(lParam);
-		AspectRatio	 = float(WindowWidth) / float(WindowHeight);
+		AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
 		if (wParam == SIZE_MINIMIZED)
 		{
@@ -303,9 +297,9 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		{
 			Minimized = false;
 			Maximized = true;
-			if (App && Initialized)
+			if (pApplication && Initialized)
 			{
-				App->Resize(WindowWidth, WindowHeight);
+				pApplication->Resize(WindowWidth, WindowHeight);
 			}
 		}
 		else if (wParam == SIZE_RESTORED)
@@ -314,18 +308,18 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 			if (Minimized)
 			{
 				Minimized = false;
-				if (App && Initialized)
+				if (pApplication && Initialized)
 				{
-					App->Resize(WindowWidth, WindowHeight);
+					pApplication->Resize(WindowWidth, WindowHeight);
 				}
 			}
 			// Restoring from maximized state?
 			else if (Maximized)
 			{
 				Maximized = false;
-				if (App && Initialized)
+				if (pApplication && Initialized)
 				{
-					App->Resize(WindowWidth, WindowHeight);
+					pApplication->Resize(WindowWidth, WindowHeight);
 				}
 			}
 			else if (Resizing)
@@ -341,9 +335,9 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 			}
 			else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
 			{
-				if (App && Initialized)
+				if (pApplication && Initialized)
 				{
-					App->Resize(WindowWidth, WindowHeight);
+					pApplication->Resize(WindowWidth, WindowHeight);
 				}
 			}
 		}
@@ -355,10 +349,11 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		switch (wParam)
 		{
 		case PRINTSCREEN:
-		{
 			// Save back buffer here or something
-		}
-		break;
+			break;
+
+		default:
+			break;
 		}
 	}
 	break;

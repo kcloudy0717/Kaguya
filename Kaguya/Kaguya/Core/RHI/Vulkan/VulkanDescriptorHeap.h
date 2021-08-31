@@ -11,7 +11,7 @@ public:
 
 	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> DescriptorHandle;
 
-	void UpdateDescriptor(const DescriptorHandle& Handle) const;
+	void UpdateDescriptor(const DescriptorHandle& Handle);
 
 	struct IndexPool
 	{
@@ -62,4 +62,7 @@ public:
 	VkDescriptorPool	   DescriptorPool	   = VK_NULL_HANDLE;
 	VkDescriptorSet		   DescriptorSet	   = VK_NULL_HANDLE;
 	std::vector<IndexPool> IndexPoolArray;
+
+	// Only for Sampler descriptor heap
+	std::unordered_map<UINT64, VkSampler> SamplerTable;
 };

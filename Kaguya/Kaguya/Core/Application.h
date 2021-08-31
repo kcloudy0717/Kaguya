@@ -20,6 +20,8 @@ struct ApplicationOptions
 class Application
 {
 public:
+	virtual ~Application() = default;
+
 	static void InitializeComponents(const std::string& LoggerName);
 
 	static int Run(Application& Application, const ApplicationOptions& Options);
@@ -33,8 +35,8 @@ public:
 	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
 	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
 
-	static std::filesystem::path OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
-	static std::filesystem::path SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
+	static std::filesystem::path OpenDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs);
+	static std::filesystem::path SaveDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs);
 
 	virtual bool Initialize()					 = 0;
 	virtual void Shutdown()						 = 0;
@@ -59,9 +61,9 @@ protected:
 	inline static InputHandler		  InputHandler;
 	inline static Stopwatch			  Stopwatch;
 
-	inline static bool Minimized = false; // is the application minimized?
-	inline static bool Maximized = false; // is the application maximized?
-	inline static bool Resizing	 = false; // are the resize bars being dragged?
+	inline static bool Minimized = false;
+	inline static bool Maximized = false;
+	inline static bool Resizing	 = false;
 
 private:
 	inline static bool Initialized = false;
