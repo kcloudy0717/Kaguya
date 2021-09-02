@@ -22,12 +22,9 @@ public:
 	void SetPushConstants(UINT Size, const void* pSrcData);
 	void SetDescriptorSets();
 
-	void BeginRenderPass(const VkRenderPassBeginInfo& RenderPassBeginInfo)
-	{
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-	}
+	void BeginRenderPass(IRHIRenderPass* RenderPass, IRHIRenderTarget* RenderTarget);
 
-	void EndRenderPass() { vkCmdEndRenderPass(CommandBuffer); }
+	void EndRenderPass();
 
 	void DrawInstanced(UINT VertexCount, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation);
 

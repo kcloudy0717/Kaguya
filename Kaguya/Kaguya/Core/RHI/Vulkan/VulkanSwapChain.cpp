@@ -117,19 +117,21 @@ void VulkanSwapChain::Initialize(HWND hWnd, VulkanDevice* Device)
 		VERIFY_VULKAN_API(vkCreateImageView(Device->GetVkDevice(), &ImageViewCreateInfo, nullptr, &ImageViews[i]))
 	}
 
-	// Backbuffers.resize(ImageCount);
-	// for (uint32_t i = 0; i < ImageCount; ++i)
-	//{
-	//	auto Desc		 = VkStruct<VkImageCreateInfo>();
-	//	Desc.format		 = Format;
-	//	Desc.extent		 = { Extent.width, Extent.height, 1 };
-	//	Desc.mipLevels	 = 1;
-	//	Desc.arrayLayers = 1;
-	//
-	//	Backbuffers[i].Desc		 = Desc;
-	//	Backbuffers[i].Texture	 = Images[i];
-	//	Backbuffers[i].ImageView = ImageViews[i];
-	//}
+	Backbuffers.reserve(ImageCount);
+	for (uint32_t i = 0; i < ImageCount; ++i)
+	{
+		VulkanTexture* Backbuffer = new VulkanTexture();
+		auto		   Desc		  = VkStruct<VkImageCreateInfo>();
+		Desc.format				  = Format;
+		Desc.extent				  = { Extent.width, Extent.height, 1 };
+		Desc.mipLevels			  = 1;
+		Desc.arrayLayers		  = 1;
+
+		Backbuffer->Desc	  = Desc;
+		Backbuffer->Texture	  = Images[i];
+		Backbuffer->ImageView = ImageViews[i];
+		Backbuffers.push_back(std::unique_ptr<VulkanTexture>(Backbuffer));
+	}
 }
 
 auto VulkanSwapChain::GetImageView(size_t i) const noexcept -> VkImageView

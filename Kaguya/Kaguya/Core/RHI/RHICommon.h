@@ -3,6 +3,7 @@
 #include "ShaderCompiler.h"
 #include "D3D12/d3dx12.h"
 
+class IRHITexture;
 class IRHIRenderPass;
 class IRHIRootSignature;
 class IRHIResource;
@@ -277,7 +278,7 @@ struct ClearValue
 	ClearValue(VkFormat Format, FLOAT Color[4])
 		: Format(Format)
 	{
-		std::memcpy(this->Color, Color, sizeof(Color));
+		std::memcpy(this->Color, Color, sizeof(FLOAT) * 4);
 	}
 	ClearValue(VkFormat Format, FLOAT Depth, UINT8 Stencil)
 		: Format(Format)
@@ -311,6 +312,20 @@ struct RenderPassDesc
 	UINT				 NumRenderTargets = 0;
 	RenderPassAttachment RenderTargets[8];
 	RenderPassAttachment DepthStencil;
+};
+
+struct RenderTargetDesc
+{
+	void AddRenderTarget(IRHITexture* RenderTarget) { RenderTargets[NumRenderTargets++] = RenderTarget; }
+	void SetDepthStencil(IRHITexture* DepthStencil) { this->DepthStencil = DepthStencil; }
+
+	IRHIRenderPass* RenderPass = nullptr;
+	UINT			Width;
+	UINT			Height;
+
+	UINT		 NumRenderTargets = 0;
+	IRHITexture* RenderTargets[8] = {};
+	IRHITexture* DepthStencil	  = nullptr;
 };
 
 enum class ERHIHeapType

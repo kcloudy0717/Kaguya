@@ -16,8 +16,8 @@ public:
 	[[nodiscard]] auto GetHeight() const noexcept -> uint32_t { return Extent.height; }
 	[[nodiscard]] auto GetImageCount() const noexcept -> uint32_t { return static_cast<uint32_t>(Images.size()); }
 	[[nodiscard]] auto GetImageView(size_t i) const noexcept -> VkImageView;
-	[[nodiscard]] auto GetCurrentBackbuffer() -> IRHITexture* { return &Backbuffers[CurrentImageIndex]; }
-	[[nodiscard]] auto GetBackbuffer(size_t i) -> IRHITexture* { return &Backbuffers[i]; }
+	[[nodiscard]] auto GetCurrentBackbuffer() -> IRHITexture* { return Backbuffers[CurrentImageIndex].get(); }
+	[[nodiscard]] auto GetBackbuffer(size_t i) -> IRHITexture* { return Backbuffers[i].get(); }
 
 	uint32_t AcquireNextImage();
 
@@ -38,12 +38,12 @@ private:
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
 	std::vector<VkPresentModeKHR>	PresentModes;
 
-	VkSwapchainKHR			   VkSwapchain = VK_NULL_HANDLE;
-	VkFormat				   Format	   = VK_FORMAT_UNDEFINED;
-	VkExtent2D				   Extent	   = { 0, 0 };
-	std::vector<VkImage>	   Images;
-	std::vector<VkImageView>   ImageViews;
-	std::vector<VulkanTexture> Backbuffers;
+	VkSwapchainKHR								VkSwapchain = VK_NULL_HANDLE;
+	VkFormat									Format		= VK_FORMAT_UNDEFINED;
+	VkExtent2D									Extent		= { 0, 0 };
+	std::vector<VkImage>						Images;
+	std::vector<VkImageView>					ImageViews;
+	std::vector<std::unique_ptr<VulkanTexture>> Backbuffers;
 
 	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
 	VkSemaphore RenderSemaphore	 = VK_NULL_HANDLE;

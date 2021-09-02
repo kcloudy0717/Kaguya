@@ -57,6 +57,12 @@ public:
 	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
+class IRHIRenderTarget : public IRHIDeviceChild
+{
+public:
+	using IRHIDeviceChild::IRHIDeviceChild;
+};
+
 class IRHIDescriptorTable : public IRHIDeviceChild
 {
 public:
@@ -96,6 +102,7 @@ class IRHIDevice : public IRHIObject
 {
 public:
 	virtual [[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc)			   = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRenderTarget>	  CreateRenderTarget(const RenderTargetDesc& Desc)		   = 0;
 	virtual [[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc)   = 0;
 	virtual [[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc)	   = 0;
 	virtual [[nodiscard]] RefPtr<IRHIPipelineState>	  CreatePipelineState(const PipelineStateStreamDesc& Desc) = 0;

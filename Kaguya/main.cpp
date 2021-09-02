@@ -133,11 +133,6 @@ public:
 		ImGui_ImplVulkan_Shutdown();
 		vkDestroyDescriptorPool(Device.GetVkDevice(), ImguiDescriptorPool, nullptr);
 
-		for (auto& Framebuffer : Framebuffers)
-		{
-			vkDestroyFramebuffer(Device.GetVkDevice(), Framebuffer, nullptr);
-		}
-
 		PhysicsManager::Shutdown();
 	}
 
@@ -188,22 +183,7 @@ public:
 				memcpy(CPUVirtualAddress, &UniformSceneConstants, sizeof(UniformSceneConstants));
 			});
 
-		VkClearValue ClearValues[2] = {};
-		ClearValues[0].color		= { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		ClearValues[1].depthStencil = { 1.0f, 0 };
-
-		// start the main renderpass.
-		// We will use the clear color from above, and the framebuffer of the index the swapchain gave us
-		auto RenderPassBeginInfo				= VkStruct<VkRenderPassBeginInfo>();
-		RenderPassBeginInfo.renderPass			= RenderPass->As<VulkanRenderPass>()->GetApiHandle();
-		RenderPassBeginInfo.renderArea.offset.x = 0;
-		RenderPassBeginInfo.renderArea.offset.y = 0;
-		RenderPassBeginInfo.renderArea.extent	= SwapChain.GetExtent();
-		RenderPassBeginInfo.framebuffer			= Framebuffers[swapchainImageIndex];
-		RenderPassBeginInfo.clearValueCount		= 2;
-		RenderPassBeginInfo.pClearValues		= ClearValues;
-
-		Context.BeginRenderPass(RenderPassBeginInfo);
+		Context.BeginRenderPass(RenderPass.Get(), RenderTargets[swapchainImageIndex].Get());
 
 		RHIViewport Viewport	= RHIViewport((float)SwapChain.GetWidth(), (float)SwapChain.GetHeight());
 		RHIRect		ScissorRect = { 0, 0, SwapChain.GetWidth(), SwapChain.GetHeight() };
@@ -265,26 +245,17 @@ private:
 
 	void InitFrameBuffers()
 	{
-		// create the framebuffers for the swapchain images. This will connect the render-pass to the images for
-		// rendering
-		auto FramebufferCreateInfo		 = VkStruct<VkFramebufferCreateInfo>();
-		FramebufferCreateInfo.renderPass = RenderPass->As<VulkanRenderPass>()->GetApiHandle();
-		FramebufferCreateInfo.width		 = SwapChain.GetWidth();
-		FramebufferCreateInfo.height	 = SwapChain.GetHeight();
-		FramebufferCreateInfo.layers	 = 1;
-
-		// grab how many images we have in the swapchain
 		const uint32_t ImageCount = SwapChain.GetImageCount();
-		Framebuffers.resize(ImageCount);
-		// create framebuffers for each of the swapchain image views
+		RenderTargets.resize(ImageCount);
 		for (uint32_t i = 0; i < ImageCount; i++)
 		{
-			const VkImageView Attachment[]		  = { SwapChain.GetImageView(i),
-												  DepthBuffer->As<VulkanTexture>()->GetImageView() };
-			FramebufferCreateInfo.attachmentCount = std::size(Attachment);
-			FramebufferCreateInfo.pAttachments	  = Attachment;
-			VERIFY_VULKAN_API(
-				vkCreateFramebuffer(Device.GetVkDevice(), &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+			RenderTargetDesc Desc = {};
+			Desc.RenderPass		  = RenderPass.Get();
+			Desc.Width			  = SwapChain.GetWidth();
+			Desc.Height			  = SwapChain.GetHeight();
+			Desc.AddRenderTarget(SwapChain.GetBackbuffer(i));
+			Desc.DepthStencil = DepthBuffer.Get();
+			RenderTargets[i]  = Device.CreateRenderTarget(Desc);
 		}
 	}
 
@@ -568,8 +539,8 @@ private:
 
 	VulkanSwapChain SwapChain;
 
-	RefPtr<IRHIRenderPass>	   RenderPass;
-	std::vector<VkFramebuffer> Framebuffers;
+	RefPtr<IRHIRenderPass>				  RenderPass;
+	std::vector<RefPtr<IRHIRenderTarget>> RenderTargets;
 
 	RefPtr<IRHIRootSignature> RootSignature;
 	RefPtr<IRHIPipelineState> MeshPipeline;

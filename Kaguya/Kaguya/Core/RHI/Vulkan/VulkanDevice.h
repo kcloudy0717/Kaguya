@@ -5,6 +5,7 @@
 #include "VulkanDescriptorHeap.h"
 
 #include "VulkanRenderPass.h"
+#include "VulkanRenderTarget.h"
 #include "VulkanDescriptorTable.h"
 #include "VulkanRootSignature.h"
 #include "VulkanResource.h"
@@ -32,6 +33,7 @@ public:
 	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return SamplerDescriptorHeap; }
 
 	[[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRenderTarget>	  CreateRenderTarget(const RenderTargetDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHIPipelineState>	  CreatePipelineState(const PipelineStateStreamDesc& Desc) override;

@@ -116,6 +116,11 @@ RefPtr<IRHIRenderPass> VulkanDevice::CreateRenderPass(const RenderPassDesc& Desc
 	return RefPtr<IRHIRenderPass>::Create(new VulkanRenderPass(this, Desc));
 }
 
+RefPtr<IRHIRenderTarget> VulkanDevice::CreateRenderTarget(const RenderTargetDesc& Desc)
+{
+	return RefPtr<IRHIRenderTarget>::Create(new VulkanRenderTarget(this, Desc));
+}
+
 RefPtr<IRHIDescriptorTable> VulkanDevice::CreateDescriptorTable(const DescriptorTableDesc& Desc)
 {
 	return RefPtr<IRHIDescriptorTable>::Create(new VulkanDescriptorTable(this, Desc));

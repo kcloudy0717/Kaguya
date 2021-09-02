@@ -74,6 +74,47 @@ void VulkanCommandContext::SetDescriptorSets()
 	vkCmdBindDescriptorSets(CommandBuffer, PipelineBindPoint, PipelineLayout, 0, 2, DescriptorSets, 0, nullptr);
 }
 
+void VulkanCommandContext::BeginRenderPass(IRHIRenderPass* RenderPass, IRHIRenderTarget* RenderTarget)
+{
+	const auto ApiRenderPass   = RenderPass->As<VulkanRenderPass>();
+	const auto ApiRenderTarget = RenderTarget->As<VulkanRenderTarget>();
+
+	RenderPassDesc	 RenderPassDesc	  = ApiRenderPass->GetDesc();
+	RenderTargetDesc RenderTargetDesc = ApiRenderTarget->GetDesc();
+
+	uint32_t	 NumClearValues		= 0;
+	VkClearValue ClearValues[8 + 1] = {};
+	for (UINT i = 0; i < RenderPassDesc.NumRenderTargets; ++i)
+	{
+		std::memcpy(
+			&ClearValues[NumClearValues++].color,
+			RenderPassDesc.RenderTargets[i].ClearValue.Color,
+			sizeof(float) * 4);
+	}
+	if (RenderPassDesc.DepthStencil.IsValid())
+	{
+		ClearValues[NumClearValues].depthStencil.depth	 = RenderPassDesc.DepthStencil.ClearValue.DepthStencil.Depth;
+		ClearValues[NumClearValues].depthStencil.stencil = RenderPassDesc.DepthStencil.ClearValue.DepthStencil.Stencil;
+		NumClearValues++;
+	}
+
+	auto RenderPassBeginInfo				= VkStruct<VkRenderPassBeginInfo>();
+	RenderPassBeginInfo.renderPass			= ApiRenderPass->GetApiHandle();
+	RenderPassBeginInfo.framebuffer			= ApiRenderTarget->GetApiHandle();
+	RenderPassBeginInfo.renderArea.offset.x = 0;
+	RenderPassBeginInfo.renderArea.offset.y = 0;
+	RenderPassBeginInfo.renderArea.extent	= { .width = RenderTargetDesc.Width, .height = RenderTargetDesc.Height };
+	RenderPassBeginInfo.clearValueCount		= NumClearValues;
+	RenderPassBeginInfo.pClearValues		= ClearValues;
+
+	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void VulkanCommandContext::EndRenderPass()
+{
+	vkCmdEndRenderPass(CommandBuffer);
+}
+
 void VulkanCommandContext::DrawInstanced(
 	UINT VertexCount,
 	UINT InstanceCount,

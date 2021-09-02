@@ -4,7 +4,6 @@
 class VulkanRenderPass final : public IRHIRenderPass
 {
 public:
-	VulkanRenderPass() noexcept = default;
 	VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& Desc);
 	~VulkanRenderPass() override;
 
@@ -12,8 +11,7 @@ public:
 	[[nodiscard]] VkRenderPass	 GetApiHandle() const noexcept { return RenderPass; }
 
 private:
-	RenderPassDesc Desc;
+	RenderPassDesc Desc = {};
 
-	VkRenderPass		  RenderPass		  = VK_NULL_HANDLE;
-	VkRenderPassBeginInfo RenderPassBeginInfo = {};
+	VkRenderPass RenderPass = VK_NULL_HANDLE;
 };
