@@ -1,11 +1,17 @@
 #pragma once
 #include "VulkanCommon.h"
 
+struct ResourceDescriptorHeapDesc
+{
+	UINT NumTextureDescriptors;
+	UINT NumRWTextureDescriptors;
+};
+
 class VulkanResourceDescriptorHeap : public VulkanDeviceChild
 {
 public:
 	VulkanResourceDescriptorHeap() noexcept = default;
-	explicit VulkanResourceDescriptorHeap(VulkanDevice* Parent, const DescriptorHeapDesc& Desc);
+	explicit VulkanResourceDescriptorHeap(VulkanDevice* Parent, const ResourceDescriptorHeapDesc& Desc);
 
 	void Destroy();
 

@@ -1,31 +1,24 @@
 #include "VulkanDescriptorHeap.h"
 
-VulkanResourceDescriptorHeap::VulkanResourceDescriptorHeap(VulkanDevice* Parent, const DescriptorHeapDesc& Desc)
+VulkanResourceDescriptorHeap::VulkanResourceDescriptorHeap(VulkanDevice* Parent, const ResourceDescriptorHeapDesc& Desc)
 	: VulkanDeviceChild(Parent)
 {
-	std::vector<VkDescriptorPoolSize>		  PoolSizes;
+	VkDescriptorPoolSize PoolSizes[] = { // SRV
+										 { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, Desc.NumTextureDescriptors },
+										 // UAV
+										 { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, Desc.NumRWTextureDescriptors }
+	};
 	std::vector<VkDescriptorSetLayoutBinding> Bindings;
 	std::vector<VkDescriptorBindingFlagsEXT>  BindingFlags;
 
-	if (Desc.Type == DescriptorHeapType::Resource)
-	{
-		PoolSizes = { // CBV
-					  { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Desc.Resource.NumConstantBufferDescriptors },
-					  // SRV
-					  { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, Desc.Resource.NumTextureDescriptors },
-					  // UAV
-					  { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, Desc.Resource.NumRWTextureDescriptors }
-		};
-		IndexPoolArray.resize(PoolSizes.size());
-		IndexPoolArray[0] = IndexPool(Desc.Resource.NumConstantBufferDescriptors);
-		IndexPoolArray[1] = IndexPool(Desc.Resource.NumTextureDescriptors);
-		IndexPoolArray[2] = IndexPool(Desc.Resource.NumRWTextureDescriptors);
-	}
+	IndexPoolArray.resize(std::size(PoolSizes));
+	IndexPoolArray[0] = IndexPool(Desc.NumTextureDescriptors);
+	IndexPoolArray[1] = IndexPool(Desc.NumRWTextureDescriptors);
 
-	Bindings.reserve(PoolSizes.size());
-	BindingFlags.reserve(PoolSizes.size());
+	Bindings.reserve(std::size(PoolSizes));
+	BindingFlags.reserve(std::size(PoolSizes));
 
-	for (size_t i = 0; i < PoolSizes.size(); ++i)
+	for (size_t i = 0; i < std::size(PoolSizes); ++i)
 	{
 		VkDescriptorSetLayoutBinding& VkBinding = Bindings.emplace_back();
 		VkBinding.binding						= static_cast<uint32_t>(i);
@@ -52,8 +45,8 @@ VulkanResourceDescriptorHeap::VulkanResourceDescriptorHeap(VulkanDevice* Parent,
 	auto DescriptorPoolCreateInfo		   = VkStruct<VkDescriptorPoolCreateInfo>();
 	DescriptorPoolCreateInfo.flags		   = 0;
 	DescriptorPoolCreateInfo.maxSets	   = 1;
-	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(PoolSizes.size());
-	DescriptorPoolCreateInfo.pPoolSizes	   = PoolSizes.data();
+	DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(std::size(PoolSizes));
+	DescriptorPoolCreateInfo.pPoolSizes	   = PoolSizes;
 	VERIFY_VULKAN_API(vkCreateDescriptorPool(
 		Parent->As<VulkanDevice>()->GetVkDevice(),
 		&DescriptorPoolCreateInfo,

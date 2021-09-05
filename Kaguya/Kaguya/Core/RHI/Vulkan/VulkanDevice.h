@@ -6,9 +6,13 @@
 
 #include "VulkanRenderPass.h"
 #include "VulkanRenderTarget.h"
-#include "VulkanDescriptorTable.h"
 #include "VulkanRootSignature.h"
 #include "VulkanResource.h"
+
+namespace VulkanAPI
+{
+extern PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
+}
 
 class VulkanDevice final : public IRHIDevice
 {
@@ -29,7 +33,10 @@ public:
 	[[nodiscard]] auto GetComputeQueue() noexcept -> VulkanCommandQueue& { return AsyncComputeQueue; }
 	[[nodiscard]] auto GetCopyQueue() noexcept -> VulkanCommandQueue& { return CopyQueue; }
 
-	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanResourceDescriptorHeap& { return ResourceDescriptorHeap; }
+	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanResourceDescriptorHeap&
+	{
+		return ResourceDescriptorHeap;
+	}
 	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanSamplerDescriptorHeap&
 	{
 		return SamplerDescriptorHeap;
@@ -81,10 +88,11 @@ private:
 	VkInstance				 Instance			 = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
 
-	VkPhysicalDevice		   PhysicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceProperties Properties	  = {};
-	VkPhysicalDeviceFeatures   Features		  = {};
-	VkPhysicalDeviceFeatures2  Features2	  = {};
+	VkPhysicalDevice							PhysicalDevice			 = VK_NULL_HANDLE;
+	VkPhysicalDeviceProperties					Properties				 = {};
+	VkPhysicalDeviceFeatures					Features				 = {};
+	VkPhysicalDeviceFeatures2					Features2				 = {};
+	VkPhysicalDevicePushDescriptorPropertiesKHR PushDescriptorProperties = {};
 
 	std::vector<VkQueueFamilyProperties> QueueFamilyProperties;
 
@@ -99,6 +107,6 @@ private:
 	VulkanCommandQueue AsyncComputeQueue;
 	VulkanCommandQueue CopyQueue;
 
-	VulkanResourceDescriptorHeap		ResourceDescriptorHeap;
-	VulkanSamplerDescriptorHeap SamplerDescriptorHeap;
+	VulkanResourceDescriptorHeap ResourceDescriptorHeap;
+	VulkanSamplerDescriptorHeap	 SamplerDescriptorHeap;
 };

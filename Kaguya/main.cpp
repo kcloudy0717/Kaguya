@@ -45,6 +45,85 @@ struct RenderObject
 	DirectX::XMFLOAT4X4 transformMatrix;
 };
 
+void StreamWrite(std::ostream& os, const SpvReflectDescriptorBinding& obj, bool write_set, const char* indent = "")
+{
+	const char* t = indent;
+
+	os << " " << obj.name;
+	os << "\n";
+	os << t;
+	os << ToStringDescriptorType(obj.descriptor_type);
+	os << " "
+	   << "(" << ToStringResourceType(obj.resource_type) << ")";
+	if ((obj.descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE) ||
+		(obj.descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE) ||
+		(obj.descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) ||
+		(obj.descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER))
+	{
+		os << "\n";
+		os << t;
+		os << "dim=" << obj.image.dim << ", ";
+		os << "depth=" << obj.image.depth << ", ";
+		os << "arrayed=" << obj.image.arrayed << ", ";
+		os << "ms=" << obj.image.ms << ", ";
+		os << "sampled=" << obj.image.sampled;
+	}
+}
+
+void StreamWrite(std::ostream& os, const SpvReflectShaderModule& obj, const char* indent = "")
+{
+	os << "entry point     : " << obj.entry_point_name << "\n";
+	os << "source lang     : " << spvReflectSourceLanguage(obj.source_language) << "\n";
+	os << "source lang ver : " << obj.source_language_version;
+}
+
+void StreamWrite(std::ostream& os, const SpvReflectDescriptorBinding& obj)
+{
+	StreamWrite(os, obj, true, "  ");
+}
+
+// Specialized stream-writer that only includes descriptor bindings.
+void StreamWrite(std::ostream& os, const spv_reflect::ShaderModule& obj)
+{
+	const char* t	  = "  ";
+	const char* tt	  = "    ";
+	const char* ttt	  = "      ";
+	const char* tttt  = "        ";
+	const char* ttttt = "          ";
+
+	StreamWrite(os, obj.GetShaderModule(), "");
+
+	SpvReflectResult						  result = SPV_REFLECT_RESULT_NOT_READY;
+	uint32_t								  count	 = 0;
+	std::vector<SpvReflectInterfaceVariable*> variables;
+	std::vector<SpvReflectDescriptorBinding*> bindings;
+	std::vector<SpvReflectDescriptorSet*>	  sets;
+
+	count  = 0;
+	result = obj.EnumerateDescriptorBindings(&count, nullptr);
+	assert(result == SPV_REFLECT_RESULT_SUCCESS);
+	bindings.resize(count);
+	result = obj.EnumerateDescriptorBindings(&count, bindings.data());
+	assert(result == SPV_REFLECT_RESULT_SUCCESS);
+	if (count > 0)
+	{
+		os << "\n";
+		os << "\n";
+		os << t << "Descriptor bindings: " << count << "\n";
+		for (size_t i = 0; i < bindings.size(); ++i)
+		{
+			SpvReflectDescriptorBinding* p_binding = bindings[i];
+			assert(result == SPV_REFLECT_RESULT_SUCCESS);
+			os << tt << i << ":";
+			StreamWrite(os, *p_binding, true, ttt);
+			if (i < (count - 1))
+			{
+				os << "\n\n";
+			}
+		}
+	}
+}
+
 class VulkanEngine : public Application
 {
 public:
@@ -189,7 +268,7 @@ public:
 		RHIRect		ScissorRect = { 0, 0, SwapChain.GetWidth(), SwapChain.GetHeight() };
 		Context.SetViewports(1, &Viewport, &ScissorRect);
 
-		draw_objects(Context, _renderables.data(), _renderables.size());
+		DrawObjects(Context, _renderables.data(), _renderables.size());
 
 		ImGui::Render();
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Context.CommandBuffer);
@@ -263,15 +342,16 @@ private:
 		{
 			RootSignatureDesc Desc = {};
 			Desc.AddPushConstant<MeshPushConstants>();
+			Desc.AddRootConstantBufferView(0);
 			RootSignature = Device.CreateRootSignature(Desc);
 		}
-		{
-			VulkanDescriptorHandle Handle =
-				Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
-			Handle.Resource = SceneConstants.Get();
-
-			Device.GetResourceDescriptorHeap().UpdateDescriptor(Handle);
-		}
+		//{
+		//	VulkanDescriptorHandle Handle =
+		//		Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
+		//	Handle.Resource = SceneConstants.Get();
+		//
+		//	Device.GetResourceDescriptorHeap().UpdateDescriptor(Handle);
+		//}
 		{
 			DescriptorHandle Handle = Device.AllocateSampler();
 			SamplerDesc		 SamplerDesc(
@@ -300,6 +380,12 @@ private:
 			   L"main",
 			   {});
 		VSModule = spv_reflect::ShaderModule(VS.GetBufferSize(), VS.GetBufferPointer());
+		if (VSModule.GetResult() != SPV_REFLECT_RESULT_SUCCESS)
+		{
+			LOG_ERROR("Error");
+		}
+
+		StreamWrite(std::cout, VSModule);
 
 		Shader PS = ShaderCompiler.SpirVCodeGen(
 			Device.GetVkDevice(),
@@ -336,7 +422,7 @@ private:
 		vkDestroyShaderModule(Device.GetVkDevice(), VS.ShaderModule, nullptr);
 		vkDestroyShaderModule(Device.GetVkDevice(), PS.ShaderModule, nullptr);
 
-		create_material(RootSignature->As<VulkanRootSignature>(), MeshPipeline->As<VulkanPipelineState>(), "Default");
+		CreateMaterial(RootSignature->As<VulkanRootSignature>(), MeshPipeline->As<VulkanPipelineState>(), "Default");
 	}
 
 	void LoadMeshes()
@@ -358,7 +444,7 @@ private:
 	{
 		RenderObject monkey = {};
 		monkey.mesh			= &SphereMesh;
-		monkey.material		= get_material("Default");
+		monkey.material		= GetMaterial("Default");
 		XMStoreFloat4x4(&monkey.transformMatrix, DirectX::XMMatrixIdentity());
 
 		_renderables.push_back(monkey);
@@ -369,7 +455,7 @@ private:
 			{
 				RenderObject tri = {};
 				tri.mesh		 = &SphereMesh;
-				tri.material	 = get_material("Default");
+				tri.material	 = GetMaterial("Default");
 				XMStoreFloat4x4(
 					&tri.transformMatrix,
 					DirectX::XMMatrixTranslation(float(x) * 2.5f, 0, float(y) * 2.5f));
@@ -546,6 +632,110 @@ private:
 			});
 	}
 
+	// create material and add it to the map
+	VulkanMaterial* CreateMaterial(
+		VulkanRootSignature* RootSignature,
+		VulkanPipelineState* PipelineState,
+		const std::string&	 name)
+	{
+		VulkanMaterial mat;
+		mat.RootSignature = RootSignature;
+		mat.PipelineState = PipelineState;
+		_materials[name]  = std::move(mat);
+		return &_materials[name];
+	}
+
+	// returns nullptr if it can't be found
+	VulkanMaterial* GetMaterial(const std::string& name)
+	{
+		// search for the object, and return nullptr if not found
+		auto it = _materials.find(name);
+		if (it == _materials.end())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return &it->second;
+		}
+	}
+
+	// returns nullptr if it can't be found
+	VulkanMesh* GetMesh(const std::string& name)
+	{
+		auto it = _meshes.find(name);
+		if (it == _meshes.end())
+		{
+			return nullptr;
+		}
+		else
+		{
+			return &it->second;
+		}
+	}
+
+	// our draw function
+	void DrawObjects(VulkanCommandContext& Context, RenderObject* first, int count)
+	{
+		VulkanMesh*		lastMesh	 = nullptr;
+		VulkanMaterial* lastMaterial = nullptr;
+		for (int i = 0; i < count; i++)
+		{
+			RenderObject& object = first[i];
+
+			// only bind the pipeline if it doesn't match with the already bound one
+			if (object.material != lastMaterial)
+			{
+				Context.SetGraphicsPipelineState(object.material->PipelineState);
+				Context.SetGraphicsRootSignature(object.material->RootSignature);
+				Context.SetDescriptorSets();
+				VkDescriptorBufferInfo descriptor = {};
+				descriptor.buffer				  = SceneConstants->As<VulkanBuffer>()->GetApiHandle();
+				descriptor.offset				  = 0;
+				descriptor.range				  = SceneConstants->As<VulkanBuffer>()->GetDesc().size;
+
+				auto writeDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
+				writeDescriptorSet.dstSet		   = 0;
+				writeDescriptorSet.dstBinding	   = 0;
+				writeDescriptorSet.descriptorCount = 1;
+				writeDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				writeDescriptorSet.pBufferInfo	   = &descriptor;
+
+				VulkanAPI::vkCmdPushDescriptorSetKHR(
+					Context.CommandBuffer,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					RootSignature->As<VulkanRootSignature>()->GetApiHandle(),
+					2,
+					1,
+					&writeDescriptorSet);
+
+				lastMaterial = object.material;
+			}
+
+			MeshPushConstants constants = {};
+			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
+			constants.Id1 = SRV.Index;
+
+			Context.SetPushConstants(sizeof(MeshPushConstants), &constants);
+
+			// only bind the mesh if it's a different one from last bind
+			if (object.mesh != lastMesh)
+			{
+				// bind the mesh vertex buffer with offset 0
+				VkDeviceSize Offsets[]		 = { 0 };
+				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource->As<VulkanBuffer>()->GetApiHandle() };
+				vkCmdBindVertexBuffers(Context.CommandBuffer, 0, 1, VertexBuffers, Offsets);
+				vkCmdBindIndexBuffer(
+					Context.CommandBuffer,
+					object.mesh->IndexResource->As<VulkanBuffer>()->GetApiHandle(),
+					0,
+					VK_INDEX_TYPE_UINT32);
+				lastMesh = object.mesh;
+			}
+			Context.DrawIndexedInstanced(object.mesh->Mesh->Indices.size(), 1, 0, 0, 0);
+		}
+	}
+
 private:
 	ShaderCompiler ShaderCompiler;
 
@@ -576,91 +766,6 @@ private:
 
 	std::unordered_map<std::string, VulkanMaterial> _materials;
 	std::unordered_map<std::string, VulkanMesh>		_meshes;
-
-	// create material and add it to the map
-	VulkanMaterial* create_material(
-		VulkanRootSignature* RootSignature,
-		VulkanPipelineState* PipelineState,
-		const std::string&	 name)
-	{
-		VulkanMaterial mat;
-		mat.RootSignature = RootSignature;
-		mat.PipelineState = PipelineState;
-		_materials[name]  = std::move(mat);
-		return &_materials[name];
-	}
-
-	// returns nullptr if it can't be found
-	VulkanMaterial* get_material(const std::string& name)
-	{
-		// search for the object, and return nullptr if not found
-		auto it = _materials.find(name);
-		if (it == _materials.end())
-		{
-			return nullptr;
-		}
-		else
-		{
-			return &it->second;
-		}
-	}
-
-	// returns nullptr if it can't be found
-	VulkanMesh* get_mesh(const std::string& name)
-	{
-		auto it = _meshes.find(name);
-		if (it == _meshes.end())
-		{
-			return nullptr;
-		}
-		else
-		{
-			return &it->second;
-		}
-	}
-
-	// our draw function
-	void draw_objects(VulkanCommandContext& Context, RenderObject* first, int count)
-	{
-		VulkanMesh*		lastMesh	 = nullptr;
-		VulkanMaterial* lastMaterial = nullptr;
-		for (int i = 0; i < count; i++)
-		{
-			RenderObject& object = first[i];
-
-			// only bind the pipeline if it doesn't match with the already bound one
-			if (object.material != lastMaterial)
-			{
-				Context.SetGraphicsPipelineState(object.material->PipelineState);
-				Context.SetGraphicsRootSignature(object.material->RootSignature);
-				Context.SetDescriptorSets();
-
-				lastMaterial = object.material;
-			}
-
-			MeshPushConstants constants = {};
-			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
-			constants.Id1 = SRV.Index;
-
-			Context.SetPushConstants(sizeof(MeshPushConstants), &constants);
-
-			// only bind the mesh if it's a different one from last bind
-			if (object.mesh != lastMesh)
-			{
-				// bind the mesh vertex buffer with offset 0
-				VkDeviceSize Offsets[]		 = { 0 };
-				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource->As<VulkanBuffer>()->GetApiHandle() };
-				vkCmdBindVertexBuffers(Context.CommandBuffer, 0, 1, VertexBuffers, Offsets);
-				vkCmdBindIndexBuffer(
-					Context.CommandBuffer,
-					object.mesh->IndexResource->As<VulkanBuffer>()->GetApiHandle(),
-					0,
-					VK_INDEX_TYPE_UINT32);
-				lastMesh = object.mesh;
-			}
-			Context.DrawIndexedInstanced(object.mesh->Mesh->Indices.size(), 1, 0, 0, 0);
-		}
-	}
 };
 
 int main(int argc, char* argv[])

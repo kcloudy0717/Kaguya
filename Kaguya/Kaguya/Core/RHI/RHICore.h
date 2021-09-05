@@ -83,12 +83,6 @@ public:
 	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
-class IRHIDescriptorTable : public IRHIDeviceChild
-{
-public:
-	using IRHIDeviceChild::IRHIDeviceChild;
-};
-
 class IRHIRootSignature : public IRHIDeviceChild
 {
 public:

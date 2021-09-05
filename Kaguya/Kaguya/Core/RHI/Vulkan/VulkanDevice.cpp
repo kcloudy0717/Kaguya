@@ -11,14 +11,16 @@ static constexpr const char* ValidationLayers[] = { "VK_LAYER_KHRONOS_validation
 
 static constexpr const char* DebugInstanceExtensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 														   VK_KHR_SURFACE_EXTENSION_NAME,
-														   VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
+														   VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+														   VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME };
 
 static constexpr const char* InstanceExtensions[] = { VK_KHR_SURFACE_EXTENSION_NAME,
 													  VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
 
 static constexpr const char* LogicalExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 													 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
-													 VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME };
+													 VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+													 VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME };
 
 static const char* GetMessageSeverity(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity)
 {
@@ -116,6 +118,259 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL MessageCallback(
 	return VK_FALSE;
 }
 
+VulkanDevice::VulkanDevice()
+	: GraphicsQueue(this)
+	, AsyncComputeQueue(this)
+	, CopyQueue(this)
+{
+}
+
+VulkanDevice::~VulkanDevice()
+{
+	SamplerDescriptorHeap.Destroy();
+	ResourceDescriptorHeap.Destroy();
+	CopyQueue.Destroy();
+	AsyncComputeQueue.Destroy();
+	GraphicsQueue.Destroy();
+
+	vmaDestroyAllocator(Allocator);
+
+	vkDestroyDevice(VkDevice, nullptr);
+
+	if (DebugUtilsMessenger)
+	{
+		auto vkDestroyDebugUtilsMessengerEXT =
+			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkDestroyDebugUtilsMessengerEXT");
+		if (vkDestroyDebugUtilsMessengerEXT)
+		{
+			vkDestroyDebugUtilsMessengerEXT(Instance, DebugUtilsMessenger, nullptr);
+		}
+	}
+	vkDestroyInstance(Instance, nullptr);
+}
+
+void VulkanDevice::Initialize(const DeviceOptions& Options)
+{
+	if (Options.EnableDebugLayer && !QueryValidationLayerSupport())
+	{
+		throw std::runtime_error("Validation Layer Unsupported");
+	}
+
+	auto DebugUtilsMessengerCreateInfo			  = VkStruct<VkDebugUtilsMessengerCreateInfoEXT>();
+	DebugUtilsMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+													VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+													VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	DebugUtilsMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+												VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+												VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	DebugUtilsMessengerCreateInfo.pfnUserCallback = MessageCallback;
+
+	auto ApplicationInfo			   = VkStruct<VkApplicationInfo>();
+	ApplicationInfo.pApplicationName   = "Vulkan Engine";
+	ApplicationInfo.applicationVersion = 0;
+	ApplicationInfo.pEngineName		   = nullptr;
+	ApplicationInfo.engineVersion	   = 0;
+	ApplicationInfo.apiVersion		   = VK_API_VERSION_1_2;
+
+	auto InstanceCreateInfo				= VkStruct<VkInstanceCreateInfo>();
+	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
+
+	if (Options.EnableDebugLayer)
+	{
+		InstanceCreateInfo.pNext			   = &DebugUtilsMessengerCreateInfo;
+		InstanceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(std::size(ValidationLayers));
+		InstanceCreateInfo.ppEnabledLayerNames = ValidationLayers;
+	}
+
+	uint32_t NumExtensions = Options.EnableDebugLayer ? static_cast<uint32_t>(std::size(DebugInstanceExtensions))
+													  : static_cast<uint32_t>(std::size(InstanceExtensions));
+	auto	 Extensions	   = Options.EnableDebugLayer ? DebugInstanceExtensions : InstanceExtensions;
+
+	InstanceCreateInfo.enabledExtensionCount   = NumExtensions;
+	InstanceCreateInfo.ppEnabledExtensionNames = Extensions;
+
+	VERIFY_VULKAN_API(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
+
+	if (Options.EnableDebugLayer)
+	{
+		VERIFY_VULKAN_API(
+			CreateDebugUtilsMessengerEXT(Instance, &DebugUtilsMessengerCreateInfo, nullptr, &DebugUtilsMessenger));
+	}
+
+	uint32_t					  NumPhysicalDevices = 0;
+	std::vector<VkPhysicalDevice> PhysicalDevices;
+	VERIFY_VULKAN_API(vkEnumeratePhysicalDevices(Instance, &NumPhysicalDevices, nullptr));
+	PhysicalDevices.resize(NumPhysicalDevices);
+	VERIFY_VULKAN_API(vkEnumeratePhysicalDevices(Instance, &NumPhysicalDevices, PhysicalDevices.data()));
+
+	for (const auto& PhysicalDevice : PhysicalDevices)
+	{
+		if (IsPhysicalDeviceSuitable(PhysicalDevice))
+		{
+			this->PhysicalDevice = PhysicalDevice;
+			break;
+		}
+	}
+
+	// Queue Family
+	uint32_t QueueFamilyPropertyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
+	QueueFamilyProperties.resize(QueueFamilyPropertyCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueFamilyProperties.data());
+
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i)
+	{
+		VkQueueFlags QueueFlags = QueueFamilyProperties[i].queueFlags;
+
+		if (QueueFlags & VK_QUEUE_GRAPHICS_BIT && !GraphicsFamily.has_value())
+		{
+			GraphicsFamily = i;
+		}
+		else if (QueueFlags & VK_QUEUE_COMPUTE_BIT && !ComputeFamily.has_value())
+		{
+			ComputeFamily = i;
+		}
+		else if (QueueFlags & VK_QUEUE_TRANSFER_BIT && !CopyFamily.has_value())
+		{
+			CopyFamily = i;
+		}
+	}
+}
+
+void VulkanDevice::InitializeDevice()
+{
+	constexpr float QueuePriority = 1.0f;
+
+	std::vector<VkDeviceQueueCreateInfo> DeviceQueueCreateInfos;
+	std::set<uint32_t> QueueFamilyIndexSet = { GraphicsFamily.value(), ComputeFamily.value(), CopyFamily.value() };
+
+	for (uint32_t QueueFamilyIndex : QueueFamilyIndexSet)
+	{
+		auto& DeviceQueueCreateInfo = DeviceQueueCreateInfos.emplace_back(VkStruct<VkDeviceQueueCreateInfo>());
+		DeviceQueueCreateInfo.queueFamilyIndex = QueueFamilyIndex;
+		DeviceQueueCreateInfo.queueCount	   = 1;
+		DeviceQueueCreateInfo.pQueuePriorities = &QueuePriority;
+	}
+
+	auto PhysicalDeviceVulkan12Features							   = VkStruct<VkPhysicalDeviceVulkan12Features>();
+	PhysicalDeviceVulkan12Features.descriptorIndexing			   = VK_TRUE;
+	PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
+	PhysicalDeviceVulkan12Features.runtimeDescriptorArray		   = VK_TRUE;
+	PhysicalDeviceVulkan12Features.timelineSemaphore			   = VK_TRUE;
+
+	auto DeviceCreateInfo					 = VkStruct<VkDeviceCreateInfo>();
+	DeviceCreateInfo.pNext					 = &PhysicalDeviceVulkan12Features;
+	DeviceCreateInfo.queueCreateInfoCount	 = static_cast<uint32_t>(DeviceQueueCreateInfos.size());
+	DeviceCreateInfo.pQueueCreateInfos		 = DeviceQueueCreateInfos.data();
+	DeviceCreateInfo.enabledExtensionCount	 = static_cast<uint32_t>(std::size(LogicalExtensions));
+	DeviceCreateInfo.ppEnabledExtensionNames = LogicalExtensions;
+	DeviceCreateInfo.pEnabledFeatures		 = &Features;
+
+	VERIFY_VULKAN_API(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &VkDevice));
+
+	InitializeVulkanAPI();
+
+	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
+	AllocatorCreateInfo.physicalDevice		   = PhysicalDevice;
+	AllocatorCreateInfo.device				   = VkDevice;
+	AllocatorCreateInfo.instance			   = Instance;
+	VERIFY_VULKAN_API(vmaCreateAllocator(&AllocatorCreateInfo, &Allocator));
+
+	GraphicsQueue.Initialize(GraphicsFamily.value());
+	AsyncComputeQueue.Initialize(ComputeFamily.value());
+	CopyQueue.Initialize(CopyFamily.value());
+
+	ResourceDescriptorHeapDesc Desc = {};
+	Desc.NumTextureDescriptors		= 4096;
+	Desc.NumRWTextureDescriptors	= 4096;
+
+	ResourceDescriptorHeap = VulkanResourceDescriptorHeap(this, Desc);
+	SamplerDescriptorHeap  = VulkanSamplerDescriptorHeap(this, 2048);
+}
+
+VulkanCommandQueue* VulkanDevice::InitializePresentQueue(VkSurfaceKHR Surface)
+{
+	VkBool32 PresentSupport = VK_FALSE;
+	uint32	 FamilyIndex	= GraphicsQueue.GetQueueFamilyIndex();
+	VERIFY_VULKAN_API(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, FamilyIndex, Surface, &PresentSupport));
+	assert(PresentSupport && "Queue does not support present");
+	return &GraphicsQueue;
+}
+
+bool VulkanDevice::QueryValidationLayerSupport()
+{
+	uint32_t PropertyCount = 0;
+	VERIFY_VULKAN_API(vkEnumerateInstanceLayerProperties(&PropertyCount, nullptr));
+	std::vector<VkLayerProperties> Properties(PropertyCount);
+	VERIFY_VULKAN_API(vkEnumerateInstanceLayerProperties(&PropertyCount, Properties.data()));
+
+	return std::ranges::all_of(
+		std::begin(ValidationLayers),
+		std::end(ValidationLayers),
+		[&](const char* Layer)
+		{
+			for (const auto& Property : Properties)
+			{
+				if (strcmp(Layer, Property.layerName) == 0)
+				{
+					return true;
+				}
+			}
+			return false;
+		});
+}
+
+bool VulkanDevice::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
+{
+	vkGetPhysicalDeviceProperties(PhysicalDevice, &Properties);
+	vkGetPhysicalDeviceFeatures(PhysicalDevice, &Features);
+	auto vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(
+		vkGetInstanceProcAddr(Instance, "vkGetPhysicalDeviceProperties2KHR"));
+	VkPhysicalDeviceProperties2KHR DeviceProperties2KHR{};
+	PushDescriptorProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
+	DeviceProperties2KHR.sType	   = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+	DeviceProperties2KHR.pNext	   = &PushDescriptorProperties;
+	vkGetPhysicalDeviceProperties2KHR(PhysicalDevice, &DeviceProperties2KHR);
+
+	// http://roar11.com/2019/06/vulkan-textures-unbound/
+	// Bindless
+	auto PhysicalDeviceDescriptorIndexingFeatures = VkStruct<VkPhysicalDeviceDescriptorIndexingFeatures>();
+
+	Features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	Features2.pNext = &PhysicalDeviceDescriptorIndexingFeatures;
+	vkGetPhysicalDeviceFeatures2(PhysicalDevice, &Features2);
+
+	bool BindlessSupport = PhysicalDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound &&
+						   PhysicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray;
+
+	return Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+		   CheckDeviceExtensionSupport(PhysicalDevice) && BindlessSupport;
+}
+
+bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) const
+{
+	uint32_t PropertyCount = 0;
+	VERIFY_VULKAN_API(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &PropertyCount, nullptr));
+	std::vector<VkExtensionProperties> Properties(PropertyCount);
+	VERIFY_VULKAN_API(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &PropertyCount, Properties.data()));
+
+	std::set<std::string> RequiredExtensions(std::begin(LogicalExtensions), std::end(LogicalExtensions));
+
+	for (const auto& [ExtensionName, SpecVersion] : Properties)
+	{
+		RequiredExtensions.erase(ExtensionName);
+	}
+
+	return RequiredExtensions.empty();
+}
+
+void VulkanDevice::InitializeVulkanAPI()
+{
+	VulkanAPI::vkCmdPushDescriptorSetKHR =
+		reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(VkDevice, "vkCmdPushDescriptorSetKHR"));
+	assert(VulkanAPI::vkCmdPushDescriptorSetKHR);
+}
+
 RefPtr<IRHIRenderPass> VulkanDevice::CreateRenderPass(const RenderPassDesc& Desc)
 {
 	return RefPtr<IRHIRenderPass>::Create(new VulkanRenderPass(this, Desc));
@@ -143,7 +398,7 @@ DescriptorHandle VulkanDevice::AllocateShaderResourceView()
 
 	DescriptorHandle Handle;
 	Handle.Version = 0;
-	Handle.Api	   = 1;
+	Handle.Api	   = 0;
 	Handle.Index   = Index;
 	return Handle;
 }
@@ -350,243 +605,4 @@ RefPtr<IRHITexture> VulkanDevice::CreateTexture(const RHITextureDesc& Desc)
 	}
 
 	return RefPtr<IRHITexture>::Create(new VulkanTexture(this, ImageCreateInfo, AllocationCreateInfo));
-}
-
-VulkanDevice::VulkanDevice()
-	: GraphicsQueue(this)
-	, AsyncComputeQueue(this)
-	, CopyQueue(this)
-{
-}
-
-VulkanDevice::~VulkanDevice()
-{
-	SamplerDescriptorHeap.Destroy();
-	ResourceDescriptorHeap.Destroy();
-	CopyQueue.Destroy();
-	AsyncComputeQueue.Destroy();
-	GraphicsQueue.Destroy();
-
-	vmaDestroyAllocator(Allocator);
-
-	vkDestroyDevice(VkDevice, nullptr);
-
-	if (DebugUtilsMessenger)
-	{
-		auto vkDestroyDebugUtilsMessengerEXT =
-			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(Instance, "vkDestroyDebugUtilsMessengerEXT");
-		if (vkDestroyDebugUtilsMessengerEXT)
-		{
-			vkDestroyDebugUtilsMessengerEXT(Instance, DebugUtilsMessenger, nullptr);
-		}
-	}
-	vkDestroyInstance(Instance, nullptr);
-}
-
-void VulkanDevice::Initialize(const DeviceOptions& Options)
-{
-	if (Options.EnableDebugLayer && !QueryValidationLayerSupport())
-	{
-		throw std::runtime_error("Validation Layer Unsupported");
-	}
-
-	auto DebugUtilsMessengerCreateInfo			  = VkStruct<VkDebugUtilsMessengerCreateInfoEXT>();
-	DebugUtilsMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-													VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-													VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	DebugUtilsMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-												VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-												VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-	DebugUtilsMessengerCreateInfo.pfnUserCallback = MessageCallback;
-
-	auto ApplicationInfo			   = VkStruct<VkApplicationInfo>();
-	ApplicationInfo.pApplicationName   = "Vulkan Engine";
-	ApplicationInfo.applicationVersion = 0;
-	ApplicationInfo.pEngineName		   = nullptr;
-	ApplicationInfo.engineVersion	   = 0;
-	ApplicationInfo.apiVersion		   = VK_API_VERSION_1_2;
-
-	auto InstanceCreateInfo				= VkStruct<VkInstanceCreateInfo>();
-	InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
-
-	if (Options.EnableDebugLayer)
-	{
-		InstanceCreateInfo.pNext			   = &DebugUtilsMessengerCreateInfo;
-		InstanceCreateInfo.enabledLayerCount   = static_cast<uint32_t>(std::size(ValidationLayers));
-		InstanceCreateInfo.ppEnabledLayerNames = ValidationLayers;
-	}
-
-	uint32_t NumExtensions = Options.EnableDebugLayer ? static_cast<uint32_t>(std::size(DebugInstanceExtensions))
-													  : static_cast<uint32_t>(std::size(InstanceExtensions));
-	auto	 Extensions	   = Options.EnableDebugLayer ? DebugInstanceExtensions : InstanceExtensions;
-
-	InstanceCreateInfo.enabledExtensionCount   = NumExtensions;
-	InstanceCreateInfo.ppEnabledExtensionNames = Extensions;
-
-	VERIFY_VULKAN_API(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
-
-	if (Options.EnableDebugLayer)
-	{
-		VERIFY_VULKAN_API(
-			CreateDebugUtilsMessengerEXT(Instance, &DebugUtilsMessengerCreateInfo, nullptr, &DebugUtilsMessenger));
-	}
-
-	uint32_t					  NumPhysicalDevices = 0;
-	std::vector<VkPhysicalDevice> PhysicalDevices;
-	VERIFY_VULKAN_API(vkEnumeratePhysicalDevices(Instance, &NumPhysicalDevices, nullptr));
-	PhysicalDevices.resize(NumPhysicalDevices);
-	VERIFY_VULKAN_API(vkEnumeratePhysicalDevices(Instance, &NumPhysicalDevices, PhysicalDevices.data()));
-
-	for (const auto& PhysicalDevice : PhysicalDevices)
-	{
-		if (IsPhysicalDeviceSuitable(PhysicalDevice))
-		{
-			this->PhysicalDevice = PhysicalDevice;
-			break;
-		}
-	}
-
-	// Queue Family
-	uint32_t QueueFamilyPropertyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
-	QueueFamilyProperties.resize(QueueFamilyPropertyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueFamilyProperties.data());
-
-	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i)
-	{
-		VkQueueFlags QueueFlags = QueueFamilyProperties[i].queueFlags;
-
-		if (QueueFlags & VK_QUEUE_GRAPHICS_BIT && !GraphicsFamily.has_value())
-		{
-			GraphicsFamily = i;
-		}
-		else if (QueueFlags & VK_QUEUE_COMPUTE_BIT && !ComputeFamily.has_value())
-		{
-			ComputeFamily = i;
-		}
-		else if (QueueFlags & VK_QUEUE_TRANSFER_BIT && !CopyFamily.has_value())
-		{
-			CopyFamily = i;
-		}
-	}
-}
-
-void VulkanDevice::InitializeDevice()
-{
-	constexpr float QueuePriority = 1.0f;
-
-	std::vector<VkDeviceQueueCreateInfo> DeviceQueueCreateInfos;
-	std::set<uint32_t> QueueFamilyIndexSet = { GraphicsFamily.value(), ComputeFamily.value(), CopyFamily.value() };
-
-	for (uint32_t QueueFamilyIndex : QueueFamilyIndexSet)
-	{
-		auto& DeviceQueueCreateInfo = DeviceQueueCreateInfos.emplace_back(VkStruct<VkDeviceQueueCreateInfo>());
-		DeviceQueueCreateInfo.queueFamilyIndex = QueueFamilyIndex;
-		DeviceQueueCreateInfo.queueCount	   = 1;
-		DeviceQueueCreateInfo.pQueuePriorities = &QueuePriority;
-	}
-
-	auto PhysicalDeviceVulkan12Features							   = VkStruct<VkPhysicalDeviceVulkan12Features>();
-	PhysicalDeviceVulkan12Features.descriptorIndexing			   = VK_TRUE;
-	PhysicalDeviceVulkan12Features.descriptorBindingPartiallyBound = VK_TRUE;
-	PhysicalDeviceVulkan12Features.runtimeDescriptorArray		   = VK_TRUE;
-	PhysicalDeviceVulkan12Features.timelineSemaphore			   = VK_TRUE;
-
-	auto DeviceCreateInfo					 = VkStruct<VkDeviceCreateInfo>();
-	DeviceCreateInfo.pNext					 = &PhysicalDeviceVulkan12Features;
-	DeviceCreateInfo.queueCreateInfoCount	 = static_cast<uint32_t>(DeviceQueueCreateInfos.size());
-	DeviceCreateInfo.pQueueCreateInfos		 = DeviceQueueCreateInfos.data();
-	DeviceCreateInfo.enabledExtensionCount	 = static_cast<uint32_t>(std::size(LogicalExtensions));
-	DeviceCreateInfo.ppEnabledExtensionNames = LogicalExtensions;
-	DeviceCreateInfo.pEnabledFeatures		 = &Features;
-
-	VERIFY_VULKAN_API(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &VkDevice));
-
-	VmaAllocatorCreateInfo AllocatorCreateInfo = {};
-	AllocatorCreateInfo.physicalDevice		   = PhysicalDevice;
-	AllocatorCreateInfo.device				   = VkDevice;
-	AllocatorCreateInfo.instance			   = Instance;
-	VERIFY_VULKAN_API(vmaCreateAllocator(&AllocatorCreateInfo, &Allocator));
-
-	GraphicsQueue.Initialize(GraphicsFamily.value());
-	AsyncComputeQueue.Initialize(ComputeFamily.value());
-	CopyQueue.Initialize(CopyFamily.value());
-
-	DescriptorHeapDesc Desc					   = {};
-	Desc.Type								   = DescriptorHeapType::Resource;
-	Desc.Resource.NumConstantBufferDescriptors = 4096;
-	Desc.Resource.NumTextureDescriptors		   = 4096;
-	Desc.Resource.NumRWTextureDescriptors	   = 4096;
-
-	ResourceDescriptorHeap = VulkanResourceDescriptorHeap(this, Desc);
-	SamplerDescriptorHeap  = VulkanSamplerDescriptorHeap(this, 2048);
-}
-
-VulkanCommandQueue* VulkanDevice::InitializePresentQueue(VkSurfaceKHR Surface)
-{
-	VkBool32 PresentSupport = VK_FALSE;
-	uint32	 FamilyIndex	= GraphicsQueue.GetQueueFamilyIndex();
-	VERIFY_VULKAN_API(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, FamilyIndex, Surface, &PresentSupport));
-	assert(PresentSupport && "Queue does not support present");
-	return &GraphicsQueue;
-}
-
-bool VulkanDevice::QueryValidationLayerSupport()
-{
-	uint32_t PropertyCount = 0;
-	VERIFY_VULKAN_API(vkEnumerateInstanceLayerProperties(&PropertyCount, nullptr));
-	std::vector<VkLayerProperties> Properties(PropertyCount);
-	VERIFY_VULKAN_API(vkEnumerateInstanceLayerProperties(&PropertyCount, Properties.data()));
-
-	return std::ranges::all_of(
-		std::begin(ValidationLayers),
-		std::end(ValidationLayers),
-		[&](const char* Layer)
-		{
-			for (const auto& Property : Properties)
-			{
-				if (strcmp(Layer, Property.layerName) == 0)
-				{
-					return true;
-				}
-			}
-			return false;
-		});
-}
-
-bool VulkanDevice::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
-{
-	vkGetPhysicalDeviceProperties(PhysicalDevice, &Properties);
-	vkGetPhysicalDeviceFeatures(PhysicalDevice, &Features);
-
-	// http://roar11.com/2019/06/vulkan-textures-unbound/
-	// Bindless
-	auto PhysicalDeviceDescriptorIndexingFeatures = VkStruct<VkPhysicalDeviceDescriptorIndexingFeatures>();
-
-	Features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	Features2.pNext = &PhysicalDeviceDescriptorIndexingFeatures;
-	vkGetPhysicalDeviceFeatures2(PhysicalDevice, &Features2);
-
-	bool BindlessSupport = PhysicalDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound &&
-						   PhysicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray;
-
-	return Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-		   CheckDeviceExtensionSupport(PhysicalDevice) && BindlessSupport;
-}
-
-bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) const
-{
-	uint32_t PropertyCount = 0;
-	VERIFY_VULKAN_API(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &PropertyCount, nullptr));
-	std::vector<VkExtensionProperties> Properties(PropertyCount);
-	VERIFY_VULKAN_API(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &PropertyCount, Properties.data()));
-
-	std::set<std::string> RequiredExtensions(std::begin(LogicalExtensions), std::end(LogicalExtensions));
-
-	for (const auto& [ExtensionName, SpecVersion] : Properties)
-	{
-		RequiredExtensions.erase(ExtensionName);
-	}
-
-	return RequiredExtensions.empty();
 }

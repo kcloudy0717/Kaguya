@@ -15,16 +15,17 @@ struct MeshPushConstants
 
 struct UniformSceneConstants
 {
-	float4x4 View;
-	float4x4 Projection;
-	float4x4 ViewProjection;
+    float4x4 View;
+    float4x4 Projection;
+    float4x4 ViewProjection;
 };
-[[vk::binding(0, 0)]] ConstantBuffer<UniformSceneConstants> SceneConstants;
 
-[[vk::binding(1, 0)]] Texture2D			  Texture2DTable[];
-[[vk::binding(2, 0)]] RWTexture2D<float4> RWTexture2DTable[];
+[[vk::binding(0, 0)]] Texture2D Texture2DTable[];
+[[vk::binding(1, 0)]] RWTexture2D<float4> RWTexture2DTable[];
 
 [[vk::binding(0, 1)]] SamplerState Sampler;
+
+[[vk::binding(0, 2)]] ConstantBuffer<UniformSceneConstants> SceneConstants;
 
 float4 main(VSOutput Input)
 	: SV_TARGET

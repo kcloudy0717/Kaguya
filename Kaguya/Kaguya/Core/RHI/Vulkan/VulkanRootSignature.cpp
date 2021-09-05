@@ -3,21 +3,38 @@
 VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatureDesc& Desc)
 	: IRHIRootSignature(Parent)
 {
-	std::vector<VkDescriptorSetLayout> Layouts(Desc.NumDescriptorTables);
-	std::vector<VkPushConstantRange>   PushConstantRanges;
-	PushConstantRanges.reserve(Desc.PushConstants.size());
-	for (UINT i = 0; i < Desc.NumDescriptorTables; ++i)
+	if (!Desc.Bindings.empty())
 	{
-		Layouts[i] = Desc.DescriptorTables[i]->As<VulkanDescriptorTable>()->GetApiHandle();
+		auto DescriptorSetLayoutCreateInfo = VkStruct<VkDescriptorSetLayoutCreateInfo>();
+		// Setting this flag tells the descriptor set layouts that no actual descriptor sets are allocated but instead
+		// pushed at command buffer creation time
+		DescriptorSetLayoutCreateInfo.flags		   = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+		DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(Desc.Bindings.size());
+		DescriptorSetLayoutCreateInfo.pBindings	   = Desc.Bindings.data();
+		VERIFY_VULKAN_API(vkCreateDescriptorSetLayout(
+			Parent->GetVkDevice(),
+			&DescriptorSetLayoutCreateInfo,
+			nullptr,
+			&PushDescriptorSetLayout));
 	}
+
+	std::vector<VkDescriptorSetLayout> Layouts;
+	std::vector<VkPushConstantRange>   PushConstantRanges;
+
 	Layouts.push_back(Parent->As<VulkanDevice>()->GetResourceDescriptorHeap().DescriptorSetLayout);
 	Layouts.push_back(Parent->As<VulkanDevice>()->GetSamplerDescriptorHeap().DescriptorSetLayout);
-	for (size_t i = 0; i < Desc.PushConstants.size(); ++i)
+	if (PushDescriptorSetLayout)
+	{
+		Layouts.push_back(PushDescriptorSetLayout);
+	}
+
+	PushConstantRanges.reserve(Desc.PushConstants.size());
+	for (const auto& i : Desc.PushConstants)
 	{
 		VkPushConstantRange& PushConstant = PushConstantRanges.emplace_back();
 		PushConstant.stageFlags			  = VK_SHADER_STAGE_ALL;
 		PushConstant.offset				  = 0;
-		PushConstant.size				  = Desc.PushConstants[i].Size;
+		PushConstant.size				  = i.Size;
 	}
 
 	auto PipelineLayoutCreateInfo					= VkStruct<VkPipelineLayoutCreateInfo>();
@@ -31,8 +48,9 @@ VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatu
 
 VulkanRootSignature::~VulkanRootSignature()
 {
-	if (Parent && Handle)
-	{
-		vkDestroyPipelineLayout(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(Handle, {}), nullptr);
-	}
+	vkDestroyDescriptorSetLayout(
+		Parent->As<VulkanDevice>()->GetVkDevice(),
+		std::exchange(PushDescriptorSetLayout, {}),
+		nullptr);
+	vkDestroyPipelineLayout(Parent->As<VulkanDevice>()->GetVkDevice(), std::exchange(Handle, {}), nullptr);
 }

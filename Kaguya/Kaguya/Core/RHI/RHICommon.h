@@ -7,7 +7,6 @@ class IRHITexture;
 class IRHIRenderPass;
 class IRHIRootSignature;
 class IRHIResource;
-class IRHIDescriptorTable;
 
 struct DeviceOptions
 {
@@ -258,39 +257,8 @@ struct RootSignatureDesc
 		Binding.stageFlags					  = VK_SHADER_STAGE_ALL;
 	}
 
-	void AddDescriptorTable(IRHIDescriptorTable* DescriptorTable)
-	{
-		DescriptorTables[NumDescriptorTables++] = DescriptorTable;
-	}
-
 	std::vector<PushConstant>				  PushConstants;
-	UINT									  NumDescriptorTables = 0;
-	IRHIDescriptorTable*					  DescriptorTables[32];
 	std::vector<VkDescriptorSetLayoutBinding> Bindings;
-};
-
-enum class DescriptorHeapType
-{
-	Resource,
-	Sampler
-};
-
-struct DescriptorHeapDesc
-{
-	DescriptorHeapType Type;
-	union
-	{
-		struct
-		{
-			UINT NumConstantBufferDescriptors;
-			UINT NumTextureDescriptors;
-			UINT NumRWTextureDescriptors;
-		} Resource;
-		struct
-		{
-			UINT NumDescriptors;
-		} Sampler;
-	};
 };
 
 enum class EResourceStates

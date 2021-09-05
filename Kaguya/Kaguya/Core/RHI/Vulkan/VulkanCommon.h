@@ -199,3 +199,21 @@ constexpr VkImageAspectFlags InferImageAspectFlags(VkFormat Format)
 		return VK_IMAGE_ASPECT_COLOR_BIT;
 	}
 }
+
+std::string ToStringSpvSourceLanguage(SpvSourceLanguage lang);
+std::string ToStringSpvExecutionModel(SpvExecutionModel model);
+std::string ToStringSpvStorageClass(SpvStorageClass storage_class);
+std::string ToStringSpvDim(SpvDim dim);
+std::string ToStringSpvBuiltIn(SpvBuiltIn value);
+std::string ToStringSpvImageFormat(SpvImageFormat fmt);
+
+std::string ToStringGenerator(SpvReflectGenerator generator);
+std::string ToStringShaderStage(SpvReflectShaderStageFlagBits stage);
+std::string ToStringResourceType(SpvReflectResourceType type);
+std::string ToStringDescriptorType(SpvReflectDescriptorType value);
+std::string ToStringTypeFlags(SpvReflectTypeFlags type_flags);
+std::string ToStringDecorationFlags(SpvReflectDecorationFlags decoration_flags);
+std::string ToStringDescriptorType(SpvReflectDescriptorType value);
+std::string ToStringFormat(SpvReflectFormat fmt);
+std::string ToStringComponentType(const SpvReflectTypeDescription& type, uint32_t member_decoration_flags);
+std::string ToStringType(SpvSourceLanguage src_lang, const SpvReflectTypeDescription& type);
