@@ -30,9 +30,10 @@ public:
 	VkImage			  GetApiHandle() const noexcept { return Texture; }
 	VkImageView		  GetImageView() const noexcept { return ImageView; }
 
-	VmaAllocationCreateInfo AllocationDesc = {};
-	VmaAllocation			Allocation	   = VK_NULL_HANDLE;
-	VkImageCreateInfo		Desc		   = {};
-	VkImage					Texture		   = VK_NULL_HANDLE;
-	VkImageView				ImageView	   = VK_NULL_HANDLE;
+	VmaAllocationCreateInfo					AllocationDesc = {};
+	VmaAllocation							Allocation	   = VK_NULL_HANDLE;
+	VkImageCreateInfo						Desc		   = {};
+	VkImage									Texture		   = VK_NULL_HANDLE;
+	VkImageView								ImageView	   = VK_NULL_HANDLE;
+	std::unordered_map<UINT64, VkImageView> ImageViewTable;
 };

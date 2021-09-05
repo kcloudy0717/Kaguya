@@ -17,7 +17,7 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 	{
 		const auto& RHIRenderTarget = Desc.RenderTargets[i];
 
-		RenderTargets[i].format			= RHIRenderTarget.Format;
+		RenderTargets[i].format			= ToVkFormat(RHIRenderTarget.Format);
 		RenderTargets[i].samples		= VK_SAMPLE_COUNT_1_BIT;
 		RenderTargets[i].loadOp			= ToVkLoadOp(RHIRenderTarget.LoadOp);
 		RenderTargets[i].storeOp		= ToVkStoreOp(RHIRenderTarget.StoreOp);
@@ -36,7 +36,7 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 
 	if (ValidDepthStencilAttachment)
 	{
-		DepthStencil.format			= Desc.DepthStencil.Format;
+		DepthStencil.format			= ToVkFormat(Desc.DepthStencil.Format);
 		DepthStencil.samples		= VK_SAMPLE_COUNT_1_BIT;
 		DepthStencil.loadOp			= VK_ATTACHMENT_LOAD_OP_CLEAR;
 		DepthStencil.storeOp		= VK_ATTACHMENT_STORE_OP_STORE;
@@ -56,20 +56,21 @@ VulkanRenderPass::VulkanRenderPass(VulkanDevice* Parent, const RenderPassDesc& D
 	ReferenceDepthStencil.attachment			= NumAttachments - 1;
 	ReferenceDepthStencil.layout				= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	// we are going to create 1 subpass, which is the minimum you can do
+	// 1 Subpass
 	VkSubpassDescription SubpassDescription	   = {};
 	SubpassDescription.pipelineBindPoint	   = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	SubpassDescription.colorAttachmentCount	   = NumRenderTargets;
 	SubpassDescription.pColorAttachments	   = &ReferenceRenderTargets;
 	SubpassDescription.pDepthStencilAttachment = ValidDepthStencilAttachment ? &ReferenceDepthStencil : nullptr;
 
-	auto RenderPassCreateInfo = VkStruct<VkRenderPassCreateInfo>();
-	// connect the color attachment to the info
+	auto RenderPassCreateInfo			 = VkStruct<VkRenderPassCreateInfo>();
+	RenderPassCreateInfo.flags			 = 0;
 	RenderPassCreateInfo.attachmentCount = NumAttachments;
 	RenderPassCreateInfo.pAttachments	 = Attachments;
-	// connect the subpass to the info
-	RenderPassCreateInfo.subpassCount = 1;
-	RenderPassCreateInfo.pSubpasses	  = &SubpassDescription;
+	RenderPassCreateInfo.subpassCount	 = 1;
+	RenderPassCreateInfo.pSubpasses		 = &SubpassDescription;
+	RenderPassCreateInfo.dependencyCount = 0;
+	RenderPassCreateInfo.pDependencies	 = nullptr;
 
 	VERIFY_VULKAN_API(vkCreateRenderPass(Parent->GetVkDevice(), &RenderPassCreateInfo, nullptr, &RenderPass));
 }

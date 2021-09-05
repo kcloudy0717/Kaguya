@@ -72,6 +72,7 @@ public:
 		if (InfoQueue1)
 		{
 			VERIFY_D3D12_API(InfoQueue1->UnregisterMessageCallback(CallbackCookie));
+			CallbackCookie = 0;
 		}
 	}
 

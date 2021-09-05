@@ -3,6 +3,46 @@
 
 VkFormat ToVkFormat(ERHIFormat RHIFormat);
 
+constexpr VkFilter ToVkFilter(ESamplerFilter SamplerFilter)
+{
+	// clang-format off
+	switch (SamplerFilter)
+	{
+	case ESamplerFilter::Point:			return VK_FILTER_NEAREST;
+	case ESamplerFilter::Linear:		return VK_FILTER_LINEAR;
+	case ESamplerFilter::Anisotropic:	return VK_FILTER_LINEAR;
+	default:							return VK_FILTER_MAX_ENUM;
+	}
+	// clang-format on
+}
+
+constexpr VkSamplerMipmapMode ToVkSamplerMipmapMode(ESamplerFilter SamplerFilter)
+{
+	// clang-format off
+	switch (SamplerFilter)
+	{
+	case ESamplerFilter::Point:			return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	case ESamplerFilter::Linear:		return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	case ESamplerFilter::Anisotropic:	return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	default:							return VK_SAMPLER_MIPMAP_MODE_MAX_ENUM;
+	}
+	// clang-format on
+}
+
+constexpr VkSamplerAddressMode ToVkSamplerAddressMode(ESamplerAddressMode SamplerAddressMode)
+{
+	// clang-format off
+	switch (SamplerAddressMode)
+	{
+	case ESamplerAddressMode::Wrap:		return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	case ESamplerAddressMode::Mirror:	return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	case ESamplerAddressMode::Clamp:	return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+	case ESamplerAddressMode::Border:	return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	default:							return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
+	}
+	// clang-format on
+}
+
 constexpr VkPrimitiveTopology ToVkPrimitiveTopology(PrimitiveTopology PrimitiveTopology)
 {
 	// clang-format off

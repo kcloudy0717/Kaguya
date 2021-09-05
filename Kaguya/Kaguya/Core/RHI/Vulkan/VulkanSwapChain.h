@@ -19,6 +19,8 @@ public:
 	[[nodiscard]] auto GetCurrentBackbuffer() -> IRHITexture* { return Backbuffers[CurrentImageIndex].get(); }
 	[[nodiscard]] auto GetBackbuffer(size_t i) -> IRHITexture* { return Backbuffers[i].get(); }
 
+	[[nodiscard]] auto GetRHIFormat() const noexcept -> ERHIFormat { return ERHIFormat::SBGRA8_UNORM; }
+
 	uint32_t AcquireNextImage();
 
 	void Present();

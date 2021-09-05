@@ -230,15 +230,14 @@ private:
 	{
 		RenderPassDesc Desc		= {};
 		FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		Desc.AddRenderTarget({ .Format	   = SwapChain.GetFormat(),
+		Desc.AddRenderTarget({ .Format	   = SwapChain.GetRHIFormat(),
 							   .LoadOp	   = ELoadOp::Clear,
 							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(SwapChain.GetFormat(), Color) });
-		Desc.SetDepthStencil(
-			{ .Format	  = DepthBuffer->As<VulkanTexture>()->GetDesc().format,
-			  .LoadOp	  = ELoadOp::Clear,
-			  .StoreOp	  = EStoreOp::Store,
-			  .ClearValue = ClearValue(DepthBuffer->As<VulkanTexture>()->GetDesc().format, 1.0f, 0xFF) });
+							   .ClearValue = ClearValue(SwapChain.GetRHIFormat(), Color) });
+		Desc.SetDepthStencil({ .Format	   = ERHIFormat::D32,
+							   .LoadOp	   = ELoadOp::Clear,
+							   .StoreOp	   = EStoreOp::Store,
+							   .ClearValue = ClearValue(ERHIFormat::D32, 1.0f, 0xFF) });
 
 		RenderPass = Device.CreateRenderPass(Desc);
 	}
@@ -266,26 +265,42 @@ private:
 			Desc.AddPushConstant<MeshPushConstants>();
 			RootSignature = Device.CreateRootSignature(Desc);
 		}
+		{
+			VulkanDescriptorHandle Handle =
+				Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
+			Handle.Resource = SceneConstants.Get();
 
-		DescriptorHandle Handle =
-			Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
-		Handle.Resource = SceneConstants.Get();
+			Device.GetResourceDescriptorHeap().UpdateDescriptor(Handle);
+		}
+		{
+			DescriptorHandle Handle = Device.AllocateSampler();
+			SamplerDesc		 SamplerDesc(
+				 ESamplerFilter::Point,
+				 ESamplerAddressMode::Wrap,
+				 ESamplerAddressMode::Wrap,
+				 ESamplerAddressMode::Wrap,
+				 0.0f,
+				 0,
+				 ComparisonFunc::Never,
+				 0.0f,
+				 0.0f,
+				 0.0f);
 
-		Device.GetResourceDescriptorHeap().UpdateDescriptor(Handle);
-
-		Handle = Device.GetSamplerDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::Sampler);
-
-		Device.GetSamplerDescriptorHeap().UpdateDescriptor(Handle);
+			Device.CreateSampler(SamplerDesc, Handle);
+		}
 	}
 
 	void InitPipelines()
 	{
-		Shader VS = ShaderCompiler.SpirVCodeGen(
-			Device.GetVkDevice(),
-			EShaderType::Vertex,
-			ExecutableDirectory / "Shaders/Vulkan/Triangle.vs.hlsl",
-			L"main",
-			{});
+		spv_reflect::ShaderModule VSModule;
+		Shader					  VS = ShaderCompiler.SpirVCodeGen(
+			   Device.GetVkDevice(),
+			   EShaderType::Vertex,
+			   ExecutableDirectory / "Shaders/Vulkan/Triangle.vs.hlsl",
+			   L"main",
+			   {});
+		VSModule = spv_reflect::ShaderModule(VS.GetBufferSize(), VS.GetBufferPointer());
+
 		Shader PS = ShaderCompiler.SpirVCodeGen(
 			Device.GetVkDevice(),
 			EShaderType::Pixel,
@@ -334,9 +349,9 @@ private:
 
 		LoadImageFromPath("Assets/models/bedroom/textures/Teapot.tga");
 
-		TextureDescriptor1 = Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::Texture);
-		TextureDescriptor1.Resource = Texture.Get();
-		Device.GetResourceDescriptorHeap().UpdateDescriptor(TextureDescriptor1);
+		SRV							= Device.AllocateShaderResourceView();
+		ShaderResourceViewDesc Desc = {};
+		Device.CreateShaderResourceView(Texture.Get(), Desc, SRV);
 	}
 
 	void InitScene()
@@ -550,7 +565,7 @@ private:
 
 	RefPtr<IRHIBuffer>	SceneConstants;
 	RefPtr<IRHITexture> Texture;
-	DescriptorHandle	TextureDescriptor1;
+	DescriptorHandle	SRV;
 
 	World			 World;
 	AsyncMeshLoader	 MeshLoader;
@@ -625,7 +640,7 @@ private:
 
 			MeshPushConstants constants = {};
 			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
-			constants.Id1 = TextureDescriptor1.Index;
+			constants.Id1 = SRV.Index;
 
 			Context.SetPushConstants(sizeof(MeshPushConstants), &constants);
 

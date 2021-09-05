@@ -7,6 +7,26 @@ class IRHIDeviceChild;
 class IRHIResource;
 class IRHIDescriptorTable;
 
+struct DescriptorHandle
+{
+	DescriptorHandle()
+		: Version(0)
+		, Api(0)
+		, Index(UINT_MAX)
+	{
+	}
+
+	auto operator<=>(const DescriptorHandle&) const = default;
+
+	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
+
+	UINT Version : 16;
+	UINT Api	 : 16;
+	UINT Index;
+};
+
+static_assert(sizeof(DescriptorHandle) == sizeof(UINT64));
+
 class IRHIObject
 {
 public:
@@ -80,6 +100,14 @@ class IRHIPipelineState : public IRHIDeviceChild
 	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
+class IRHIView : public IRHIDeviceChild
+{
+public:
+	using IRHIDeviceChild::IRHIDeviceChild;
+
+	virtual [[nodiscard]] auto GetIndex() const noexcept -> UINT = 0;
+};
+
 class IRHIResource : public IRHIDeviceChild
 {
 public:
@@ -101,11 +129,22 @@ public:
 class IRHIDevice : public IRHIObject
 {
 public:
-	virtual [[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc)			   = 0;
-	virtual [[nodiscard]] RefPtr<IRHIRenderTarget>	  CreateRenderTarget(const RenderTargetDesc& Desc)		   = 0;
-	virtual [[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc)   = 0;
-	virtual [[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc)	   = 0;
-	virtual [[nodiscard]] RefPtr<IRHIPipelineState>	  CreatePipelineState(const PipelineStateStreamDesc& Desc) = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRenderPass>	CreateRenderPass(const RenderPassDesc& Desc)			 = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRenderTarget>	CreateRenderTarget(const RenderTargetDesc& Desc)		 = 0;
+	virtual [[nodiscard]] RefPtr<IRHIRootSignature> CreateRootSignature(const RootSignatureDesc& Desc)		 = 0;
+	virtual [[nodiscard]] RefPtr<IRHIPipelineState> CreatePipelineState(const PipelineStateStreamDesc& Desc) = 0;
+
+	virtual [[nodiscard]] DescriptorHandle AllocateShaderResourceView() = 0;
+	virtual [[nodiscard]] DescriptorHandle AllocateSampler()			= 0;
+
+	virtual void ReleaseShaderResourceView(DescriptorHandle Handle) = 0;
+	virtual void ReleaseSampler(DescriptorHandle Handle)			= 0;
+
+	virtual void CreateShaderResourceView(
+		IRHIResource*				  Resource,
+		const ShaderResourceViewDesc& Desc,
+		DescriptorHandle			  DestHandle)												 = 0;
+	virtual void CreateSampler(const SamplerDesc& Desc, DescriptorHandle DestHandle) = 0;
 
 	virtual [[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc)	= 0;
 	virtual [[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) = 0;

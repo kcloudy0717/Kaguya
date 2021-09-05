@@ -25,17 +25,17 @@ public:
 	D3D12CommandQueue* GetCopyQueue2() { return GetCommandQueue(ED3D12CommandQueueType::Copy2); }
 
 	// clang-format off
-	template <typename ViewDesc> D3D12DynamicResourceDescriptorHeap& GetDescriptorHeap() noexcept;
-	template<> D3D12DynamicResourceDescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-	template<> D3D12DynamicResourceDescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-	template<> D3D12DynamicResourceDescriptorHeap& GetDescriptorHeap<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RenderTargetDescriptorHeap; }
-	template<> D3D12DynamicResourceDescriptorHeap& GetDescriptorHeap<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return DepthStencilDescriptorHeap; }
+	template <typename ViewDesc> D3D12DescriptorHeap& GetDescriptorHeap() noexcept;
+	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
+	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
+	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RenderTargetDescriptorHeap; }
+	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return DepthStencilDescriptorHeap; }
 	// clang-format on
 
-	D3D12DynamicResourceDescriptorHeap& GetResourceDescriptorHeap() noexcept { return ResourceDescriptorHeap; }
-	D3D12DynamicResourceDescriptorHeap& GetSamplerDescriptorHeap() noexcept { return SamplerDescriptorHeap; }
-	D3D12DynamicResourceDescriptorHeap& GetRenderTargetDescriptorHeap() noexcept { return RenderTargetDescriptorHeap; }
-	D3D12DynamicResourceDescriptorHeap& GetDepthStencilDescriptorHeap() noexcept { return DepthStencilDescriptorHeap; }
+	D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept { return ResourceDescriptorHeap; }
+	D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept { return SamplerDescriptorHeap; }
+	D3D12DescriptorHeap& GetRenderTargetDescriptorHeap() noexcept { return RenderTargetDescriptorHeap; }
+	D3D12DescriptorHeap& GetDepthStencilDescriptorHeap() noexcept { return DepthStencilDescriptorHeap; }
 
 	D3D12CommandContext& GetCommandContext(UINT ThreadIndex = 0) { return *AvailableCommandContexts[ThreadIndex]; }
 	D3D12CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0)
@@ -55,10 +55,10 @@ private:
 	D3D12CommandQueue CopyQueue1;
 	D3D12CommandQueue CopyQueue2;
 
-	D3D12DynamicResourceDescriptorHeap ResourceDescriptorHeap;
-	D3D12DynamicResourceDescriptorHeap SamplerDescriptorHeap;
-	D3D12DynamicResourceDescriptorHeap RenderTargetDescriptorHeap;
-	D3D12DynamicResourceDescriptorHeap DepthStencilDescriptorHeap;
+	D3D12DescriptorHeap ResourceDescriptorHeap;
+	D3D12DescriptorHeap SamplerDescriptorHeap;
+	D3D12DescriptorHeap RenderTargetDescriptorHeap;
+	D3D12DescriptorHeap DepthStencilDescriptorHeap;
 
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableCommandContexts;
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableAsyncCommandContexts;
@@ -75,7 +75,7 @@ void D3D12Descriptor<ViewDesc>::Allocate()
 {
 	if (Parent)
 	{
-		D3D12DynamicResourceDescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
+		D3D12DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
 		Heap.Allocate(CPUHandle, GPUHandle, Index);
 	}
 }
@@ -85,7 +85,7 @@ void D3D12Descriptor<ViewDesc>::Release()
 {
 	if (Parent && IsValid())
 	{
-		D3D12DynamicResourceDescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
+		D3D12DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
 		Heap.Release(Index);
 		CPUHandle = { NULL };
 		GPUHandle = { NULL };

@@ -182,7 +182,7 @@ void InputLayout::AddVertexLayoutElement(
 	ERHIFormat		 Format,
 	UINT			 Stride)
 {
-	auto& Element		  = m_InputElements.emplace_back();
+	auto& Element		  = Elements.emplace_back();
 	Element.SemanticName  = SemanticName.data();
 	Element.SemanticIndex = SemanticIndex;
 	Element.Location	  = Location;

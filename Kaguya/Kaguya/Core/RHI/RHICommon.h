@@ -147,6 +147,60 @@ enum class ERHIFormat
 	COUNT,
 };
 
+enum class ESamplerFilter
+{
+	Point,
+	Linear,
+	Anisotropic
+};
+
+enum class ESamplerAddressMode
+{
+	Wrap,
+	Mirror,
+	Clamp,
+	Border,
+};
+
+struct SamplerDesc
+{
+	SamplerDesc() noexcept = default;
+	SamplerDesc(
+		ESamplerFilter		Filter,
+		ESamplerAddressMode AddressU,
+		ESamplerAddressMode AddressV,
+		ESamplerAddressMode AddressW,
+		FLOAT				MipLODBias,
+		UINT				MaxAnisotropy,
+		ComparisonFunc		ComparisonFunc,
+		FLOAT				BorderColor,
+		FLOAT				MinLOD,
+		FLOAT				MaxLOD) noexcept
+		: Filter(Filter)
+		, AddressU(AddressU)
+		, AddressV(AddressV)
+		, AddressW(AddressW)
+		, MipLODBias(MipLODBias)
+		, MaxAnisotropy(MaxAnisotropy)
+		, ComparisonFunc(ComparisonFunc)
+		, BorderColor(BorderColor)
+		, MinLOD(MinLOD)
+		, MaxLOD(MaxLOD)
+	{
+	}
+
+	ESamplerFilter		Filter		  = ESamplerFilter::Point;
+	ESamplerAddressMode AddressU	  = ESamplerAddressMode::Wrap;
+	ESamplerAddressMode AddressV	  = ESamplerAddressMode::Wrap;
+	ESamplerAddressMode AddressW	  = ESamplerAddressMode::Wrap;
+	FLOAT				MipLODBias	  = 0.0f;
+	UINT				MaxAnisotropy = 0;
+	ComparisonFunc		ComparisonFunc;
+	FLOAT				BorderColor = 0.0f;
+	FLOAT				MinLOD		= 0.0f;
+	FLOAT				MaxLOD		= FLT_MAX;
+};
+
 enum class EDescriptorType
 {
 	ConstantBuffer,
@@ -157,7 +211,7 @@ enum class EDescriptorType
 	NumDescriptorTypes
 };
 
-struct DescriptorHandle
+struct VulkanDescriptorHandle
 {
 	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
 
@@ -195,14 +249,24 @@ struct RootSignatureDesc
 		PushConstant.Size		   = sizeof(T);
 	}
 
+	void AddRootConstantBufferView(UINT Register)
+	{
+		VkDescriptorSetLayoutBinding& Binding = Bindings.emplace_back();
+		Binding.binding						  = Register;
+		Binding.descriptorType				  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		Binding.descriptorCount				  = 1;
+		Binding.stageFlags					  = VK_SHADER_STAGE_ALL;
+	}
+
 	void AddDescriptorTable(IRHIDescriptorTable* DescriptorTable)
 	{
 		DescriptorTables[NumDescriptorTables++] = DescriptorTable;
 	}
 
-	std::vector<PushConstant> PushConstants;
-	UINT					  NumDescriptorTables = 0;
-	IRHIDescriptorTable*	  DescriptorTables[32];
+	std::vector<PushConstant>				  PushConstants;
+	UINT									  NumDescriptorTables = 0;
+	IRHIDescriptorTable*					  DescriptorTables[32];
+	std::vector<VkDescriptorSetLayoutBinding> Bindings;
 };
 
 enum class DescriptorHeapType
@@ -275,18 +339,18 @@ struct DepthStencilValue
 struct ClearValue
 {
 	ClearValue() noexcept = default;
-	ClearValue(VkFormat Format, FLOAT Color[4])
+	ClearValue(ERHIFormat Format, FLOAT Color[4])
 		: Format(Format)
 	{
 		std::memcpy(this->Color, Color, sizeof(FLOAT) * 4);
 	}
-	ClearValue(VkFormat Format, FLOAT Depth, UINT8 Stencil)
+	ClearValue(ERHIFormat Format, FLOAT Depth, UINT8 Stencil)
 		: Format(Format)
 		, DepthStencil{ Depth, Stencil }
 	{
 	}
 
-	VkFormat Format = VK_FORMAT_UNDEFINED;
+	ERHIFormat Format = ERHIFormat::UNKNOWN;
 	union
 	{
 		FLOAT			  Color[4];
@@ -296,9 +360,9 @@ struct ClearValue
 
 struct RenderPassAttachment
 {
-	[[nodiscard]] bool IsValid() const noexcept { return Format != VK_FORMAT_UNDEFINED; }
+	[[nodiscard]] bool IsValid() const noexcept { return Format != ERHIFormat::UNKNOWN; }
 
-	VkFormat   Format = VK_FORMAT_UNDEFINED;
+	ERHIFormat Format = ERHIFormat::UNKNOWN;
 	ELoadOp	   LoadOp;
 	EStoreOp   StoreOp;
 	ClearValue ClearValue;
@@ -528,26 +592,12 @@ struct RHITextureDesc
 	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
 };
 
-enum class ESRVType
-{
-	Unknown,
-	Buffer,
-	Texture1D,
-	Texture1DArray,
-	Texture2D,
-	Texture2DArray,
-	Texture2DMS,
-	Texture2DMSArray,
-	Texture3D,
-	TextureCube,
-	TextureCubeArray,
-	RaytracingAccelerationStructure
-};
-
 class BlendState
 {
 public:
-	/* Defines how to combine the blend inputs */
+	/// <summary>
+	/// Defines how to combine the blend inputs
+	/// </summary>
 	enum class BlendOp
 	{
 		Add,			 // Add src1 and src2
@@ -557,7 +607,9 @@ public:
 		Max				 // Find the maximum between the sources (per-channel)
 	};
 
-	/* Defines how to modulate the pixel-shader and render-target pixel values */
+	/// <summary>
+	/// Defines how to modulate the pixel-shader and render-target pixel values
+	/// </summary>
 	enum class Factor
 	{
 		Zero,				 // (0, 0, 0, 0)
@@ -620,12 +672,18 @@ public:
 class RasterizerState
 {
 public:
+	/// <summary>
+	/// Defines triangle filling mode.
+	/// </summary>
 	enum class EFillMode
 	{
 		Wireframe, // Draw lines connecting the vertices.
 		Solid	   // Fill the triangles formed by the vertices
 	};
 
+	/// <summary>
+	/// Defines which face would be culled
+	/// </summary>
 	enum class ECullMode
 	{
 		None,  // Always draw all triangles
@@ -754,7 +812,7 @@ public:
 		UINT		Stride;
 	};
 
-	std::vector<Element> m_InputElements;
+	std::vector<Element> Elements;
 };
 
 enum class PipelineStateSubobjectType
@@ -776,36 +834,38 @@ enum class PipelineStateSubobjectType
 	NumTypes
 };
 
-template<typename T, PipelineStateSubobjectType Type>
+// PSO desc is inspired by D3D12' PSO stream
+
+template<typename TDesc, PipelineStateSubobjectType TType>
 class alignas(void*) PipelineStateStreamSubobject
 {
 public:
 	PipelineStateStreamSubobject() noexcept
-		: _Type(Type)
-		, _Desc(T())
+		: Type(TType)
+		, Desc(TDesc())
 	{
 	}
-	PipelineStateStreamSubobject(const T& Desc) noexcept
-		: _Type(Type)
-		, _Desc(Desc)
+	PipelineStateStreamSubobject(const TDesc& Desc) noexcept
+		: Type(TType)
+		, Desc(Desc)
 	{
 	}
-	PipelineStateStreamSubobject& operator=(const T& Desc) noexcept
+	PipelineStateStreamSubobject& operator=(const TDesc& Desc) noexcept
 	{
-		_Type = Type;
-		_Desc = Desc;
+		this->Type = TType;
+		this->Desc = Desc;
 		return *this;
 	}
-			 operator const T&() const noexcept { return _Desc; }
-			 operator T&() noexcept { return _Desc; }
-	T*		 operator&() noexcept { return &_Desc; }
-	const T* operator&() const noexcept { return &_Desc; }
+				 operator const TDesc&() const noexcept { return Desc; }
+				 operator TDesc&() noexcept { return Desc; }
+	TDesc*		 operator&() noexcept { return &Desc; }
+	const TDesc* operator&() const noexcept { return &Desc; }
 
-	T& operator->() noexcept { return _Desc; }
+	TDesc& operator->() noexcept { return Desc; }
 
 private:
-	PipelineStateSubobjectType _Type;
-	T						   _Desc;
+	PipelineStateSubobjectType Type;
+	TDesc					   Desc;
 };
 
 // clang-format off
@@ -942,3 +1002,71 @@ inline void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelin
 		}
 	}
 }
+
+enum class ESRVType
+{
+	Unknown,
+	Texture2D,
+};
+
+struct Texture2DSRV
+{
+	std::optional<UINT>	 MostDetailedMip;
+	std::optional<UINT>	 MipLevels;
+	std::optional<FLOAT> ResourceMinLODClamp;
+};
+
+struct ShaderResourceViewDesc
+{
+	ERHIFormat Format;
+	ESRVType   Type;
+	union
+	{
+		Texture2DSRV Texture2D;
+	};
+};
+
+struct IndexPool
+{
+	IndexPool() = default;
+	IndexPool(size_t NumIndices)
+	{
+		Elements.resize(NumIndices);
+		Reset();
+	}
+
+	auto& operator[](size_t Index) { return Elements[Index]; }
+
+	const auto& operator[](size_t Index) const { return Elements[Index]; }
+
+	void Reset()
+	{
+		FreeStart		  = 0;
+		NumActiveElements = 0;
+		for (size_t i = 0; i < Elements.size(); ++i)
+		{
+			Elements[i] = i + 1;
+		}
+	}
+
+	// Removes the first element from the free list and returns its index
+	size_t Allocate()
+	{
+		assert(NumActiveElements < Elements.size() && "Consider increasing the size of the pool");
+		NumActiveElements++;
+		size_t index = FreeStart;
+		FreeStart	 = Elements[index];
+		return index;
+	}
+
+	void Release(size_t Index)
+	{
+		NumActiveElements--;
+		Elements[Index] = FreeStart;
+		FreeStart		= Index;
+	}
+
+	std::vector<size_t> Elements;
+	size_t				FreeStart		  = 0;
+	size_t				NumActiveElements = 0;
+};

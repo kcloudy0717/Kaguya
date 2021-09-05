@@ -29,14 +29,28 @@ public:
 	[[nodiscard]] auto GetComputeQueue() noexcept -> VulkanCommandQueue& { return AsyncComputeQueue; }
 	[[nodiscard]] auto GetCopyQueue() noexcept -> VulkanCommandQueue& { return CopyQueue; }
 
-	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return ResourceDescriptorHeap; }
-	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanDescriptorHeap& { return SamplerDescriptorHeap; }
+	[[nodiscard]] auto GetResourceDescriptorHeap() noexcept -> VulkanResourceDescriptorHeap& { return ResourceDescriptorHeap; }
+	[[nodiscard]] auto GetSamplerDescriptorHeap() noexcept -> VulkanSamplerDescriptorHeap&
+	{
+		return SamplerDescriptorHeap;
+	}
 
-	[[nodiscard]] RefPtr<IRHIRenderPass>	  CreateRenderPass(const RenderPassDesc& Desc) override;
-	[[nodiscard]] RefPtr<IRHIRenderTarget>	  CreateRenderTarget(const RenderTargetDesc& Desc) override;
-	[[nodiscard]] RefPtr<IRHIDescriptorTable> CreateDescriptorTable(const DescriptorTableDesc& Desc) override;
-	[[nodiscard]] RefPtr<IRHIRootSignature>	  CreateRootSignature(const RootSignatureDesc& Desc) override;
-	[[nodiscard]] RefPtr<IRHIPipelineState>	  CreatePipelineState(const PipelineStateStreamDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRenderPass>	CreateRenderPass(const RenderPassDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRenderTarget>	CreateRenderTarget(const RenderTargetDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIRootSignature> CreateRootSignature(const RootSignatureDesc& Desc) override;
+	[[nodiscard]] RefPtr<IRHIPipelineState> CreatePipelineState(const PipelineStateStreamDesc& Desc) override;
+
+	[[nodiscard]] DescriptorHandle AllocateShaderResourceView() override;
+	[[nodiscard]] DescriptorHandle AllocateSampler() override;
+
+	void ReleaseShaderResourceView(DescriptorHandle Handle) override;
+	void ReleaseSampler(DescriptorHandle Handle) override;
+
+	void CreateShaderResourceView(
+		IRHIResource*				  Resource,
+		const ShaderResourceViewDesc& Desc,
+		DescriptorHandle			  DestHandle) override;
+	void CreateSampler(const SamplerDesc& Desc, DescriptorHandle DestHandle) override;
 
 	[[nodiscard]] RefPtr<IRHIBuffer>  CreateBuffer(const RHIBufferDesc& Desc) override;
 	[[nodiscard]] RefPtr<IRHITexture> CreateTexture(const RHITextureDesc& Desc) override;
@@ -61,19 +75,18 @@ private:
 
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) const;
 
+	void InitializeVulkanAPI();
+
 private:
 	VkInstance				 Instance			 = VK_NULL_HANDLE;
 	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
 
-	VkPhysicalDevice		   PhysicalDevice			= VK_NULL_HANDLE;
-	VkPhysicalDeviceProperties PhysicalDeviceProperties = {};
-	VkPhysicalDeviceFeatures   PhysicalDeviceFeatures	= {};
-	VkPhysicalDeviceFeatures2  PhysicalDeviceFeatures2	= {};
+	VkPhysicalDevice		   PhysicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceProperties Properties	  = {};
+	VkPhysicalDeviceFeatures   Features		  = {};
+	VkPhysicalDeviceFeatures2  Features2	  = {};
 
 	std::vector<VkQueueFamilyProperties> QueueFamilyProperties;
-
-	std::vector<VkSurfaceFormatKHR> SurfaceFormats;
-	std::vector<VkPresentModeKHR>	PresentModes;
 
 	VkDevice	 VkDevice  = VK_NULL_HANDLE;
 	VmaAllocator Allocator = VK_NULL_HANDLE;
@@ -86,6 +99,6 @@ private:
 	VulkanCommandQueue AsyncComputeQueue;
 	VulkanCommandQueue CopyQueue;
 
-	VulkanDescriptorHeap ResourceDescriptorHeap;
-	VulkanDescriptorHeap SamplerDescriptorHeap;
+	VulkanResourceDescriptorHeap		ResourceDescriptorHeap;
+	VulkanSamplerDescriptorHeap SamplerDescriptorHeap;
 };

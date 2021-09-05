@@ -3,7 +3,7 @@
 
 static AutoConsoleVariable<int> CVar_DescriptorPageSize("D3D12.DescriptorPageSize", "Descriptor Page Size", 4096);
 
-void D3D12DynamicResourceDescriptorHeap::Initialize(
+void D3D12DescriptorHeap::Initialize(
 	UINT					   NumDescriptors,
 	bool					   ShaderVisible,
 	D3D12_DESCRIPTOR_HEAP_TYPE Type)
@@ -25,7 +25,7 @@ void D3D12DynamicResourceDescriptorHeap::Initialize(
 	IndexPool = { NumDescriptors };
 }
 
-void D3D12DynamicResourceDescriptorHeap::Allocate(
+void D3D12DescriptorHeap::Allocate(
 	D3D12_CPU_DESCRIPTOR_HANDLE& hCPU,
 	D3D12_GPU_DESCRIPTOR_HANDLE& hGPU,
 	UINT&						 Index)
@@ -37,21 +37,21 @@ void D3D12DynamicResourceDescriptorHeap::Allocate(
 	hGPU  = this->hGPU(Index);
 }
 
-void D3D12DynamicResourceDescriptorHeap::Release(UINT Index)
+void D3D12DescriptorHeap::Release(UINT Index)
 {
 	std::scoped_lock _(Mutex);
 
 	IndexPool.Release(static_cast<size_t>(Index));
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12DynamicResourceDescriptorHeap::hCPU(UINT Index) const noexcept
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::hCPU(UINT Index) const noexcept
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE hCPU = {};
 	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(hCPU, hCPUStart, Index, DescriptorHandleIncrementSize);
 	return hCPU;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE D3D12DynamicResourceDescriptorHeap::hGPU(UINT Index) const noexcept
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::hGPU(UINT Index) const noexcept
 {
 	D3D12_GPU_DESCRIPTOR_HANDLE hGPU = {};
 	CD3DX12_GPU_DESCRIPTOR_HANDLE::InitOffsetted(hGPU, hGPUStart, Index, DescriptorHandleIncrementSize);

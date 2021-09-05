@@ -2,11 +2,11 @@
 #include "D3D12Common.h"
 #include "D3D12RootSignature.h"
 
-class D3D12DynamicResourceDescriptorHeap : public D3D12LinkedDeviceChild
+class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
 {
 public:
-	D3D12DynamicResourceDescriptorHeap() noexcept = default;
-	D3D12DynamicResourceDescriptorHeap(D3D12LinkedDevice* Parent) noexcept
+	D3D12DescriptorHeap() noexcept = default;
+	D3D12DescriptorHeap(D3D12LinkedDevice* Parent) noexcept
 		: D3D12LinkedDeviceChild(Parent)
 	{
 	}
@@ -23,52 +23,6 @@ public:
 
 	D3D12_CPU_DESCRIPTOR_HANDLE hCPU(UINT Index) const noexcept;
 	D3D12_GPU_DESCRIPTOR_HANDLE hGPU(UINT Index) const noexcept;
-
-private:
-	struct IndexPool
-	{
-		IndexPool() = default;
-		IndexPool(size_t NumIndices)
-		{
-			Elements.resize(NumIndices);
-			Reset();
-		}
-
-		auto& operator[](size_t Index) { return Elements[Index]; }
-
-		const auto& operator[](size_t Index) const { return Elements[Index]; }
-
-		void Reset()
-		{
-			FreeStart		  = 0;
-			NumActiveElements = 0;
-			for (size_t i = 0; i < Elements.size(); ++i)
-			{
-				Elements[i] = i + 1;
-			}
-		}
-
-		// Removes the first element from the free list and returns its index
-		size_t Allocate()
-		{
-			assert(NumActiveElements < Elements.size() && "Consider increasing the size of the pool");
-			NumActiveElements++;
-			size_t index = FreeStart;
-			FreeStart	 = Elements[index];
-			return index;
-		}
-
-		void Release(size_t Index)
-		{
-			NumActiveElements--;
-			Elements[Index] = FreeStart;
-			FreeStart		= Index;
-		}
-
-		std::vector<size_t> Elements;
-		size_t				FreeStart;
-		size_t				NumActiveElements;
-	};
 
 private:
 	D3D12_DESCRIPTOR_HEAP_DESC					 Desc;

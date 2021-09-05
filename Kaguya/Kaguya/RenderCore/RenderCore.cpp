@@ -29,10 +29,12 @@ const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
 
 void Initialize()
 {
-	DeviceOptions  DeviceOptions  = { .EnableDebugLayer			= true,
-									  .EnableGpuBasedValidation = false,
-									  .EnableAutoDebugName		= true };
-	DeviceFeatures DeviceFeatures = { .FeatureLevel = D3D_FEATURE_LEVEL_12_0, .WaveOperation = true };
+	DeviceOptions  DeviceOptions	= { .EnableDebugLayer		  = true,
+									.EnableGpuBasedValidation = false,
+									.EnableAutoDebugName	  = true };
+	DeviceFeatures DeviceFeatures	= {};
+	DeviceFeatures.FeatureLevel		= D3D_FEATURE_LEVEL_12_0;
+	DeviceFeatures.DynamicResources = true;
 
 	pDevice = new D3D12Device();
 	pDevice->Initialize(DeviceOptions);

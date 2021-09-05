@@ -118,7 +118,7 @@ struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
 	void InputLayoutCb(const InputLayout& InputLayout) override
 	{
 		UINT CurrentOffset = 0;
-		for (const auto& Element : InputLayout.m_InputElements)
+		for (const auto& Element : InputLayout.Elements)
 		{
 			VkVertexInputAttributeDescription& Attribute = AttributeDescriptions.emplace_back();
 			Attribute.location							 = Element.Location;

@@ -103,13 +103,12 @@ public:
 
 	D3D12View(D3D12LinkedDevice* Device)
 		: Descriptor(Device)
-		, Desc{}
 	{
 	}
 
 	D3D12View(D3D12LinkedDevice* Device, const ViewDesc& Desc)
-		: Descriptor(Device)
-		, Desc(Desc)
+		: Desc(Desc)
+		, Descriptor(Device)
 	{
 	}
 

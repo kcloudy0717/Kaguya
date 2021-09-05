@@ -11,5 +11,6 @@ public:
 	[[nodiscard]] VkPipelineLayout GetApiHandle() const noexcept { return Handle; }
 
 private:
-	VkPipelineLayout Handle = VK_NULL_HANDLE;
+	VkPipelineLayout				   Handle = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 };

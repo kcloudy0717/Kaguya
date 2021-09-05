@@ -2,6 +2,11 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
+namespace VulkanAPI
+{
+PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = nullptr;
+}
+
 static constexpr const char* ValidationLayers[] = { "VK_LAYER_KHRONOS_validation" };
 
 static constexpr const char* DebugInstanceExtensions[] = { VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
@@ -121,11 +126,6 @@ RefPtr<IRHIRenderTarget> VulkanDevice::CreateRenderTarget(const RenderTargetDesc
 	return RefPtr<IRHIRenderTarget>::Create(new VulkanRenderTarget(this, Desc));
 }
 
-RefPtr<IRHIDescriptorTable> VulkanDevice::CreateDescriptorTable(const DescriptorTableDesc& Desc)
-{
-	return RefPtr<IRHIDescriptorTable>::Create(new VulkanDescriptorTable(this, Desc));
-}
-
 RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureDesc& Desc)
 {
 	return RefPtr<IRHIRootSignature>::Create(new VulkanRootSignature(this, Desc));
@@ -134,6 +134,143 @@ RefPtr<IRHIRootSignature> VulkanDevice::CreateRootSignature(const RootSignatureD
 RefPtr<IRHIPipelineState> VulkanDevice::CreatePipelineState(const PipelineStateStreamDesc& Desc)
 {
 	return RefPtr<IRHIPipelineState>::Create(new VulkanPipelineState(this, Desc));
+}
+
+DescriptorHandle VulkanDevice::AllocateShaderResourceView()
+{
+	UINT Index = UINT_MAX;
+	ResourceDescriptorHeap.Allocate(1, Index);
+
+	DescriptorHandle Handle;
+	Handle.Version = 0;
+	Handle.Api	   = 1;
+	Handle.Index   = Index;
+	return Handle;
+}
+
+DescriptorHandle VulkanDevice::AllocateSampler()
+{
+	UINT Index = UINT_MAX;
+	SamplerDescriptorHeap.Allocate(Index);
+
+	DescriptorHandle Handle;
+	Handle.Version = 0;
+	Handle.Api	   = 0;
+	Handle.Index   = Index;
+	return Handle;
+}
+
+void VulkanDevice::ReleaseShaderResourceView(DescriptorHandle Handle)
+{
+	if (Handle.IsValid())
+	{
+		ResourceDescriptorHeap.Release(Handle.Api, Handle.Index);
+	}
+}
+
+void VulkanDevice::ReleaseSampler(DescriptorHandle Handle)
+{
+	if (Handle.IsValid())
+	{
+		SamplerDescriptorHeap.Release(Handle.Index);
+	}
+}
+
+void VulkanDevice::CreateShaderResourceView(
+	IRHIResource*				  Resource,
+	const ShaderResourceViewDesc& Desc,
+	DescriptorHandle			  DestHandle)
+{
+	auto ApiTexture = Resource->As<VulkanTexture>();
+
+	uint32_t MostDetailedMip = Desc.Texture2D.MostDetailedMip.value_or(0);
+	uint32_t MipLevels		 = Desc.Texture2D.MipLevels.value_or(ApiTexture->Desc.mipLevels);
+
+	auto ImageViewCreateInfo							= VkStruct<VkImageViewCreateInfo>();
+	ImageViewCreateInfo.viewType						= VK_IMAGE_VIEW_TYPE_2D;
+	ImageViewCreateInfo.image							= ApiTexture->GetApiHandle();
+	ImageViewCreateInfo.format							= ApiTexture->Desc.format;
+	ImageViewCreateInfo.subresourceRange.aspectMask		= InferImageAspectFlags(ApiTexture->Desc.format);
+	ImageViewCreateInfo.subresourceRange.baseMipLevel	= MostDetailedMip;
+	ImageViewCreateInfo.subresourceRange.levelCount		= MipLevels;
+	ImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	ImageViewCreateInfo.subresourceRange.layerCount		= ApiTexture->Desc.arrayLayers;
+
+	VkImageView ImageView = VK_NULL_HANDLE;
+	UINT64		Hash	  = CityHash64((char*)&ImageViewCreateInfo.subresourceRange, sizeof(VkImageSubresourceRange));
+	if (auto iter = ApiTexture->ImageViewTable.find(Hash); iter != ApiTexture->ImageViewTable.end())
+	{
+		ImageView = iter->second;
+	}
+	else
+	{
+		VERIFY_VULKAN_API(vkCreateImageView(VkDevice, &ImageViewCreateInfo, nullptr, &ImageView));
+		ApiTexture->ImageViewTable[Hash] = ImageView;
+	}
+
+	VkDescriptorImageInfo DescriptorImageInfo = {};
+	DescriptorImageInfo.sampler				  = nullptr;
+	DescriptorImageInfo.imageView			  = ImageView;
+	DescriptorImageInfo.imageLayout			  = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	auto WriteDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
+	WriteDescriptorSet.dstSet		   = ResourceDescriptorHeap.DescriptorSet;
+	WriteDescriptorSet.dstBinding	   = DestHandle.Api; // Texture
+	WriteDescriptorSet.dstArrayElement = DestHandle.Index;
+	WriteDescriptorSet.descriptorCount = 1;
+	WriteDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	WriteDescriptorSet.pImageInfo	   = &DescriptorImageInfo;
+
+	vkUpdateDescriptorSets(VkDevice, 1, &WriteDescriptorSet, 0, nullptr);
+}
+
+void VulkanDevice::CreateSampler(const SamplerDesc& Desc, DescriptorHandle DestHandle)
+{
+	auto SamplerCreateInfo			   = VkStruct<VkSamplerCreateInfo>();
+	SamplerCreateInfo.flags			   = 0;
+	SamplerCreateInfo.magFilter		   = ToVkFilter(Desc.Filter);
+	SamplerCreateInfo.minFilter		   = ToVkFilter(Desc.Filter);
+	SamplerCreateInfo.mipmapMode	   = ToVkSamplerMipmapMode(Desc.Filter);
+	SamplerCreateInfo.addressModeU	   = ToVkSamplerAddressMode(Desc.AddressU);
+	SamplerCreateInfo.addressModeV	   = ToVkSamplerAddressMode(Desc.AddressV);
+	SamplerCreateInfo.addressModeW	   = ToVkSamplerAddressMode(Desc.AddressW);
+	SamplerCreateInfo.mipLodBias	   = Desc.MipLODBias;
+	SamplerCreateInfo.anisotropyEnable = Desc.MaxAnisotropy > 1;
+	SamplerCreateInfo.maxAnisotropy	   = static_cast<float>(Desc.MaxAnisotropy);
+	SamplerCreateInfo.compareEnable	   = Desc.ComparisonFunc != ComparisonFunc::Never;
+	SamplerCreateInfo.compareOp		   = ToVkCompareOp(Desc.ComparisonFunc);
+	SamplerCreateInfo.minLod		   = Desc.MinLOD;
+	SamplerCreateInfo.maxLod		   = Desc.MaxLOD;
+	SamplerCreateInfo.borderColor =
+		Desc.BorderColor == 0 ? VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK : VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	SamplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+
+	VkSampler Sampler = nullptr;
+	UINT64	  Hash	  = CityHash64(reinterpret_cast<char*>(&SamplerCreateInfo), sizeof(VkSamplerCreateInfo));
+	if (auto iter = SamplerDescriptorHeap.SamplerTable.find(Hash); iter != SamplerDescriptorHeap.SamplerTable.end())
+	{
+		Sampler = iter->second;
+	}
+	else
+	{
+		VERIFY_VULKAN_API(vkCreateSampler(VkDevice, &SamplerCreateInfo, nullptr, &Sampler));
+		SamplerDescriptorHeap.SamplerTable[Hash] = Sampler;
+	}
+
+	VkDescriptorImageInfo DescriptorImageInfo = {};
+	DescriptorImageInfo.sampler				  = Sampler;
+	DescriptorImageInfo.imageView			  = nullptr;
+	DescriptorImageInfo.imageLayout			  = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	auto WriteDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
+	WriteDescriptorSet.dstSet		   = SamplerDescriptorHeap.DescriptorSet;
+	WriteDescriptorSet.dstBinding	   = DestHandle.Api;
+	WriteDescriptorSet.dstArrayElement = DestHandle.Index;
+	WriteDescriptorSet.descriptorCount = 1;
+	WriteDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_SAMPLER;
+	WriteDescriptorSet.pImageInfo	   = &DescriptorImageInfo;
+
+	vkUpdateDescriptorSets(VkDevice, 1, &WriteDescriptorSet, 0, nullptr);
 }
 
 RefPtr<IRHIBuffer> VulkanDevice::CreateBuffer(const RHIBufferDesc& Desc)
@@ -361,7 +498,7 @@ void VulkanDevice::InitializeDevice()
 	DeviceCreateInfo.pQueueCreateInfos		 = DeviceQueueCreateInfos.data();
 	DeviceCreateInfo.enabledExtensionCount	 = static_cast<uint32_t>(std::size(LogicalExtensions));
 	DeviceCreateInfo.ppEnabledExtensionNames = LogicalExtensions;
-	DeviceCreateInfo.pEnabledFeatures		 = &PhysicalDeviceFeatures;
+	DeviceCreateInfo.pEnabledFeatures		 = &Features;
 
 	VERIFY_VULKAN_API(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &VkDevice));
 
@@ -381,11 +518,8 @@ void VulkanDevice::InitializeDevice()
 	Desc.Resource.NumTextureDescriptors		   = 4096;
 	Desc.Resource.NumRWTextureDescriptors	   = 4096;
 
-	ResourceDescriptorHeap = VulkanDescriptorHeap(this, Desc);
-
-	Desc.Type					= DescriptorHeapType::Sampler;
-	Desc.Sampler.NumDescriptors = 2048;
-	SamplerDescriptorHeap		= VulkanDescriptorHeap(this, Desc);
+	ResourceDescriptorHeap = VulkanResourceDescriptorHeap(this, Desc);
+	SamplerDescriptorHeap  = VulkanSamplerDescriptorHeap(this, 2048);
 }
 
 VulkanCommandQueue* VulkanDevice::InitializePresentQueue(VkSurfaceKHR Surface)
@@ -422,21 +556,21 @@ bool VulkanDevice::QueryValidationLayerSupport()
 
 bool VulkanDevice::IsPhysicalDeviceSuitable(VkPhysicalDevice PhysicalDevice)
 {
-	vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
-	vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
+	vkGetPhysicalDeviceProperties(PhysicalDevice, &Properties);
+	vkGetPhysicalDeviceFeatures(PhysicalDevice, &Features);
 
 	// http://roar11.com/2019/06/vulkan-textures-unbound/
 	// Bindless
 	auto PhysicalDeviceDescriptorIndexingFeatures = VkStruct<VkPhysicalDeviceDescriptorIndexingFeatures>();
 
-	PhysicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-	PhysicalDeviceFeatures2.pNext = &PhysicalDeviceDescriptorIndexingFeatures;
-	vkGetPhysicalDeviceFeatures2(PhysicalDevice, &PhysicalDeviceFeatures2);
+	Features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	Features2.pNext = &PhysicalDeviceDescriptorIndexingFeatures;
+	vkGetPhysicalDeviceFeatures2(PhysicalDevice, &Features2);
 
 	bool BindlessSupport = PhysicalDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound &&
 						   PhysicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray;
 
-	return PhysicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+	return Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
 		   CheckDeviceExtensionSupport(PhysicalDevice) && BindlessSupport;
 }
 
