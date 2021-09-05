@@ -88,57 +88,6 @@ void VulkanResourceDescriptorHeap::Release(UINT PoolIndex, UINT Index)
 	IndexPoolArray[PoolIndex].Release(static_cast<size_t>(Index));
 }
 
-auto VulkanResourceDescriptorHeap::AllocateDescriptorHandle(EDescriptorType DescriptorType) -> VulkanDescriptorHandle
-{
-	size_t	   PoolIndex = DescriptorType != EDescriptorType::Sampler ? static_cast<size_t>(DescriptorType) : 0;
-	const UINT Index	 = IndexPoolArray[PoolIndex].Allocate();
-	return { .Resource = nullptr, .Type = DescriptorType, .Index = Index };
-}
-
-void VulkanResourceDescriptorHeap::UpdateDescriptor(const VulkanDescriptorHandle& Handle)
-{
-	VkDescriptorImageInfo  DescriptorImageInfo	= {};
-	VkDescriptorBufferInfo DescriptorBufferInfo = {};
-	if (Handle.Type == EDescriptorType::ConstantBuffer)
-	{
-		assert(Handle.Resource);
-
-		VulkanBuffer*	   ApiBuffer = Handle.Resource->As<VulkanBuffer>();
-		VkBufferCreateInfo Desc		 = ApiBuffer->GetDesc();
-
-		DescriptorBufferInfo.buffer = ApiBuffer->GetApiHandle();
-		DescriptorBufferInfo.offset = 0;
-		DescriptorBufferInfo.range	= Desc.size;
-	}
-	if (Handle.Type == EDescriptorType::Texture)
-	{
-		assert(Handle.Resource);
-
-		VulkanTexture* ApiTexture = Handle.Resource->As<VulkanTexture>();
-
-		DescriptorImageInfo.sampler		= nullptr;
-		DescriptorImageInfo.imageView	= ApiTexture->GetImageView();
-		DescriptorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	}
-
-	auto WriteDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
-	WriteDescriptorSet.dstSet		   = DescriptorSet;
-	WriteDescriptorSet.dstBinding	   = Handle.Type != EDescriptorType::Sampler ? static_cast<size_t>(Handle.Type) : 0;
-	WriteDescriptorSet.dstArrayElement = Handle.Index;
-	WriteDescriptorSet.descriptorCount = 1;
-	WriteDescriptorSet.descriptorType  = ToVkDescriptorType(Handle.Type);
-	if (Handle.Type == EDescriptorType::ConstantBuffer)
-	{
-		WriteDescriptorSet.pBufferInfo = &DescriptorBufferInfo;
-	}
-	if (Handle.Type == EDescriptorType::Texture || Handle.Type == EDescriptorType::Sampler)
-	{
-		WriteDescriptorSet.pImageInfo = &DescriptorImageInfo;
-	}
-
-	vkUpdateDescriptorSets(Parent->As<VulkanDevice>()->GetVkDevice(), 1, &WriteDescriptorSet, 0, nullptr);
-}
-
 VulkanSamplerDescriptorHeap::VulkanSamplerDescriptorHeap(VulkanDevice* Parent, UINT NumDescriptors)
 	: VulkanDeviceChild(Parent)
 	, IndexPool(NumDescriptors)

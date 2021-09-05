@@ -43,7 +43,7 @@ class D3D12LinearAllocator : public D3D12LinkedDeviceChild
 public:
 	enum
 	{
-		CpuAllocatorPageSize = 128 * 1024
+		CpuAllocatorPageSize = 64 * 1024
 	};
 
 	D3D12LinearAllocator(D3D12LinkedDevice* Parent)

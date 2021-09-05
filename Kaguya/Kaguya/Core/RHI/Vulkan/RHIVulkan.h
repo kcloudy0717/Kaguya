@@ -76,20 +76,6 @@ constexpr VkCompareOp ToVkCompareOp(ComparisonFunc Func)
 	// clang-format on
 }
 
-constexpr VkDescriptorType ToVkDescriptorType(EDescriptorType DescriptorType)
-{
-	// clang-format off
-	switch (DescriptorType)
-	{
-	case EDescriptorType::ConstantBuffer:	return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	case EDescriptorType::Texture:			return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-	case EDescriptorType::RWTexture:		return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-	case EDescriptorType::Sampler:			return VK_DESCRIPTOR_TYPE_SAMPLER;
-	default:								return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-	}
-	// clang-format on
-}
-
 constexpr VkImageType ToVkImageType(ERHITextureType RHITextureType)
 {
 	switch (RHITextureType)

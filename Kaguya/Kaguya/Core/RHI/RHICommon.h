@@ -200,40 +200,6 @@ struct SamplerDesc
 	FLOAT				MaxLOD		= FLT_MAX;
 };
 
-enum class EDescriptorType
-{
-	ConstantBuffer,
-	Texture,
-	RWTexture,
-	Sampler,
-
-	NumDescriptorTypes
-};
-
-struct VulkanDescriptorHandle
-{
-	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
-
-	IRHIResource* Resource = nullptr;
-
-	EDescriptorType Type;
-	UINT			Index = UINT_MAX;
-};
-
-struct DescriptorRange
-{
-	EDescriptorType Type;
-	UINT			NumDescriptors;
-	UINT			Binding;
-};
-
-struct DescriptorTableDesc
-{
-	void AddDescriptorRange(const DescriptorRange& Range) { Ranges.emplace_back(Range); }
-
-	std::vector<DescriptorRange> Ranges;
-};
-
 struct PushConstant
 {
 	UINT Size;

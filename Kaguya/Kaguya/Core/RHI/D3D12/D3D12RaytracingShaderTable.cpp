@@ -14,8 +14,10 @@ void D3D12RaytracingShaderBindingTable::Generate(D3D12LinkedDevice* Device)
 	SizeInBytes += HitGroupShaderTable->GetTotalSizeInBytes();
 	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 
-	SBTBuffer = D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	CPUData	  = std::make_unique<BYTE[]>(SizeInBytes);
+	SBTBuffer		= D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	SBTUploadBuffer = D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
+	SBTUploadBuffer.Initialize();
+	CPUData = std::make_unique<BYTE[]>(SizeInBytes);
 }
 
 void D3D12RaytracingShaderBindingTable::Write()
@@ -29,10 +31,10 @@ void D3D12RaytracingShaderBindingTable::Write()
 
 void D3D12RaytracingShaderBindingTable::CopyToGPU(D3D12CommandContext& Context) const
 {
-	D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(SizeInBytes);
-	std::memcpy(Allocation.CPUVirtualAddress, CPUData.get(), SizeInBytes);
+	BYTE* CPUVirtualAddress = SBTUploadBuffer.GetCPUVirtualAddress<BYTE>();
+	std::memcpy(CPUVirtualAddress, CPUData.get(), SizeInBytes);
 
-	Context->CopyBufferRegion(SBTBuffer.GetResource(), 0, Allocation.pResource, Allocation.Offset, Allocation.Size);
+	Context->CopyBufferRegion(SBTBuffer.GetResource(), 0, SBTUploadBuffer.GetResource(), 0, SizeInBytes);
 }
 
 D3D12_DISPATCH_RAYS_DESC D3D12RaytracingShaderBindingTable::GetDispatchRaysDesc(

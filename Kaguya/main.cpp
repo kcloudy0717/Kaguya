@@ -124,7 +124,7 @@ void StreamWrite(std::ostream& os, const spv_reflect::ShaderModule& obj)
 	}
 }
 
-class VulkanEngine : public Application
+class VulkanEngine final : public Application
 {
 public:
 	VulkanEngine() {}
@@ -159,46 +159,45 @@ public:
 		InitDescriptors();
 		InitPipelines();
 
-		// 1: create descriptor pool for IMGUI
-		// the size of the pool is very oversize, but it's copied from imgui demo itself.
-		VkDescriptorPoolSize PoolSizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
-											 { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
-											 { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
-											 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
-											 { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
-											 { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
+		// The size of the pool is very oversize, but it's copied from imgui demo itself.
+		VkDescriptorPoolSize PoolSizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1024 },
+											 { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1024 },
+											 { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1024 },
+											 { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1024 },
+											 { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 },
+											 { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024 } };
 
-		VkDescriptorPoolCreateInfo pool_info = {};
-		pool_info.sType						 = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		pool_info.flags						 = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-		pool_info.maxSets					 = 1000;
-		pool_info.poolSizeCount				 = std::size(PoolSizes);
-		pool_info.pPoolSizes				 = PoolSizes;
+		auto DescriptorPoolCreateInfo		   = VkStruct<VkDescriptorPoolCreateInfo>();
+		DescriptorPoolCreateInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		DescriptorPoolCreateInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		DescriptorPoolCreateInfo.maxSets	   = 1024;
+		DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(std::size(PoolSizes));
+		DescriptorPoolCreateInfo.pPoolSizes	   = PoolSizes;
 
-		VERIFY_VULKAN_API(vkCreateDescriptorPool(Device.GetVkDevice(), &pool_info, nullptr, &ImguiDescriptorPool));
+		VERIFY_VULKAN_API(
+			vkCreateDescriptorPool(Device.GetVkDevice(), &DescriptorPoolCreateInfo, nullptr, &ImguiDescriptorPool));
 
-		ImGui_ImplVulkan_InitInfo init_info = {};
-		init_info.Instance					= Device.GetVkInstance();
-		init_info.PhysicalDevice			= Device.GetVkPhysicalDevice();
-		init_info.Device					= Device.GetVkDevice();
-		init_info.Queue						= Device.GetGraphicsQueue().GetApiHandle();
-		init_info.DescriptorPool			= ImguiDescriptorPool;
-		init_info.MinImageCount				= 3;
-		init_info.ImageCount				= 3;
-		init_info.MSAASamples				= VK_SAMPLE_COUNT_1_BIT;
+		ImGui_ImplVulkan_InitInfo ImGuiVulkan = {};
+		ImGuiVulkan.Instance				  = Device.GetVkInstance();
+		ImGuiVulkan.PhysicalDevice			  = Device.GetVkPhysicalDevice();
+		ImGuiVulkan.Device					  = Device.GetVkDevice();
+		ImGuiVulkan.Queue					  = Device.GetGraphicsQueue().GetApiHandle();
+		ImGuiVulkan.DescriptorPool			  = ImguiDescriptorPool;
+		ImGuiVulkan.MinImageCount			  = 3;
+		ImGuiVulkan.ImageCount				  = 3;
+		ImGuiVulkan.MSAASamples				  = VK_SAMPLE_COUNT_1_BIT;
 
-		ImGui_ImplVulkan_Init(&init_info, RenderPass->As<VulkanRenderPass>()->GetApiHandle());
+		ImGui_ImplVulkan_Init(&ImGuiVulkan, RenderPass->As<VulkanRenderPass>()->GetApiHandle());
 		GraphicsImmediate(
 			[&](VkCommandBuffer CommandBuffer)
 			{
 				ImGui_ImplVulkan_CreateFontsTexture(CommandBuffer);
 			});
-		// clear font textures from cpu data
 		ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 		LoadMeshes();
@@ -268,7 +267,7 @@ public:
 		RHIRect		ScissorRect = { 0, 0, SwapChain.GetWidth(), SwapChain.GetHeight() };
 		Context.SetViewports(1, &Viewport, &ScissorRect);
 
-		DrawObjects(Context, _renderables.data(), _renderables.size());
+		DrawObjects(Context, Renderables.size(), Renderables.data());
 
 		ImGui::Render();
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), Context.CommandBuffer);
@@ -447,7 +446,7 @@ private:
 		monkey.material		= GetMaterial("Default");
 		XMStoreFloat4x4(&monkey.transformMatrix, DirectX::XMMatrixIdentity());
 
-		_renderables.push_back(monkey);
+		Renderables.push_back(monkey);
 
 		for (int x = -20; x <= 20; x++)
 		{
@@ -460,7 +459,7 @@ private:
 					&tri.transformMatrix,
 					DirectX::XMMatrixTranslation(float(x) * 2.5f, 0, float(y) * 2.5f));
 
-				_renderables.push_back(tri);
+				Renderables.push_back(tri);
 			}
 		}
 	}
@@ -636,52 +635,42 @@ private:
 	VulkanMaterial* CreateMaterial(
 		VulkanRootSignature* RootSignature,
 		VulkanPipelineState* PipelineState,
-		const std::string&	 name)
+		const std::string&	 Name)
 	{
-		VulkanMaterial mat;
-		mat.RootSignature = RootSignature;
-		mat.PipelineState = PipelineState;
-		_materials[name]  = std::move(mat);
-		return &_materials[name];
+		VulkanMaterial Material = {};
+		Material.RootSignature	= RootSignature;
+		Material.PipelineState	= PipelineState;
+		Materials[Name]			= std::move(Material);
+		return &Materials[Name];
 	}
 
-	// returns nullptr if it can't be found
-	VulkanMaterial* GetMaterial(const std::string& name)
+	VulkanMaterial* GetMaterial(const std::string& Name)
 	{
-		// search for the object, and return nullptr if not found
-		auto it = _materials.find(name);
-		if (it == _materials.end())
+		if (auto iter = Materials.find(Name); iter != Materials.end())
 		{
-			return nullptr;
+			return &iter->second;
 		}
-		else
-		{
-			return &it->second;
-		}
+
+		return nullptr;
 	}
 
-	// returns nullptr if it can't be found
 	VulkanMesh* GetMesh(const std::string& name)
 	{
-		auto it = _meshes.find(name);
-		if (it == _meshes.end())
+		if (auto iter = Meshes.find(name); iter != Meshes.end())
 		{
-			return nullptr;
+			return &iter->second;
 		}
-		else
-		{
-			return &it->second;
-		}
+
+		return nullptr;
 	}
 
-	// our draw function
-	void DrawObjects(VulkanCommandContext& Context, RenderObject* first, int count)
+	void DrawObjects(VulkanCommandContext& Context, int NumRenderObjects, RenderObject* pRenderObjects)
 	{
 		VulkanMesh*		lastMesh	 = nullptr;
 		VulkanMaterial* lastMaterial = nullptr;
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < NumRenderObjects; i++)
 		{
-			RenderObject& object = first[i];
+			RenderObject& object = pRenderObjects[i];
 
 			// only bind the pipeline if it doesn't match with the already bound one
 			if (object.material != lastMaterial)
@@ -740,7 +729,7 @@ private:
 	ShaderCompiler ShaderCompiler;
 
 	VulkanDevice	 Device;
-	VkDescriptorPool ImguiDescriptorPool;
+	VkDescriptorPool ImguiDescriptorPool = nullptr;
 
 	VulkanSwapChain SwapChain;
 
@@ -762,10 +751,10 @@ private:
 	AsyncImageLoader ImageLoader;
 
 	// default array of renderable objects
-	std::vector<RenderObject> _renderables;
+	std::vector<RenderObject> Renderables;
 
-	std::unordered_map<std::string, VulkanMaterial> _materials;
-	std::unordered_map<std::string, VulkanMesh>		_meshes;
+	std::unordered_map<std::string, VulkanMaterial> Materials;
+	std::unordered_map<std::string, VulkanMesh>		Meshes;
 };
 
 int main(int argc, char* argv[])

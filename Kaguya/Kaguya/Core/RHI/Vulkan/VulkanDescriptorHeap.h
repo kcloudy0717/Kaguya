@@ -19,10 +19,6 @@ public:
 
 	void Release(UINT PoolIndex, UINT Index);
 
-	[[nodiscard]] auto AllocateDescriptorHandle(EDescriptorType DescriptorType) -> VulkanDescriptorHandle;
-
-	void UpdateDescriptor(const VulkanDescriptorHandle& Handle);
-
 	VkDescriptorSetLayout  DescriptorSetLayout = VK_NULL_HANDLE;
 	VkDescriptorPool	   DescriptorPool	   = VK_NULL_HANDLE;
 	VkDescriptorSet		   DescriptorSet	   = VK_NULL_HANDLE;

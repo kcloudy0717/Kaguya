@@ -3,23 +3,22 @@
 #include <Core/CoreDefines.h>
 #include "D3D12LinkedDevice.h"
 
-// 	========== Miss shader table indexing ==========
-// 	Simple pointer arithmetic
-// 	MissShaderRecordAddress = D3D12_DISPATCH_RAYS_DESC.MissShaderTable.StartAddress +
+// ========== Miss shader table indexing ==========
+// Simple pointer arithmetic
+// MissShaderRecordAddress = D3D12_DISPATCH_RAYS_DESC.MissShaderTable.StartAddress +
 // D3D12_DISPATCH_RAYS_DESC.MissShaderTable.StrideInBytes * MissShaderIndex
 //
 
 //
-//	========== Hit group table indexing ==========
-//	HitGroupRecordAddress = D3D12_DISPATCH_RAYS_DESC.HitGroupTable.StartAddress +
+// ========== Hit group table indexing ==========
+// HitGroupRecordAddress = D3D12_DISPATCH_RAYS_DESC.HitGroupTable.StartAddress +
 // D3D12_DISPATCH_RAYS_DESC.HitGroupTable.StrideInBytes * HitGroupEntryIndex
 //
-//	where HitGroupEntryIndex =
-//	(RayContributionToHitGroupIndex + (MultiplierForGeometryContributionToHitGroupIndex *
+// where HitGroupEntryIndex =
+// (RayContributionToHitGroupIndex + (MultiplierForGeometryContributionToHitGroupIndex *
 // GeometryContributionToHitGroupIndex) + D3D12_RAYTRACING_INSTANCE_DESC.InstanceContributionToHitGroupIndex)
 //
-//	GeometryContributionToHitGroupIndex is a system generated index of geometry in bottom-level acceleration structure
-//(0,1,2,3..)
+//	GeometryContributionToHitGroupIndex is a system generated index of geometry in BLAS (0,1,2,3..)
 //
 
 // This blog post by Will is very useful for calculating sbt in various graphics APIs
@@ -126,8 +125,8 @@ public:
 	D3D12RaytracingShaderTable<T>* AddRayGenerationShaderTable(UINT NumRayGenerationShaders)
 	{
 		assert(RayGenerationShaderTable == nullptr);
-		D3D12RaytracingShaderTable<T>* Table = new D3D12RaytracingShaderTable<T>(NumRayGenerationShaders);
-		RayGenerationShaderTable			 = std::unique_ptr<IRaytracingShaderTable>(Table);
+		auto Table				 = new D3D12RaytracingShaderTable<T>(NumRayGenerationShaders);
+		RayGenerationShaderTable = std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;
 	}
 
@@ -135,8 +134,8 @@ public:
 	D3D12RaytracingShaderTable<T>* AddMissShaderTable(UINT NumMissShaders)
 	{
 		assert(MissShaderTable == nullptr);
-		D3D12RaytracingShaderTable<T>* Table = new D3D12RaytracingShaderTable<T>(NumMissShaders);
-		MissShaderTable						 = std::unique_ptr<IRaytracingShaderTable>(Table);
+		auto Table		= new D3D12RaytracingShaderTable<T>(NumMissShaders);
+		MissShaderTable = std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;
 	}
 
@@ -144,8 +143,8 @@ public:
 	D3D12RaytracingShaderTable<T>* AddHitGroupShaderTable(UINT NumHitGroups)
 	{
 		assert(HitGroupShaderTable == nullptr);
-		D3D12RaytracingShaderTable<T>* Table = new D3D12RaytracingShaderTable<T>(NumHitGroups);
-		HitGroupShaderTable					 = std::unique_ptr<IRaytracingShaderTable>(Table);
+		auto Table			= new D3D12RaytracingShaderTable<T>(NumHitGroups);
+		HitGroupShaderTable = std::unique_ptr<IRaytracingShaderTable>(Table);
 		return Table;
 	}
 
@@ -171,6 +170,6 @@ private:
 
 	UINT64 SizeInBytes = 0;
 
-	D3D12Buffer				SBTBuffer;
+	D3D12Buffer				SBTBuffer, SBTUploadBuffer;
 	std::unique_ptr<BYTE[]> CPUData;
 };
