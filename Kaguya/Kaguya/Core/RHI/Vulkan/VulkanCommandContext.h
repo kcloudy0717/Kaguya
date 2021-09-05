@@ -20,6 +20,7 @@ public:
 	void SetViewports(UINT NumViewports, RHIViewport* pViewports, RHIRect* pScissorRects);
 
 	void SetPushConstants(UINT Size, const void* pSrcData);
+	void SetConstantBufferView(UINT Binding, IRHIBuffer* Buffer);
 	void SetDescriptorSets();
 
 	void BeginRenderPass(IRHIRenderPass* RenderPass, IRHIRenderTarget* RenderTarget);
@@ -39,5 +40,5 @@ public:
 
 	VkCommandBuffer		 CommandBuffer	   = VK_NULL_HANDLE;
 	VkPipelineBindPoint	 PipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-	VulkanRootSignature* RootSignature	   = VK_NULL_HANDLE;
+	VkPipelineLayout	 PipelineLayout	   = VK_NULL_HANDLE;
 };

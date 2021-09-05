@@ -3,14 +3,14 @@
 VulkanRootSignature::VulkanRootSignature(VulkanDevice* Parent, const RootSignatureDesc& Desc)
 	: IRHIRootSignature(Parent)
 {
-	if (!Desc.Bindings.empty())
+	if (!Desc.DescriptorSetLayoutBindings.empty())
 	{
 		auto DescriptorSetLayoutCreateInfo = VkStruct<VkDescriptorSetLayoutCreateInfo>();
 		// Setting this flag tells the descriptor set layouts that no actual descriptor sets are allocated but instead
 		// pushed at command buffer creation time
 		DescriptorSetLayoutCreateInfo.flags		   = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
-		DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(Desc.Bindings.size());
-		DescriptorSetLayoutCreateInfo.pBindings	   = Desc.Bindings.data();
+		DescriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(Desc.DescriptorSetLayoutBindings.size());
+		DescriptorSetLayoutCreateInfo.pBindings	   = Desc.DescriptorSetLayoutBindings.data();
 		VERIFY_VULKAN_API(vkCreateDescriptorSetLayout(
 			Parent->GetVkDevice(),
 			&DescriptorSetLayoutCreateInfo,

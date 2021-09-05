@@ -214,17 +214,21 @@ struct RootSignatureDesc
 		PushConstant.Size		   = sizeof(T);
 	}
 
-	void AddRootConstantBufferView(UINT Register)
+	void AddConstantBufferView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER); }
+	void AddShaderResourceView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); }
+	void AddUnorderedAccessView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); }
+
+	void AddDescriptor(UINT Binding, VkDescriptorType Type)
 	{
-		VkDescriptorSetLayoutBinding& Binding = Bindings.emplace_back();
-		Binding.binding						  = Register;
-		Binding.descriptorType				  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		Binding.descriptorCount				  = 1;
-		Binding.stageFlags					  = VK_SHADER_STAGE_ALL;
+		VkDescriptorSetLayoutBinding& DescriptorSetLayoutBinding = DescriptorSetLayoutBindings.emplace_back();
+		DescriptorSetLayoutBinding.binding						 = Binding;
+		DescriptorSetLayoutBinding.descriptorType				 = Type;
+		DescriptorSetLayoutBinding.descriptorCount				 = 1;
+		DescriptorSetLayoutBinding.stageFlags					 = VK_SHADER_STAGE_ALL;
 	}
 
 	std::vector<PushConstant>				  PushConstants;
-	std::vector<VkDescriptorSetLayoutBinding> Bindings;
+	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
 };
 
 enum class EResourceStates

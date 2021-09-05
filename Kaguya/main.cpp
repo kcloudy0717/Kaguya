@@ -13,8 +13,8 @@
 struct MeshPushConstants
 {
 	DirectX::XMFLOAT4X4 Transform;
-	UINT				Id1;
-	UINT				Id2;
+	UINT				TextureId;
+	UINT				SamplerId;
 };
 
 struct UniformSceneConstants
@@ -341,31 +341,24 @@ private:
 		{
 			RootSignatureDesc Desc = {};
 			Desc.AddPushConstant<MeshPushConstants>();
-			Desc.AddRootConstantBufferView(0);
+			Desc.AddConstantBufferView(0);
 			RootSignature = Device.CreateRootSignature(Desc);
 		}
-		//{
-		//	VulkanDescriptorHandle Handle =
-		//		Device.GetResourceDescriptorHeap().AllocateDescriptorHandle(EDescriptorType::ConstantBuffer);
-		//	Handle.Resource = SceneConstants.Get();
-		//
-		//	Device.GetResourceDescriptorHeap().UpdateDescriptor(Handle);
-		//}
 		{
-			DescriptorHandle Handle = Device.AllocateSampler();
-			SamplerDesc		 SamplerDesc(
-				 ESamplerFilter::Point,
-				 ESamplerAddressMode::Wrap,
-				 ESamplerAddressMode::Wrap,
-				 ESamplerAddressMode::Wrap,
-				 0.0f,
-				 0,
-				 ComparisonFunc::Never,
-				 0.0f,
-				 0.0f,
-				 0.0f);
+			Sampler = Device.AllocateSampler();
+			SamplerDesc SamplerDesc(
+				ESamplerFilter::Point,
+				ESamplerAddressMode::Wrap,
+				ESamplerAddressMode::Wrap,
+				ESamplerAddressMode::Wrap,
+				0.0f,
+				0,
+				ComparisonFunc::Never,
+				0.0f,
+				0.0f,
+				0.0f);
 
-			Device.CreateSampler(SamplerDesc, Handle);
+			Device.CreateSampler(SamplerDesc, Sampler);
 		}
 	}
 
@@ -441,12 +434,12 @@ private:
 
 	void InitScene()
 	{
-		RenderObject monkey = {};
-		monkey.mesh			= &SphereMesh;
-		monkey.material		= GetMaterial("Default");
-		XMStoreFloat4x4(&monkey.transformMatrix, DirectX::XMMatrixIdentity());
+		RenderObject Sphere = {};
+		Sphere.mesh			= &SphereMesh;
+		Sphere.material		= GetMaterial("Default");
+		XMStoreFloat4x4(&Sphere.transformMatrix, DirectX::XMMatrixIdentity());
 
-		Renderables.push_back(monkey);
+		Renderables.push_back(Sphere);
 
 		for (int x = -20; x <= 20; x++)
 		{
@@ -678,32 +671,15 @@ private:
 				Context.SetGraphicsPipelineState(object.material->PipelineState);
 				Context.SetGraphicsRootSignature(object.material->RootSignature);
 				Context.SetDescriptorSets();
-				VkDescriptorBufferInfo descriptor = {};
-				descriptor.buffer				  = SceneConstants->As<VulkanBuffer>()->GetApiHandle();
-				descriptor.offset				  = 0;
-				descriptor.range				  = SceneConstants->As<VulkanBuffer>()->GetDesc().size;
-
-				auto writeDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
-				writeDescriptorSet.dstSet		   = 0;
-				writeDescriptorSet.dstBinding	   = 0;
-				writeDescriptorSet.descriptorCount = 1;
-				writeDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				writeDescriptorSet.pBufferInfo	   = &descriptor;
-
-				VulkanAPI::vkCmdPushDescriptorSetKHR(
-					Context.CommandBuffer,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					RootSignature->As<VulkanRootSignature>()->GetApiHandle(),
-					2,
-					1,
-					&writeDescriptorSet);
+				Context.SetConstantBufferView(0, SceneConstants.Get());
 
 				lastMaterial = object.material;
 			}
 
 			MeshPushConstants constants = {};
 			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
-			constants.Id1 = SRV.Index;
+			constants.TextureId = SRV.Index;
+			constants.SamplerId = Sampler.Index;
 
 			Context.SetPushConstants(sizeof(MeshPushConstants), &constants);
 
@@ -745,6 +721,7 @@ private:
 	RefPtr<IRHIBuffer>	SceneConstants;
 	RefPtr<IRHITexture> Texture;
 	DescriptorHandle	SRV;
+	DescriptorHandle	Sampler;
 
 	World			 World;
 	AsyncMeshLoader	 MeshLoader;

@@ -20,13 +20,13 @@ void VulkanCommandContext::CloseCommandList()
 void VulkanCommandContext::SetGraphicsRootSignature(VulkanRootSignature* pRootSignature)
 {
 	PipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	RootSignature	  = pRootSignature;
+	PipelineLayout	  = pRootSignature->GetApiHandle();
 }
 
 void VulkanCommandContext::SetComputeRootSignature(VulkanRootSignature* pRootSignature)
 {
 	PipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-	RootSignature	  = pRootSignature;
+	PipelineLayout	  = pRootSignature->GetApiHandle();
 }
 
 void VulkanCommandContext::SetGraphicsPipelineState(VulkanPipelineState* pPipelineState)
@@ -62,15 +62,38 @@ void VulkanCommandContext::SetViewports(UINT NumViewports, RHIViewport* pViewpor
 
 void VulkanCommandContext::SetPushConstants(UINT Size, const void* pSrcData)
 {
-	const VkPipelineLayout PipelineLayout = RootSignature->GetApiHandle();
 	vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_ALL, 0, Size, pSrcData);
+}
+
+void VulkanCommandContext::SetConstantBufferView(UINT Binding, IRHIBuffer* Buffer)
+{
+	constexpr UINT RootDescriptorLayoutIndex = 2;
+
+	VkDescriptorBufferInfo DescriptorBufferInfo = {};
+	DescriptorBufferInfo.buffer					= Buffer->As<VulkanBuffer>()->GetApiHandle();
+	DescriptorBufferInfo.offset					= 0;
+	DescriptorBufferInfo.range					= Buffer->As<VulkanBuffer>()->GetDesc().size;
+
+	auto WriteDescriptorSet			   = VkStruct<VkWriteDescriptorSet>();
+	WriteDescriptorSet.dstSet		   = nullptr;
+	WriteDescriptorSet.dstBinding	   = Binding;
+	WriteDescriptorSet.descriptorCount = 1;
+	WriteDescriptorSet.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	WriteDescriptorSet.pBufferInfo	   = &DescriptorBufferInfo;
+
+	VulkanAPI::vkCmdPushDescriptorSetKHR(
+		CommandBuffer,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		PipelineLayout,
+		RootDescriptorLayoutIndex,
+		1,
+		&WriteDescriptorSet);
 }
 
 void VulkanCommandContext::SetDescriptorSets()
 {
-	const VkPipelineLayout PipelineLayout	= RootSignature->GetApiHandle();
-	const VkDescriptorSet  DescriptorSets[] = { GetParentDevice()->GetResourceDescriptorHeap().DescriptorSet,
-												GetParentDevice()->GetSamplerDescriptorHeap().DescriptorSet };
+	const VkDescriptorSet DescriptorSets[] = { GetParentDevice()->GetResourceDescriptorHeap().DescriptorSet,
+											   GetParentDevice()->GetSamplerDescriptorHeap().DescriptorSet };
 	vkCmdBindDescriptorSets(CommandBuffer, PipelineBindPoint, PipelineLayout, 0, 2, DescriptorSets, 0, nullptr);
 }
 

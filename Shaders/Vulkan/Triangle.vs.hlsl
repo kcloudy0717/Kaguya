@@ -15,8 +15,8 @@ struct VSOutput
 struct MeshPushConstants
 {
 	float4x4 Transform;
-	uint	 Id1;
-	uint	 Id2;
+	uint	 TextureId;
+	uint	 SamplerId;
 };
 [[vk::push_constant]] MeshPushConstants PushConstants;
 
@@ -30,7 +30,7 @@ struct UniformSceneConstants
 [[vk::binding(0, 0)]] Texture2D			  Texture2DTable[];
 [[vk::binding(1, 0)]] RWTexture2D<float4> RWTexture2DTable[];
 
-[[vk::binding(0, 1)]] SamplerState Sampler;
+[[vk::binding(0, 1)]] SamplerState SamplerTable[];
 
 [[vk::binding(0, 2)]] ConstantBuffer<UniformSceneConstants> SceneConstants;
 
