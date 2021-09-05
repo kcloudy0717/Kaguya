@@ -100,14 +100,6 @@ class IRHIPipelineState : public IRHIDeviceChild
 	using IRHIDeviceChild::IRHIDeviceChild;
 };
 
-class IRHIView : public IRHIDeviceChild
-{
-public:
-	using IRHIDeviceChild::IRHIDeviceChild;
-
-	virtual [[nodiscard]] auto GetIndex() const noexcept -> UINT = 0;
-};
-
 class IRHIResource : public IRHIDeviceChild
 {
 public:

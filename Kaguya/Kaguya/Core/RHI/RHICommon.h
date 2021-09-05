@@ -578,9 +578,18 @@ struct RHITextureDesc
 		};
 	}
 
-	bool AllowRenderTarget() const noexcept { return Flags & ERHITextureFlags::RHITextureFlag_AllowRenderTarget; }
-	bool AllowDepthStencil() const noexcept { return Flags & ERHITextureFlags::RHITextureFlag_AllowDepthStencil; }
-	bool AllowUnorderedAccess() const noexcept { return Flags & ERHITextureFlags::RHITextureFlag_AllowUnorderedAccess; }
+	[[nodiscard]] bool AllowRenderTarget() const noexcept
+	{
+		return Flags & ERHITextureFlags::RHITextureFlag_AllowRenderTarget;
+	}
+	[[nodiscard]] bool AllowDepthStencil() const noexcept
+	{
+		return Flags & ERHITextureFlags::RHITextureFlag_AllowDepthStencil;
+	}
+	[[nodiscard]] bool AllowUnorderedAccess() const noexcept
+	{
+		return Flags & ERHITextureFlags::RHITextureFlag_AllowUnorderedAccess;
+	}
 
 	ERHIFormat						 Format				 = ERHIFormat::UNKNOWN;
 	ERHITextureType					 Type				 = ERHITextureType::Unknown;
@@ -915,93 +924,7 @@ struct PipelineStateStreamDesc
 	void*  pPipelineStateSubobjectStream;
 };
 
-inline void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* pCallbacks)
-{
-	if (Desc.SizeInBytes == 0 || Desc.pPipelineStateSubobjectStream == nullptr)
-	{
-		pCallbacks->ErrorBadInputParameter(1); // first parameter issue
-		return;
-	}
-
-	bool SubobjectSeen[static_cast<size_t>(PipelineStateSubobjectType::NumTypes)] = {};
-	for (SIZE_T CurOffset = 0, SizeOfSubobject = 0; CurOffset < Desc.SizeInBytes; CurOffset += SizeOfSubobject)
-	{
-		BYTE*  pStream		 = static_cast<BYTE*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
-		auto   SubobjectType = *reinterpret_cast<PipelineStateSubobjectType*>(pStream);
-		size_t Index		 = static_cast<size_t>(SubobjectType);
-
-		if (Index < 0 || Index >= static_cast<size_t>(PipelineStateSubobjectType::NumTypes))
-		{
-			pCallbacks->ErrorUnknownSubobject(Index);
-			return;
-		}
-		if (SubobjectSeen[Index])
-		{
-			pCallbacks->ErrorDuplicateSubobject(SubobjectType);
-			return; // disallow subobject duplicates in a stream
-		}
-		SubobjectSeen[Index] = true;
-
-		switch (SubobjectType)
-		{
-		case PipelineStateSubobjectType::RootSignature:
-			pCallbacks->RootSignatureCb(*reinterpret_cast<PipelineStateStreamRootSignature*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamRootSignature);
-			break;
-		case PipelineStateSubobjectType::VS:
-			pCallbacks->VSCb(*reinterpret_cast<PipelineStateStreamVS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamVS);
-			break;
-		case PipelineStateSubobjectType::PS:
-			pCallbacks->PSCb(*reinterpret_cast<PipelineStateStreamPS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamPS);
-			break;
-		case PipelineStateSubobjectType::DS:
-			pCallbacks->DSCb(*reinterpret_cast<PipelineStateStreamDS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamPS);
-			break;
-		case PipelineStateSubobjectType::HS:
-			pCallbacks->HSCb(*reinterpret_cast<PipelineStateStreamHS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamHS);
-			break;
-		case PipelineStateSubobjectType::GS:
-			pCallbacks->GSCb(*reinterpret_cast<PipelineStateStreamGS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamGS);
-			break;
-		case PipelineStateSubobjectType::CS:
-			pCallbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamCS);
-			break;
-		case PipelineStateSubobjectType::BlendState:
-			pCallbacks->BlendStateCb(*reinterpret_cast<PipelineStateStreamBlendState*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamBlendState);
-			break;
-		case PipelineStateSubobjectType::RasterizerState:
-			pCallbacks->RasterizerStateCb(*reinterpret_cast<PipelineStateStreamRasterizerState*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamRasterizerState);
-			break;
-		case PipelineStateSubobjectType::DepthStencilState:
-			pCallbacks->DepthStencilStateCb(*reinterpret_cast<PipelineStateStreamDepthStencilState*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamDepthStencilState);
-			break;
-		case PipelineStateSubobjectType::InputLayout:
-			pCallbacks->InputLayoutCb(*reinterpret_cast<PipelineStateStreamInputLayout*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamInputLayout);
-			break;
-		case PipelineStateSubobjectType::PrimitiveTopology:
-			pCallbacks->PrimitiveTopologyTypeCb(*reinterpret_cast<PipelineStateStreamPrimitiveTopology*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamPrimitiveTopology);
-			break;
-		case PipelineStateSubobjectType::RenderPass:
-			pCallbacks->RenderPassCb(*reinterpret_cast<PipelineStateStreamRenderPass*>(pStream));
-			SizeOfSubobject = sizeof(PipelineStateStreamRenderPass);
-			break;
-		default:
-			pCallbacks->ErrorUnknownSubobject(Index);
-			return;
-		}
-	}
-}
+void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* pCallbacks);
 
 enum class ESRVType
 {

@@ -189,3 +189,91 @@ void InputLayout::AddVertexLayoutElement(
 	Element.Format		  = Format;
 	Element.Stride		  = Stride;
 }
+
+void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* pCallbacks)
+{
+	if (Desc.SizeInBytes == 0 || Desc.pPipelineStateSubobjectStream == nullptr)
+	{
+		pCallbacks->ErrorBadInputParameter(1); // first parameter issue
+		return;
+	}
+
+	bool SubobjectSeen[static_cast<UINT>(PipelineStateSubobjectType::NumTypes)] = {};
+	for (SIZE_T CurOffset = 0, SizeOfSubobject = 0; CurOffset < Desc.SizeInBytes; CurOffset += SizeOfSubobject)
+	{
+		BYTE* Stream		= static_cast<BYTE*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
+		auto  SubobjectType = *reinterpret_cast<PipelineStateSubobjectType*>(Stream);
+		UINT  Index			= static_cast<UINT>(SubobjectType);
+
+		if (Index < 0 || Index >= static_cast<UINT>(PipelineStateSubobjectType::NumTypes))
+		{
+			pCallbacks->ErrorUnknownSubobject(Index);
+			return;
+		}
+		if (SubobjectSeen[Index])
+		{
+			pCallbacks->ErrorDuplicateSubobject(SubobjectType);
+			return; // disallow subobject duplicates in a stream
+		}
+		SubobjectSeen[Index] = true;
+
+		switch (SubobjectType)
+		{
+		case PipelineStateSubobjectType::RootSignature:
+			pCallbacks->RootSignatureCb(*reinterpret_cast<PipelineStateStreamRootSignature*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRootSignature);
+			break;
+		case PipelineStateSubobjectType::VS:
+			pCallbacks->VSCb(*reinterpret_cast<PipelineStateStreamVS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamVS);
+			break;
+		case PipelineStateSubobjectType::PS:
+			pCallbacks->PSCb(*reinterpret_cast<PipelineStateStreamPS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPS);
+			break;
+		case PipelineStateSubobjectType::DS:
+			pCallbacks->DSCb(*reinterpret_cast<PipelineStateStreamDS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPS);
+			break;
+		case PipelineStateSubobjectType::HS:
+			pCallbacks->HSCb(*reinterpret_cast<PipelineStateStreamHS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamHS);
+			break;
+		case PipelineStateSubobjectType::GS:
+			pCallbacks->GSCb(*reinterpret_cast<PipelineStateStreamGS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamGS);
+			break;
+		case PipelineStateSubobjectType::CS:
+			pCallbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamCS);
+			break;
+		case PipelineStateSubobjectType::BlendState:
+			pCallbacks->BlendStateCb(*reinterpret_cast<PipelineStateStreamBlendState*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamBlendState);
+			break;
+		case PipelineStateSubobjectType::RasterizerState:
+			pCallbacks->RasterizerStateCb(*reinterpret_cast<PipelineStateStreamRasterizerState*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRasterizerState);
+			break;
+		case PipelineStateSubobjectType::DepthStencilState:
+			pCallbacks->DepthStencilStateCb(*reinterpret_cast<PipelineStateStreamDepthStencilState*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamDepthStencilState);
+			break;
+		case PipelineStateSubobjectType::InputLayout:
+			pCallbacks->InputLayoutCb(*reinterpret_cast<PipelineStateStreamInputLayout*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamInputLayout);
+			break;
+		case PipelineStateSubobjectType::PrimitiveTopology:
+			pCallbacks->PrimitiveTopologyTypeCb(*reinterpret_cast<PipelineStateStreamPrimitiveTopology*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamPrimitiveTopology);
+			break;
+		case PipelineStateSubobjectType::RenderPass:
+			pCallbacks->RenderPassCb(*reinterpret_cast<PipelineStateStreamRenderPass*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamRenderPass);
+			break;
+		default:
+			pCallbacks->ErrorUnknownSubobject(Index);
+			return;
+		}
+	}
+}
