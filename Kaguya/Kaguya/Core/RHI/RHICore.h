@@ -5,11 +5,10 @@ class IRHIObject;
 class IRHIDevice;
 class IRHIDeviceChild;
 class IRHIResource;
-class IRHIDescriptorTable;
 
 struct DescriptorHandle
 {
-	DescriptorHandle()
+	DescriptorHandle() noexcept
 		: Version(0)
 		, Api(0)
 		, Index(UINT_MAX)
@@ -21,7 +20,7 @@ struct DescriptorHandle
 	[[nodiscard]] bool IsValid() const noexcept { return Index != UINT_MAX; }
 
 	UINT Version : 16;
-	UINT Api	 : 16;
+	UINT Api	 : 16; // Api specific data
 	UINT Index;
 };
 

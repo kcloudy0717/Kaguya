@@ -99,7 +99,6 @@ void StreamWrite(std::ostream& os, const spv_reflect::ShaderModule& obj)
 	std::vector<SpvReflectDescriptorBinding*> bindings;
 	std::vector<SpvReflectDescriptorSet*>	  sets;
 
-	count  = 0;
 	result = obj.EnumerateDescriptorBindings(&count, nullptr);
 	assert(result == SPV_REFLECT_RESULT_SUCCESS);
 	bindings.resize(count);
@@ -156,7 +155,6 @@ public:
 
 		InitDefaultRenderPass();
 		InitFrameBuffers();
-		InitDescriptors();
 		InitPipelines();
 
 		// The size of the pool is very oversize, but it's copied from imgui demo itself.
@@ -172,9 +170,9 @@ public:
 											 { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1024 },
 											 { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1024 } };
 
-		auto DescriptorPoolCreateInfo		   = VkStruct<VkDescriptorPoolCreateInfo>();
-		DescriptorPoolCreateInfo.sType		   = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		DescriptorPoolCreateInfo.flags		   = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		auto DescriptorPoolCreateInfo = VkStruct<VkDescriptorPoolCreateInfo>();
+		DescriptorPoolCreateInfo.flags =
+			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 		DescriptorPoolCreateInfo.maxSets	   = 1024;
 		DescriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(std::size(PoolSizes));
 		DescriptorPoolCreateInfo.pPoolSizes	   = PoolSizes;
@@ -336,7 +334,7 @@ private:
 		}
 	}
 
-	void InitDescriptors()
+	void InitPipelines()
 	{
 		{
 			RootSignatureDesc Desc = {};
@@ -360,10 +358,7 @@ private:
 
 			Device.CreateSampler(SamplerDesc, Sampler);
 		}
-	}
 
-	void InitPipelines()
-	{
 		spv_reflect::ShaderModule VSModule;
 		Shader					  VS = ShaderCompiler.SpirVCodeGen(
 			   Device.GetVkDevice(),
@@ -740,7 +735,7 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents("Kaguya");
 
-		const ApplicationOptions AppOptions = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
+		ApplicationOptions AppOptions = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
 
 		VulkanEngine App;
 		Application::Run(App, AppOptions);

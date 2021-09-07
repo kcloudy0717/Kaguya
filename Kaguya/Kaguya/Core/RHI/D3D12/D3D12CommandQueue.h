@@ -40,7 +40,7 @@ public:
 	void Wait(D3D12CommandQueue* CommandQueue);
 	void WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint);
 
-	void Flush() { HostWaitForValue(AdvanceGpu()); }
+	void WaitIdle() { HostWaitForValue(AdvanceGpu()); }
 
 	[[nodiscard]] D3D12CommandListHandle RequestCommandList(D3D12CommandAllocator* CommandAllocator)
 	{

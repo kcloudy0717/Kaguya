@@ -102,49 +102,6 @@ auto VulkanCommandSyncPoint::WaitForCompletion() const -> void
 	VERIFY_VULKAN_API(vkWaitSemaphores(Fence->GetParentDevice()->GetVkDevice(), &SemaphoreWaitInfo, UINT64_MAX));
 }
 
-enum TextLineType
-{
-	TEXT_LINE_TYPE_BLOCK_BEGIN	= 0x01,
-	TEXT_LINE_TYPE_BLOCK_END	= 0x02,
-	TEXT_LINE_TYPE_STRUCT_BEGIN = 0x04,
-	TEXT_LINE_TYPE_STRUCT_END	= 0x08,
-	TEXT_LINE_TYPE_LINES		= 0x10,
-};
-
-struct TextLine
-{
-	std::string indent;
-	std::string modifier;
-	std::string type_name;
-	std::string name;
-	uint32_t	absolute_offset;
-	uint32_t	relative_offset;
-	uint32_t	size;
-	uint32_t	padded_size;
-	uint32_t	array_stride;
-	uint32_t	block_variable_flags;
-	// Text Data
-	uint32_t			  text_line_flags;
-	std::vector<TextLine> lines;
-	std::string			  formatted_line;
-	std::string			  formatted_absolute_offset;
-	std::string			  formatted_relative_offset;
-	std::string			  formatted_size;
-	std::string			  formatted_padded_size;
-	std::string			  formatted_array_stride;
-	std::string			  formatted_block_variable_flags;
-};
-
-static std::string AsHexString(uint32_t n)
-{
-	// std::iomanip can die in a fire.
-	char out_word[11];
-	int	 len = snprintf(out_word, 11, "0x%08X", n);
-	assert(len == 10);
-	(void)len;
-	return std::string(out_word);
-}
-
 std::string ToStringGenerator(SpvReflectGenerator generator)
 {
 	switch (generator)

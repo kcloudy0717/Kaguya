@@ -6,7 +6,7 @@ class Entity
 {
 public:
 	Entity() noexcept = default;
-	Entity(entt::entity Handle, World* pWorld)
+	Entity(entt::entity Handle, World* pWorld) noexcept
 		: Handle(Handle)
 		, pWorld(pWorld)
 	{
@@ -63,9 +63,7 @@ public:
 
 	operator entt::entity() const noexcept { return Handle; }
 
-	bool operator==(const Entity& other) const noexcept { return Handle == other.Handle && pWorld == other.pWorld; }
-
-	bool operator!=(const Entity& other) const noexcept { return !(*this == other); }
+	auto operator<=>(const Entity&) const = default;
 
 private:
 	entt::entity Handle = entt::null;

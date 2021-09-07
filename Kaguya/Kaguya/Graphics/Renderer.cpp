@@ -142,7 +142,7 @@ void Renderer::OnRender()
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	RenderCore::pDevice->GetDevice()->GetGraphicsQueue()->Flush();
+	RenderCore::pDevice->GetDevice()->GetGraphicsQueue()->WaitIdle();
 	RenderCore::pSwapChain->Resize(Width, Height);
 }
 

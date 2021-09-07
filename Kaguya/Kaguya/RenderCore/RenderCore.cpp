@@ -76,10 +76,10 @@ void Initialize()
 
 void Shutdown()
 {
-	pDevice->GetDevice()->GetGraphicsQueue()->Flush();
-	pDevice->GetDevice()->GetAsyncComputeQueue()->Flush();
-	pDevice->GetDevice()->GetCopyQueue1()->Flush();
-	pDevice->GetDevice()->GetCopyQueue2()->Flush();
+	pDevice->GetDevice()->GetGraphicsQueue()->WaitIdle();
+	pDevice->GetDevice()->GetAsyncComputeQueue()->WaitIdle();
+	pDevice->GetDevice()->GetCopyQueue1()->WaitIdle();
+	pDevice->GetDevice()->GetCopyQueue2()->WaitIdle();
 
 	ImGui_ImplDX12_Shutdown();
 	pDevice->UnregisterMessageCallback();

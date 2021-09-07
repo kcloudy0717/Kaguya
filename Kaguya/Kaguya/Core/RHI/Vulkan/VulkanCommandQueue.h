@@ -29,7 +29,7 @@ public:
 	void Wait(VulkanCommandQueue* CommandQueue);
 	void WaitForSyncPoint(const VulkanCommandSyncPoint& SyncPoint);
 
-	void Flush() { HostWaitForValue(AdvanceGpu()); }
+	void WaitIdle() { HostWaitForValue(AdvanceGpu()); }
 
 	VulkanCommandSyncPoint ExecuteCommandLists(
 		UINT				  NumCommandListHandles,
