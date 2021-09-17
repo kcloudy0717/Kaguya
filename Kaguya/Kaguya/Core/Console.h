@@ -4,24 +4,18 @@
 class IConsoleVariable
 {
 public:
-	virtual bool		GetBool() const	  = 0;
-	virtual int			GetInt() const	  = 0;
-	virtual float		GetFloat() const  = 0;
-	virtual std::string GetString() const = 0;
+	virtual ~IConsoleVariable() = default;
 
-	virtual void Set(std::string_view Value) = 0;
+	[[nodiscard]] virtual bool		  GetBool() const	= 0;
+	[[nodiscard]] virtual int		  GetInt() const	= 0;
+	[[nodiscard]] virtual float		  GetFloat() const	= 0;
+	[[nodiscard]] virtual std::string GetString() const = 0;
+
+	virtual void Set(const std::string& Value) = 0;
 
 	void Set(bool Value) { Set(Value ? "true" : "false"); }
-	void Set(int Value)
-	{
-		std::string s = std::to_string(Value);
-		Set(s.data());
-	}
-	void Set(float Value)
-	{
-		std::string s = std::to_string(Value);
-		Set(s.data());
-	}
+	void Set(int Value) { Set(std::to_string(Value)); }
+	void Set(float Value) { Set(std::to_string(Value)); }
 };
 
 template<typename T>
@@ -48,24 +42,26 @@ private:
 class IConsole
 {
 public:
+	virtual ~IConsole() = default;
+
 	static IConsole& Instance();
 
-	virtual IConsoleVariable* RegisterVariable(
+	virtual IConsoleVariable* Register(
 		std::string_view Name,
 		std::string_view Description,
 		const bool&		 DefaultValue) = 0;
 
-	virtual IConsoleVariable* RegisterVariable(
+	virtual IConsoleVariable* Register(
 		std::string_view Name,
 		std::string_view Description,
 		const int&		 DefaultValue) = 0;
 
-	virtual IConsoleVariable* RegisterVariable(
+	virtual IConsoleVariable* Register(
 		std::string_view Name,
 		std::string_view Description,
 		const float&	 DefaultValue) = 0;
 
-	virtual IConsoleVariable* RegisterVariable(
+	virtual IConsoleVariable* Register(
 		std::string_view   Name,
 		std::string_view   Description,
 		const std::string& DefaultValue) = 0;
@@ -81,7 +77,7 @@ inline AutoConsoleVariable<bool>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const bool&		 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
@@ -95,7 +91,7 @@ inline AutoConsoleVariable<int>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const int&		 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
@@ -109,7 +105,7 @@ inline AutoConsoleVariable<float>::AutoConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const float&	 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
@@ -123,7 +119,7 @@ inline AutoConsoleVariable<std::string>::AutoConsoleVariable(
 	std::string_view   Name,
 	std::string_view   Description,
 	const std::string& DefaultValue)
-	: ConsoleVariable(IConsole::Instance().RegisterVariable(Name, Description, DefaultValue))
+	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>

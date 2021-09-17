@@ -223,38 +223,23 @@ class D3D12RootSignature
 {
 public:
 	D3D12RootSignature() noexcept = default;
+	D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilder& Builder);
 
-	D3D12RootSignature(ID3D12Device* pDevice, RootSignatureBuilder& Builder);
+	operator ID3D12RootSignature*() const { return RootSignature.Get(); }
 
-	D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return Desc.Desc_1_1; }
+	[[nodiscard]] D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return Desc.Desc_1_1; }
 
-	operator ID3D12RootSignature*() const { return pRootSignature.Get(); }
+	[[nodiscard]] std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> GetDescriptorTableBitMask(
+		D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept;
 
-	std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> GetDescriptorTableBitMask(
-		D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
-	{
-		switch (Type)
-		{
-		case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-			return ResourceDescriptorTableBitMask;
-		case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
-			return SamplerTableBitMask;
-		}
-		return {};
-	}
-
-	UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept
-	{
-		assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
-		return NumDescriptorsPerTable[RootParameterIndex];
-	}
+	[[nodiscard]] UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept;
 
 private:
 	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> pRootSignature;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
 	// Need to know the number of descriptors per descriptor table
-	UINT NumDescriptorsPerTable[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT];
+	UINT NumDescriptorsPerTable[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
 
 	// A bit mask that represents the root parameter indices that are
 	// descriptor tables for CBV, UAV, and SRV

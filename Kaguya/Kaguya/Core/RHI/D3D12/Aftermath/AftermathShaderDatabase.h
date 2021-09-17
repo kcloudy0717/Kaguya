@@ -37,7 +37,7 @@
 class AftermathShaderDatabase
 {
 public:
-	static void AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob) noexcept;
+	static void AddShader(Microsoft::WRL::ComPtr<IDxcBlob> Blob, Microsoft::WRL::ComPtr<IDxcBlob> PdbBlob) noexcept;
 
 	// Find a shader bytecode binary by shader hash.
 	static IDxcBlob* FindShaderBinary(const GFSDK_Aftermath_ShaderHash& ShaderHash);
@@ -57,5 +57,5 @@ private:
 		ShaderInstructionsToShaderHash;
 
 	// List of available source shader debug information.
-	inline static std::map<GFSDK_Aftermath_ShaderDebugName, Microsoft::WRL::ComPtr<IDxcBlob>> ShaderPDBs;
+	inline static std::map<GFSDK_Aftermath_ShaderDebugName, Microsoft::WRL::ComPtr<IDxcBlob>> ShaderPdbs;
 };

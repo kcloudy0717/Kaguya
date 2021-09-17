@@ -831,8 +831,9 @@ using PipelineStateStreamPrimitiveTopology	= PipelineStateStreamSubobject<Primit
 using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<IRHIRenderPass*, PipelineStateSubobjectType::RenderPass>;
 // clang-format on
 
-struct IPipelineParserCallbacks
+class IPipelineParserCallbacks
 {
+public:
 	virtual ~IPipelineParserCallbacks() = default;
 
 	// Subobject Callbacks

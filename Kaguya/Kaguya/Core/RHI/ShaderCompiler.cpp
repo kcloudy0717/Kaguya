@@ -60,11 +60,11 @@ Shader ShaderCompiler::CompileShader(
 	std::wstring ProfileString = ShaderProfileString(ShaderType);
 
 	IDxcBlob*	 Blob	 = nullptr;
-	IDxcBlob*	 PDBBlob = nullptr;
-	std::wstring PDBName;
-	Compile(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob, &PDBBlob, PDBName);
+	IDxcBlob*	 PdbBlob = nullptr;
+	std::wstring PdbName;
+	Compile(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob, &PdbBlob, PdbName);
 
-	return Shader(ShaderType, Blob, PDBBlob, std::move(PDBName));
+	return Shader(ShaderType, Blob, PdbBlob, std::move(PdbName));
 }
 
 Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
@@ -72,11 +72,11 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	std::wstring ProfileString = LibraryProfileString();
 
 	IDxcBlob*	 Blob	 = nullptr;
-	IDxcBlob*	 PDBBlob = nullptr;
-	std::wstring PDBName;
-	Compile(Path, L"", ProfileString.data(), {}, &Blob, &PDBBlob, PDBName);
+	IDxcBlob*	 PdbBlob = nullptr;
+	std::wstring PdbName;
+	Compile(Path, L"", ProfileString.data(), {}, &Blob, &PdbBlob, PdbName);
 
-	return Library(Blob, PDBBlob, std::move(PDBName));
+	return Library(Blob, PdbBlob, std::move(PdbName));
 }
 
 Shader ShaderCompiler::SpirVCodeGen(
@@ -84,7 +84,7 @@ Shader ShaderCompiler::SpirVCodeGen(
 	EShaderType					  ShaderType,
 	const std::filesystem::path&  Path,
 	std::wstring_view			  EntryPoint,
-	const std::vector<DxcDefine>& ShaderDefines)
+	const std::vector<DxcDefine>& ShaderDefines) const
 {
 	std::wstring ProfileString = ShaderProfileString(ShaderType);
 
@@ -94,7 +94,7 @@ Shader ShaderCompiler::SpirVCodeGen(
 	Shader Shader(ShaderType, Blob, nullptr, std::wstring());
 	auto   ShaderModuleCreateInfo	= VkStruct<VkShaderModuleCreateInfo>();
 	ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
-	ShaderModuleCreateInfo.pCode	= (uint32_t*)Shader.GetBufferPointer();
+	ShaderModuleCreateInfo.pCode	= static_cast<uint32_t*>(Shader.GetBufferPointer());
 	VERIFY_VULKAN_API(vkCreateShaderModule(Device, &ShaderModuleCreateInfo, nullptr, &Shader.ShaderModule));
 	return Shader;
 }
@@ -159,12 +159,12 @@ void ShaderCompiler::Compile(
 	std::wstring_view			  EntryPoint,
 	std::wstring_view			  Profile,
 	const std::vector<DxcDefine>& ShaderDefines,
-	_Outptr_result_maybenull_ IDxcBlob** ppBlob,
-	_Outptr_result_maybenull_ IDxcBlob** ppPDBBlob,
-	std::wstring&						 PDBName) const
+	_Outptr_result_maybenull_ IDxcBlob** OutBlob,
+	_Outptr_result_maybenull_ IDxcBlob** OutPdbBlob,
+	std::wstring&						 PdbName) const
 {
-	*ppBlob	   = nullptr;
-	*ppPDBBlob = nullptr;
+	*OutBlob	= nullptr;
+	*OutPdbBlob = nullptr;
 
 	// https://developer.nvidia.com/dx12-dos-and-donts
 	LPCWSTR Arguments[] = { // Use the /all_resources_bound / D3DCOMPILE_ALL_RESOURCES_BOUND compile flag if possible
@@ -240,12 +240,12 @@ void ShaderCompiler::Compile(
 		}
 	}
 
-	DxcResult->GetResult(ppBlob);
+	DxcResult->GetResult(OutBlob);
 	if (DxcResult->HasOutput(DXC_OUT_PDB))
 	{
-		ComPtr<IDxcBlobUtf16> PDB;
-		DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(ppPDBBlob), PDB.ReleaseAndGetAddressOf());
-		PDBName = PDB->GetStringPointer();
+		ComPtr<IDxcBlobUtf16> Pdb;
+		DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(OutPdbBlob), Pdb.ReleaseAndGetAddressOf());
+		PdbName = Pdb->GetStringPointer();
 	}
 }
 
@@ -254,9 +254,9 @@ void ShaderCompiler::SpirV(
 	std::wstring_view			  EntryPoint,
 	std::wstring_view			  Profile,
 	const std::vector<DxcDefine>& ShaderDefines,
-	_Outptr_result_maybenull_ IDxcBlob** ppBlob) const
+	_Outptr_result_maybenull_ IDxcBlob** OutBlob) const
 {
-	*ppBlob = nullptr;
+	*OutBlob = nullptr;
 
 	LPCWSTR Arguments[] = { L"-spirv",
 #ifdef _DEBUG
@@ -326,5 +326,5 @@ void ShaderCompiler::SpirV(
 		}
 	}
 
-	DxcResult->GetResult(ppBlob);
+	DxcResult->GetResult(OutBlob);
 }

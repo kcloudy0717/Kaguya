@@ -50,7 +50,7 @@ void D3D12LinkedDevice::Initialize()
 #endif
 
 	// TODO: Implement a task-graph for rendering work
-	const unsigned int NumThreads = 1;
+	constexpr size_t NumThreads = 1;
 	AvailableCommandContexts.reserve(NumThreads);
 	for (unsigned int i = 0; i < NumThreads; ++i)
 	{
@@ -86,20 +86,16 @@ ID3D12Device5* D3D12LinkedDevice::GetDevice5() const
 
 D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(ED3D12CommandQueueType Type)
 {
+	// clang-format off
 	switch (Type)
 	{
-	case ED3D12CommandQueueType::Direct:
-		return &GraphicsQueue;
-	case ED3D12CommandQueueType::AsyncCompute:
-		return &AsyncComputeQueue;
-	case ED3D12CommandQueueType::Copy1:
-		return &CopyQueue1;
-	case ED3D12CommandQueueType::Copy2:
-		return &CopyQueue2;
-	default:
-		assert(false && "Should not get here");
-		return nullptr;
+	case ED3D12CommandQueueType::Direct:		return &GraphicsQueue;
+	case ED3D12CommandQueueType::AsyncCompute:	return &AsyncComputeQueue;
+	case ED3D12CommandQueueType::Copy1:			return &CopyQueue1;
+	case ED3D12CommandQueueType::Copy2:			return &CopyQueue2;
+	default:									assert(false && "Should not get here"); return nullptr;
 	}
+	// clang-format on
 }
 
 D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc)
@@ -122,7 +118,7 @@ D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(cons
 	return ResourceAllocationInfo;
 }
 
-bool D3D12LinkedDevice::ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
+bool D3D12LinkedDevice::ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
 {
 	// Refer to MSDN and samples
 	// 4KB alignment is only available for read only textures

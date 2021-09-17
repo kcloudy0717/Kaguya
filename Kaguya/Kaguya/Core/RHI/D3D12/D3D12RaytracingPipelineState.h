@@ -1,9 +1,9 @@
 #pragma once
 #include "D3D12Common.h"
 
-struct DXILLibrary
+struct DxilLibrary
 {
-	DXILLibrary(_In_ const D3D12_SHADER_BYTECODE& Library, _In_ const std::vector<std::wstring>& Symbols)
+	DxilLibrary(const D3D12_SHADER_BYTECODE& Library, const std::vector<std::wstring>& Symbols)
 		: Library(Library)
 		, Symbols(Symbols)
 	{
@@ -16,14 +16,14 @@ struct DXILLibrary
 struct HitGroup
 {
 	HitGroup(
-		std::optional<std::wstring_view> pHitGroupName,
-		std::optional<std::wstring_view> pAnyHitSymbol,
-		std::optional<std::wstring_view> pClosestHitSymbol,
-		std::optional<std::wstring_view> pIntersectionSymbol)
-		: HitGroupName(pHitGroupName ? *pHitGroupName : L"")
-		, AnyHitSymbol(pAnyHitSymbol ? *pAnyHitSymbol : L"")
-		, ClosestHitSymbol(pClosestHitSymbol ? *pClosestHitSymbol : L"")
-		, IntersectionSymbol(pIntersectionSymbol ? *pIntersectionSymbol : L"")
+		std::wstring_view				 HitGroupName,
+		std::optional<std::wstring_view> AnyHitSymbol,
+		std::optional<std::wstring_view> ClosestHitSymbol,
+		std::optional<std::wstring_view> IntersectionSymbol)
+		: HitGroupName(HitGroupName)
+		, AnyHitSymbol(AnyHitSymbol ? *AnyHitSymbol : L"")
+		, ClosestHitSymbol(ClosestHitSymbol ? *ClosestHitSymbol : L"")
+		, IntersectionSymbol(IntersectionSymbol ? *IntersectionSymbol : L"")
 	{
 	}
 
@@ -35,13 +35,13 @@ struct HitGroup
 
 struct RootSignatureAssociation
 {
-	RootSignatureAssociation(_In_ ID3D12RootSignature* pRootSignature, _In_ const std::vector<std::wstring>& Symbols)
-		: pRootSignature(pRootSignature)
+	RootSignatureAssociation(ID3D12RootSignature* RootSignature, const std::vector<std::wstring>& Symbols)
+		: RootSignature(RootSignature)
 		, Symbols(Symbols)
 	{
 	}
 
-	ID3D12RootSignature*	  pRootSignature;
+	ID3D12RootSignature*	  RootSignature;
 	std::vector<std::wstring> Symbols;
 };
 
@@ -55,14 +55,14 @@ public:
 	void AddLibrary(const D3D12_SHADER_BYTECODE& Library, const std::vector<std::wstring>& Symbols);
 
 	void AddHitGroup(
-		std::optional<std::wstring_view> pHitGroupName,
-		std::optional<std::wstring_view> pAnyHitSymbol,
-		std::optional<std::wstring_view> pClosestHitSymbol,
-		std::optional<std::wstring_view> pIntersectionSymbol);
+		std::wstring_view				 HitGroupName,
+		std::optional<std::wstring_view> AnyHitSymbol,
+		std::optional<std::wstring_view> ClosestHitSymbol,
+		std::optional<std::wstring_view> IntersectionSymbol);
 
-	void AddRootSignatureAssociation(ID3D12RootSignature* pRootSignature, const std::vector<std::wstring>& Symbols);
+	void AddRootSignatureAssociation(ID3D12RootSignature* RootSignature, const std::vector<std::wstring>& Symbols);
 
-	void SetGlobalRootSignature(ID3D12RootSignature* pGlobalRootSignature);
+	void SetGlobalRootSignature(ID3D12RootSignature* GlobalRootSignature);
 
 	void SetRaytracingShaderConfig(UINT MaxPayloadSizeInBytes, UINT MaxAttributeSizeInBytes);
 
@@ -74,7 +74,7 @@ private:
 private:
 	CD3DX12_STATE_OBJECT_DESC Desc;
 
-	std::vector<DXILLibrary>			  Libraries;
+	std::vector<DxilLibrary>			  Libraries;
 	std::vector<HitGroup>				  HitGroups;
 	std::vector<RootSignatureAssociation> RootSignatureAssociations;
 	ID3D12RootSignature*				  GlobalRootSignature;
@@ -86,11 +86,11 @@ class D3D12RaytracingPipelineState
 {
 public:
 	D3D12RaytracingPipelineState() noexcept = default;
-	D3D12RaytracingPipelineState(ID3D12Device5* pDevice, RaytracingPipelineStateBuilder& Builder);
-
-	void* GetShaderIdentifier(std::wstring_view pExportName) const;
+	D3D12RaytracingPipelineState(ID3D12Device5* Device, RaytracingPipelineStateBuilder& Builder);
 
 	operator ID3D12StateObject*() const { return StateObject.Get(); }
+
+	[[nodiscard]] void* GetShaderIdentifier(std::wstring_view ExportName) const;
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12StateObject>			StateObject;

@@ -165,14 +165,14 @@ void AssetManager::Initialize()
 							dxrGeometryDesc.Triangles.VertexFormat		   = DXGI_FORMAT_R32G32B32_FLOAT;
 							dxrGeometryDesc.Triangles.IndexCount		   = submesh.IndexCount;
 							dxrGeometryDesc.Triangles.VertexCount		   = submesh.VertexCount;
-							dxrGeometryDesc.Triangles.IndexBuffer = assetMesh->IndexResource.GetGPUVirtualAddress() +
+							dxrGeometryDesc.Triangles.IndexBuffer = assetMesh->IndexResource.GetGpuVirtualAddress() +
 																	submesh.StartIndexLocation * sizeof(unsigned int);
 							dxrGeometryDesc.Triangles.VertexBuffer.StartAddress =
-								assetMesh->VertexResource.GetGPUVirtualAddress() +
+								assetMesh->VertexResource.GetGpuVirtualAddress() +
 								submesh.BaseVertexLocation * sizeof(Vertex);
 							dxrGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 
-							assetMesh->BLAS.AddGeometry(dxrGeometryDesc);
+							assetMesh->Blas.AddGeometry(dxrGeometryDesc);
 						}
 
 						uploadedMeshes.push_back(assetMesh);

@@ -67,4 +67,5 @@ protected:
 
 private:
 	inline static bool Initialized = false;
+	inline static int  ExitCode	   = 0;
 };

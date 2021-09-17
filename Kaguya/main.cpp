@@ -1,6 +1,6 @@
 // main.cpp : Defines the entry point for the application.
 
-#define VULKAN_PLAYGROUND 1
+#define VULKAN_PLAYGROUND 0
 
 #if VULKAN_PLAYGROUND
 
@@ -39,10 +39,10 @@ struct VulkanMaterial
 
 struct RenderObject
 {
-	VulkanMesh*		mesh;
-	VulkanMaterial* material;
+	VulkanMesh*		Mesh;
+	VulkanMaterial* Material;
 
-	DirectX::XMFLOAT4X4 transformMatrix;
+	DirectX::XMFLOAT4X4 Transform;
 };
 
 void StreamWrite(std::ostream& os, const SpvReflectDescriptorBinding& obj, bool write_set, const char* indent = "")
@@ -222,7 +222,7 @@ public:
 
 		ImGui::ShowDemoWindow();
 
-		while (auto Key = InputHandler.Keyboard.ReadKey())
+		while (auto Key = InputHandler.Keyboard.Read())
 		{
 			if (!Key->IsPressed())
 			{
@@ -430,9 +430,9 @@ private:
 	void InitScene()
 	{
 		RenderObject Sphere = {};
-		Sphere.mesh			= &SphereMesh;
-		Sphere.material		= GetMaterial("Default");
-		XMStoreFloat4x4(&Sphere.transformMatrix, DirectX::XMMatrixIdentity());
+		Sphere.Mesh			= &SphereMesh;
+		Sphere.Material		= GetMaterial("Default");
+		XMStoreFloat4x4(&Sphere.Transform, DirectX::XMMatrixIdentity());
 
 		Renderables.push_back(Sphere);
 
@@ -441,11 +441,9 @@ private:
 			for (int y = -20; y <= 20; y++)
 			{
 				RenderObject tri = {};
-				tri.mesh		 = &SphereMesh;
-				tri.material	 = GetMaterial("Default");
-				XMStoreFloat4x4(
-					&tri.transformMatrix,
-					DirectX::XMMatrixTranslation(float(x) * 2.5f, 0, float(y) * 2.5f));
+				tri.Mesh		 = &SphereMesh;
+				tri.Material	 = GetMaterial("Default");
+				XMStoreFloat4x4(&tri.Transform, DirectX::XMMatrixTranslation(float(x) * 2.5f, 0, float(y) * 2.5f));
 
 				Renderables.push_back(tri);
 			}
@@ -652,47 +650,47 @@ private:
 		return nullptr;
 	}
 
-	void DrawObjects(VulkanCommandContext& Context, int NumRenderObjects, RenderObject* pRenderObjects)
+	void DrawObjects(VulkanCommandContext& Context, size_t NumRenderObjects, RenderObject* RenderObjects)
 	{
 		VulkanMesh*		lastMesh	 = nullptr;
 		VulkanMaterial* lastMaterial = nullptr;
 		for (int i = 0; i < NumRenderObjects; i++)
 		{
-			RenderObject& object = pRenderObjects[i];
+			RenderObject& Cur = RenderObjects[i];
 
 			// only bind the pipeline if it doesn't match with the already bound one
-			if (object.material != lastMaterial)
+			if (Cur.Material != lastMaterial)
 			{
-				Context.SetGraphicsPipelineState(object.material->PipelineState);
-				Context.SetGraphicsRootSignature(object.material->RootSignature);
+				Context.SetGraphicsPipelineState(Cur.Material->PipelineState);
+				Context.SetGraphicsRootSignature(Cur.Material->RootSignature);
 				Context.SetDescriptorSets();
 				Context.SetConstantBufferView(0, SceneConstants.Get());
 
-				lastMaterial = object.material;
+				lastMaterial = Cur.Material;
 			}
 
 			MeshPushConstants constants = {};
-			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&object.transformMatrix)));
+			XMStoreFloat4x4(&constants.Transform, XMMatrixTranspose(XMLoadFloat4x4(&Cur.Transform)));
 			constants.TextureId = SRV.Index;
 			constants.SamplerId = Sampler.Index;
 
 			Context.SetPushConstants(sizeof(MeshPushConstants), &constants);
 
 			// only bind the mesh if it's a different one from last bind
-			if (object.mesh != lastMesh)
+			if (Cur.Mesh != lastMesh)
 			{
 				// bind the mesh vertex buffer with offset 0
 				VkDeviceSize Offsets[]		 = { 0 };
-				VkBuffer	 VertexBuffers[] = { object.mesh->VertexResource->As<VulkanBuffer>()->GetApiHandle() };
+				VkBuffer	 VertexBuffers[] = { Cur.Mesh->VertexResource->As<VulkanBuffer>()->GetApiHandle() };
 				vkCmdBindVertexBuffers(Context.CommandBuffer, 0, 1, VertexBuffers, Offsets);
 				vkCmdBindIndexBuffer(
 					Context.CommandBuffer,
-					object.mesh->IndexResource->As<VulkanBuffer>()->GetApiHandle(),
+					Cur.Mesh->IndexResource->As<VulkanBuffer>()->GetApiHandle(),
 					0,
 					VK_INDEX_TYPE_UINT32);
-				lastMesh = object.mesh;
+				lastMesh = Cur.Mesh;
 			}
-			Context.DrawIndexedInstanced(object.mesh->Mesh->Indices.size(), 1, 0, 0, 0);
+			Context.DrawIndexedInstanced(Cur.Mesh->Mesh->Indices.size(), 1, 0, 0, 0);
 		}
 	}
 
@@ -735,10 +733,10 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents("Kaguya");
 
-		ApplicationOptions AppOptions = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
+		ApplicationOptions Options = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
 
 		VulkanEngine App;
-		Application::Run(App, AppOptions);
+		Application::Run(App, Options);
 	}
 	catch (std::exception& Exception)
 	{
@@ -782,16 +780,15 @@ public:
 		RenderCore::Initialize();
 		AssetManager::Initialize();
 
-		std::string iniFile = (Application::ExecutableDirectory / "imgui.ini").string();
-
-		ImGui::LoadIniSettingsFromDisk(iniFile.data());
+		std::string IniFile = (ExecutableDirectory / "imgui.ini").string();
+		ImGui::LoadIniSettingsFromDisk(IniFile.data());
 
 		HierarchyWindow.SetContext(&World);
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		pRenderer = std::make_unique<PathIntegrator>(&World);
-		pRenderer->OnInitialize();
+		Renderer = std::make_unique<PathIntegrator>(&World);
+		Renderer->OnInitialize();
 
 		return true;
 	}
@@ -811,7 +808,7 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		ViewportWindow.SetContext(pRenderer->GetViewportDescriptor());
+		ViewportWindow.SetContext(Renderer->GetViewportDescriptor());
 		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
 		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
 
@@ -830,22 +827,22 @@ public:
 		World.Update(DeltaTime);
 
 		// Render
-		pRenderer->OnSetViewportResolution(viewportWidth, viewportHeight);
+		Renderer->OnSetViewportResolution(viewportWidth, viewportHeight);
 
-		pRenderer->OnRender();
+		Renderer->OnRender();
 	}
 
 	void Shutdown() override
 	{
-		pRenderer->OnDestroy();
-		pRenderer.reset();
+		Renderer->OnDestroy();
+		Renderer.reset();
 		World.Clear();
 		AssetManager::Shutdown();
 		RenderCore::Shutdown();
 		PhysicsManager::Shutdown();
 	}
 
-	void Resize(UINT Width, UINT Height) override { pRenderer->OnResize(Width, Height); }
+	void Resize(UINT Width, UINT Height) override { Renderer->OnResize(Width, Height); }
 
 private:
 	HierarchyWindow HierarchyWindow;
@@ -855,7 +852,7 @@ private:
 	ConsoleWindow	ConsoleWindow;
 
 	World					  World;
-	std::unique_ptr<Renderer> pRenderer;
+	std::unique_ptr<Renderer> Renderer;
 };
 
 int main(int argc, char* argv[])
@@ -864,14 +861,14 @@ int main(int argc, char* argv[])
 	{
 		Application::InitializeComponents("Kaguya");
 
-		const ApplicationOptions AppOptions = { .Name	  = L"Kaguya",
-												.Width	  = 1280,
-												.Height	  = 720,
-												.Maximize = true,
-												.Icon	  = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
+		ApplicationOptions Options = { .Name	 = L"Kaguya",
+									   .Width	 = 1280,
+									   .Height	 = 720,
+									   .Maximize = true,
+									   .Icon	 = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
 
 		Editor App;
-		Application::Run(App, AppOptions);
+		Application::Run(App, Options);
 	}
 	catch (std::exception& Exception)
 	{

@@ -2,22 +2,22 @@
 
 static D3D12Profiler* g_Profiler = nullptr;
 
-void ProfileData::Update(UINT64 Index, UINT64 GpuFrequency, const UINT64* pFrameQueryData)
+void ProfileData::Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData)
 {
 	QueryFinished = false;
 
 	double Time		 = 0.0;
-	UINT64 StartTime = pFrameQueryData[Index * 2 + 0];
-	UINT64 EndTime	 = pFrameQueryData[Index * 2 + 1];
+	UINT64 StartTime = FrameQueryData[Index * 2 + 0];
+	UINT64 EndTime	 = FrameQueryData[Index * 2 + 1];
 
 	if (EndTime > StartTime)
 	{
 		UINT64 Delta = EndTime - StartTime;
-		Time		 = (Delta / double(GpuFrequency)) * 1000.0;
+		Time		 = (static_cast<double>(Delta) / static_cast<double>(GpuFrequency)) * 1000.0;
 	}
 
 	TimeSamples[CurrSample] = Time;
-	CurrSample				= (CurrSample + 1) % ProfileData::FilterSize;
+	CurrSample				= (CurrSample + 1) % FilterSize;
 
 	UINT64 AvgTimeSamples = 0;
 	for (double TimeSample : TimeSamples)
@@ -33,7 +33,7 @@ void ProfileData::Update(UINT64 Index, UINT64 GpuFrequency, const UINT64* pFrame
 
 	if (AvgTimeSamples > 0)
 	{
-		AvgTime /= double(AvgTimeSamples);
+		AvgTime /= static_cast<double>(AvgTimeSamples);
 	}
 }
 
@@ -49,7 +49,7 @@ void D3D12EventNode::EndTiming(ID3D12GraphicsCommandList* CommandList)
 {
 	if (CommandList)
 	{
-		g_Profiler->EndProfile(CommandList, Index);
+		g_Profiler->EndProfile(CommandList, std::exchange(Index, UINT_MAX));
 	}
 }
 
@@ -61,7 +61,7 @@ D3D12Profiler::D3D12Profiler(UINT FrameLatency)
 	g_Profiler = this;
 }
 
-void D3D12Profiler::Initialize(ID3D12Device* pDevice, UINT64 Frequency)
+void D3D12Profiler::Initialize(ID3D12Device* Device, UINT64 Frequency)
 {
 	this->Frequency = Frequency;
 	FrameIndex		= 0;
@@ -69,12 +69,12 @@ void D3D12Profiler::Initialize(ID3D12Device* pDevice, UINT64 Frequency)
 	D3D12_QUERY_HEAP_DESC QueryHeapDesc = { .Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
 											.Count	  = MaxProfiles * 2,
 											.NodeMask = 0 };
-	VERIFY_D3D12_API(pDevice->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
+	VERIFY_D3D12_API(Device->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
 	QueryHeap->SetName(L"Timestamp Query Heap");
 
 	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
 	D3D12_RESOURCE_DESC	  ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
-	VERIFY_D3D12_API(pDevice->CreateCommittedResource(
+	VERIFY_D3D12_API(Device->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -82,14 +82,38 @@ void D3D12Profiler::Initialize(ID3D12Device* pDevice, UINT64 Frequency)
 		nullptr,
 		IID_PPV_ARGS(QueryReadback.ReleaseAndGetAddressOf())));
 	QueryReadback->SetName(L"Timestamp Query Readback");
-
-	Profiles.resize(MaxProfiles);
 }
 
-UINT64 D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth)
+void D3D12Profiler::OnBeginFrame()
+{
+	UINT64* QueryData = nullptr;
+	if (SUCCEEDED(QueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
+	{
+		const UINT64* FrameQueryData = QueryData + (FrameIndex * MaxProfiles * 2);
+
+		for (UINT i = 0; i < NumProfiles; ++i)
+		{
+			Profiles[i].Update(i, Frequency, FrameQueryData);
+		}
+
+		Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
+
+		QueryReadback->Unmap(0, nullptr);
+	}
+
+	NumProfiles = 0;
+}
+
+void D3D12Profiler::OnEndFrame()
+{
+	FrameIndex = (FrameIndex + 1) % FrameLatency;
+	Data	   = {};
+}
+
+UINT D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth)
 {
 	assert(NumProfiles < MaxProfiles);
-	UINT64 ProfileIdx		  = NumProfiles++;
+	UINT ProfileIdx			  = NumProfiles++;
 	Profiles[ProfileIdx].Name = Name;
 
 	ProfileData& ProfileData = Profiles[ProfileIdx];
@@ -97,7 +121,7 @@ UINT64 D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const
 	assert(ProfileData.QueryFinished == false);
 
 	// Insert the start timestamp
-	const UINT32 StartQueryIdx = UINT32(ProfileIdx * 2);
+	UINT StartQueryIdx = ProfileIdx * 2;
 	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartQueryIdx);
 
 	ProfileData.QueryStarted = true;
@@ -107,7 +131,7 @@ UINT64 D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const
 	return ProfileIdx;
 }
 
-void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT64 Index)
+void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index)
 {
 	assert(Index < NumProfiles);
 
@@ -116,8 +140,8 @@ void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT64 In
 	assert(ProfileData.QueryFinished == false);
 
 	// Insert the end timestamp
-	const UINT32 StartQueryIdx = UINT32(Index * 2);
-	const UINT32 EndQueryIdx   = UINT32(Index * 2 + 1);
+	UINT StartQueryIdx = Index * 2 + 0;
+	UINT EndQueryIdx   = Index * 2 + 1;
 	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndQueryIdx);
 
 	// Resolve the data

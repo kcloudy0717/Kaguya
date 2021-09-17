@@ -78,6 +78,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	if (!Options.Icon.empty())
 	{
+		assert(Options.Icon.extension() == ".ico");
 		hIcon = wil::unique_hicon(reinterpret_cast<HICON>(
 			::LoadImage(nullptr, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
 	}
@@ -137,7 +138,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	RegisterHotKey(hWnd.get(), PRINTSCREEN, 0, VK_SNAPSHOT);
 
 	// Initialize ImGui
-	ImGuiContextManager imgui(hWnd.get());
+	ImGuiContextManager ImGuiContextManager(hWnd.get());
 
 	// Initialize InputHandler
 	InputHandler = { hWnd.get() };
@@ -153,8 +154,8 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	Application.Shutdown();
 
-	BOOL b = ::UnregisterClass(wcexw.lpszClassName, hInstance);
-	return !b;
+	::UnregisterClass(wcexw.lpszClassName, hInstance);
+	return ExitCode;
 }
 
 std::filesystem::path Application::OpenDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs)
@@ -236,6 +237,7 @@ bool Application::ProcessMessages()
 
 		if (Msg.message == WM_QUIT)
 		{
+			ExitCode = static_cast<int>(Msg.wParam);
 			return false;
 		}
 	}
@@ -265,8 +267,8 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
-		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.x = GetSystemMetrics(SM_CXMINTRACK);
-		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize.y = GetSystemMetrics(SM_CYMINTRACK);
+		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK),
+																  GetSystemMetrics(SM_CYMINTRACK) };
 	}
 	break;
 

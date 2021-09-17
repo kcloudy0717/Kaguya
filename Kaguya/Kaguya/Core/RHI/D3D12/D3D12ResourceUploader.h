@@ -1,8 +1,6 @@
 #pragma once
 #include "D3D12Common.h"
 #include "D3D12CommandContext.h"
-#include "D3D12CommandQueue.h"
-#include "D3D12MemoryAllocator.h"
 
 class D3D12ResourceUploader : public D3D12LinkedDeviceChild
 {
@@ -12,12 +10,10 @@ public:
 
 	void Begin();
 
-	// GpuSyncPoint can be ignored if WaitForCompletion is true
 	D3D12CommandSyncPoint End(bool WaitForCompletion);
 
-	void Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subresources, ID3D12Resource* pResource);
-
-	void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* pResource);
+	void Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subresources, ID3D12Resource* Resource);
+	void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* Resource);
 
 private:
 	D3D12CommandContext&								CopyContext2;

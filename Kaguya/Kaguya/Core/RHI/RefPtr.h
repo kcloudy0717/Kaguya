@@ -56,44 +56,42 @@ public:
 	}
 
 	template<class U>
-	RefPtr(U* other) noexcept
-		: Ptr(other)
+	RefPtr(U* Other) noexcept
+		: Ptr(Other)
 	{
 		InternalAddRef();
 	}
 
-	RefPtr(const RefPtr& other) noexcept
-		: Ptr(other.Ptr)
+	RefPtr(const RefPtr& Other) noexcept
+		: Ptr(Other.Ptr)
 	{
 		InternalAddRef();
 	}
 
 	// copy ctor that allows to instanatiate class when U* is convertible to T*
 	template<class U>
-	RefPtr(
-		const RefPtr<U>& other,
-		typename std::enable_if<std::is_convertible<U*, T*>::value, void*>::type* = nullptr) noexcept
-		: Ptr(other.Ptr)
+	RefPtr(const RefPtr<U>& Other, std::enable_if_t<std::is_convertible_v<U*, T*>, void*>* = nullptr) noexcept
+		: Ptr(Other.Ptr)
 
 	{
 		InternalAddRef();
 	}
 
-	RefPtr(RefPtr&& other) noexcept
+	RefPtr(RefPtr&& Other) noexcept
 		: Ptr(nullptr)
 	{
-		if (this != reinterpret_cast<RefPtr*>(&reinterpret_cast<unsigned char&>(other)))
+		if (this != reinterpret_cast<RefPtr*>(&reinterpret_cast<unsigned char&>(Other)))
 		{
-			Swap(other);
+			Swap(Other);
 		}
 	}
 
 	// Move ctor that allows instantiation of a class when U* is convertible to T*
 	template<class U>
-	RefPtr(RefPtr<U>&& other, typename std::enable_if<std::is_convertible_v<U*, T*>, void*>::type* = nullptr) noexcept
-		: Ptr(other.Ptr)
+	RefPtr(RefPtr<U>&& Other, std::enable_if_t<std::is_convertible_v<U*, T*>, void*>* = nullptr) noexcept
+		: Ptr(Other.Ptr)
 	{
-		other.Ptr = nullptr;
+		Other.Ptr = nullptr;
 	}
 
 	~RefPtr() noexcept { InternalRelease(); }
@@ -104,63 +102,63 @@ public:
 		return *this;
 	}
 
-	RefPtr& operator=(T* other) noexcept
+	RefPtr& operator=(T* Other) noexcept
 	{
-		if (Ptr != other)
+		if (Ptr != Other)
 		{
-			RefPtr(other).Swap(*this);
+			RefPtr(Other).Swap(*this);
 		}
 		return *this;
 	}
 
 	template<typename U>
-	RefPtr& operator=(U* other) noexcept
+	RefPtr& operator=(U* Other) noexcept
 	{
-		RefPtr(other).Swap(*this);
+		RefPtr(Other).Swap(*this);
 		return *this;
 	}
 
-	RefPtr& operator=(const RefPtr& other) noexcept
+	RefPtr& operator=(const RefPtr& Other) noexcept
 	{
-		if (Ptr != other.Ptr)
+		if (Ptr != Other.Ptr)
 		{
-			RefPtr(other).Swap(*this);
+			RefPtr(Other).Swap(*this);
 		}
 		return *this;
 	}
 
 	template<class U>
-	RefPtr& operator=(const RefPtr<U>& other) noexcept
+	RefPtr& operator=(const RefPtr<U>& Other) noexcept
 	{
-		RefPtr(other).Swap(*this);
+		RefPtr(Other).Swap(*this);
 		return *this;
 	}
 
-	RefPtr& operator=(RefPtr&& other) noexcept
+	RefPtr& operator=(RefPtr&& Other) noexcept
 	{
-		RefPtr(static_cast<RefPtr&&>(other)).Swap(*this);
+		RefPtr(static_cast<RefPtr&&>(Other)).Swap(*this);
 		return *this;
 	}
 
 	template<class U>
-	RefPtr& operator=(RefPtr<U>&& other) noexcept
+	RefPtr& operator=(RefPtr<U>&& Other) noexcept
 	{
-		RefPtr(static_cast<RefPtr<U>&&>(other)).Swap(*this);
+		RefPtr(static_cast<RefPtr<U>&&>(Other)).Swap(*this);
 		return *this;
 	}
 
-	void Swap(RefPtr&& r) noexcept
+	void Swap(RefPtr&& RefPtr) noexcept
 	{
-		T* tmp = Ptr;
-		Ptr	   = r.Ptr;
-		r.Ptr  = tmp;
+		T* Temp	   = Ptr;
+		Ptr		   = RefPtr.Ptr;
+		RefPtr.Ptr = Temp;
 	}
 
-	void Swap(RefPtr& r) noexcept
+	void Swap(RefPtr& RefPtr) noexcept
 	{
-		T* tmp = Ptr;
-		Ptr	   = r.Ptr;
-		r.Ptr  = tmp;
+		T* Temp	   = Ptr;
+		Ptr		   = RefPtr.Ptr;
+		RefPtr.Ptr = Temp;
 	}
 
 	[[nodiscard]] T* Get() const noexcept { return Ptr; }
@@ -168,8 +166,6 @@ public:
 	operator T*() const { return Ptr; }
 
 	InterfaceType* operator->() const noexcept { return Ptr; }
-
-	T** operator&() { return &Ptr; }
 
 	[[nodiscard]] T* const* GetAddressOf() const noexcept { return &Ptr; }
 
@@ -184,26 +180,25 @@ public:
 	T* Detach() noexcept { return std::exchange(Ptr, {}); }
 
 	// Set the pointer while keeping the object's reference count unchanged
-	void Attach(InterfaceType* other)
+	void Attach(InterfaceType* InterfacePtr)
 	{
 		if (Ptr != nullptr)
 		{
-			auto ref = Ptr->Release();
-			(void)ref;
-
+			auto Ref = Ptr->Release();
+			(void)Ref;
 			// Attaching to the same object only works if duplicate references are being coalesced. Otherwise
 			// re-attaching will cause the pointer to be released and may cause a crash on a subsequent dereference.
-			assert(ref != 0 || Ptr != other);
+			assert(Ref != 0 || Ptr != InterfacePtr);
 		}
 
-		Ptr = other;
+		Ptr = InterfacePtr;
 	}
 
 	// Create a wrapper around a raw object while keeping the object's reference count unchanged
-	static RefPtr<T> Create(T* other)
+	static RefPtr<T> Create(T* InterfacePtr)
 	{
 		RefPtr<T> Ptr;
-		Ptr.Attach(other);
+		Ptr.Attach(InterfacePtr);
 		return Ptr;
 	}
 

@@ -5,18 +5,17 @@
 #include "D3D12CommandContext.h"
 #include "D3D12DescriptorHeap.h"
 #include "D3D12Resource.h"
-#include "D3D12Raytracing.h"
 
 class D3D12LinkedDevice : public D3D12DeviceChild
 {
 public:
-	D3D12LinkedDevice(D3D12Device* Parent);
+	explicit D3D12LinkedDevice(D3D12Device* Parent);
 	~D3D12LinkedDevice();
 
 	void Initialize();
 
-	ID3D12Device*  GetDevice() const;
-	ID3D12Device5* GetDevice5() const;
+	[[nodiscard]] ID3D12Device*	 GetDevice() const;
+	[[nodiscard]] ID3D12Device5* GetDevice5() const;
 
 	D3D12CommandQueue* GetCommandQueue(ED3D12CommandQueueType Type);
 	D3D12CommandQueue* GetGraphicsQueue() { return GetCommandQueue(ED3D12CommandQueueType::Direct); }
@@ -47,7 +46,7 @@ public:
 
 	D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc);
 
-	bool ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
+	bool ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
 
 private:
 	D3D12CommandQueue GraphicsQueue;
@@ -75,8 +74,8 @@ void D3D12Descriptor<ViewDesc>::Allocate()
 {
 	if (Parent)
 	{
-		D3D12DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
-		Heap.Allocate(CPUHandle, GPUHandle, Index);
+		D3D12DescriptorHeap& DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
+		DescriptorHeap.Allocate(CpuHandle, GpuHandle, Index);
 	}
 }
 
@@ -85,10 +84,10 @@ void D3D12Descriptor<ViewDesc>::Release()
 {
 	if (Parent && IsValid())
 	{
-		D3D12DescriptorHeap& Heap = Parent->GetDescriptorHeap<ViewDesc>();
-		Heap.Release(Index);
-		CPUHandle = { NULL };
-		GPUHandle = { NULL };
+		D3D12DescriptorHeap& DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
+		DescriptorHeap.Release(Index);
+		CpuHandle = { NULL };
+		GpuHandle = { NULL };
 		Index	  = UINT_MAX;
 	}
 }

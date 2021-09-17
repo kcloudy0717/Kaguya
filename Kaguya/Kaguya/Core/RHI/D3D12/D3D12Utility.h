@@ -56,6 +56,8 @@ constexpr DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
 class D3D12InputLayout
 {
 public:
+	operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
+
 	void AddVertexLayoutElement(
 		std::string_view SemanticName,
 		UINT			 SemanticIndex,
@@ -63,9 +65,7 @@ public:
 		UINT			 InputSlot,
 		UINT			 AlignedByteOffset);
 
-	operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
-
 private:
 	std::vector<std::string>					  SemanticNames;
-	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements; // must be mutable, as operator() resolves SemanticName
+	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 };

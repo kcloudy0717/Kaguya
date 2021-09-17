@@ -7,10 +7,10 @@ unsigned long IRHIObject::AddRef()
 
 unsigned long IRHIObject::Release()
 {
-	unsigned long result = --NumReferences;
-	if (result == 0)
+	unsigned long Result = --NumReferences;
+	if (Result == 0)
 	{
 		delete this;
 	}
-	return result;
+	return Result;
 }

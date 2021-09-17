@@ -5,8 +5,9 @@ static constexpr VkDynamicState DynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT,
 													VK_DYNAMIC_STATE_STENCIL_REFERENCE,
 													VK_DYNAMIC_STATE_BLEND_CONSTANTS };
 
-struct VulkanPipelineParserCallbacks final : IPipelineParserCallbacks
+class VulkanPipelineParserCallbacks final : public IPipelineParserCallbacks
 {
+public:
 	VulkanPipelineParserCallbacks() noexcept
 	{
 		ColorBlendStateCreateInfo				  = VkStruct<VkPipelineColorBlendStateCreateInfo>();

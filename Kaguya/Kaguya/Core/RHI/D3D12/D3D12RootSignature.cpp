@@ -87,24 +87,24 @@ void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
 	Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 }
 
-D3D12RootSignature::D3D12RootSignature(ID3D12Device* pDevice, RootSignatureBuilder& Builder)
+D3D12RootSignature::D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilder& Builder)
 {
 	Desc = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = Builder.Build() };
 
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> SerializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_D3D12_API(::D3D12SerializeVersionedRootSignature(
+	VERIFY_D3D12_API(D3D12SerializeVersionedRootSignature(
 		&Desc,
 		SerializedRootSignatureBlob.ReleaseAndGetAddressOf(),
 		ErrorBlob.ReleaseAndGetAddressOf()));
 
 	// Create the root signature
-	VERIFY_D3D12_API(pDevice->CreateRootSignature(
+	VERIFY_D3D12_API(Device->CreateRootSignature(
 		0,
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),
-		IID_PPV_ARGS(pRootSignature.ReleaseAndGetAddressOf())));
+		IID_PPV_ARGS(RootSignature.ReleaseAndGetAddressOf())));
 
 	for (UINT i = 0; i < Desc.Desc_1_1.NumParameters; ++i)
 	{
@@ -134,4 +134,24 @@ D3D12RootSignature::D3D12RootSignature(ID3D12Device* pDevice, RootSignatureBuild
 			}
 		}
 	}
+}
+
+std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> D3D12RootSignature::GetDescriptorTableBitMask(
+	D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
+{
+	switch (Type)
+	{
+	case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+		return ResourceDescriptorTableBitMask;
+	case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+		return SamplerTableBitMask;
+	default:
+		return {};
+	}
+}
+
+UINT D3D12RootSignature::GetNumDescriptors(UINT RootParameterIndex) const noexcept
+{
+	assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+	return NumDescriptorsPerTable[RootParameterIndex];
 }

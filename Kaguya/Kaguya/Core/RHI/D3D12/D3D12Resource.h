@@ -3,8 +3,8 @@
 #include "D3D12Descriptor.h"
 
 // Custom resource states
-#define D3D12_RESOURCE_STATE_UNKNOWN	   (static_cast<D3D12_RESOURCE_STATES>(-1))
-#define D3D12_RESOURCE_STATE_UNINITIALIZED (static_cast<D3D12_RESOURCE_STATES>(-2))
+constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_UNKNOWN	   = static_cast<D3D12_RESOURCE_STATES>(-1);
+constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_UNINITIALIZED = static_cast<D3D12_RESOURCE_STATES>(-2);
 
 // https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking
 class CResourceState
@@ -27,48 +27,18 @@ public:
 		SubresourceStates.resize(NumSubresources);
 	}
 
-	auto begin() { return SubresourceStates.begin(); }
-	auto end() { return SubresourceStates.end(); }
+	[[nodiscard]] auto begin() { return SubresourceStates.begin(); }
+	[[nodiscard]] auto end() { return SubresourceStates.end(); }
 
-	bool IsResourceStateUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
-	bool IsResourceStateUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
+	[[nodiscard]] bool IsUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
+	[[nodiscard]] bool IsUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
 
 	// Returns true if all subresources have the same state
-	bool IsUniformResourceState() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
+	[[nodiscard]] bool IsUniform() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
 
-	D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const
-	{
-		if (TrackingMode == ETrackingMode::PerResource)
-		{
-			return ResourceState;
-		}
+	[[nodiscard]] D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const;
 
-		return SubresourceStates[Subresource];
-	}
-
-	void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State)
-	{
-		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceStates.size() == 1)
-		{
-			TrackingMode  = ETrackingMode::PerResource;
-			ResourceState = State;
-		}
-		else
-		{
-			// If we previous tracked resource per resource level, we need to update all
-			// all subresource states before proceeding
-			if (TrackingMode == ETrackingMode::PerResource)
-			{
-				TrackingMode = ETrackingMode::PerSubresource;
-				for (auto& SubresourceState : SubresourceStates)
-				{
-					SubresourceState = ResourceState;
-				}
-			}
-			SubresourceStates[Subresource] = State;
-		}
-	}
+	void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State);
 
 private:
 	ETrackingMode					   TrackingMode;
@@ -92,30 +62,29 @@ public:
 	{
 	}
 
-					operator ID3D12Resource*() const { return pResource.Get(); }
-	ID3D12Resource* GetResource() const { return pResource.Get(); }
+								  operator ID3D12Resource*() const { return Resource.Get(); }
+	[[nodiscard]] ID3D12Resource* GetResource() const { return Resource.Get(); }
 
-	const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }
-	UINT					   GetNumSubresources() const noexcept { return NumSubresources; }
-
-	CResourceState& GetResourceState() { return ResourceState; }
+	[[nodiscard]] const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }
+	[[nodiscard]] UINT						 GetNumSubresources() const noexcept { return NumSubresources; }
+	[[nodiscard]] CResourceState&			 GetResourceState() { return ResourceState; }
 
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
 	// https://devblogs.microsoft.com/directx/a-look-inside-d3d12-resource-state-barriers/
 	// Can this resource be promoted to State from common
-	bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept;
+	[[nodiscard]] bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept;
 
 	// Can this resource decay back to common
-	// NOTE: There are 4 cases
-	// Cases:
+	// 4 Cases:
 	// 1. Resources being accessed on a Copy queue, or
 	// 2. Buffer resources on any queue type, or
 	// 3. Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set, or
 	// 4. Any resource implicitly promoted to a read-only state.
-	bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept;
+	[[nodiscard]] bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType)
+		const noexcept;
 
 protected:
-	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
 	D3D12_RESOURCE_DESC					   Desc;
 	std::optional<D3D12_CLEAR_VALUE>	   ClearValue;
 	UINT								   NumSubresources;
@@ -128,7 +97,7 @@ public:
 	D3D12ASBuffer() noexcept = default;
 	D3D12ASBuffer(D3D12LinkedDevice* Parent, UINT64 SizeInBytes);
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
+	[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const;
 };
 
 class D3D12Buffer : public D3D12Resource
@@ -146,30 +115,27 @@ public:
 	// Call this for upload heap to map a cpu pointer
 	void Initialize();
 
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const { return pResource->GetGPUVirtualAddress(); }
-	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress(int Index) const
-	{
-		return pResource->GetGPUVirtualAddress() + Index * Stride;
-	}
-
-	UINT GetStride() const { return Stride; }
+	[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const;
+	[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress(UINT Index) const;
+	[[nodiscard]] UINT						GetStride() const { return Stride; }
 	template<typename T>
-	T* GetCPUVirtualAddress() const
+	[[nodiscard]] T* GetCpuVirtualAddress() const
 	{
-		assert(CPUVirtualAddress && "Invalid CPUVirtualAddress");
-		return reinterpret_cast<T*>(CPUVirtualAddress);
+		assert(CpuVirtualAddress && "Invalid CPUVirtualAddress");
+		return reinterpret_cast<T*>(CpuVirtualAddress);
 	}
 
 	template<typename T>
-	void CopyData(int Index, const T& Data)
+	void CopyData(UINT Index, const T& Data)
 	{
-		memcpy(&CPUVirtualAddress[Index * Stride], &Data, sizeof(T));
+		assert(CpuVirtualAddress && "Invalid CPUVirtualAddress");
+		memcpy(&CpuVirtualAddress[Index * Stride], &Data, sizeof(T));
 	}
 
 private:
-	D3D12_HEAP_TYPE HeapType		  = D3D12_HEAP_TYPE(-1);
+	D3D12_HEAP_TYPE HeapType		  = {};
 	UINT			Stride			  = 0;
-	BYTE*			CPUVirtualAddress = nullptr;
+	BYTE*			CpuVirtualAddress = nullptr;
 };
 
 template<typename T>
@@ -203,38 +169,31 @@ public:
 		const D3D12_RESOURCE_DESC&		 Desc,
 		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt);
 
-	UINT GetSubresourceIndex(
+	[[nodiscard]] UINT GetSubresourceIndex(
 		std::optional<UINT> OptArraySlice = std::nullopt,
 		std::optional<UINT> OptMipSlice	  = std::nullopt,
-		std::optional<UINT> OptPlaneSlice = std::nullopt) const
-	{
-		UINT ArraySlice = OptMipSlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-		UINT PlaneSlice = OptPlaneSlice.value_or(0);
-
-		return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, Desc.MipLevels, Desc.DepthOrArraySize);
-	}
+		std::optional<UINT> OptPlaneSlice = std::nullopt) const noexcept;
 
 	void CreateShaderResourceView(
 		D3D12ShaderResourceView& ShaderResourceView,
 		std::optional<UINT>		 OptMostDetailedMip = std::nullopt,
-		std::optional<UINT>		 OptMipLevels		= std::nullopt);
+		std::optional<UINT>		 OptMipLevels		= std::nullopt) const;
 
 	void CreateUnorderedAccessView(
 		D3D12UnorderedAccessView& UnorderedAccessView,
 		std::optional<UINT>		  OptArraySlice = std::nullopt,
-		std::optional<UINT>		  OptMipSlice	= std::nullopt);
+		std::optional<UINT>		  OptMipSlice	= std::nullopt) const;
 
 	void CreateRenderTargetView(
 		D3D12RenderTargetView& RenderTargetView,
 		std::optional<UINT>	   OptArraySlice = std::nullopt,
 		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
 		std::optional<UINT>	   OptArraySize	 = std::nullopt,
-		bool				   sRGB			 = false);
+		bool				   sRGB			 = false) const;
 
 	void CreateDepthStencilView(
 		D3D12DepthStencilView& DepthStencilView,
 		std::optional<UINT>	   OptArraySlice = std::nullopt,
 		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
-		std::optional<UINT>	   OptArraySize	 = std::nullopt);
+		std::optional<UINT>	   OptArraySize	 = std::nullopt) const;
 };

@@ -25,8 +25,8 @@ public:
 
 	D3D12Descriptor(D3D12Descriptor&& D3D12Descriptor) noexcept
 		: D3D12LinkedDeviceChild(std::exchange(D3D12Descriptor.Parent, {}))
-		, CPUHandle(std::exchange(D3D12Descriptor.CPUHandle, {}))
-		, GPUHandle(std::exchange(D3D12Descriptor.GPUHandle, {}))
+		, CpuHandle(std::exchange(D3D12Descriptor.CpuHandle, {}))
+		, GpuHandle(std::exchange(D3D12Descriptor.GpuHandle, {}))
 		, Index(std::exchange(D3D12Descriptor.Index, UINT_MAX))
 	{
 	}
@@ -36,8 +36,8 @@ public:
 		if (this != &D3D12Descriptor)
 		{
 			Parent	  = std::exchange(D3D12Descriptor.Parent, {});
-			CPUHandle = std::exchange(D3D12Descriptor.CPUHandle, {});
-			GPUHandle = std::exchange(D3D12Descriptor.GPUHandle, {});
+			CpuHandle = std::exchange(D3D12Descriptor.CpuHandle, {});
+			GpuHandle = std::exchange(D3D12Descriptor.GpuHandle, {});
 			Index	  = std::exchange(D3D12Descriptor.Index, UINT_MAX);
 		}
 		return *this;
@@ -45,19 +45,18 @@ public:
 
 	NONCOPYABLE(D3D12Descriptor);
 
-	bool IsValid() const noexcept { return Index != UINT_MAX; }
-
-	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept
+	[[nodiscard]] bool						  IsValid() const noexcept { return Index != UINT_MAX; }
+	[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept
 	{
 		assert(IsValid());
-		return CPUHandle;
+		return CpuHandle;
 	}
-	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept
+	[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle() const noexcept
 	{
 		assert(IsValid());
-		return GPUHandle;
+		return GpuHandle;
 	}
-	UINT GetIndex() const noexcept
+	[[nodiscard]] UINT GetIndex() const noexcept
 	{
 		assert(IsValid());
 		return Index;
@@ -65,29 +64,29 @@ public:
 
 	void CreateDefaultView(ID3D12Resource* Resource)
 	{
-		(GetParentLinkedDevice()->GetDevice()->*Traits<ViewDesc>::Create())(Resource, nullptr, CPUHandle);
+		(GetParentLinkedDevice()->GetDevice()->*Traits<ViewDesc>::Create())(Resource, nullptr, CpuHandle);
 	}
 
 	void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 	{
 		(GetParentLinkedDevice()->GetDevice()
-			 ->*Traits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CPUHandle);
+			 ->*Traits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CpuHandle);
 	}
 
 	void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
 	{
-		(GetParentLinkedDevice()->GetDevice()->*Traits<ViewDesc>::Create())(Resource, &Desc, CPUHandle);
+		(GetParentLinkedDevice()->GetDevice()->*Traits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
 	}
 
 	void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 	{
 		(GetParentLinkedDevice()->GetDevice()
-			 ->*Traits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CPUHandle);
+			 ->*Traits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
 	}
 
 protected:
-	D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle = { NULL };
-	D3D12_GPU_DESCRIPTOR_HANDLE GPUHandle = { NULL };
+	D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = { NULL };
+	D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle = { NULL };
 	UINT						Index	  = UINT_MAX;
 
 private:
@@ -115,9 +114,9 @@ public:
 	DEFAULTMOVABLE(D3D12View);
 	NONCOPYABLE(D3D12View);
 
-	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCPUHandle() const noexcept { return Descriptor.GetCPUHandle(); }
-	const D3D12_GPU_DESCRIPTOR_HANDLE& GetGPUHandle() const noexcept { return Descriptor.GetGPUHandle(); }
-	UINT							   GetIndex() const noexcept { return Descriptor.GetIndex(); }
+	[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
+	[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle() const noexcept { return Descriptor.GetGpuHandle(); }
+	[[nodiscard]] UINT						  GetIndex() const noexcept { return Descriptor.GetIndex(); }
 
 public:
 	ViewDesc				  Desc = {};

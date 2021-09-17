@@ -91,8 +91,8 @@ public:
 
 	D3D12CommandSignature(ID3D12Device* Device, CommandSignatureBuilder& Builder, ID3D12RootSignature* RootSignature);
 
-	operator ID3D12CommandSignature*() const { return pCommandSignature.Get(); }
+	operator ID3D12CommandSignature*() const { return CommandSignature.Get(); }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12CommandSignature> pCommandSignature;
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> CommandSignature;
 };

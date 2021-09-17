@@ -4,16 +4,17 @@
 class D3D12RaytracingGeometry
 {
 public:
-	auto size() const noexcept { return RaytracingGeometryDescs.size(); }
+	auto begin() noexcept { return RaytracingGeometryDescs.begin(); }
+	auto end() noexcept { return RaytracingGeometryDescs.end(); }
 
-	void clear() noexcept { RaytracingGeometryDescs.clear(); }
+	[[nodiscard]] UINT Size() const noexcept { return static_cast<UINT>(RaytracingGeometryDescs.size()); }
 
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS GetInputsDesc() const
+	[[nodiscard]] D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS GetInputsDesc() const
 	{
 		return { .Type	= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
 				 .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE |
 						  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION,
-				 .NumDescs		 = static_cast<UINT>(RaytracingGeometryDescs.size()),
+				 .NumDescs		 = Size(),
 				 .DescsLayout	 = D3D12_ELEMENTS_LAYOUT_ARRAY,
 				 .pGeometryDescs = RaytracingGeometryDescs.data() };
 	}
@@ -30,24 +31,22 @@ private:
 class D3D12RaytracingScene
 {
 public:
-	auto size() const noexcept { return RaytracingInstanceDescs.size(); }
-
-	bool empty() const noexcept { return RaytracingInstanceDescs.empty(); }
-
-	void clear() noexcept { RaytracingInstanceDescs.clear(); }
-
 	auto begin() noexcept { return RaytracingInstanceDescs.begin(); }
-
 	auto end() noexcept { return RaytracingInstanceDescs.end(); }
+
+	[[nodiscard]] UINT Size() const noexcept { return static_cast<UINT>(RaytracingInstanceDescs.size()); }
+	[[nodiscard]] bool Valid() const noexcept { return !RaytracingInstanceDescs.empty(); }
+
+	void Reset() noexcept;
 
 	void AddInstance(const D3D12_RAYTRACING_INSTANCE_DESC& Desc);
 
-	void ComputeMemoryRequirements(ID3D12Device5* pDevice, UINT64* pScratchSizeInBytes, UINT64* pResultSizeInBytes);
+	void ComputeMemoryRequirements(ID3D12Device5* Device, UINT64* pScratchSizeInBytes, UINT64* pResultSizeInBytes);
 
 	void Generate(
-		ID3D12GraphicsCommandList6* pCommandList,
-		ID3D12Resource*				pScratch,
-		ID3D12Resource*				pResult,
+		ID3D12GraphicsCommandList6* CommandList,
+		ID3D12Resource*				Scratch,
+		ID3D12Resource*				Result,
 		D3D12_GPU_VIRTUAL_ADDRESS	InstanceDescs);
 
 private:
@@ -56,35 +55,37 @@ private:
 	UINT64										ResultSizeInBytes  = 0;
 };
 
+// https://github.com/NVIDIAGameWorks/RTXMU, RTXMU is licensed under the MIT License.
+// Modified for my own use
+
 class D3D12RaytracingMemoryPage;
 
 struct RaytracingMemorySection
 {
-	D3D12RaytracingMemoryPage* Parent	  = nullptr;
-	UINT64					   Size		  = 0;
-	UINT64					   Offset	  = 0;
-	UINT64					   UnusedSize = 0;
-	D3D12_GPU_VIRTUAL_ADDRESS  GPUVirtualAddress;
-	bool					   IsFree = false;
+	D3D12RaytracingMemoryPage* Parent		  = nullptr;
+	UINT64					   Size			  = 0;
+	UINT64					   Offset		  = 0;
+	UINT64					   UnusedSize	  = 0;
+	D3D12_GPU_VIRTUAL_ADDRESS  VirtualAddress = {};
+	bool					   IsFree		  = false;
 };
 
 class D3D12RaytracingMemoryPage : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12RaytracingMemoryPage() noexcept = default;
-
 	D3D12RaytracingMemoryPage(D3D12LinkedDevice* Parent, UINT64 PageSize)
 		: D3D12LinkedDeviceChild(Parent)
 		, PageSize(PageSize)
 	{
 	}
 
-	void Initialize(D3D12_HEAP_TYPE Type, D3D12_RESOURCE_STATES InitialResourceState);
+	void Initialize(D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState);
 
-	UINT64 PageSize;
+	UINT64 PageSize = 0;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
-	D3D12_GPU_VIRTUAL_ADDRESS			   GPUVirtualAddress;
+	Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+	D3D12_GPU_VIRTUAL_ADDRESS			   VirtualAddress = {};
 
 	std::vector<RaytracingMemorySection> FreeMemorySections;
 	UINT64								 CurrentOffset = 0;
@@ -95,9 +96,8 @@ class D3D12RaytracingMemoryAllocator : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12RaytracingMemoryAllocator() noexcept = default;
-
 	D3D12RaytracingMemoryAllocator(
-		D3D12LinkedDevice*		  Parent,
+		D3D12LinkedDevice*	  Parent,
 		D3D12_HEAP_TYPE		  HeapType,
 		D3D12_RESOURCE_STATES InitialResourceState,
 		UINT64				  DefaultPageSize,
@@ -133,7 +133,7 @@ public:
 			Section.Parent					= Page;
 			Section.Size					= AlignedSizeInBytes;
 			Section.Offset					= Page->CurrentOffset;
-			Section.GPUVirtualAddress		= Page->GPUVirtualAddress + Page->CurrentOffset;
+			Section.VirtualAddress			= Page->VirtualAddress + Page->CurrentOffset;
 
 			const UINT64 OffsetInBytes = Page->CurrentOffset + AlignedSizeInBytes;
 			Page->CurrentOffset		   = OffsetInBytes;
@@ -160,9 +160,9 @@ public:
 					if (offsetInBytes <= Page->PageSize)
 					{
 						// Only ever change the memory size if this is a new allocation
-						Section.Size			  = AlignedSizeInBytes;
-						Section.Offset			  = Page->CurrentOffset;
-						Section.GPUVirtualAddress = Page->GPUVirtualAddress + Page->CurrentOffset;
+						Section.Size		   = AlignedSizeInBytes;
+						Section.Offset		   = Page->CurrentOffset;
+						Section.VirtualAddress = Page->VirtualAddress + Page->CurrentOffset;
 
 						Page->CurrentOffset = offsetInBytes;
 						Page->NumSubBlocks++;
@@ -286,7 +286,7 @@ private:
 					}
 				}
 			}
-			freeSubBlockIter++;
+			++freeSubBlockIter;
 		}
 
 		// Did not find a perfect match so take the closest and get hit with fragmentation
@@ -301,7 +301,7 @@ private:
 
 			// Remove from the list
 			Page->FreeMemorySections.erase(minUnusedMemoryIter);
-			Page->NumSubBlocks++;
+			++Page->NumSubBlocks;
 		}
 
 		return foundFreeSubBlock;
@@ -335,42 +335,7 @@ class D3D12RaytracingAccelerationStructureManager : public D3D12LinkedDeviceChil
 {
 public:
 	D3D12RaytracingAccelerationStructureManager() noexcept = default;
-
-	D3D12RaytracingAccelerationStructureManager(D3D12LinkedDevice* Parent, UINT64 PageSize)
-		: D3D12LinkedDeviceChild(Parent)
-		, PageSize(PageSize)
-		, ScratchPool(
-			  Parent,
-			  D3D12_HEAP_TYPE_DEFAULT,
-			  D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-			  PageSize,
-			  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
-		, ResultPool(
-			  Parent,
-			  D3D12_HEAP_TYPE_DEFAULT,
-			  D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-			  PageSize,
-			  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
-		, ResultCompactedPool(
-			  Parent,
-			  D3D12_HEAP_TYPE_DEFAULT,
-			  D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-			  PageSize,
-			  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
-		, CompactedSizeCPUPool(
-			  Parent,
-			  D3D12_HEAP_TYPE_DEFAULT,
-			  D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-			  65536,
-			  sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC))
-		, CompactedSizeGPUPool(
-			  Parent,
-			  D3D12_HEAP_TYPE_READBACK,
-			  D3D12_RESOURCE_STATE_COPY_DEST,
-			  65536,
-			  sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC))
-	{
-	}
+	D3D12RaytracingAccelerationStructureManager(D3D12LinkedDevice* Parent, UINT64 PageSize);
 
 	UINT64 Build(
 		ID3D12GraphicsCommandList4*									CommandList,
@@ -386,19 +351,18 @@ public:
 		AccelerationStructures[AccelerationStructureIndex]->SyncPoint = SyncPoint;
 	}
 
-	// Returns GPUVA of the acceleration structure
-	D3D12_GPU_VIRTUAL_ADDRESS GetAccelerationStructureGPUVA(UINT64 AccelerationStructureIndex)
+	D3D12_GPU_VIRTUAL_ADDRESS GetAccelerationStructureAddress(UINT64 AccelerationStructureIndex)
 	{
 		D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
 
-		return AccelerationStructure->IsCompacted ? AccelerationStructure->ResultCompactedMemory.GPUVirtualAddress
-												  : AccelerationStructure->ResultMemory.GPUVirtualAddress;
+		return AccelerationStructure->IsCompacted ? AccelerationStructure->ResultCompactedMemory.VirtualAddress
+												  : AccelerationStructure->ResultMemory.VirtualAddress;
 	}
 
 private:
 	UINT64 GetAccelerationStructureIndex()
 	{
-		UINT64 NewIndex = 0;
+		UINT64 NewIndex;
 		if (!IndexQueue.empty())
 		{
 			NewIndex						 = IndexQueue.front();
@@ -420,10 +384,7 @@ private:
 	}
 
 private:
-	static constexpr UINT SizeOfPostBuildInfoCompactedSizeDesc =
-		sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-
-	UINT64 PageSize;
+	UINT64 PageSize = 0;
 
 	UINT64 TotalUncompactedMemory = 0;
 	UINT64 TotalCompactedMemory	  = 0;
@@ -435,6 +396,6 @@ private:
 	D3D12RaytracingMemoryAllocator ScratchPool;
 	D3D12RaytracingMemoryAllocator ResultPool;
 	D3D12RaytracingMemoryAllocator ResultCompactedPool;
-	D3D12RaytracingMemoryAllocator CompactedSizeCPUPool;
-	D3D12RaytracingMemoryAllocator CompactedSizeGPUPool;
+	D3D12RaytracingMemoryAllocator CompactedSizeGpuPool;
+	D3D12RaytracingMemoryAllocator CompactedSizeCpuPool;
 };

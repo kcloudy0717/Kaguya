@@ -25,7 +25,7 @@
 
 void AftermathShaderDatabase::AddShader(
 	Microsoft::WRL::ComPtr<IDxcBlob> Blob,
-	Microsoft::WRL::ComPtr<IDxcBlob> PDBBlob) noexcept
+	Microsoft::WRL::ComPtr<IDxcBlob> PdbBlob) noexcept
 {
 #ifdef NVIDIA_NSIGHT_AFTERMATH
 	// Create shader hashes for the shader bytecode
@@ -60,12 +60,12 @@ void AftermathShaderDatabase::AddShader(
 		{
 			// Store the data for shader instruction address mapping when decoding GPU crash dumps.
 			// cf. FindSourceShaderDebugData()
-			ShaderPDBs[ShaderDebugName].Swap(PDBBlob);
+			ShaderPdbs[ShaderDebugName].Swap(PdbBlob);
 		}
 	}
 #else
 	UNREFERENCED_PARAMETER(Blob);
-	UNREFERENCED_PARAMETER(PDBBlob);
+	UNREFERENCED_PARAMETER(PdbBlob);
 #endif
 }
 
@@ -93,7 +93,7 @@ IDxcBlob* AftermathShaderDatabase::FindShaderBinary(
 
 IDxcBlob* AftermathShaderDatabase::FindSourceShaderDebugData(const GFSDK_Aftermath_ShaderDebugName& ShaderDebugName)
 {
-	if (auto iter = ShaderPDBs.find(ShaderDebugName); iter != ShaderPDBs.end())
+	if (auto iter = ShaderPdbs.find(ShaderDebugName); iter != ShaderPdbs.end())
 	{
 		return iter->second.Get();
 	}

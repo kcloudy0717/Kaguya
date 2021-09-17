@@ -13,56 +13,23 @@ struct PendingResourceBarrier
 
 struct ResourceBarrierBatch
 {
-	enum
-	{
-		BatchCount = 64
-	};
+	static constexpr UINT NumBatches = 64;
 
-	ResourceBarrierBatch()
-	{
-		std::memset(ResourceBarriers, NULL, sizeof(ResourceBarriers));
-		NumResourceBarriers = 0;
-	}
+	void Reset();
 
-	void Reset() { NumResourceBarriers = 0; }
+	UINT Flush(ID3D12GraphicsCommandList* GraphicsCommandList);
 
-	UINT Flush(ID3D12GraphicsCommandList* GraphicsCommandList)
-	{
-		if (NumResourceBarriers > 0)
-		{
-			GraphicsCommandList->ResourceBarrier(NumResourceBarriers, ResourceBarriers);
-			Reset();
-		}
-		return NumResourceBarriers;
-	}
-
-	void Add(const D3D12_RESOURCE_BARRIER& ResourceBarrier)
-	{
-		assert(NumResourceBarriers < BatchCount);
-		ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
-	}
-
+	void Add(const D3D12_RESOURCE_BARRIER& ResourceBarrier);
 	void AddTransition(
 		D3D12Resource*		  Resource,
 		D3D12_RESOURCE_STATES StateBefore,
 		D3D12_RESOURCE_STATES StateAfter,
-		UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
-	}
+		UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+	void AddAliasing(D3D12Resource* BeforeResource, D3D12Resource* AfterResource);
+	void AddUAV(D3D12Resource* Resource);
 
-	void AddAliasing(D3D12Resource* BeforeResource, D3D12Resource* AfterResource)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::Aliasing(BeforeResource->GetResource(), AfterResource->GetResource()));
-	}
-
-	void AddUAV(D3D12Resource* Resource)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::UAV(Resource ? Resource->GetResource() : nullptr));
-	}
-
-	D3D12_RESOURCE_BARRIER ResourceBarriers[BatchCount];
-	UINT				   NumResourceBarriers;
+	D3D12_RESOURCE_BARRIER ResourceBarriers[NumBatches] = {};
+	UINT				   NumResourceBarriers			= 0;
 };
 
 class D3D12ResourceStateTracker
@@ -74,10 +41,7 @@ public:
 
 	void Reset();
 
-	void Add(const PendingResourceBarrier& PendingResourceBarrier)
-	{
-		PendingResourceBarriers.push_back(PendingResourceBarrier);
-	}
+	void Add(const PendingResourceBarrier& PendingResourceBarrier);
 
 private:
 	std::unordered_map<D3D12Resource*, CResourceState> ResourceStates;

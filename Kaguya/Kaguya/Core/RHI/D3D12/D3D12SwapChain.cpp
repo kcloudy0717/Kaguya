@@ -4,14 +4,14 @@ using Microsoft::WRL::ComPtr;
 
 D3D12SwapChain::D3D12SwapChain(
 	HWND				hWnd,
-	IDXGIFactory5*		pFactory5,
-	ID3D12Device*		pDevice,
-	ID3D12CommandQueue* pCommandQueue)
-	: pDevice(pDevice)
+	IDXGIFactory5*		Factory5,
+	ID3D12Device*		Device,
+	ID3D12CommandQueue* CommandQueue)
+	: Device(Device)
 {
 	// Check tearing support
 	BOOL AllowTearing = FALSE;
-	if (FAILED(pFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
+	if (FAILED(Factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
 	{
 		AllowTearing = FALSE;
 	}
@@ -31,14 +31,8 @@ D3D12SwapChain::D3D12SwapChain(
 	Desc.Flags = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	ComPtr<IDXGISwapChain1> SwapChain1;
-	VERIFY_D3D12_API(pFactory5->CreateSwapChainForHwnd(
-		pCommandQueue,
-		hWnd,
-		&Desc,
-		nullptr,
-		nullptr,
-		SwapChain1.ReleaseAndGetAddressOf()));
-	VERIFY_D3D12_API(pFactory5->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
+	VERIFY_D3D12_API(Factory5->CreateSwapChainForHwnd(CommandQueue, hWnd, &Desc, nullptr, nullptr, &SwapChain1));
+	VERIFY_D3D12_API(Factory5->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
 	SwapChain1.As(&SwapChain4);
 
 	// Create Descriptor heap
@@ -46,14 +40,14 @@ D3D12SwapChain::D3D12SwapChain(
 											.NumDescriptors = BackBufferCount,
 											.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 											.NodeMask		= 0 };
-	VERIFY_D3D12_API(pDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(RTVHeaps.ReleaseAndGetAddressOf())));
-	UINT RTVViewStride = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	VERIFY_D3D12_API(Device->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(RTVHeaps.ReleaseAndGetAddressOf())));
+	UINT RTVSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// Initialize RTVs
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hCPU(RTVHeaps->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress(RTVHeaps->GetCPUDescriptorHandleForHeapStart());
 	for (UINT i = 0; i < BackBufferCount; i++)
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(RenderTargetViews[i], hCPU, i, RTVViewStride);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(RenderTargetViews[i], CpuBaseAddress, i, RTVSize);
 	}
 
 	CreateRenderTargetViews();
@@ -89,18 +83,18 @@ void D3D12SwapChain::Present(bool VSync)
 {
 	try
 	{
-		const UINT SyncInterval = VSync ? 1u : 0u;
-		const UINT PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-		HRESULT	   hr			= SwapChain4->Present(SyncInterval, PresentFlags);
-		if (hr == DXGI_ERROR_DEVICE_REMOVED)
+		UINT	SyncInterval = VSync ? 1u : 0u;
+		UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+		HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
+		if (Result == DXGI_ERROR_DEVICE_REMOVED)
 		{
 			// TODO: Handle device removal
-			throw hr;
+			throw DXGI_ERROR_DEVICE_REMOVED;
 		}
 	}
-	catch (HRESULT hr)
+	catch (HRESULT Result)
 	{
-		HRESULT errorCode = hr;
+		(void)Result;
 	}
 }
 
@@ -108,8 +102,8 @@ void D3D12SwapChain::CreateRenderTargetViews()
 {
 	for (UINT i = 0; i < BackBufferCount; ++i)
 	{
-		ComPtr<ID3D12Resource> pBackBuffer;
-		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer)));
+		ComPtr<ID3D12Resource> BackBuffer;
+		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&BackBuffer)));
 
 		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
 		ViewDesc.Format						   = Format;
@@ -117,6 +111,6 @@ void D3D12SwapChain::CreateRenderTargetViews()
 		ViewDesc.Texture2D.MipSlice			   = 0;
 		ViewDesc.Texture2D.PlaneSlice		   = 0;
 
-		pDevice->CreateRenderTargetView(pBackBuffer.Get(), &ViewDesc, RenderTargetViews[i]);
+		Device->CreateRenderTargetView(BackBuffer.Get(), &ViewDesc, RenderTargetViews[i]);
 	}
 }

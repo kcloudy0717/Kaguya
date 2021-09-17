@@ -21,14 +21,14 @@ struct ProfileData
 
 	INT Depth = 0;
 
-	void Update(UINT64 Index, UINT64 GpuFrequency, const UINT64* pFrameQueryData);
+	void Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData);
 };
 
 struct D3D12EventNode
 {
-	D3D12EventNode(INT Depth, const std::string& Name, D3D12EventNode* Parent)
+	D3D12EventNode(INT Depth, std::string Name, D3D12EventNode* Parent)
 		: Depth(Depth)
-		, Name(Name)
+		, Name(std::move(Name))
 		, Parent(Parent)
 	{
 	}
@@ -50,10 +50,10 @@ struct D3D12EventNode
 			return iter->second;
 		}
 
-		D3D12EventNode* pEventNode = new D3D12EventNode(Depth + 1, Name, this);
-		Children.push_back(pEventNode);
-		LUT[Name] = pEventNode;
-		return pEventNode;
+		auto EventNode = new D3D12EventNode(Depth + 1, Name, this);
+		Children.push_back(EventNode);
+		LUT[Name] = EventNode;
+		return EventNode;
 	}
 
 	void StartTiming(ID3D12GraphicsCommandList* CommandList);
@@ -62,7 +62,7 @@ struct D3D12EventNode
 
 	INT												 Depth;
 	std::string										 Name;
-	UINT64											 Index = UINT64_MAX;
+	UINT											 Index = UINT_MAX;
 	D3D12EventNode*									 Parent;
 	std::vector<D3D12EventNode*>					 Children;
 	std::unordered_map<std::string, D3D12EventNode*> LUT;
@@ -92,41 +92,20 @@ private:
 class D3D12Profiler
 {
 public:
-	static constexpr UINT64 MaxProfiles = 64;
+	static constexpr UINT MaxProfiles = 64;
 
 	D3D12Profiler(UINT FrameLatency);
 
-	void Initialize(ID3D12Device* pDevice, UINT64 Frequency);
+	void Initialize(ID3D12Device* Device, UINT64 Frequency);
 
-	void OnBeginFrame()
-	{
-		UINT64* QueryData = nullptr;
-		if (SUCCEEDED(QueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
-		{
-			const UINT64* FrameQueryData = QueryData + (FrameIndex * MaxProfiles * 2);
+	void OnBeginFrame();
+	void OnEndFrame();
 
-			for (UINT64 i = 0; i < NumProfiles; ++i)
-			{
-				Profiles[i].Update(i, Frequency, FrameQueryData);
-			}
-
-			QueryReadback->Unmap(0, nullptr);
-
-			Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
-		}
-
-		NumProfiles = 0;
-	}
-	void OnEndFrame()
-	{
-		FrameIndex = (FrameIndex + 1) % FrameLatency;
-		Data	   = {};
-	}
-
-	UINT64 StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth);
-	void   EndProfile(ID3D12GraphicsCommandList* CommandList, UINT64 Index);
+	UINT StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth);
+	void EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index);
 
 public:
+	// Read only
 	inline static std::span<ProfileData> Data;
 
 private:
@@ -134,7 +113,7 @@ private:
 	UINT64	   Frequency;
 
 	std::vector<ProfileData> Profiles;
-	UINT64					 NumProfiles = 0;
+	UINT					 NumProfiles = 0;
 
 	UINT									FrameIndex;
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> QueryHeap;

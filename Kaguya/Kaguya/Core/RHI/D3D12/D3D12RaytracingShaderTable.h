@@ -21,7 +21,7 @@
 //	GeometryContributionToHitGroupIndex is a system generated index of geometry in BLAS (0,1,2,3..)
 //
 
-// This blog post by Will is very useful for calculating sbt in various graphics APIs
+// This blog post is very useful for calculating sbt in various graphics APIs
 // https://www.willusher.io/graphics/2019/11/20/the-sbt-three-ways
 
 // RaytracingShaderRecord = {{Shader Identifier}, {RootArguments}}
@@ -155,9 +155,9 @@ public:
 	void Write();
 
 	// Call this to upload the records to GPU table
-	void CopyToGPU(D3D12CommandContext& Context) const;
+	void CopyToGpu(D3D12CommandContext& Context) const;
 
-	D3D12_DISPATCH_RAYS_DESC GetDispatchRaysDesc(UINT RayGenerationShaderIndex, UINT BaseMissShaderIndex) const;
+	[[nodiscard]] D3D12_DISPATCH_RAYS_DESC GetDesc(UINT RayGenerationShaderIndex, UINT BaseMissShaderIndex) const;
 
 private:
 	std::unique_ptr<IRaytracingShaderTable> RayGenerationShaderTable;
@@ -171,5 +171,5 @@ private:
 	UINT64 SizeInBytes = 0;
 
 	D3D12Buffer				SBTBuffer, SBTUploadBuffer;
-	std::unique_ptr<BYTE[]> CPUData;
+	std::unique_ptr<BYTE[]> CpuData;
 };

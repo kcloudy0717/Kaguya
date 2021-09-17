@@ -103,7 +103,7 @@ class D3D12ScopedEventObject
 public:
 	D3D12ScopedEventObject(D3D12CommandContext& CommandContext, std::string_view Name)
 		: CommandContext(CommandContext)
-		, PIXEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
+		, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
 		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
 	{
 #ifdef NVIDIA_NSIGHT_AFTERMATH
@@ -116,7 +116,7 @@ public:
 
 private:
 	D3D12CommandContext&							CommandContext;
-	PIXScopedEventObject<ID3D12GraphicsCommandList> PIXEvent;
+	PIXScopedEventObject<ID3D12GraphicsCommandList> PixEvent;
 	D3D12ProfileBlock								ProfileBlock;
 };
 

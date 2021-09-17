@@ -1,8 +1,6 @@
 #pragma once
 #include "D3D12Common.h"
 #include "D3D12ResourceStateTracker.h"
-#include "D3D12RootSignature.h"
-#include "D3D12PipelineState.h"
 
 class D3D12CommandQueue;
 
@@ -12,13 +10,13 @@ public:
 	D3D12CommandAllocator() noexcept = default;
 	D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND_LIST_TYPE Type);
 
-	operator ID3D12CommandAllocator*() { return CommandAllocator.Get(); }
+	operator ID3D12CommandAllocator*() const noexcept { return CommandAllocator.Get(); }
 
-	bool IsReady() const { return CommandSyncPoint.IsComplete(); }
+	[[nodiscard]] bool IsReady() const { return CommandSyncPoint.IsComplete(); }
 
-	D3D12CommandSyncPoint GetSyncPoint() const { return CommandSyncPoint; }
+	[[nodiscard]] D3D12CommandSyncPoint GetSyncPoint() const { return CommandSyncPoint; }
 
-	bool HasValidSyncPoint() const { return CommandSyncPoint.IsValid(); }
+	[[nodiscard]] bool HasValidSyncPoint() const { return CommandSyncPoint.IsValid(); }
 
 	void SetSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
 	{
@@ -41,15 +39,14 @@ class D3D12CommandListHandle
 {
 public:
 	D3D12CommandListHandle() noexcept = default;
-	D3D12CommandListHandle(D3D12LinkedDevice* Device, D3D12_COMMAND_LIST_TYPE Type, D3D12CommandQueue* CommandQueue);
+	D3D12CommandListHandle(D3D12LinkedDevice* Device, D3D12_COMMAND_LIST_TYPE Type);
 
 	ID3D12CommandList*			GetCommandList() const { return CommandList->GraphicsCommandList.Get(); }
 	ID3D12GraphicsCommandList*	GetGraphicsCommandList() const { return CommandList->GraphicsCommandList.Get(); }
 	ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const { return CommandList->GraphicsCommandList4.Get(); }
 	ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const { return CommandList->GraphicsCommandList6.Get(); }
-
 #ifdef NVIDIA_NSIGHT_AFTERMATH
-	GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return pCommandList->AftermathContextHandle; }
+	GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return CommandList->AftermathContextHandle; }
 #endif
 
 	ID3D12GraphicsCommandList* operator->() const { return GetGraphicsCommandList(); }
@@ -111,9 +108,7 @@ private:
 		GFSDK_Aftermath_ContextHandle AftermathContextHandle = nullptr;
 #endif
 
-		D3D12CommandAllocator* CommandAllocator;
-		bool				   IsClosed;
-
+		D3D12CommandAllocator*	  CommandAllocator;
 		D3D12ResourceStateTracker ResourceStateTracker;
 		ResourceBarrierBatch	  ResourceBarrierBatch;
 	};

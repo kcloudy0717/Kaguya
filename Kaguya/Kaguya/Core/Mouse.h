@@ -8,11 +8,6 @@ class Mouse
 public:
 	friend class InputHandler;
 
-	enum
-	{
-		BufferSize = 16
-	};
-
 	enum Button
 	{
 		Left,
@@ -37,43 +32,36 @@ public:
 			WheelDown
 		};
 
-		struct SData
-		{
-			int	 X;
-			int	 Y;
-			bool LeftIsPressed;
-			bool MiddleIsPressed;
-			bool RightIsPressed;
-		};
-
-		Event() = default;
-		Event(EType Type, const Mouse& Mouse)
+		Event() noexcept = default;
+		Event(EType Type, const Mouse& Mouse) noexcept
 			: Type(Type)
 		{
-			Data.X				 = Mouse.x;
-			Data.Y				 = Mouse.y;
-			Data.LeftIsPressed	 = Mouse.IsLeftPressed();
-			Data.MiddleIsPressed = Mouse.IsMiddlePressed();
-			Data.RightIsPressed	 = Mouse.IsRightPressed();
+			x				= Mouse.x;
+			y				= Mouse.y;
+			LeftIsPressed	= Mouse.IsLeftPressed();
+			MiddleIsPressed = Mouse.IsMiddlePressed();
+			RightIsPressed	= Mouse.IsRightPressed();
 		}
 
 		EType Type = EType::Invalid;
-		SData Data = {};
+		int	  x, y;
+		bool  LeftIsPressed;
+		bool  MiddleIsPressed;
+		bool  RightIsPressed;
 	};
 
 	struct RawInput
 	{
-		int X, Y;
+		int x, y;
 	};
 
-	bool IsPressed(Button Button) const;
-	bool IsLeftPressed() const;
-	bool IsMiddlePressed() const;
-	bool IsRightPressed() const;
+	[[nodiscard]] bool IsPressed(Button Button) const;
+	[[nodiscard]] bool IsLeftPressed() const;
+	[[nodiscard]] bool IsMiddlePressed() const;
+	[[nodiscard]] bool IsRightPressed() const;
 
-	std::optional<Mouse::Event> Read();
-
-	std::optional<Mouse::RawInput> ReadRawInput();
+	std::optional<Event>	Read();
+	std::optional<RawInput> ReadRawInput();
 
 private:
 	void OnMove(int x, int y);
@@ -89,11 +77,12 @@ private:
 	void OnRawInput(int x, int y);
 
 	template<class T>
-	void TrimBuffer(std::queue<T>& QueueBuffer)
+	static void Trim(std::queue<T>& Queue)
 	{
-		while (QueueBuffer.size() > BufferSize)
+		static constexpr size_t BufferSize = 16;
+		while (Queue.size() > BufferSize)
 		{
-			QueueBuffer.pop();
+			Queue.pop();
 		}
 	}
 
@@ -104,8 +93,8 @@ public:
 	int yRaw = 0;
 
 private:
-	std::bitset<NumButtons>	 ButtonStates;
-	int						 WheelDeltaCarry = 0;
-	std::queue<Mouse::Event> MouseBuffer;
-	std::queue<RawInput>	 RawDeltaBuffer;
+	std::bitset<NumButtons> ButtonStates;
+	int						WheelDeltaCarry = 0;
+	std::queue<Event>		EventQueue;
+	std::queue<RawInput>	RawInputQueue;
 };

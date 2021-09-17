@@ -55,17 +55,19 @@ void D3D12CommandQueue::Initialize(ED3D12CommandQueueType CommandQueueType, UINT
 
 	constexpr UINT NodeMask = 0;
 
-	D3D12_COMMAND_QUEUE_DESC Desc = { .Type		= CommandListType,
-									  .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-									  .Flags	= D3D12_COMMAND_QUEUE_FLAG_NONE,
-									  .NodeMask = NodeMask };
+	D3D12_COMMAND_QUEUE_DESC Desc = {};
+	Desc.Type					  = CommandListType;
+	Desc.Priority				  = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	Desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	Desc.NodeMask				  = NodeMask;
+
 	VERIFY_D3D12_API(
 		Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(CommandQueue.ReleaseAndGetAddressOf())));
 	VERIFY_D3D12_API(
 		Device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.ReleaseAndGetAddressOf())));
 
-#ifdef _DEBUG
 	CommandQueue->SetName(GetCommandQueueTypeString(CommandQueueType));
+#ifdef _DEBUG
 	Fence->SetName(GetCommandQueueTypeFenceString(CommandQueueType));
 #endif
 
@@ -76,7 +78,7 @@ void D3D12CommandQueue::Initialize(ED3D12CommandQueueType CommandQueueType, UINT
 
 	for (UINT i = 0; i < NumCommandLists; ++i)
 	{
-		AvailableCommandListHandles.push(D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType, this));
+		AvailableCommandListHandles.push(D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType));
 	}
 
 	ResourceBarrierCommandAllocator = ResourceBarrierCommandAllocatorPool.RequestCommandAllocator();
@@ -123,9 +125,8 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 	D3D12CommandListHandle& ResourceBarrierCommandListHandle)
 {
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle.ResolveResourceBarriers();
-	UINT								NumBarriers		 = static_cast<UINT>(ResourceBarriers.size());
 
-	const bool AnyResolved = NumBarriers > 0;
+	bool AnyResolved = !ResourceBarriers.empty();
 	if (AnyResolved)
 	{
 		if (!ResourceBarrierCommandAllocator)
@@ -134,7 +135,9 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 		}
 
 		ResourceBarrierCommandListHandle = RequestCommandList(ResourceBarrierCommandAllocator);
-		ResourceBarrierCommandListHandle->ResourceBarrier(NumBarriers, ResourceBarriers.data());
+		ResourceBarrierCommandListHandle->ResourceBarrier(
+			static_cast<UINT>(ResourceBarriers.size()),
+			ResourceBarriers.data());
 		ResourceBarrierCommandListHandle.Close();
 	}
 
@@ -149,8 +152,8 @@ void D3D12CommandQueue::ExecuteCommandLists(
 	UINT			   NumCommandLists	= 0;
 	ID3D12CommandList* CommandLists[64] = {};
 
-	D3D12CommandListHandle BarrierCommandLists[64];
-	UINT				   NumBarrierCommandList = 0;
+	UINT				   NumBarrierCommandList   = 0;
+	D3D12CommandListHandle BarrierCommandLists[64] = {};
 
 	// Resolve resource barriers
 	for (UINT i = 0; i < NumCommandListHandles; ++i)

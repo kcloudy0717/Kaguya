@@ -5,20 +5,20 @@ class D3D12PipelineState
 {
 public:
 	D3D12PipelineState() noexcept = default;
-	D3D12PipelineState(ID3D12Device* pDevice, const D3D12_GRAPHICS_PIPELINE_STATE_DESC* pDesc);
-	D3D12PipelineState(ID3D12Device* pDevice, const D3D12_COMPUTE_PIPELINE_STATE_DESC* pDesc);
-	D3D12PipelineState(ID3D12Device2* pDevice, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
+	D3D12PipelineState(ID3D12Device* Device, const D3D12_GRAPHICS_PIPELINE_STATE_DESC* Desc);
+	D3D12PipelineState(ID3D12Device* Device, const D3D12_COMPUTE_PIPELINE_STATE_DESC* Desc);
+	D3D12PipelineState(ID3D12Device2* Device, const D3D12_PIPELINE_STATE_STREAM_DESC& Desc);
 	template<typename PipelineStateStream>
-	D3D12PipelineState(ID3D12Device2* pDevice, PipelineStateStream& Stream)
+	D3D12PipelineState(ID3D12Device2* Device, PipelineStateStream& Stream)
 		: D3D12PipelineState(
-			  pDevice,
+			  Device,
 			  D3D12_PIPELINE_STATE_STREAM_DESC{ .SizeInBytes				   = sizeof(PipelineStateStream),
 												.pPipelineStateSubobjectStream = &Stream })
 	{
 	}
 
-	operator ID3D12PipelineState*() const { return pPipelineState.Get(); }
+	operator ID3D12PipelineState*() const { return PipelineState.Get(); }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> pPipelineState;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 };

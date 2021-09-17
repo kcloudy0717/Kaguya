@@ -105,8 +105,10 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = GetDevice()->GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
+			GetDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
+			GetDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
 
 		Context->SetGraphicsRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
@@ -123,8 +125,10 @@ public:
 	{
 		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
 		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor = GetDevice()->GetResourceDescriptorHeap().hGPU(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor  = GetDevice()->GetSamplerDescriptorHeap().hGPU(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
+			GetDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
+			GetDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
 
 		Context->SetComputeRootDescriptorTable(
 			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
@@ -140,7 +144,7 @@ public:
 private:
 	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
 
-	void InitializeDXGIObjects(bool Debug);
+	void InitializeDxgiObjects(bool Debug);
 
 	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
@@ -155,7 +159,7 @@ private:
 
 	CD3DX12FeatureSupport FeatureSupport;
 
-	UINT DescriptorHandleIncrementSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+	UINT DescriptorHandleIncrementSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {};
 
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> InfoQueue1;
 	DWORD									 CallbackCookie = 0;

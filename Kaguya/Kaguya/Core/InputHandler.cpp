@@ -82,7 +82,7 @@ void InputHandler::HandleRawInput(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		UINT dwSize = 0;
 		::GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, nullptr, &dwSize, sizeof(RAWINPUTHEADER));
 
-		auto lpb = (LPBYTE)_malloca(dwSize);
+		auto lpb = static_cast<LPBYTE>(_malloca(dwSize));
 		if (!lpb)
 		{
 			break;
@@ -98,28 +98,28 @@ void InputHandler::HandleRawInput(UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			const RAWMOUSE& RawMouse = pRawInput->data.mouse;
 
-			if ((RawMouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN))
+			if (RawMouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN)
 			{
 				Mouse.OnButtonDown(Mouse::Left, RawMouse.lLastX, RawMouse.lLastY);
 			}
-			if ((RawMouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN))
+			if (RawMouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN)
 			{
 				Mouse.OnButtonDown(Mouse::Middle, RawMouse.lLastX, RawMouse.lLastY);
 			}
-			if ((RawMouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN))
+			if (RawMouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN)
 			{
 				Mouse.OnButtonDown(Mouse::Right, RawMouse.lLastX, RawMouse.lLastY);
 			}
 
-			if ((RawMouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP))
+			if (RawMouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP)
 			{
 				Mouse.OnButtonUp(Mouse::Left, RawMouse.lLastX, RawMouse.lLastY);
 			}
-			if ((RawMouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP))
+			if (RawMouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP)
 			{
 				Mouse.OnButtonUp(Mouse::Middle, RawMouse.lLastX, RawMouse.lLastY);
 			}
-			if ((RawMouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP))
+			if (RawMouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP)
 			{
 				Mouse.OnButtonUp(Mouse::Right, RawMouse.lLastX, RawMouse.lLastY);
 			}
@@ -143,6 +143,9 @@ void InputHandler::HandleRawInput(UINT uMsg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		break;
+
+		default:
+			break;
 		}
 
 		_freea(lpb);
@@ -160,83 +163,74 @@ void InputHandler::HandleStandardInput(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_MOUSEMOVE:
 	{
-		const POINTS Points		= MAKEPOINTS(lParam);
-		RECT		 ClientRect = {};
+		auto [x, y]		= MAKEPOINTS(lParam);
+		RECT ClientRect = {};
 		::GetClientRect(hWnd, &ClientRect);
-		LONG width	= ClientRect.right - ClientRect.left;
-		LONG height = ClientRect.bottom - ClientRect.top;
+		LONG Width	= ClientRect.right - ClientRect.left;
+		LONG Height = ClientRect.bottom - ClientRect.top;
 
-		// Within the range of our window dimension -> log move, and log enter + capture mouse (if not previously in
-		// window)
-		if (Points.x >= 0 && Points.x < width && Points.y >= 0 && Points.y < height)
+		if (x >= 0 && x < Width && y >= 0 && y < Height)
 		{
-			Mouse.OnMove(Points.x, Points.y);
+			Mouse.OnMove(x, y);
 		}
 	}
 	break;
 
 	case WM_LBUTTONDOWN:
-		[[fallthrough]];
 	case WM_MBUTTONDOWN:
-		[[fallthrough]];
 	case WM_RBUTTONDOWN:
 	{
 		Mouse::Button Button = {};
-		if ((uMsg == WM_LBUTTONDOWN))
+		if (uMsg == WM_LBUTTONDOWN)
 		{
 			Button = Mouse::Left;
 		}
-		if ((uMsg == WM_MBUTTONDOWN))
+		if (uMsg == WM_MBUTTONDOWN)
 		{
 			Button = Mouse::Middle;
 		}
-		if ((uMsg == WM_RBUTTONDOWN))
+		if (uMsg == WM_RBUTTONDOWN)
 		{
 			Button = Mouse::Right;
 		}
 
-		const POINTS pt = MAKEPOINTS(lParam);
-		Mouse.OnButtonDown(Button, pt.x, pt.y);
+		auto [x, y] = MAKEPOINTS(lParam);
+		Mouse.OnButtonDown(Button, x, y);
 	}
 	break;
 
 	case WM_LBUTTONUP:
-		[[fallthrough]];
 	case WM_MBUTTONUP:
-		[[fallthrough]];
 	case WM_RBUTTONUP:
 	{
 		Mouse::Button Button = {};
-		if ((uMsg == WM_LBUTTONUP))
+		if (uMsg == WM_LBUTTONUP)
 		{
 			Button = Mouse::Left;
 		}
-		if ((uMsg == WM_MBUTTONUP))
+		if (uMsg == WM_MBUTTONUP)
 		{
 			Button = Mouse::Middle;
 		}
-		if ((uMsg == WM_RBUTTONUP))
+		if (uMsg == WM_RBUTTONUP)
 		{
 			Button = Mouse::Right;
 		}
 
-		const POINTS Points = MAKEPOINTS(lParam);
-		Mouse.OnButtonUp(Button, Points.x, Points.y);
+		auto [x, y] = MAKEPOINTS(lParam);
+		Mouse.OnButtonUp(Button, x, y);
 	}
 	break;
 
 	case WM_MOUSEWHEEL:
 	{
-		const POINTS Points		= MAKEPOINTS(lParam);
-		const int	 WheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-		Mouse.OnWheelDelta(WheelDelta, Points.x, Points.y);
+		auto [x, y]	   = MAKEPOINTS(lParam);
+		int WheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+		Mouse.OnWheelDelta(WheelDelta, x, y);
 	}
 	break;
 
-	// Keyboard messages
 	case WM_KEYDOWN:
-		[[fallthrough]];
-		// syskey commands need to be handled to track ALT key (VK_MENU) and F10
 	case WM_SYSKEYDOWN:
 	{
 		if (!(lParam & 0x40000000) || Keyboard.AutoRepeat) // Filter AutoRepeat
@@ -247,7 +241,6 @@ void InputHandler::HandleStandardInput(UINT uMsg, WPARAM wParam, LPARAM lParam)
 	break;
 
 	case WM_KEYUP:
-		[[fallthrough]];
 	case WM_SYSKEYUP:
 	{
 		Keyboard.OnKeyUp(static_cast<unsigned char>(wParam));

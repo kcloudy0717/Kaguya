@@ -60,7 +60,7 @@ private:
 	FSRState			FSRState;
 
 	D3D12Buffer		Materials;
-	HLSL::Material* pMaterials = nullptr;
+	HLSL::Material* pMaterial = nullptr;
 	D3D12Buffer		Lights;
 	HLSL::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;

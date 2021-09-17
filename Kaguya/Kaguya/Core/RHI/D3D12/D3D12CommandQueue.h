@@ -74,7 +74,7 @@ private:
 
 	D3D12CommandListHandle CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator)
 	{
-		D3D12CommandListHandle Handle = D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType, this);
+		D3D12CommandListHandle Handle = D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType);
 		Handle.Reset(CommandAllocator);
 		return Handle;
 	}
