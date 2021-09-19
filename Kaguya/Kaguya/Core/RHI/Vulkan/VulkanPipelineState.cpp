@@ -33,7 +33,7 @@ public:
 		MultisampleStateCreateInfo.alphaToCoverageEnable = VK_FALSE;
 		MultisampleStateCreateInfo.alphaToOneEnable		 = VK_FALSE;
 
-		// We default initialize for different states here in case they are not present in the stream
+		// Default initialize for different states here in case they are not present in the stream
 		BlendStateCb(BlendState());
 		RasterizerStateCb(RasterizerState());
 		DepthStencilStateCb(DepthStencilState());

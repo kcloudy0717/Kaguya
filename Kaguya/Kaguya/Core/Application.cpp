@@ -290,6 +290,8 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		WindowHeight = HIWORD(lParam);
 		AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
+		bool ShouldResize = false;
+
 		if (wParam == SIZE_MINIMIZED)
 		{
 			Minimized = true;
@@ -297,50 +299,36 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		}
 		else if (wParam == SIZE_MAXIMIZED)
 		{
-			Minimized = false;
-			Maximized = true;
-			if (pApplication && Initialized)
-			{
-				pApplication->Resize(WindowWidth, WindowHeight);
-			}
+			Minimized	 = false;
+			Maximized	 = true;
+			ShouldResize = true;
 		}
 		else if (wParam == SIZE_RESTORED)
 		{
 			// Restoring from minimized state?
 			if (Minimized)
 			{
-				Minimized = false;
-				if (pApplication && Initialized)
-				{
-					pApplication->Resize(WindowWidth, WindowHeight);
-				}
+				Minimized	 = false;
+				ShouldResize = true;
 			}
 			// Restoring from maximized state?
 			else if (Maximized)
 			{
-				Maximized = false;
-				if (pApplication && Initialized)
-				{
-					pApplication->Resize(WindowWidth, WindowHeight);
-				}
+				Maximized	 = false;
+				ShouldResize = true;
 			}
-			else if (Resizing)
+			// API call such as SetWindowPos or IDXGISwapChain::SetFullscreenState
+			else if (!Resizing)
 			{
-				// If user is dragging the resize bars, we do not resize
-				// the buffers here because as the user continuously
-				// drags the resize bars, a stream of WM_SIZE messages are
-				// sent to the window, and it would be pointless (and slow)
-				// to resize for each WM_SIZE message received from dragging
-				// the resize bars.  So instead, we reset after the user is
-				// done resizing the window and releases the resize bars, which
-				// sends a WM_EXITSIZEMOVE message.
+				ShouldResize = true;
 			}
-			else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
+		}
+
+		if (ShouldResize)
+		{
+			if (pApplication && Initialized)
 			{
-				if (pApplication && Initialized)
-				{
-					pApplication->Resize(WindowWidth, WindowHeight);
-				}
+				pApplication->Resize(WindowWidth, WindowHeight);
 			}
 		}
 	}

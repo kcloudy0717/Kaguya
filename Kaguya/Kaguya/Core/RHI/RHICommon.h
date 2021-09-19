@@ -604,9 +604,9 @@ public:
 
 	void SetRenderTargetBlendDesc(
 		UINT	Index,
-		Factor	SrcBlendRGB,
-		Factor	DstBlendRGB,
-		BlendOp BlendOpRGB,
+		Factor	SrcBlendRgb,
+		Factor	DstBlendRgb,
+		BlendOp BlendOpRgb,
 		Factor	SrcBlendAlpha,
 		Factor	DstBlendAlpha,
 		BlendOp BlendOpAlpha);
@@ -863,7 +863,7 @@ struct PipelineStateStreamDesc
 	void*  pPipelineStateSubobjectStream;
 };
 
-void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* pCallbacks);
+void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* Callbacks);
 
 enum class ESRVType
 {
