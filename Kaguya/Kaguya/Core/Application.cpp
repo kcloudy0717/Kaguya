@@ -49,7 +49,7 @@ public:
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void Application::InitializeComponents(const std::string& LoggerName)
+Application::Application(const std::string& LoggerName)
 {
 #if defined(_DEBUG)
 	ENABLE_LEAK_DETECTION();
@@ -57,12 +57,11 @@ void Application::InitializeComponents(const std::string& LoggerName)
 #endif
 
 	// Initialize ExecutableDirectory
-	int		argc;
-	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-	if (argv)
+	int Argc;
+	if (LPWSTR* Argv = CommandLineToArgvW(GetCommandLineW(), &Argc); Argv)
 	{
-		ExecutableDirectory = std::filesystem::path(argv[0]).parent_path();
-		LocalFree(argv);
+		ExecutableDirectory = std::filesystem::path(Argv[0]).parent_path();
+		LocalFree(Argv);
 	}
 
 	// Initialize Log
@@ -79,8 +78,8 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	if (!Options.Icon.empty())
 	{
 		assert(Options.Icon.extension() == ".ico");
-		hIcon = wil::unique_hicon(reinterpret_cast<HICON>(
-			::LoadImage(nullptr, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
+		hIcon = wil::unique_hicon(static_cast<HICON>(
+			LoadImage(nullptr, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
 	}
 
 	hCursor = wil::unique_hcursor(::LoadCursor(nullptr, IDC_ARROW));
@@ -97,7 +96,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	wcexw.hCursor		= hCursor.get();
 	wcexw.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
 	wcexw.lpszMenuName	= nullptr;
-	wcexw.lpszClassName = L"Kai Window Class";
+	wcexw.lpszClassName = TEXT("Kai Window Class");
 	wcexw.hIconSm		= hIcon.get();
 	if (!RegisterClassExW(&wcexw))
 	{
@@ -143,7 +142,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	// Initialize InputHandler
 	InputHandler = { hWnd.get() };
 
-	::ShowWindow(hWnd.get(), SW_SHOW);
+	ShowWindow(hWnd.get(), SW_SHOW);
 
 	Initialized = Application.Initialize();
 
@@ -154,7 +153,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	Application.Shutdown();
 
-	::UnregisterClass(wcexw.lpszClassName, hInstance);
+	UnregisterClass(wcexw.lpszClassName, hInstance);
 	return ExitCode;
 }
 
@@ -230,10 +229,10 @@ std::filesystem::path Application::SaveDialog(UINT NumFilters, const COMDLG_FILT
 bool Application::ProcessMessages()
 {
 	MSG Msg = {};
-	while (::PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
+	while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
 	{
-		::TranslateMessage(&Msg);
-		::DispatchMessage(&Msg);
+		TranslateMessage(&Msg);
+		DispatchMessage(&Msg);
 
 		if (Msg.message == WM_QUIT)
 		{
@@ -251,7 +250,7 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 		return true;
 	}
 
-	auto pApplication = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+	auto This = std::bit_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
 	InputHandler.Process(uMsg, wParam, lParam);
 
@@ -260,22 +259,22 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	case WM_CREATE:
 	{
 		// Save the Application* passed in to CreateWindow.
-		auto CreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+		auto CreateStruct = std::bit_cast<LPCREATESTRUCT>(lParam);
 		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(CreateStruct->lpCreateParams));
 	}
 	break;
 
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
-		reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK),
-																  GetSystemMetrics(SM_CYMINTRACK) };
+		auto Info			 = std::bit_cast<MINMAXINFO*>(lParam);
+		Info->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) };
 	}
 	break;
 
 	case WM_PAINT:
 	{
 		Stopwatch.Signal();
-		pApplication->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+		This->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 	}
 	break;
 
@@ -326,9 +325,9 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 		if (ShouldResize)
 		{
-			if (pApplication && Initialized)
+			if (This && Initialized)
 			{
-				pApplication->Resize(WindowWidth, WindowHeight);
+				This->Resize(WindowWidth, WindowHeight);
 			}
 		}
 	}
@@ -336,14 +335,9 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 	case WM_HOTKEY:
 	{
-		switch (wParam)
+		if (wParam == PRINTSCREEN)
 		{
-		case PRINTSCREEN:
-			// Save back buffer here or something
-			break;
-
-		default:
-			break;
+			UNREFERENCED_PARAMETER(wParam);
 		}
 	}
 	break;

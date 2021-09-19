@@ -1,7 +1,7 @@
 #pragma once
 #include "Delegate.h"
 
-enum NotifyFilters
+enum class NotifyFilters
 {
 	FileName   = 1 << 0,
 	DirName	   = 1 << 1,
@@ -14,7 +14,7 @@ enum NotifyFilters
 
 	All = 0xFF
 };
-DEFINE_ENUM_FLAG_OPERATORS(NotifyFilters);
+ENABLE_BITMASK_OPERATORS(NotifyFilters);
 
 struct FileSystemEventArgs
 {
@@ -41,11 +41,10 @@ public:
 	MulticastDelegate<const FileSystemEventArgs&> RenamedNewName;
 
 private:
-	std::atomic<bool> Running = true;
-	std::mutex		  Mutex;
-
 	std::filesystem::path Path;
 	wil::unique_handle	  FileHandle;
 
-	std::jthread Thread;
+	std::atomic<bool> Running = true;
+	std::mutex		  Mutex;
+	std::jthread	  Thread;
 };

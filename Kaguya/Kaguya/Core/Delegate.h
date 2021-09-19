@@ -21,7 +21,7 @@ public:
 	{
 		if (HasHeapAllocation())
 		{
-			std::swap(Ptr, InlineAllocator.Ptr);
+			Ptr = std::exchange(InlineAllocator.Ptr, {});
 		}
 		else
 		{
@@ -38,9 +38,9 @@ public:
 
 		Free();
 		SizeInBytes = std::exchange(InlineAllocator.SizeInBytes, 0);
-		if (SizeInBytes > MaxStackSizeInBytes)
+		if (HasHeapAllocation())
 		{
-			std::swap(Ptr, InlineAllocator.Ptr);
+			Ptr = std::exchange(InlineAllocator.Ptr, {});
 		}
 		else
 		{
@@ -51,6 +51,27 @@ public:
 
 	InlineAllocator(const InlineAllocator&) = delete;
 	InlineAllocator& operator=(const InlineAllocator&) = delete;
+
+	[[nodiscard]] BYTE* GetAllocation()
+	{
+		if (HasAllocation())
+		{
+			return HasHeapAllocation() ? Ptr : Buffer;
+		}
+		return nullptr;
+	}
+	[[nodiscard]] const BYTE* GetAllocation() const
+	{
+		if (HasAllocation())
+		{
+			return HasHeapAllocation() ? Ptr : Buffer;
+		}
+		return nullptr;
+	}
+
+	[[nodiscard]] size_t GetSize() const noexcept { return SizeInBytes; }
+	[[nodiscard]] bool	 HasAllocation() const noexcept { return SizeInBytes > 0; }
+	[[nodiscard]] bool	 HasHeapAllocation() const noexcept { return SizeInBytes > MaxStackSizeInBytes; }
 
 	BYTE* Allocate(size_t SizeInBytes)
 	{
@@ -75,27 +96,6 @@ public:
 		}
 		SizeInBytes = 0;
 	}
-
-	[[nodiscard]] BYTE* GetAllocation()
-	{
-		if (HasAllocation())
-		{
-			return HasHeapAllocation() ? Ptr : Buffer;
-		}
-		return nullptr;
-	}
-	[[nodiscard]] const BYTE* GetAllocation() const
-	{
-		if (HasAllocation())
-		{
-			return HasHeapAllocation() ? Ptr : Buffer;
-		}
-		return nullptr;
-	}
-
-	[[nodiscard]] size_t GetSize() const noexcept { return SizeInBytes; }
-	[[nodiscard]] bool	 HasAllocation() const noexcept { return SizeInBytes > 0; }
-	[[nodiscard]] bool	 HasHeapAllocation() const noexcept { return SizeInBytes > MaxStackSizeInBytes; }
 
 private:
 	union
@@ -131,9 +131,27 @@ class Delegate<TRet(TArgs...)>
 public:
 	using ProxyType = TRet (*)(void*, TArgs&&...);
 
-	Delegate() noexcept			  = default;
-	Delegate(Delegate&&) noexcept = default;
-	Delegate& operator=(Delegate&&) noexcept = default;
+	Delegate() noexcept = default;
+	Delegate(Delegate&& Delegate) noexcept
+		: Allocator(std::exchange(Delegate.Allocator, {}))
+		, Object(Allocator.GetAllocation())
+		, Proxy(std::exchange(Delegate.Proxy, {}))
+	{
+	}
+	Delegate& operator=(Delegate&& Delegate) noexcept
+	{
+		if (this == &Delegate)
+		{
+			return *this;
+		}
+
+		Allocator = std::exchange(Delegate.Allocator, {});
+		// Object cannot be safely exchanged, it must use the Allocator's memory allocation
+		Object = Allocator.GetAllocation();
+		// Proxy can be safely exchanged
+		Proxy = std::exchange(Delegate.Proxy, {});
+		return *this;
+	}
 
 	Delegate(const Delegate&) = delete;
 	Delegate& operator=(const Delegate&) = delete;
@@ -155,7 +173,7 @@ public:
 		Object = Allocator.Allocate(sizeof(DecayedType));
 		Proxy  = FunctionProxy<DecayedType>;
 
-		new (Object) DecayedType(std::forward<T>(Lambda));
+		new (Object) DecayedType(std::forward<DecayedType>(Lambda));
 	}
 
 	template<typename T, typename = std::enable_if_t<!std::is_same_v<Delegate, std::decay_t<T>>>>
@@ -173,7 +191,7 @@ public:
 		Object = Allocator.Allocate(sizeof(DecayedType));
 		Proxy  = FunctionProxy<DecayedType>;
 
-		new (Object) DecayedType(::std::forward<T>(Lambda));
+		new (Object) DecayedType(std::forward<DecayedType>(Lambda));
 
 		return *this;
 	}
@@ -295,9 +313,9 @@ private:
 	}
 
 private:
+	InlineAllocator<32> Allocator;
 	void*				Object = nullptr;
 	ProxyType			Proxy  = nullptr;
-	InlineAllocator<32> Allocator;
 };
 
 template<typename... TArgs>

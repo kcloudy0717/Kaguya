@@ -26,7 +26,7 @@ FileSystemWatcher::~FileSystemWatcher()
 
 void FileSystemWatcher::Watch()
 {
-	auto			Buffer		  = std::make_unique<BYTE[]>(32 * 1028);
+	auto			lpBuffer	  = std::make_unique<BYTE[]>(32 * 1028);
 	constexpr DWORD nBufferLength = sizeof(BYTE) * 32 * 1028;
 
 	while (Running)
@@ -35,18 +35,18 @@ void FileSystemWatcher::Watch()
 
 		BOOL  bWatchSubtree	 = IncludeSubdirectories ? TRUE : FALSE;
 		DWORD dwNotifyFilter = 0;
-		dwNotifyFilter |= this->NotifyFilter & FileName ? FILE_NOTIFY_CHANGE_FILE_NAME : 0;
-		dwNotifyFilter |= this->NotifyFilter & DirName ? FILE_NOTIFY_CHANGE_DIR_NAME : 0;
-		dwNotifyFilter |= this->NotifyFilter & Attributes ? FILE_NOTIFY_CHANGE_ATTRIBUTES : 0;
-		dwNotifyFilter |= this->NotifyFilter & Size ? FILE_NOTIFY_CHANGE_SIZE : 0;
-		dwNotifyFilter |= this->NotifyFilter & LastWrite ? FILE_NOTIFY_CHANGE_LAST_WRITE : 0;
-		dwNotifyFilter |= this->NotifyFilter & LastAccess ? FILE_NOTIFY_CHANGE_LAST_ACCESS : 0;
-		dwNotifyFilter |= this->NotifyFilter & Creation ? FILE_NOTIFY_CHANGE_CREATION : 0;
-		dwNotifyFilter |= this->NotifyFilter & Security ? FILE_NOTIFY_CHANGE_SECURITY : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::FileName) ? FILE_NOTIFY_CHANGE_FILE_NAME : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::DirName) ? FILE_NOTIFY_CHANGE_DIR_NAME : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::Attributes) ? FILE_NOTIFY_CHANGE_ATTRIBUTES : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::Size) ? FILE_NOTIFY_CHANGE_SIZE : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::LastWrite) ? FILE_NOTIFY_CHANGE_LAST_WRITE : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::LastAccess) ? FILE_NOTIFY_CHANGE_LAST_ACCESS : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::Creation) ? FILE_NOTIFY_CHANGE_CREATION : 0;
+		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::Security) ? FILE_NOTIFY_CHANGE_SECURITY : 0;
 
 		if (ReadDirectoryChangesW(
 				FileHandle.get(),
-				Buffer.get(),
+				lpBuffer.get(),
 				nBufferLength,
 				bWatchSubtree,
 				dwNotifyFilter,
@@ -54,7 +54,7 @@ void FileSystemWatcher::Watch()
 				nullptr,
 				nullptr))
 		{
-			BYTE*					 Ptr				= Buffer.get();
+			BYTE*					 Ptr				= lpBuffer.get();
 			char					 FileName[MAX_PATH] = {};
 			FILE_NOTIFY_INFORMATION* Information		= nullptr;
 			do

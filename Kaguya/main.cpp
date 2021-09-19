@@ -126,9 +126,12 @@ void StreamWrite(std::ostream& os, const spv_reflect::ShaderModule& obj)
 class VulkanEngine final : public Application
 {
 public:
-	VulkanEngine() {}
+	VulkanEngine()
+		: Application("Vulkan")
+	{
+	}
 
-	~VulkanEngine() {}
+	~VulkanEngine() override {}
 
 	bool Initialize() override
 	{
@@ -727,13 +730,15 @@ private:
 	std::unordered_map<std::string, VulkanMesh>		Meshes;
 };
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv[]*/)
 {
 	try
 	{
-		Application::InitializeComponents("Kaguya");
-
-		ApplicationOptions Options = { .Name = L"Vulkan", .Width = 1280, .Height = 720, .Maximize = true };
+		ApplicationOptions Options = {};
+		Options.Name			   = L"Vulkan";
+		Options.Width			   = 1280;
+		Options.Height			   = 720;
+		Options.Maximize		   = true;
 
 		VulkanEngine App;
 		Application::Run(App, Options);
@@ -767,12 +772,15 @@ int main(int argc, char* argv[])
 
 	#define RENDER_AT_1920x1080 0
 
-class Editor : public Application
+class Editor final : public Application
 {
 public:
-	Editor() {}
+	Editor()
+		: Application("Editor")
+	{
+	}
 
-	~Editor() {}
+	~Editor() override {}
 
 	bool Initialize() override
 	{
@@ -855,17 +863,16 @@ private:
 	std::unique_ptr<Renderer> Renderer;
 };
 
-int main(int argc, char* argv[])
+int main(int /*argc*/, char* /*argv[]*/)
 {
 	try
 	{
-		Application::InitializeComponents("Kaguya");
-
-		ApplicationOptions Options = { .Name	 = L"Kaguya",
-									   .Width	 = 1280,
-									   .Height	 = 720,
-									   .Maximize = true,
-									   .Icon	 = Application::ExecutableDirectory / "Assets/Kaguya.ico" };
+		ApplicationOptions Options = {};
+		Options.Name			   = L"Kaguya";
+		Options.Width			   = 1280;
+		Options.Height			   = 720;
+		Options.Maximize		   = true;
+		Options.Icon			   = Application::ExecutableDirectory / "Assets/Kaguya.ico";
 
 		Editor App;
 		Application::Run(App, Options);

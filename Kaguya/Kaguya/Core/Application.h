@@ -1,14 +1,12 @@
 #pragma once
 #include <filesystem>
-#include <type_traits>
-#include <string_view>
 
 #include "Stopwatch.h"
 #include "InputHandler.h"
 
 struct ApplicationOptions
 {
-	std::wstring_view	  Name;
+	std::wstring		  Name;
 	int					  Width	 = CW_USEDEFAULT;
 	int					  Height = CW_USEDEFAULT;
 	std::optional<int>	  x;
@@ -20,9 +18,8 @@ struct ApplicationOptions
 class Application
 {
 public:
+	explicit Application(const std::string& LoggerName);
 	virtual ~Application() = default;
-
-	static void InitializeComponents(const std::string& LoggerName);
 
 	static int Run(Application& Application, const ApplicationOptions& Options);
 

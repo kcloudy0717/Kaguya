@@ -95,69 +95,69 @@ constexpr std::size_t ToGiB(std::size_t Byte)
 template<typename Enum>
 struct EnableBitMaskOperators
 {
-	static const bool Enable = false;
+	static constexpr bool Enable = false;
 };
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator|(Enum lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator|(Enum Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum>(static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	return static_cast<Enum>(static_cast<UnderlyingType>(Lhs) | static_cast<UnderlyingType>(Rhs));
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator&(Enum lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator&(Enum Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum>(static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	return static_cast<Enum>(static_cast<UnderlyingType>(Lhs) & static_cast<UnderlyingType>(Rhs));
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator^(Enum lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator^(Enum Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum>(static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	return static_cast<Enum>(static_cast<UnderlyingType>(Lhs) ^ static_cast<UnderlyingType>(Rhs));
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum>::type operator~(Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator~(Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum>(~static_cast<underlying>(rhs));
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	return static_cast<Enum>(~static_cast<UnderlyingType>(Rhs));
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator|=(Enum& lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator|=(Enum& Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
-	return lhs;
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	Lhs					 = static_cast<Enum>(static_cast<UnderlyingType>(Lhs) | static_cast<UnderlyingType>(Rhs));
+	return Lhs;
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator&=(Enum& lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator&=(Enum& Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
-	return lhs;
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	Lhs					 = static_cast<Enum>(static_cast<UnderlyingType>(Lhs) & static_cast<UnderlyingType>(Rhs));
+	return Lhs;
 }
 
 template<typename Enum>
-typename std::enable_if<EnableBitMaskOperators<Enum>::Enable, Enum&>::type operator^=(Enum& lhs, Enum rhs)
+constexpr std::enable_if_t<EnableBitMaskOperators<Enum>::Enable, Enum> operator^=(Enum& Lhs, Enum Rhs)
 {
-	using underlying = typename std::underlying_type<Enum>::type;
-	lhs				 = static_cast<Enum>(static_cast<underlying>(lhs) ^ static_cast<underlying>(rhs));
-	return lhs;
+	using UnderlyingType = std::underlying_type_t<Enum>;
+	Lhs					 = static_cast<Enum>(static_cast<UnderlyingType>(Lhs) ^ static_cast<UnderlyingType>(Rhs));
+	return Lhs;
 }
 
 #define ENABLE_BITMASK_OPERATORS(Enum)                                                                                 \
 	template<>                                                                                                         \
 	struct EnableBitMaskOperators<Enum>                                                                                \
 	{                                                                                                                  \
-		static const bool Enable = true;                                                                               \
+		static constexpr bool Enable = true;                                                                           \
 	};                                                                                                                 \
                                                                                                                        \
-	inline bool EnumMaskBitSet(Enum Mask, Enum Component) { return (Mask & Component) == Component; }
+	constexpr bool EnumMaskBitSet(Enum Mask, Enum Component) { return (Mask & Component) == Component; }
 
 // http://reedbeta.com/blog/python-like-enumerate-in-cpp17/
 #include <tuple>
