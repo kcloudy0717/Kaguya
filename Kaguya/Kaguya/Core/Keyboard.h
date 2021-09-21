@@ -8,12 +8,6 @@ class Keyboard
 public:
 	friend class InputHandler;
 
-	enum
-	{
-		BufferSize	 = 16,
-		NumKeyStates = 256
-	};
-
 	struct Event
 	{
 		enum class EType
@@ -23,28 +17,25 @@ public:
 			Release
 		};
 
-		Event() = default;
-		Event(EType Type, unsigned char Code)
+		Event() noexcept = default;
+		Event(EType Type, unsigned char Code) noexcept
 			: Type(Type)
 			, Code(Code)
 		{
 		}
 
-		bool IsPressed() const { return Type == EType::Press; }
+		[[nodiscard]] bool IsPressed() const noexcept { return Type == EType::Press; }
 
-		bool IsReleased() { return Type == EType::Release; }
+		[[nodiscard]] bool IsReleased() const noexcept { return Type == EType::Release; }
 
 		EType		  Type = EType::Invalid;
 		unsigned char Code = {};
 	};
 
-	bool IsPressed(unsigned char KeyCode) const;
+	[[nodiscard]] bool IsPressed(unsigned char KeyCode) const;
 
-	std::optional<Keyboard::Event> ReadKey();
-	bool						   KeyBufferIsEmpty() const;
-
-	unsigned char ReadChar();
-	bool		  CharBufferIsEmpty() const;
+	std::optional<Event>		 Read();
+	std::optional<unsigned char> ReadChar();
 
 private:
 	void ResetKeyState();
@@ -53,11 +44,12 @@ private:
 	void OnChar(unsigned char Char);
 
 	template<class T>
-	void TrimBuffer(std::queue<T>& QueueBuffer)
+	static void Trim(std::queue<T>& Queue)
 	{
-		while (QueueBuffer.size() > BufferSize)
+		static constexpr size_t BufferSize = 16;
+		while (Queue.size() > BufferSize)
 		{
-			QueueBuffer.pop();
+			Queue.pop();
 		}
 	}
 
@@ -65,7 +57,9 @@ public:
 	bool AutoRepeat = false;
 
 private:
-	std::bitset<NumKeyStates>	KeyStates;
-	std::queue<Keyboard::Event> KeyBuffer;
-	std::queue<unsigned char>	CharBuffer;
+	static constexpr size_t NumKeyStates = 256;
+
+	std::bitset<NumKeyStates> KeyStates;
+	std::queue<Event>		  EventQueue;
+	std::queue<unsigned char> CharQueue;
 };

@@ -530,6 +530,8 @@ void InspectorWindow::OnRender()
 						IsEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
 						IsEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
 						break;
+					default:
+						break;
 					}
 
 					auto ImageBox = [&](ETextureTypes Type, UINT64& Key, std::string_view Name)

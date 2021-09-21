@@ -4,19 +4,18 @@
 class Stopwatch
 {
 public:
-	Stopwatch();
+	Stopwatch() noexcept;
 
-	double GetDeltaTime() const;
-	double GetTotalTime() const;
-	double GetTotalTimePrecise() const;
+	[[nodiscard]] double GetDeltaTime() const noexcept;
+	[[nodiscard]] double GetTotalTime() const noexcept;
+	[[nodiscard]] double GetTotalTimePrecise() const noexcept;
 
-	void Resume();
-	void Pause();
-	void Signal();
-	void Restart();
+	void Resume() noexcept;
+	void Pause() noexcept;
+	void Signal() noexcept;
+	void Restart() noexcept;
 
 private:
-	LARGE_INTEGER Frequency	   = {};
 	LARGE_INTEGER StartTime	   = {};
 	LARGE_INTEGER TotalTime	   = {};
 	LARGE_INTEGER PausedTime   = {};

@@ -1,6 +1,7 @@
 #pragma once
 #include <World/Vertex.h>
-#include "D3D12/D3D12Device.h"
+
+#include "Core/RHI/D3D12/D3D12Raytracing.h"
 
 namespace Asset
 {
@@ -32,9 +33,9 @@ struct Mesh
 	D3D12Buffer				  VertexResource;
 	D3D12Buffer				  IndexResource;
 	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
-	D3D12RaytracingGeometry	  BLAS;
-	UINT64					  BLASIndex		= UINT64_MAX;
-	bool					  BLASValid		= false;
-	bool					  BLASCompacted = false;
+	D3D12RaytracingGeometry	  Blas;
+	UINT64					  BlasIndex		= UINT64_MAX;
+	bool					  BlasValid		= false;
+	bool					  BlasCompacted = false;
 };
 } // namespace Asset

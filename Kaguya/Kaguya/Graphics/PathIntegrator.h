@@ -59,9 +59,9 @@ private:
 	PathIntegratorState PathIntegratorState;
 	FSRState			FSRState;
 
-	D3D12Buffer			Materials;
-	HLSL::Material* pMaterials = nullptr;
-	D3D12Buffer			Lights;
+	D3D12Buffer		Materials;
+	HLSL::Material* pMaterial = nullptr;
+	D3D12Buffer		Lights;
 	HLSL::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;
 
@@ -74,8 +74,8 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	D3D12RaytracingShaderBindingTable		 ShaderBindingTable;
-	D3D12RaytracingShaderTable<void>*		 RayGenerationShaderTable;
-	D3D12RaytracingShaderTable<void>*		 MissShaderTable;
+	D3D12RaytracingShaderBindingTable		  ShaderBindingTable;
+	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable;
+	D3D12RaytracingShaderTable<void>*		  MissShaderTable;
 	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
 };

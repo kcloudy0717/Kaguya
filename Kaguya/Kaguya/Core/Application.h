@@ -1,14 +1,12 @@
 #pragma once
 #include <filesystem>
-#include <type_traits>
-#include <string_view>
 
 #include "Stopwatch.h"
 #include "InputHandler.h"
 
 struct ApplicationOptions
 {
-	std::wstring_view	  Name;
+	std::wstring		  Name;
 	int					  Width	 = CW_USEDEFAULT;
 	int					  Height = CW_USEDEFAULT;
 	std::optional<int>	  x;
@@ -20,7 +18,8 @@ struct ApplicationOptions
 class Application
 {
 public:
-	static void InitializeComponents();
+	explicit Application(const std::string& LoggerName);
+	virtual ~Application() = default;
 
 	static int Run(Application& Application, const ApplicationOptions& Options);
 
@@ -33,12 +32,12 @@ public:
 	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
 	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
 
-	static std::filesystem::path OpenDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
-	static std::filesystem::path SaveDialog(UINT NumFilters, COMDLG_FILTERSPEC* pFilterSpecs);
+	static std::filesystem::path OpenDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs);
+	static std::filesystem::path SaveDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs);
 
 	virtual bool Initialize()					 = 0;
-	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Shutdown()						 = 0;
+	virtual void Update(float DeltaTime)		 = 0;
 	virtual void Resize(UINT Width, UINT Height) = 0;
 
 private:
@@ -59,10 +58,11 @@ protected:
 	inline static InputHandler		  InputHandler;
 	inline static Stopwatch			  Stopwatch;
 
-	inline static bool Minimized = false; // is the application minimized?
-	inline static bool Maximized = false; // is the application maximized?
-	inline static bool Resizing	 = false; // are the resize bars being dragged?
+	inline static bool Minimized = false;
+	inline static bool Maximized = false;
+	inline static bool Resizing	 = false;
 
 private:
 	inline static bool Initialized = false;
+	inline static int  ExitCode	   = 0;
 };

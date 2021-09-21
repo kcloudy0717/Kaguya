@@ -43,7 +43,7 @@ class RenderGraph
 {
 public:
 	using RenderPassCallback =
-		std::function<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
+		Delegate<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
 
 	RenderGraph()
 		: Scheduler(this)

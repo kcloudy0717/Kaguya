@@ -14,33 +14,24 @@ public:
 
 	void Initialize();
 
-	operator auto() const { return TLASResult.GetGPUVirtualAddress(); }
+	operator auto() const { return TlasResult.GetGpuVirtualAddress(); }
 
-	auto size() const { return TopLevelAccelerationStructure.size(); }
+	[[nodiscard]] bool Valid() const noexcept { return TopLevelAccelerationStructure.Valid(); }
 
-	bool empty() const { return TopLevelAccelerationStructure.empty(); }
+	void Reset();
 
-	void clear()
-	{
-		TopLevelAccelerationStructure.clear();
-		MeshRenderers.clear();
-		ReferencedGeometries.clear();
-		InstanceContributionToHitGroupIndex = 0;
-	}
-
-	void AddInstance(const Transform& Transform, MeshRenderer* pMeshRenderer);
+	void AddInstance(const Transform& Transform, MeshRenderer* MeshRenderer);
 
 	void Build(D3D12CommandContext& Context);
 
 	UINT NumHitGroups = 0;
 
-	D3D12RaytracingScene	   TopLevelAccelerationStructure;
+	D3D12RaytracingScene			   TopLevelAccelerationStructure;
 	std::vector<MeshRenderer*>		   MeshRenderers;
 	std::set<AssetHandle<Asset::Mesh>> ReferencedGeometries;
 	UINT							   InstanceContributionToHitGroupIndex = 0;
 
-	D3D12Buffer							TLASScratch;
-	D3D12ASBuffer						TLASResult;
-	D3D12Buffer							InstanceDescs;
-	D3D12_RAYTRACING_INSTANCE_DESC* pInstanceDescs = nullptr;
+	D3D12Buffer	  TlasScratch;
+	D3D12ASBuffer TlasResult;
+	D3D12Buffer	  InstanceDescs;
 };

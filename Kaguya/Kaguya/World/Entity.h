@@ -6,9 +6,9 @@ class Entity
 {
 public:
 	Entity() noexcept = default;
-	Entity(entt::entity Handle, World* pWorld)
+	Entity(entt::entity Handle, World* World) noexcept
 		: Handle(Handle)
-		, pWorld(pWorld)
+		, World(World)
 	{
 	}
 
@@ -17,8 +17,8 @@ public:
 	{
 		assert(!HasComponent<T>());
 
-		T& Component = pWorld->Registry.emplace<T>(Handle, std::forward<TArgs>(Args)...);
-		pWorld->OnComponentAdded<T>(*this, Component);
+		T& Component = World->Registry.emplace<T>(Handle, std::forward<TArgs>(Args)...);
+		World->OnComponentAdded<T>(*this, Component);
 		return Component;
 	}
 
@@ -27,7 +27,7 @@ public:
 	{
 		assert(HasComponent<T>());
 
-		return pWorld->Registry.get<T>(Handle);
+		return World->Registry.get<T>(Handle);
 	}
 
 	template<typename T, typename... TArgs>
@@ -43,7 +43,7 @@ public:
 	template<typename T>
 	[[nodiscard]] auto HasComponent() -> bool
 	{
-		return pWorld->Registry.any_of<T>(Handle);
+		return World->Registry.any_of<T>(Handle);
 	}
 
 	template<typename T>
@@ -52,24 +52,22 @@ public:
 		assert(HasComponent<T>());
 
 		T& Component = GetComponent<T>();
-		pWorld->OnComponentRemoved<T>(*this, Component);
+		World->OnComponentRemoved<T>(*this, Component);
 
-		pWorld->Registry.remove<T>(Handle);
+		World->Registry.remove<T>(Handle);
 	}
 
-	void OnComponentModified() { pWorld->WorldState |= EWorldState_Update; }
+	void OnComponentModified() { World->WorldState |= EWorldState_Update; }
 
 	operator bool() const noexcept { return Handle != entt::null; }
 
 	operator entt::entity() const noexcept { return Handle; }
 
-	bool operator==(const Entity& other) const noexcept { return Handle == other.Handle && pWorld == other.pWorld; }
-
-	bool operator!=(const Entity& other) const noexcept { return !(*this == other); }
+	auto operator<=>(const Entity&) const = default;
 
 private:
 	entt::entity Handle = entt::null;
-	World*		 pWorld = nullptr;
+	World*		 World	= nullptr;
 };
 
 class ScriptableEntity
@@ -92,7 +90,7 @@ public:
 protected:
 	virtual void OnCreate() {}
 	virtual void OnDestroy() {}
-	virtual void OnUpdate(float dt) {}
+	virtual void OnUpdate(float DeltaTime) {}
 
 private:
 	friend class World;

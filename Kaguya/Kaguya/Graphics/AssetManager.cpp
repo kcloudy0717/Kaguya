@@ -27,7 +27,7 @@ void AssetManager::Initialize()
 	{
 		static unsigned int WINAPI thunk(LPVOID lpParameter)
 		{
-			D3D12LinkedDevice*			 Device = RenderCore::pAdapter->GetDevice();
+			D3D12LinkedDevice*			 Device = RenderCore::pDevice->GetDevice();
 			D3D12ResourceUploader uploader(Device);
 
 			while (true)
@@ -90,8 +90,8 @@ void AssetManager::Initialize()
 							break;
 						}
 
-						assetImage->Texture = D3D12Texture(RenderCore::pAdapter->GetDevice(), resourceDesc, {});
-						assetImage->SRV		= D3D12ShaderResourceView(RenderCore::pAdapter->GetDevice());
+						assetImage->Texture = D3D12Texture(RenderCore::pDevice->GetDevice(), resourceDesc, {});
+						assetImage->SRV		= D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
 						assetImage->Texture.CreateShaderResourceView(assetImage->SRV);
 
 						std::vector<D3D12_SUBRESOURCE_DATA> subresources(Image.GetImageCount());
@@ -165,14 +165,14 @@ void AssetManager::Initialize()
 							dxrGeometryDesc.Triangles.VertexFormat		   = DXGI_FORMAT_R32G32B32_FLOAT;
 							dxrGeometryDesc.Triangles.IndexCount		   = submesh.IndexCount;
 							dxrGeometryDesc.Triangles.VertexCount		   = submesh.VertexCount;
-							dxrGeometryDesc.Triangles.IndexBuffer = assetMesh->IndexResource.GetGPUVirtualAddress() +
+							dxrGeometryDesc.Triangles.IndexBuffer = assetMesh->IndexResource.GetGpuVirtualAddress() +
 																	submesh.StartIndexLocation * sizeof(unsigned int);
 							dxrGeometryDesc.Triangles.VertexBuffer.StartAddress =
-								assetMesh->VertexResource.GetGPUVirtualAddress() +
+								assetMesh->VertexResource.GetGpuVirtualAddress() +
 								submesh.BaseVertexLocation * sizeof(Vertex);
 							dxrGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 
-							assetMesh->BLAS.AddGeometry(dxrGeometryDesc);
+							assetMesh->Blas.AddGeometry(dxrGeometryDesc);
 						}
 
 						uploadedMeshes.push_back(assetMesh);

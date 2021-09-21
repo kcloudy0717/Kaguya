@@ -40,23 +40,23 @@ VertexAttributes GetVertexAttributes(BuiltInTriangleIntersectionAttributes Attri
 	Vertex vtx0 = VertexBuffer[Idx0];
 	Vertex vtx1 = VertexBuffer[Idx1];
 	Vertex vtx2 = VertexBuffer[Idx2];
-	
+
 	float3 p0 = vtx0.Position, p1 = vtx1.Position, p2 = vtx2.Position;
 	// Compute 2 edges of the triangle
 	float3 e0 = p1 - p0;
 	float3 e1 = p2 - p0;
-	float3 n = normalize(cross(e0, e1));
-	n = normalize(mul(n, transpose((float3x3) ObjectToWorld3x4())));
+	float3 n  = normalize(cross(e0, e1));
+	n		  = normalize(mul(n, transpose((float3x3)ObjectToWorld3x4())));
 
 	float3 barycentrics = float3(
 		1.f - Attributes.barycentrics.x - Attributes.barycentrics.y,
 		Attributes.barycentrics.x,
 		Attributes.barycentrics.y);
 	Vertex vertex = BarycentricInterpolation(vtx0, vtx1, vtx2, barycentrics);
-	vertex.Normal = normalize(mul(vertex.Normal, transpose((float3x3) ObjectToWorld3x4())));
-	
+	vertex.Normal = normalize(mul(vertex.Normal, transpose((float3x3)ObjectToWorld3x4())));
+
 	VertexAttributes vertexAttributes;
-	vertexAttributes.p = WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
+	vertexAttributes.p	= WorldRayOrigin() + (WorldRayDirection() * RayTCurrent());
 	vertexAttributes.Ng = n;
 	vertexAttributes.Ns = vertex.Normal;
 	vertexAttributes.uv = vertex.TextureCoord;
@@ -68,14 +68,11 @@ VertexAttributes GetVertexAttributes(BuiltInTriangleIntersectionAttributes Attri
 
 struct RayPayload
 {
-	bool IsValid()
-	{
-		return materialID != INVALID_ID;
-	}
+	bool IsValid() { return materialID != INVALID_ID; }
 
-	float3 p;
-	uint materialID;
-	float2 uv;
+	float3			 p;
+	uint			 materialID;
+	float2			 uv;
 	OctahedralVector Ng;
 	OctahedralVector Ns;
 };
@@ -148,12 +145,12 @@ float3 EstimateDirect(SurfaceInteraction si, Light light, float2 XiLight)
 
 float3 UniformSampleOneLight(SurfaceInteraction si, inout uint seed)
 {
-	if (g_SystemConstants.NumLights == 0)
+	if (g_GlobalConstants.NumLights == 0)
 	{
 		return float3(0.0f, 0.0f, 0.0f);
 	}
 
-	int numLights = g_SystemConstants.NumLights;
+	int numLights = g_GlobalConstants.NumLights;
 
 	int	  lightIndex = min(RandomFloat01(seed) * numLights, numLights - 1);
 	float lightPdf	 = 1.0f / float(numLights);
@@ -172,29 +169,34 @@ float3 Li(RayDesc ray, inout uint Seed)
 
 	RayPayload payload = (RayPayload)0;
 
-	for (int bounce = 0; ; ++bounce)
+	for (int bounce = 0;; ++bounce)
 	{
 		// Trace the ray
 		TraceRay(g_Scene, RAY_FLAG_NONE, 0xffffffff, RayTypePrimary, NumRayTypes, 0, ray, payload);
 
 		// Ray missed
-		if (!payload.IsValid() || bounce >= g_SystemConstants.MaxDepth)
+		if (!payload.IsValid() || bounce >= g_GlobalConstants.MaxDepth)
 		{
 			float t = 0.5f * (ray.Direction.y + 1.0f);
-			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_SystemConstants.SkyIntensity;
+			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_GlobalConstants.SkyIntensity;
 			break;
 		}
+
+        Material material = g_Materials[payload.materialID];
 
 		float3 Ng, Ns;
 		Ng = payload.Ng.Decode();
 		Ns = payload.Ns.Decode();
-		
+
 		float3 wo = -ray.Direction;
 
-		//if (dot(Ng, wo) < 0.0f)
-		//	Ng = -Ng;
-		//if (dot(Ns, wo) < 0.0f)
-		//	Ns = -Ns;
+        if (material.BSDFType != 2 /* Glass */)
+		{
+			if (dot(Ng, wo) < 0.0f)
+				Ng = -Ng;
+			if (dot(Ns, wo) < 0.0f)
+				Ns = -Ns;
+		}
 
 		SurfaceInteraction si;
 		si.p  = payload.p;
@@ -207,7 +209,6 @@ float3 Li(RayDesc ray, inout uint Seed)
 		si.ShadingFrame	 = InitFrameFromZ(Ns);
 
 		// Update BSDF's internal data
-		Material material = g_Materials[payload.materialID];
 
 		if (material.Albedo != -1)
 		{
@@ -227,8 +228,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 
 		// Sample BSDF to get new path direction
 		BSDFSample bsdfSample = (BSDFSample)0;
-		bool	   success =
-			si.BSDF.Samplef(si.wo, float2(RandomFloat01(Seed), RandomFloat01(Seed)), bsdfSample);
+		bool	   success	  = si.BSDF.Samplef(si.wo, float2(RandomFloat01(Seed), RandomFloat01(Seed)), bsdfSample);
 		if (!success)
 		{
 			// Used to debug
@@ -263,10 +263,7 @@ void RayGeneration()
 {
 	const uint2 launchIndex		 = DispatchRaysIndex().xy;
 	const uint2 launchDimensions = DispatchRaysDimensions().xy;
-	uint		seed			 = uint(
-					   launchIndex.x * uint(1973) + launchIndex.y * uint(9277) +
-					   uint(g_SystemConstants.TotalFrameCount) * uint(26699)) |
-				uint(1);
+	uint		seed			 = uint(launchIndex.x * uint(1973) + launchIndex.y * uint(9277) + uint(g_GlobalConstants.TotalFrameCount) * uint(26699)) | uint(1);
 
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
@@ -279,7 +276,7 @@ void RayGeneration()
 		const float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 
 		// Initialize ray
-		RayDesc ray = g_SystemConstants.Camera.GenerateCameraRay(ndc, seed);
+		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc, seed);
 
 		L += Li(ray, seed);
 	}
@@ -290,13 +287,13 @@ void RayGeneration()
 	L.g = isnan(L.g) ? 0.0f : L.g;
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
-	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_SystemConstants.RenderTarget];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_SystemConstants.RenderTarget];
+	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_GlobalConstants.RenderTarget];
+	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
 
 	// Progressive accumulation
-	if (g_SystemConstants.NumAccumulatedSamples > 0)
+	if (g_GlobalConstants.NumAccumulatedSamples > 0)
 	{
-		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_SystemConstants.NumAccumulatedSamples));
+		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_GlobalConstants.NumAccumulatedSamples));
 	}
 
 	RenderTarget[launchIndex] = float4(L, 1);

@@ -1,5 +1,4 @@
 #include "PathIntegrator.h"
-#include "World/Entity.h"
 #include "RendererRegistry.h"
 
 // CAS
@@ -47,8 +46,9 @@ void* PathIntegrator::GetViewportDescriptor()
 		RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
 		RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
 
-		return FSRState.Enable ? (void*)RenderGraph.GetRegistry().GetTextureSRV(FSROutput).GetGPUHandle().ptr
-							   : (void*)RenderGraph.GetRegistry().GetTextureSRV(TonemapOutput).GetGPUHandle().ptr;
+		return FSRState.Enable
+				   ? reinterpret_cast<void*>(RenderGraph.GetRegistry().GetTextureSRV(FSROutput).GetGpuHandle().ptr)
+				   : reinterpret_cast<void*>(RenderGraph.GetRegistry().GetTextureSRV(TonemapOutput).GetGpuHandle().ptr);
 	}
 
 	return nullptr;
@@ -75,8 +75,8 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 
 	if (FSRState.Enable)
 	{
-		RenderWidth	 = UINT(ViewportWidth / r);
-		RenderHeight = UINT(ViewportHeight / r);
+		RenderWidth	 = static_cast<UINT>(ViewportWidth / r);
+		RenderHeight = static_cast<UINT>(ViewportHeight / r);
 	}
 	else
 	{
@@ -96,25 +96,25 @@ void PathIntegrator::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
 
-	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pAdapter->GetDevice(), 6_MiB);
+	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pDevice->GetDevice(), 6_MiB);
 
 	Materials = D3D12Buffer(
-		RenderCore::pAdapter->GetDevice(),
+		RenderCore::pDevice->GetDevice(),
 		sizeof(HLSL::Material) * World::MaterialLimit,
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Materials.Initialize();
-	pMaterials = Materials.GetCPUVirtualAddress<HLSL::Material>();
+	pMaterial = Materials.GetCpuVirtualAddress<HLSL::Material>();
 
 	Lights = D3D12Buffer(
-		RenderCore::pAdapter->GetDevice(),
+		RenderCore::pDevice->GetDevice(),
 		sizeof(HLSL::Light) * World::LightLimit,
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.Initialize();
-	pLights = Lights.GetCPUVirtualAddress<HLSL::Light>();
+	pLights = Lights.GetCpuVirtualAddress<HLSL::Light>();
 
 	RenderGraph.AddRenderPass(
 		"Path Trace",
@@ -131,7 +131,7 @@ void PathIntegrator::Initialize()
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
-				if (AccelerationStructure.empty())
+				if (!AccelerationStructure.Valid())
 				{
 					return;
 				}
@@ -156,10 +156,10 @@ void PathIntegrator::Initialize()
 					float SkyIntensity;
 				} g_GlobalConstants						= {};
 				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*pWorld->ActiveCamera);
-				g_GlobalConstants.Resolution			= { float(ViewportWidth),
-													float(ViewportHeight),
-													1.0f / float(ViewportWidth),
-													1.0f / float(ViewportHeight) };
+				g_GlobalConstants.Resolution			= { static_cast<float>(ViewportWidth),
+													static_cast<float>(ViewportHeight),
+													1.0f / static_cast<float>(ViewportWidth),
+													1.0f / static_cast<float>(ViewportHeight) };
 				g_GlobalConstants.NumLights				= NumLights;
 				g_GlobalConstants.TotalFrameCount		= Counter++;
 				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
@@ -174,14 +174,14 @@ void PathIntegrator::Initialize()
 				Context->SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
 				Context->SetComputeRootConstantBufferView(0, Allocation.GPUVirtualAddress);
 				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
-				Context->SetComputeRootShaderResourceView(2, Materials.GetGPUVirtualAddress());
-				Context->SetComputeRootShaderResourceView(3, Lights.GetGPUVirtualAddress());
+				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
+				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
 
-				RenderCore::pAdapter->BindComputeDescriptorTable(
+				RenderCore::pDevice->BindComputeDescriptorTable(
 					RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS),
 					Context);
 
-				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDispatchRaysDesc(0, 0);
+				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
 				Desc.Width					  = ViewData.RenderWidth;
 				Desc.Height					  = ViewData.RenderHeight;
 				Desc.Depth					  = 1;
@@ -213,7 +213,7 @@ void PathIntegrator::Initialize()
 					1,
 					TextureFlag_AllowRenderTarget,
 					ClearValue));
-			Parameter.RTV = D3D12RenderTargetView(RenderCore::pAdapter->GetDevice());
+			Parameter.RTV = D3D12RenderTargetView(RenderCore::pDevice->GetDevice());
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
@@ -236,18 +236,19 @@ void PathIntegrator::Initialize()
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				Context->RSSetViewports(1, &Viewport);
 				Context->RSSetScissorRects(1, &ScissorRect);
-				Context->OMSetRenderTargets(1, &Parameter.RTV.GetCPUHandle(), TRUE, nullptr);
+				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandles[] = { Parameter.RTV.GetCpuHandle() };
+				Context->OMSetRenderTargets(1, RtvHandles, TRUE, nullptr);
 
-				FLOAT white[] = { 1, 1, 1, 1 };
-				Context->ClearRenderTargetView(Parameter.RTV.GetCPUHandle(), white, 0, nullptr);
+				FLOAT White[] = { 1, 1, 1, 1 };
+				Context->ClearRenderTargetView(Parameter.RTV.GetCpuHandle(), White, 0, nullptr);
 
-				struct Settings
+				struct RootConstants
 				{
 					unsigned int InputIndex;
-				} settings			= {};
-				settings.InputIndex = Registry.GetTextureIndex(PathTraceInput);
+				} Constants;
+				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
 
-				Context->SetGraphicsRoot32BitConstants(0, 1, &settings, 0);
+				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
 
 				Context.DrawInstanced(3, 1, 0, 0);
 			};
@@ -302,8 +303,8 @@ void PathIntegrator::Initialize()
 						static_cast<AF1>(FSRState.RenderHeight),
 						static_cast<AF1>(FSRState.RenderWidth),
 						static_cast<AF1>(FSRState.RenderHeight),
-						(AF1)ViewData.ViewportWidth,
-						(AF1)ViewData.ViewportHeight);
+						static_cast<AF1>(ViewData.ViewportWidth),
+						static_cast<AF1>(ViewData.ViewportHeight));
 					FsrEasu.Sample.x = 0;
 
 					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
@@ -361,7 +362,7 @@ void PathIntegrator::Initialize()
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
 
-	ShaderBindingTable.Generate(RenderCore::pAdapter->GetDevice());
+	ShaderBindingTable.Generate(RenderCore::pDevice->GetDevice());
 }
 
 void PathIntegrator::Render(D3D12CommandContext& Context)
@@ -402,7 +403,11 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 												 "Quality (1.5x)",
 												 "Balanced (1.7x)",
 												 "Performance (2x)" };
-		ImGui::Combo("Quality", (int*)&FSRState.QualityMode, QualityModes, static_cast<int>(std::size(QualityModes)));
+		ImGui::Combo(
+			"Quality",
+			reinterpret_cast<int*>(&FSRState.QualityMode),
+			QualityModes,
+			static_cast<int>(std::size(QualityModes)));
 
 		ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
 
@@ -412,14 +417,14 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	ImGui::End();
 
 	NumMaterials = NumLights = 0;
-	AccelerationStructure.clear();
+	AccelerationStructure.Reset();
 	pWorld->Registry.view<Transform, MeshFilter, MeshRenderer>().each(
 		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
 		{
 			if (MeshFilter.Mesh)
 			{
 				AccelerationStructure.AddInstance(Transform, &MeshRenderer);
-				pMaterials[NumMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
+				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
 			}
 		});
 	pWorld->Registry.view<Transform, Light>().each(
@@ -429,9 +434,9 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 		});
 
 	D3D12CommandSyncPoint CopySyncPoint;
-	if (!AccelerationStructure.empty())
+	if (AccelerationStructure.Valid())
 	{
-		D3D12CommandContext& Copy = RenderCore::pAdapter->GetDevice()->GetCopyContext1();
+		D3D12CommandContext& Copy = RenderCore::pDevice->GetDevice()->GetCopyContext1();
 		Copy.OpenCommandList();
 
 		// Update shader table
@@ -443,16 +448,16 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 			D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
 			Record.ShaderIdentifier									= RaytracingPipelineStates::g_DefaultSID;
-			Record.RootArguments									= { .MaterialIndex = static_cast<UINT>(i),
-										.Padding	   = 0xDEADBEEF,
-										.VertexBuffer  = VertexBuffer->GetGPUVirtualAddress(),
-										.IndexBuffer   = IndexBuffer->GetGPUVirtualAddress() };
+			Record.RootArguments.MaterialIndex						= static_cast<UINT>(i);
+			Record.RootArguments.Padding							= 0xDEADBEEF;
+			Record.RootArguments.VertexBuffer						= VertexBuffer->GetGPUVirtualAddress();
+			Record.RootArguments.IndexBuffer						= IndexBuffer->GetGPUVirtualAddress();
 
 			HitGroupShaderTable->AddShaderRecord(Record);
 		}
 
 		ShaderBindingTable.Write();
-		ShaderBindingTable.CopyToGPU(Copy);
+		ShaderBindingTable.CopyToGpu(Copy);
 
 		Copy.CloseCommandList();
 
@@ -460,25 +465,25 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	}
 
 	D3D12CommandSyncPoint ASBuildSyncPoint;
-	if (!AccelerationStructure.empty())
+	if (AccelerationStructure.Valid())
 	{
-		D3D12CommandContext& AsyncCompute = RenderCore::pAdapter->GetDevice()->GetAsyncComputeCommandContext();
+		D3D12CommandContext& AsyncCompute = RenderCore::pDevice->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
 		bool AnyBuild = false;
 
 		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			if (Geometry->BLASValid)
+			if (Geometry->BlasValid)
 			{
 				continue;
 			}
 
-			Geometry->BLASValid = true;
-			AnyBuild |= Geometry->BLASValid;
+			Geometry->BlasValid = true;
+			AnyBuild |= Geometry->BlasValid;
 
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->BLAS.GetInputsDesc();
-			Geometry->BLASIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
+			Geometry->BlasIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
 		}
 
 		if (AnyBuild)
@@ -490,12 +495,12 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BLASIndex);
+			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
 		}
 
 		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			Geometry->AccelerationStructure = Manager.GetAccelerationStructureGPUVA(Geometry->BLASIndex);
+			Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
 		}
 
 		AccelerationStructure.Build(AsyncCompute);
@@ -506,9 +511,9 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			if (Geometry->BLASIndex != UINT64_MAX)
+			if (Geometry->BlasIndex != UINT64_MAX)
 			{
-				Manager.SetSyncPoint(Geometry->BLASIndex, ASBuildSyncPoint);
+				Manager.SetSyncPoint(Geometry->BlasIndex, ASBuildSyncPoint);
 			}
 		}
 	}

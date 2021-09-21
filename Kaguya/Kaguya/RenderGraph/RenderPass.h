@@ -9,7 +9,7 @@ class RenderGraphDependencyLevel;
 class RenderPass : public RenderGraphChild
 {
 public:
-	using ExecuteCallback = std::function<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
+	using ExecuteCallback = Delegate<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
 
 	RenderPass(RenderGraph* Parent, const std::string& Name)
 		: RenderGraphChild(Parent)

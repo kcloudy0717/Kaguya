@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2020, assimp team
+Copyright (c) 2006-2021, assimp team
 
 
 All rights reserved.
@@ -81,7 +81,7 @@ public:
     /// @brief  Returns the file-size.
     /// @return The file-size.
     size_t size() const;
-    
+
     /// @brief  Returns the cache size.
     /// @return The cache size.
     size_t cacheSize() const;
@@ -254,25 +254,16 @@ bool IOStreamBuffer<T>::getNextDataLine( std::vector<T> &buffer, T continuationT
         }
     }
 
-    bool continuationFound( false );
     size_t i = 0;
     for( ;; ) {
-        if ( continuationToken == m_cache[ m_cachePos ] ) {
-            continuationFound = true;
+        if ( continuationToken == m_cache[ m_cachePos ] && IsLineEnd( m_cache[ m_cachePos + 1 ] ) ) {
             ++m_cachePos;
-        }
-        if ( IsLineEnd( m_cache[ m_cachePos ] ) ) {
-            if ( !continuationFound ) {
-                // the end of the data line
-                break;
-            } else {
-                // skip line end
-                while ( m_cache[m_cachePos] != '\n') {
-                    ++m_cachePos;
-                }
+            while ( m_cache[ m_cachePos ] != '\n' ) {
                 ++m_cachePos;
-                continuationFound = false;
             }
+            ++m_cachePos;
+        } else if ( IsLineEnd ( m_cache[ m_cachePos ] ) ) {
+            break;
         }
 
         buffer[ i ] = m_cache[ m_cachePos ];
@@ -287,7 +278,7 @@ bool IOStreamBuffer<T>::getNextDataLine( std::vector<T> &buffer, T continuationT
             }
         }
     }
-    
+
     buffer[ i ] = '\n';
     ++m_cachePos;
 
@@ -343,7 +334,7 @@ template<class T>
 AI_FORCE_INLINE
 bool IOStreamBuffer<T>::getNextBlock( std::vector<T> &buffer) {
     // Return the last block-value if getNextLine was used before
-    if ( 0 != m_cachePos ) {      
+    if ( 0 != m_cachePos ) {
         buffer = std::vector<T>( m_cache.begin() + m_cachePos, m_cache.end() );
         m_cachePos = 0;
     } else {

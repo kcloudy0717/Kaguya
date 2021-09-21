@@ -21,6 +21,7 @@ struct Material
 	float3 T;
 	float  etaA, etaB;
 
+	// Texture indices
 	int Albedo;
 };
 
@@ -83,8 +84,8 @@ struct Camera
 		// Setup the ray
 		RayDesc ray;
 		ray.Origin = World[3].xyz;
-		ray.TMin   = 0.0f;
-		ray.TMax   = FLT_MAX;
+		ray.TMin   = NearZ;
+		ray.TMax   = FarZ;
 
 		// Extract the aspect ratio and field of view from the projection matrix
 		float tanHalfFoVY = tan(radians(FoVY) * 0.5f);

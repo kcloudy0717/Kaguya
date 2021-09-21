@@ -6,7 +6,7 @@ class World;
 class WorldParser
 {
 public:
-	static void Save(const std::filesystem::path& Path, World* pWorld);
+	static void Save(const std::filesystem::path& Path, World* World);
 
-	static void Load(const std::filesystem::path& Path, World* pWorld);
+	static void Load(const std::filesystem::path& Path, World* World);
 };

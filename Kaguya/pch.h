@@ -15,6 +15,7 @@
 #include <compare>
 #include <mutex>
 #include <span>
+#include <ranges>
 
 // c++ stl
 #include <array>
@@ -48,17 +49,18 @@
 #include <synchapi.h>
 #include <wrl/client.h>
 #include <wrl/event.h>
-#include <shobjidl.h> 
+#include <shobjidl.h>
+#include <strsafe.h>
 
-// dxgi
+// DXGI
 #include <dxgi1_6.h>
 #if defined(_DEBUG)
-#include <dxgidebug.h>
+	#include <dxgidebug.h>
 #endif
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
 
-// d3d12
+// D3D12
 #include "d3d12.h"
 #include "d3d12sdklayers.h"
 #include "d3d12shader.h"
@@ -66,16 +68,23 @@
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
-#include <DirectXMath.h>
+// Vulkan
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_win32.h>
 
-// ext
-#include <city.h>
+// Online
+#include <entt.hpp>
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
+#include <backends/imgui_impl_vulkan.h>
 #include <ImGuizmo.h>
-#include <entt.hpp>
 #include <wil/resource.h>
+
+// Offline
+#include <city.h>
 #include <DirectXTex.h>
 
 #include <Core/Core.h>

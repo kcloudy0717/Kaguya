@@ -9,37 +9,37 @@ struct AttributeContainer
 };
 
 template<typename... TArgs>
-inline auto Attributes(TArgs&&... Args)
+auto Attributes(TArgs&&... Args)
 {
 	return std::make_tuple(std::forward<TArgs>(Args)...);
 }
 
 template<typename TClass>
-inline const char* RegisterClassName();
+const char* RegisterClassName();
 
 template<typename TClass>
-inline auto RegisterClassAttributes();
+auto RegisterClassAttributes();
 
 template<typename TClass>
-inline const char* GetClass()
+const char* GetClass()
 {
 	return AttributeContainer<TClass, decltype(RegisterClassAttributes<TClass>())>::Name;
 }
 
 template<typename TClass>
-inline auto& GetAttributes()
+auto& GetAttributes()
 {
 	return AttributeContainer<TClass, decltype(RegisterClassAttributes<TClass>())>::Attributes;
 }
 
 template<typename TClass>
-inline constexpr std::size_t GetNumAttributes()
+constexpr std::size_t GetNumAttributes()
 {
 	return std::tuple_size<decltype(RegisterClassAttributes<TClass>())>::value;
 }
 
 template<typename TClass, typename Functor>
-inline void ForEachAttribute(Functor&& F)
+void ForEachAttribute(Functor&& F)
 {
 	std::apply(
 		[&](auto&&... x)

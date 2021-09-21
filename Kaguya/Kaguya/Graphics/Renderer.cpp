@@ -31,7 +31,7 @@ void Renderer::OnRender()
 {
 	pWorld->ActiveCamera->AspectRatio = float(RenderWidth) / float(RenderHeight);
 
-	RenderCore::pAdapter->OnBeginFrame();
+	RenderCore::pDevice->OnBeginFrame();
 
 	if (ImGui::Begin("GPU Timing"))
 	{
@@ -93,9 +93,8 @@ void Renderer::OnRender()
 	}
 	ImGui::End();
 
-	D3D12CommandContext& Context = RenderCore::pAdapter->GetDevice()->GetCommandContext();
+	D3D12CommandContext& Context = RenderCore::pDevice->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
-	Context.BindResourceViewHeaps();
 
 	Render(Context);
 
@@ -136,14 +135,14 @@ void Renderer::OnRender()
 
 	RenderCore::pSwapChain->Present(false);
 
-	RenderCore::pAdapter->OnEndFrame();
+	RenderCore::pDevice->OnEndFrame();
 
 	MainSyncPoint.WaitForCompletion();
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	RenderCore::pAdapter->GetDevice()->GetGraphicsQueue()->Flush();
+	RenderCore::pDevice->GetDevice()->GetGraphicsQueue()->WaitIdle();
 	RenderCore::pSwapChain->Resize(Width, Height);
 }
 

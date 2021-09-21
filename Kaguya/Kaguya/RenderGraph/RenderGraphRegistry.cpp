@@ -100,7 +100,7 @@ void RenderGraphRegistry::RealizeResources()
 			break;
 		}
 
-		Textures[i]				 = D3D12Texture(RenderCore::pAdapter->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		Textures[i]				 = D3D12Texture(RenderCore::pDevice->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
 		ShaderViews& ShaderViews = TextureShaderViews[i];
 
 		if (ShaderViews.SRVs.empty())
@@ -156,7 +156,7 @@ auto RenderGraphRegistry::GetTextureSRV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.SRVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::pAdapter->GetDevice());
+		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
 		Texture.CreateShaderResourceView(ShaderViews.SRVs[SubresourceIndex]);
 	}
 
@@ -177,7 +177,7 @@ auto RenderGraphRegistry::GetTextureUAV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.UAVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		auto UAV = D3D12UnorderedAccessView(RenderCore::pAdapter->GetDevice());
+		auto UAV = D3D12UnorderedAccessView(RenderCore::pDevice->GetDevice());
 		Texture.CreateUnorderedAccessView(UAV, OptArraySlice, OptMipSlice);
 
 		ShaderViews.UAVs[SubresourceIndex] = std::move(UAV);

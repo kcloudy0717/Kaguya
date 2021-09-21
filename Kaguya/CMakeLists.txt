@@ -30,6 +30,8 @@ set(imgui
 	${DEPONLINEDIR}/imgui/imstb_textedit.h
 	${DEPONLINEDIR}/imgui/imstb_truetype.h
 	# Backend
+	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.cpp
+	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.h
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.cpp
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.h
 	${DEPONLINEDIR}/imgui/backends/imgui_impl_win32.cpp
@@ -69,10 +71,8 @@ source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${spdlog})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${dxc})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
-if (MSVC)
-    add_compile_options(/W3) # warning level 3
-	add_compile_options(/MP) # Multi-processor compilation
-endif()
+add_compile_options(/W3) # warning level 3
+add_compile_options(/MP) # Multi-processor compilation
 
 add_executable(
 	${PROJECTNAME}
@@ -90,35 +90,52 @@ add_executable(
 	${dxc}
 	${cityhash})
 
+file(GLOB_RECURSE inc_hlsl
+${CMAKE_SOURCE_DIR}/Shaders/*.hlsli)
+
+file(GLOB_RECURSE src_hlsl
+${CMAKE_SOURCE_DIR}/Shaders/*.hlsl)
+
+source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${inc_hlsl})
+source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${src_hlsl})
+set_source_files_properties(${src_hlsl} PROPERTIES VS_TOOL_OVERRIDE None)
+
+add_custom_target(Shaders
+ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders
+ALL SOURCES ${inc_hlsl} ${src_hlsl}
+)
+
+add_dependencies(${PROJECTNAME} Shaders)
+
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
-include_directories(${PROJECTDIR})
+target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})
 
 # Online
-include_directories("${DEPONLINEDIR}/entt/single_include/entt")
-include_directories("${DEPONLINEDIR}/imgui")
-include_directories("${DEPONLINEDIR}/ImGuizmo")
-include_directories("${DEPONLINEDIR}/json/single_include")
-include_directories("${DEPONLINEDIR}/spdlog/include")
-include_directories("${DEPONLINEDIR}/wil/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/entt/single_include/entt")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/imgui")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/ImGuizmo")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/json/single_include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/spdlog/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/wil/include")
 
 # Offline
-include_directories("${DEPOFFLINEDIR}/assimp/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/assimp/include")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
 
-include_directories("${DEPOFFLINEDIR}/DirectXTex/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/DirectXTex/include")
 target_link_libraries(${PROJECTNAME} debug ${DEPOFFLINEDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} optimized ${DEPOFFLINEDIR}/DirectXTex/lib/Release/DirectXTex.lib)
 
-include_directories("${DEPOFFLINEDIR}/dxc")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/dxc")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/dxc/dxcompiler.lib)
 
-include_directories("${DEPOFFLINEDIR}/google/cityhash")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/google/cityhash")
 
-include_directories("${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 
-include_directories("${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 
 set(PhysX_SDK
@@ -151,14 +168,14 @@ set(PhysX_SDK
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
 	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
-include_directories("${DEPOFFLINEDIR}/PhysX-4.0.1/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/PhysX-4.0.1/include")
 target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 
-include_directories("${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/Include/WinPixEventRuntime")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
+target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
 # Linking
-include_directories(Vulkan::Headers)
+target_include_directories(${PROJECTNAME} PUBLIC Vulkan::Headers)
 target_link_libraries(${PROJECTNAME} Vulkan::Vulkan)
 
 # Offline DLL
@@ -173,7 +190,7 @@ COMMAND ${CMAKE_COMMAND} -E copy
 	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
 	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
 
-	${DEPOFFLINEDIR}/winpixeventruntime.1.0.210209001/bin/x64/WinPixEventRuntime.dll
+	${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
 
 	${CMAKE_SOURCE_DIR}/imgui.ini
 
@@ -210,13 +227,4 @@ COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/Assets
 
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
-DEPENDS ${PROJECTNAME})
-
-# Copy shaders
-add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/Shaders
-
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/Shaders
 DEPENDS ${PROJECTNAME})

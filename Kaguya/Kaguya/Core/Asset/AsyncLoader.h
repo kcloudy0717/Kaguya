@@ -30,8 +30,8 @@ public:
 				while (true)
 				{
 					// Sleep until the condition variable becomes notified
-					std::unique_lock _(pAsyncLoader->m_CriticalSection);
-					pAsyncLoader->m_ConditionVariable.wait(_);
+					std::unique_lock _(pAsyncLoader->CriticalSection);
+					pAsyncLoader->ConditionVariable.wait(_);
 
 					if (pAsyncLoader->Quit)
 					{
@@ -39,10 +39,10 @@ public:
 					}
 
 					// Start loading stuff async :D
-					while (!pAsyncLoader->m_MetadataQueue.empty())
+					while (!pAsyncLoader->MetadataQueue.empty())
 					{
-						auto Metadata = pAsyncLoader->m_MetadataQueue.front();
-						pAsyncLoader->m_MetadataQueue.pop();
+						auto Metadata = pAsyncLoader->MetadataQueue.front();
+						pAsyncLoader->MetadataQueue.pop();
 
 						auto pResource = static_cast<TDerived*>(pAsyncLoader)->AsyncLoad(Metadata);
 						if (pResource)
@@ -63,7 +63,7 @@ public:
 	~AsyncLoader()
 	{
 		Quit = true;
-		m_ConditionVariable.notify_all();
+		ConditionVariable.notify_all();
 
 		::WaitForSingleObject(Thread.get(), INFINITE);
 	}
@@ -73,18 +73,18 @@ public:
 	void RequestAsyncLoad(UINT NumMetadata, TMetadata* pMetadata)
 	{
 		assert(Delegate != nullptr);
-		std::scoped_lock _(m_CriticalSection);
+		std::scoped_lock _(CriticalSection);
 		for (UINT i = 0; i < NumMetadata; i++)
 		{
-			m_MetadataQueue.push(pMetadata[i]);
+			MetadataQueue.push(pMetadata[i]);
 		}
-		m_ConditionVariable.notify_one();
+		ConditionVariable.notify_one();
 	}
 
 private:
-	std::mutex				m_CriticalSection;
-	std::condition_variable m_ConditionVariable;
-	std::queue<TMetadata>	m_MetadataQueue;
+	std::mutex				CriticalSection;
+	std::condition_variable ConditionVariable;
+	std::queue<TMetadata>	MetadataQueue;
 	TDelegate				Delegate = nullptr;
 
 	wil::unique_handle Thread;
@@ -93,16 +93,12 @@ private:
 
 class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>
 {
-private:
+public:
 	TResourcePtr AsyncLoad(const Asset::ImageMetadata& Metadata);
-
-	friend class AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>;
 };
 
 class AsyncMeshLoader : public AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>
 {
-private:
+public:
 	TResourcePtr AsyncLoad(const Asset::MeshMetadata& Metadata);
-
-	friend class AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>;
 };
