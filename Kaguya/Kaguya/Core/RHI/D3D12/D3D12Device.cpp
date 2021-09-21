@@ -55,7 +55,7 @@ D3D12Device::~D3D12Device()
 {
 	if (InfoQueue1)
 	{
-		VERIFY_D3D12_API(InfoQueue1->UnregisterMessageCallback(std::exchange(CallbackCookie, 0)));
+		InfoQueue1->UnregisterMessageCallback(std::exchange(CallbackCookie, 0));
 	}
 
 	if (CVar_Dred && DeviceRemovedFence)
@@ -134,7 +134,7 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 #endif
 
 	VERIFY_D3D12_API(Device.As(&Device5));
-	VERIFY_D3D12_API(Device.As(&InfoQueue1));
+	Device.As(&InfoQueue1);
 
 	if (FAILED(FeatureSupport.Init(Device.Get())))
 	{
@@ -147,7 +147,7 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 													 D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
 	for (size_t i = 0; i < std::size(Types); ++i)
 	{
-		DescriptorHandleIncrementSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
+		DescriptorSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
 	}
 
 	ComPtr<ID3D12InfoQueue> InfoQueue;
@@ -241,22 +241,22 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
 }
 
-D3D12RootSignature D3D12Device::CreateRootSignature(
-	std::function<void(RootSignatureBuilder&)> Configurator,
-	bool									   AddDescriptorTableRootParameters)
+D3D12RootSignature D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
 {
 	RootSignatureBuilder Builder = {};
 	Configurator(Builder);
-	if (AddDescriptorTableRootParameters)
+	if (!Builder.IsLocal())
 	{
+		// If a root signature is local we don't add bindless descriptor table because it will conflict with global root
+		// signature
 		AddDescriptorTableRootParameterToBuilder(Builder);
 	}
 
-	return D3D12RootSignature(GetD3D12Device(), Builder);
+	return D3D12RootSignature(this, Builder);
 }
 
 D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(
-	std::function<void(RaytracingPipelineStateBuilder&)> Configurator)
+	Delegate<void(RaytracingPipelineStateBuilder&)> Configurator)
 {
 	RaytracingPipelineStateBuilder Builder = {};
 	Configurator(Builder);
@@ -338,7 +338,7 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 {
 	UINT Flags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	VERIFY_D3D12_API(::CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
 
 	// Enumerate hardware for an adapter that supports D3D12
 	ComPtr<IDXGIAdapter4> pAdapter4;
@@ -348,7 +348,7 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
 		IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf()))))
 	{
-		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 		{
 			Adapter4 = std::move(pAdapter4);
 			break;

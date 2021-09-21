@@ -6,6 +6,8 @@ void RenderGraphRegistry::Initialize()
 {
 	Textures.resize(Scheduler.Textures.size());
 	TextureShaderViews.resize(Scheduler.Textures.size());
+
+	RenderTargets.resize(Scheduler.RenderTargets.size());
 }
 
 void RenderGraphRegistry::RealizeResources()
@@ -100,7 +102,7 @@ void RenderGraphRegistry::RealizeResources()
 			break;
 		}
 
-		Textures[i]				 = D3D12Texture(RenderCore::pDevice->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		Textures[i] = D3D12Texture(RenderCore::pDevice->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
 		ShaderViews& ShaderViews = TextureShaderViews[i];
 
 		if (ShaderViews.SRVs.empty())
@@ -132,13 +134,37 @@ void RenderGraphRegistry::RealizeResources()
 			}
 		}
 	}
+
+	size_t i = 0;
+	for (const auto& Desc : Scheduler.RenderTargets)
+	{
+		D3D12RenderTargetDesc ApiDesc = {};
+
+		for (UINT j = 0; j < Desc.NumRenderTargets; ++j)
+		{
+			ApiDesc.AddRenderTarget(&GetTexture(Desc.RenderTargets[j]), Desc.sRGB[i]);
+		}
+		if (Desc.DepthStencil.IsValid())
+		{
+			ApiDesc.SetDepthStencil(&GetTexture(Desc.DepthStencil));
+		}
+
+		RenderTargets[i] = D3D12RenderTarget(RenderCore::pDevice->GetDevice(), ApiDesc);
+	}
 }
 
 auto RenderGraphRegistry::GetTexture(RenderResourceHandle Handle) -> D3D12Texture&
 {
 	assert(Handle.Type == ERGResourceType::Texture);
-	assert(Handle.Id >= 0 && Handle.Id < Textures.size());
+	assert(Handle.Id < Textures.size());
 	return Textures[Handle.Id];
+}
+
+auto RenderGraphRegistry::GetRenderTarget(RenderResourceHandle Handle) -> D3D12RenderTarget&
+{
+	assert(Handle.Type == ERGResourceType::RenderTarget);
+	assert(Handle.Id < RenderTargets.size());
+	return RenderTargets[Handle.Id];
 }
 
 auto RenderGraphRegistry::GetTextureSRV(

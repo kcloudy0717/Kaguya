@@ -1,30 +1,5 @@
 #include "RenderCompileContext.h"
 
-bool RenderCompileContext::CompileCommand(const RenderCommandPipelineState& Command)
-{
-	return true;
-}
-
-bool RenderCompileContext::CompileCommand(const RenderCommandRaytracingPipelineState& Command)
-{
-	return true;
-}
-
-bool RenderCompileContext::CompileCommand(const RenderCommandDraw& Command)
-{
-	return true;
-}
-
-bool RenderCompileContext::CompileCommand(const RenderCommandDrawIndexed& Command)
-{
-	return true;
-}
-
-bool RenderCompileContext::CompileCommand(const RenderCommandDispatch& Command)
-{
-	return true;
-}
-
 void RenderCompileContext::Translate(const RenderCommandList& CommandList)
 {
 #define COMPILE_PACKET(Type)                                                                                           \
@@ -36,6 +11,11 @@ void RenderCompileContext::Translate(const RenderCommandList& CommandList)
 	{
 		switch (Command.Type)
 		{
+			COMPILE_PACKET(SetCBV);
+			COMPILE_PACKET(SetSRV);
+			COMPILE_PACKET(SetUAV);
+			COMPILE_PACKET(BeginRenderPass);
+			COMPILE_PACKET(EndRenderPass);
 			COMPILE_PACKET(PipelineState);
 			COMPILE_PACKET(RaytracingPipelineState);
 			COMPILE_PACKET(Draw);

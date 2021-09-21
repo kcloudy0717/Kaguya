@@ -205,6 +205,11 @@ D3D12DescriptorArray::~D3D12DescriptorArray()
 	if (IsValid())
 	{
 		Parent->Release(std::move(*this));
+
+		Parent				= nullptr;
+		CpuDescriptorHandle = {};
+		Offset				= 0;
+		NumDescriptors		= 0;
 	}
 }
 

@@ -3,6 +3,8 @@
 #include "D3D12Common.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12MemoryAllocator.h"
+#include "D3D12RenderPass.h"
+#include "D3D12RenderTarget.h"
 
 class D3D12CommandContext : public D3D12LinkedDeviceChild
 {
@@ -32,6 +34,10 @@ public:
 	void UAVBarrier(D3D12Resource* Resource);
 
 	void FlushResourceBarriers();
+
+	void BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget);
+
+	void EndRenderPass();
 
 	// These version of the API calls should be used as it needs to flush resource barriers before any work
 	void DrawInstanced(UINT VertexCount, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation);
@@ -79,12 +85,12 @@ public:
 	void ResetCounter(D3D12Resource* CounterResource, UINT64 CounterOffset, UINT Value = 0)
 	{
 		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(sizeof(UINT));
-		std::memcpy(Allocation.CPUVirtualAddress, &Value, sizeof(UINT));
+		std::memcpy(Allocation.CpuVirtualAddress, &Value, sizeof(UINT));
 
 		CommandListHandle->CopyBufferRegion(
 			CounterResource->GetResource(),
 			CounterOffset,
-			Allocation.pResource,
+			Allocation.Resource,
 			Allocation.Offset,
 			sizeof(UINT));
 	}
@@ -96,6 +102,13 @@ public:
 	D3D12CommandAllocatorPool CommandAllocatorPool;
 
 	D3D12LinearAllocator CpuConstantAllocator;
+
+	// State Cache
+	struct StateCache
+	{
+		D3D12RenderPass*   RenderPass	= nullptr;
+		D3D12RenderTarget* RenderTarget = nullptr;
+	} Cache;
 };
 
 class D3D12ScopedEventObject

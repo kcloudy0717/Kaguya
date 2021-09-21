@@ -1,6 +1,6 @@
 ﻿#include "D3D12RenderTarget.h"
 
-D3D12RenderTarget::D3D12RenderTarget(D3D12LinkedDevice* Parent, const RenderTargetDesc& Desc)
+D3D12RenderTarget::D3D12RenderTarget(D3D12LinkedDevice* Parent, const D3D12RenderTargetDesc& Desc)
 	: D3D12LinkedDeviceChild(Parent)
 	, Desc(Desc)
 {
@@ -10,14 +10,15 @@ D3D12RenderTarget::D3D12RenderTarget(D3D12LinkedDevice* Parent, const RenderTarg
 	{
 		RenderTargetViews[i] = RenderTargetArray[i];
 
-		Desc.RenderTargets[i]->As<Experimental::D3D12Texture>()->CreateRenderTargetView(RenderTargetViews[i]);
+		Desc.RenderTargets[i]
+			->CreateRenderTargetView(RenderTargetViews[i], std::nullopt, std::nullopt, std::nullopt, Desc.sRGB[i]);
 	}
 	if (Desc.DepthStencil)
 	{
 		DepthStencilArray = Parent->GetDsvAllocator().Allocate(1);
 		DepthStencilView  = DepthStencilArray[0];
 
-		Desc.DepthStencil->As<Experimental::D3D12Texture>()->CreateDepthStencilView(DepthStencilView);
+		Desc.DepthStencil->CreateDepthStencilView(DepthStencilView);
 	}
 }
 

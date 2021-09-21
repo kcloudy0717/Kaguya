@@ -110,8 +110,7 @@ struct RootSignatures
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
-			},
-			false));
+			}));
 
 		FSR = Device.CreateRootSignature(RenderCore::pDevice->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
@@ -126,8 +125,7 @@ struct RootSignatures
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
-			},
-			false));
+			}));
 	}
 };
 
@@ -249,8 +247,7 @@ struct RaytracingPipelineStates
 				Builder.AddShaderResourceView<1, 1>(); // IndexBuffer		t1 | space1
 
 				Builder.SetAsLocalRootSignature();
-			},
-			false));
+			}));
 
 		RTPSO = Device.CreateRaytracingPipelineState(RenderCore::pDevice->CreateRaytracingPipelineState(
 			[&](RaytracingPipelineStateBuilder& Builder)

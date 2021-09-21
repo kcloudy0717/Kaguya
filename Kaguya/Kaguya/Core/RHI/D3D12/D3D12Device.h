@@ -52,35 +52,30 @@ public:
 	auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
 	auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
 
-	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
-	{
-		return DescriptorHandleIncrementSizeCache[Type];
-	}
+	UINT GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept { return DescriptorSizeCache[Type]; }
 
 	D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
 
-	[[nodiscard]] D3D12RootSignature CreateRootSignature(
-		std::function<void(RootSignatureBuilder&)> Configurator,
-		bool									   AddDescriptorTableRootParameters = true);
+	[[nodiscard]] D3D12RootSignature CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator);
 
 	[[nodiscard]] D3D12PipelineState CreateGraphicsPipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
 	{
-		return D3D12PipelineState(GetD3D12Device(), &Desc);
+		return D3D12PipelineState(this, &Desc);
 	}
 
 	[[nodiscard]] D3D12PipelineState CreateComputePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
 	{
-		return D3D12PipelineState(GetD3D12Device(), &Desc);
+		return D3D12PipelineState(this, &Desc);
 	}
 
 	template<typename PipelineStateStream>
 	[[nodiscard]] D3D12PipelineState CreatePipelineState(PipelineStateStream& Stream)
 	{
-		return D3D12PipelineState(GetD3D12Device5(), Stream);
+		return D3D12PipelineState(this, Stream);
 	}
 
 	[[nodiscard]] D3D12RaytracingPipelineState CreateRaytracingPipelineState(
-		std::function<void(RaytracingPipelineStateBuilder&)> Configurator);
+		Delegate<void(RaytracingPipelineStateBuilder&)> Configurator);
 
 	void BindGraphicsDescriptorTable(const D3D12RootSignature& RootSignature, D3D12CommandContext& Context)
 	{
@@ -140,7 +135,7 @@ private:
 
 	CD3DX12FeatureSupport FeatureSupport;
 
-	UINT DescriptorHandleIncrementSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {};
+	UINT DescriptorSizeCache[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] = {};
 
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue1> InfoQueue1;
 	DWORD									 CallbackCookie = 0;

@@ -29,8 +29,7 @@ struct PathTrace
 struct Tonemap
 {
 	RenderResourceHandle Output;
-
-	D3D12RenderTargetView RTV;
+	RenderResourceHandle RenderTarget;
 };
 
 struct FSR
@@ -92,6 +91,16 @@ void PathIntegrator::Initialize()
 	RootSignatures::Compile(RenderDevice);
 	PipelineStates::Compile(RenderDevice);
 	RaytracingPipelineStates::Compile(RenderDevice);
+
+	{
+		RenderPassDesc Desc		= {};
+		FLOAT		   Color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		Desc.AddRenderTarget({ .Format	   = D3D12SwapChain::RHIFormat,
+							   .LoadOp	   = ELoadOp::Clear,
+							   .StoreOp	   = EStoreOp::Store,
+							   .ClearValue = ClearValue(D3D12SwapChain::RHIFormat, Color) });
+		TonemapRenderPass = D3D12RenderPass(RenderCore::pDevice, Desc);
+	}
 
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
@@ -172,7 +181,7 @@ void PathIntegrator::Initialize()
 				Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(
 					RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
 				Context->SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
-				Context->SetComputeRootConstantBufferView(0, Allocation.GPUVirtualAddress);
+				Context->SetComputeRootConstantBufferView(0, Allocation.GpuVirtualAddress);
 				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
@@ -213,15 +222,18 @@ void PathIntegrator::Initialize()
 					1,
 					TextureFlag_AllowRenderTarget,
 					ClearValue));
-			Parameter.RTV = D3D12RenderTargetView(RenderCore::pDevice->GetDevice());
+
+			{
+				RGRenderTargetDesc Desc = {};
+				Desc.AddRenderTarget(Parameter.Output, true);
+
+				Parameter.RenderTarget = Scheduler.CreateRenderTarget(Desc);
+			}
 
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Tonemap");
-
-				Registry.GetTexture(Parameter.Output)
-					.CreateRenderTargetView(Parameter.RTV, std::nullopt, std::nullopt, std::nullopt, true);
 
 				Context->SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Tonemap));
 				Context->SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Tonemap));
@@ -236,21 +248,20 @@ void PathIntegrator::Initialize()
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				Context->RSSetViewports(1, &Viewport);
 				Context->RSSetScissorRects(1, &ScissorRect);
-				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandles[] = { Parameter.RTV.GetCpuHandle() };
-				Context->OMSetRenderTargets(1, RtvHandles, TRUE, nullptr);
 
-				FLOAT White[] = { 1, 1, 1, 1 };
-				Context->ClearRenderTargetView(Parameter.RTV.GetCpuHandle(), White, 0, nullptr);
-
-				struct RootConstants
+				Context.BeginRenderPass(&TonemapRenderPass, &Registry.GetRenderTarget(Parameter.RenderTarget));
 				{
-					unsigned int InputIndex;
-				} Constants;
-				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
+					struct RootConstants
+					{
+						unsigned int InputIndex;
+					} Constants;
+					Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
 
-				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
+					Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
 
-				Context.DrawInstanced(3, 1, 0, 0);
+					Context.DrawInstanced(3, 1, 0, 0);
+				}
+				Context.EndRenderPass();
 			};
 		});
 
@@ -308,10 +319,10 @@ void PathIntegrator::Initialize()
 					FsrEasu.Sample.x = 0;
 
 					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
-					std::memcpy(Allocation.CPUVirtualAddress, &FsrEasu, sizeof(FSRConstants));
+					std::memcpy(Allocation.CpuVirtualAddress, &FsrEasu, sizeof(FSRConstants));
 
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
+					Context->SetComputeRootConstantBufferView(1, Allocation.GpuVirtualAddress);
 
 					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 				}
@@ -335,10 +346,10 @@ void PathIntegrator::Initialize()
 					FsrRcas.Sample.x = 0;
 
 					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
-					std::memcpy(Allocation.CPUVirtualAddress, &FsrRcas, sizeof(FSRConstants));
+					std::memcpy(Allocation.CpuVirtualAddress, &FsrRcas, sizeof(FSRConstants));
 
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context->SetComputeRootConstantBufferView(1, Allocation.GPUVirtualAddress);
+					Context->SetComputeRootConstantBufferView(1, Allocation.GpuVirtualAddress);
 
 					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 				}

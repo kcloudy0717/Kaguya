@@ -203,6 +203,8 @@ public:
 	void AllowResourceDescriptorHeapIndexing() noexcept;
 	void AllowSampleDescriptorHeapIndexing() noexcept;
 
+	[[nodiscard]] bool IsLocal() const noexcept { return Flags & D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE; }
+
 private:
 	void AddParameter(D3D12_ROOT_PARAMETER1 Parameter)
 	{
@@ -219,11 +221,11 @@ private:
 	std::vector<D3D12DescriptorTable> DescriptorTables;
 };
 
-class D3D12RootSignature
+class D3D12RootSignature final : public D3D12DeviceChild
 {
 public:
 	D3D12RootSignature() noexcept = default;
-	D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilder& Builder);
+	D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder);
 
 	operator ID3D12RootSignature*() const { return RootSignature.Get(); }
 

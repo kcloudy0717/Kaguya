@@ -55,17 +55,17 @@ D3D12SwapChain::D3D12SwapChain(
 
 ID3D12Resource* D3D12SwapChain::GetBackBuffer(UINT Index) const
 {
-	ID3D12Resource* pBackBuffer = nullptr;
-	VERIFY_D3D12_API(SwapChain4->GetBuffer(Index, IID_PPV_ARGS(&pBackBuffer)));
-	pBackBuffer->Release();
-	return pBackBuffer;
+	ID3D12Resource* BackBuffer = nullptr;
+	VERIFY_D3D12_API(SwapChain4->GetBuffer(Index, IID_PPV_ARGS(&BackBuffer)));
+	BackBuffer->Release();
+	return BackBuffer;
 }
 
 std::pair<ID3D12Resource*, D3D12_CPU_DESCRIPTOR_HANDLE> D3D12SwapChain::GetCurrentBackBufferResource() const
 {
 	UINT			BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
-	ID3D12Resource* pBackBuffer		= GetBackBuffer(BackBufferIndex);
-	return { pBackBuffer, RenderTargetViews[BackBufferIndex] };
+	ID3D12Resource* BackBuffer		= GetBackBuffer(BackBufferIndex);
+	return { BackBuffer, RenderTargetViews[BackBufferIndex] };
 }
 
 void D3D12SwapChain::Resize(UINT Width, UINT Height)

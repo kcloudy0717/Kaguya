@@ -1,5 +1,10 @@
 #include "RenderDevice.h"
 
+auto RenderDevice::CreateRenderPass(D3D12RenderPass&& RenderPass) -> RenderResourceHandle
+{
+	return RenderPassRegistry.Construct(std::forward<D3D12RenderPass>(RenderPass));
+}
+
 auto RenderDevice::CreateRootSignature(D3D12RootSignature&& RootSignature) -> RenderResourceHandle
 {
 	return RootSignatureRegistry.Construct(std::move(RootSignature));
@@ -14,6 +19,11 @@ auto RenderDevice::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& 
 	-> RenderResourceHandle
 {
 	return RaytracingPipelineStateRegistry.Construct(std::move(RaytracingPipelineState));
+}
+
+const D3D12RenderPass& RenderDevice::GetRenderPass(RenderResourceHandle Handle) const
+{
+	return RenderPassRegistry.GetResource(Handle);
 }
 
 const D3D12RootSignature& RenderDevice::GetRootSignature(RenderResourceHandle Handle) const

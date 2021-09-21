@@ -48,6 +48,8 @@ private:
 	void Render(D3D12CommandContext& Context) override;
 
 private:
+	D3D12RenderPass	  TonemapRenderPass;
+
 	RaytracingAccelerationStructure AccelerationStructure;
 
 	D3D12RaytracingAccelerationStructureManager Manager;

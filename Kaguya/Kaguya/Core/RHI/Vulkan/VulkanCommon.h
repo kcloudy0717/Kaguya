@@ -151,55 +151,6 @@ template<>				inline [[nodiscard]] auto VkStruct() -> VkWin32SurfaceCreateInfoKH
 template<>				inline [[nodiscard]] auto VkStruct() -> VkDebugUtilsMessengerCreateInfoEXT				{ return { .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT }; }
 // clang-format on
 
-constexpr VkAttachmentLoadOp ToVkLoadOp(ELoadOp LoadOp)
-{
-	switch (LoadOp)
-	{
-	case ELoadOp::Load:
-		return VK_ATTACHMENT_LOAD_OP_LOAD;
-	case ELoadOp::Clear:
-		return VK_ATTACHMENT_LOAD_OP_CLEAR;
-	case ELoadOp::Noop:
-		return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	}
-	return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
-}
-
-constexpr VkAttachmentStoreOp ToVkStoreOp(EStoreOp StoreOp)
-{
-	switch (StoreOp)
-	{
-	case EStoreOp::Store:
-		return VK_ATTACHMENT_STORE_OP_STORE;
-	case EStoreOp::Noop:
-		return VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	}
-	return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
-}
-
-// Infer aspect flags for a given image format
-constexpr VkImageAspectFlags InferImageAspectFlags(VkFormat Format)
-{
-	switch (Format)
-	{
-	case VK_FORMAT_D16_UNORM:
-	case VK_FORMAT_X8_D24_UNORM_PACK32:
-	case VK_FORMAT_D32_SFLOAT:
-		return VK_IMAGE_ASPECT_DEPTH_BIT;
-
-	case VK_FORMAT_S8_UINT:
-		return VK_IMAGE_ASPECT_STENCIL_BIT;
-
-	case VK_FORMAT_D16_UNORM_S8_UINT:
-	case VK_FORMAT_D24_UNORM_S8_UINT:
-	case VK_FORMAT_D32_SFLOAT_S8_UINT:
-		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
-	default:
-		return VK_IMAGE_ASPECT_COLOR_BIT;
-	}
-}
-
 std::string ToStringSpvSourceLanguage(SpvSourceLanguage lang);
 std::string ToStringSpvExecutionModel(SpvExecutionModel model);
 std::string ToStringSpvStorageClass(SpvStorageClass storage_class);

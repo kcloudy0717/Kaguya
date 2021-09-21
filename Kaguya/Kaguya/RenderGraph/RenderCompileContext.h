@@ -5,21 +5,25 @@
 class RenderCompileContext
 {
 public:
-	RenderCompileContext(RenderDevice& Device, D3D12CommandContext& Context)
+	explicit RenderCompileContext(RenderDevice& Device)
 		: Device(Device)
-		, Context(Context)
 	{
 	}
+	virtual ~RenderCompileContext() = default;
 
-	bool CompileCommand(const RenderCommandPipelineState& Command);
-	bool CompileCommand(const RenderCommandRaytracingPipelineState& Command);
-	bool CompileCommand(const RenderCommandDraw& Command);
-	bool CompileCommand(const RenderCommandDrawIndexed& Command);
-	bool CompileCommand(const RenderCommandDispatch& Command);
+	virtual bool CompileCommand(const RenderCommandSetCBV& Command)					 = 0;
+	virtual bool CompileCommand(const RenderCommandSetSRV& Command)					 = 0;
+	virtual bool CompileCommand(const RenderCommandSetUAV& Command)					 = 0;
+	virtual bool CompileCommand(const RenderCommandBeginRenderPass& Command)		 = 0;
+	virtual bool CompileCommand(const RenderCommandEndRenderPass& Command)			 = 0;
+	virtual bool CompileCommand(const RenderCommandPipelineState& Command)			 = 0;
+	virtual bool CompileCommand(const RenderCommandRaytracingPipelineState& Command) = 0;
+	virtual bool CompileCommand(const RenderCommandDraw& Command)					 = 0;
+	virtual bool CompileCommand(const RenderCommandDrawIndexed& Command)			 = 0;
+	virtual bool CompileCommand(const RenderCommandDispatch& Command)				 = 0;
 
 	void Translate(const RenderCommandList& CommandList);
 
-private:
-	RenderDevice&	Device;
-	D3D12CommandContext& Context;
+protected:
+	RenderDevice& Device;
 };

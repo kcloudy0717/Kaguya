@@ -8,6 +8,10 @@
 
 enum class ERenderCommandType
 {
+	SetCBV,
+	SetSRV,
+	SetUAV,
+
 	BeginRenderPass,
 	EndRenderPass,
 
@@ -31,6 +35,25 @@ template<ERenderCommandType Type>
 struct TypedRenderCommand
 {
 	static constexpr ERenderCommandType Type = Type;
+};
+
+struct RenderCommandSetCBV : TypedRenderCommand<ERenderCommandType::SetCBV>
+{
+	UINT  RootParameter;
+	void* Data;
+	UINT  SizeInBytes;
+};
+
+struct RenderCommandSetSRV : TypedRenderCommand<ERenderCommandType::SetSRV>
+{
+	UINT				 RootParameter;
+	RenderResourceHandle Buffer;
+};
+
+struct RenderCommandSetUAV : TypedRenderCommand<ERenderCommandType::SetUAV>
+{
+	UINT				 RootParameter;
+	RenderResourceHandle Buffer;
 };
 
 struct RenderCommandBeginRenderPass : TypedRenderCommand<ERenderCommandType::BeginRenderPass>
@@ -85,6 +108,9 @@ struct RenderCommand
 	ERenderCommandType Type;
 	union
 	{
+		RenderCommandSetCBV					 SetCBV;
+		RenderCommandSetSRV					 SetSRV;
+		RenderCommandSetUAV					 SetUAV;
 		RenderCommandBeginRenderPass		 BeginRenderPass;
 		RenderCommandEndRenderPass			 EndRenderPass;
 		RenderCommandPipelineState			 PipelineState;
@@ -98,6 +124,27 @@ struct RenderCommand
 struct RenderCommandList
 {
 	void Reset() { Recorded.clear(); }
+
+	void SetCBV(const RenderCommandSetCBV& Args)
+	{
+		RenderCommand& Command = Recorded.emplace_back();
+		Command.Type		   = Args.Type;
+		Command.SetCBV		   = Args;
+	}
+
+	void SetSRV(const RenderCommandSetSRV& Args)
+	{
+		RenderCommand& Command = Recorded.emplace_back();
+		Command.Type		   = Args.Type;
+		Command.SetSRV		   = Args;
+	}
+
+	void SetUAV(const RenderCommandSetUAV& Args)
+	{
+		RenderCommand& Command = Recorded.emplace_back();
+		Command.Type		   = Args.Type;
+		Command.SetUAV		   = Args;
+	}
 
 	void BeginRenderPass(const RenderCommandBeginRenderPass& Args)
 	{

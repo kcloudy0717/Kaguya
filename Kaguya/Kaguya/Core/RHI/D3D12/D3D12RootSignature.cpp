@@ -87,7 +87,8 @@ void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
 	Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
 }
 
-D3D12RootSignature::D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilder& Builder)
+D3D12RootSignature::D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder)
+	: D3D12DeviceChild(Parent)
 {
 	Desc = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = Builder.Build() };
 
@@ -100,7 +101,7 @@ D3D12RootSignature::D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilde
 		ErrorBlob.ReleaseAndGetAddressOf()));
 
 	// Create the root signature
-	VERIFY_D3D12_API(Device->CreateRootSignature(
+	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(
 		0,
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),

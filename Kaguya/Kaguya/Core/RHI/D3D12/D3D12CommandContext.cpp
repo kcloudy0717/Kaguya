@@ -83,6 +83,55 @@ void D3D12CommandContext::FlushResourceBarriers()
 	CommandListHandle.FlushResourceBarriers();
 }
 
+void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget)
+{
+	Cache.RenderPass   = RenderPass;
+	Cache.RenderTarget = RenderTarget;
+
+	assert(RenderPass->Desc.NumRenderTargets == RenderTarget->Desc.NumRenderTargets);
+
+	bool HasDepthStencil = RenderPass->Desc.DepthStencil.IsValid();
+
+	UINT						 NumRenderTargets  = RenderTarget->Desc.NumRenderTargets;
+	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->RenderTargetViews;
+	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = nullptr;
+	if (HasDepthStencil)
+	{
+		DepthStencilView = &RenderTarget->DepthStencilView;
+	}
+
+	for (UINT i = 0; i < NumRenderTargets; ++i)
+	{
+		const RenderPassAttachment& Attachment = RenderPass->Desc.RenderTargets[i];
+
+		if (ToD3D12BeginAccessType(Attachment.LoadOp) == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			CommandListHandle->ClearRenderTargetView(RenderTargetViews[i], Attachment.ClearValue.Color, 0, nullptr);
+		}
+	}
+	if (HasDepthStencil)
+	{
+		const RenderPassAttachment& Attachment = RenderPass->Desc.DepthStencil;
+
+		if (ToD3D12BeginAccessType(Attachment.LoadOp) == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			D3D12_CLEAR_FLAGS ClearFlags = D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL;
+			FLOAT			  Depth		 = Attachment.ClearValue.DepthStencil.Depth;
+			UINT8			  Stencil	 = Attachment.ClearValue.DepthStencil.Stencil;
+
+			CommandListHandle->ClearDepthStencilView(*DepthStencilView, ClearFlags, Depth, Stencil, 0, nullptr);
+		}
+	}
+
+	CommandListHandle->OMSetRenderTargets(NumRenderTargets, RenderTargetViews, TRUE, DepthStencilView);
+}
+
+void D3D12CommandContext::EndRenderPass()
+{
+	Cache.RenderTarget = nullptr;
+	Cache.RenderPass   = nullptr;
+}
+
 void D3D12CommandContext::DrawInstanced(
 	UINT VertexCount,
 	UINT InstanceCount,

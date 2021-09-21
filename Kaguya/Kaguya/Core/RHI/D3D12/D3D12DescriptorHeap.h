@@ -72,13 +72,17 @@ public:
 
 	D3D12DescriptorArray& operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
 	{
-		if (this != &D3D12DescriptorArray)
+		if (this == &D3D12DescriptorArray)
 		{
-			Parent				= std::exchange(D3D12DescriptorArray.Parent, {});
-			CpuDescriptorHandle = std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {});
-			Offset				= std::exchange(D3D12DescriptorArray.Offset, {});
-			NumDescriptors		= std::exchange(D3D12DescriptorArray.NumDescriptors, {});
+			return *this;
 		}
+
+		this->~D3D12DescriptorArray();
+		Parent				= std::exchange(D3D12DescriptorArray.Parent, {});
+		CpuDescriptorHandle = std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {});
+		Offset				= std::exchange(D3D12DescriptorArray.Offset, {});
+		NumDescriptors		= std::exchange(D3D12DescriptorArray.NumDescriptors, {});
+
 		return *this;
 	}
 
@@ -101,7 +105,6 @@ private:
 class D3D12DescriptorPage : public D3D12LinkedDeviceChild
 {
 public:
-	D3D12DescriptorPage() noexcept = default;
 	explicit D3D12DescriptorPage(D3D12LinkedDevice* Parent) noexcept
 		: D3D12LinkedDeviceChild(Parent)
 	{

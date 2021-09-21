@@ -32,6 +32,16 @@ auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureD
 	return Texture.Handle;
 }
 
+auto RenderGraphScheduler::CreateRenderTarget(const RGRenderTargetDesc& Desc) -> RenderResourceHandle
+{
+	RenderTargets.emplace_back(Desc);
+	RenderResourceHandle Handle = RenderTargetHandle;
+
+	++RenderTargetHandle.Id;
+
+	return Handle;
+}
+
 auto RenderGraphScheduler::Read(RenderResourceHandle Resource) -> RenderResourceHandle
 {
 	assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);

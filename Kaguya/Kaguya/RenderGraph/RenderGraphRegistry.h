@@ -4,7 +4,7 @@
 
 struct ShaderViews
 {
-	std::vector<D3D12ShaderResourceView>	 SRVs;
+	std::vector<D3D12ShaderResourceView>  SRVs;
 	std::vector<D3D12UnorderedAccessView> UAVs;
 };
 
@@ -20,7 +20,9 @@ public:
 
 	void RealizeResources();
 
-	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle)->D3D12Texture&;
+	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle) -> D3D12Texture&;
+
+	[[nodiscard]] auto GetRenderTarget(RenderResourceHandle Handle) -> D3D12RenderTarget&;
 
 	[[nodiscard]] auto GetTextureSRV(
 		RenderResourceHandle Handle,
@@ -49,7 +51,8 @@ public:
 private:
 	RenderGraphScheduler& Scheduler;
 
-	// std::vector<Buffer>	 Buffers;
-	std::vector<D3D12Texture>	 Textures;
-	std::vector<ShaderViews> TextureShaderViews;
+	std::vector<D3D12Texture> Textures;
+	std::vector<ShaderViews>  TextureShaderViews;
+
+	std::vector<D3D12RenderTarget> RenderTargets;
 };

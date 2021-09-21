@@ -12,14 +12,14 @@ public:
 	void OpenCommandList();
 	void CloseCommandList();
 
-	void SetGraphicsRootSignature(VulkanRootSignature* pRootSignature);
-	void SetComputeRootSignature(VulkanRootSignature* pRootSignature);
+	void SetGraphicsRootSignature(VulkanRootSignature* RootSignature);
+	void SetComputeRootSignature(VulkanRootSignature* RootSignature);
 
-	void SetGraphicsPipelineState(VulkanPipelineState* pPipelineState);
+	void SetGraphicsPipelineState(VulkanPipelineState* PipelineState);
 
-	void SetViewports(UINT NumViewports, RHIViewport* pViewports, RHIRect* pScissorRects);
+	void SetViewports(UINT NumViewports, RHIViewport* Viewports, RHIRect* ScissorRects);
 
-	void SetPushConstants(UINT Size, const void* pSrcData);
+	void SetPushConstants(UINT Size, const void* SrcData);
 	void SetConstantBufferView(UINT Binding, IRHIBuffer* Buffer);
 	void SetDescriptorSets();
 
@@ -38,7 +38,7 @@ public:
 
 	void Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 
-	VkCommandBuffer		 CommandBuffer	   = VK_NULL_HANDLE;
-	VkPipelineBindPoint	 PipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-	VkPipelineLayout	 PipelineLayout	   = VK_NULL_HANDLE;
+	VkCommandBuffer		CommandBuffer	  = VK_NULL_HANDLE;
+	VkPipelineBindPoint PipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+	VkPipelineLayout	PipelineLayout	  = VK_NULL_HANDLE;
 };
