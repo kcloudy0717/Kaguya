@@ -36,6 +36,9 @@ public:
 	D3D12DescriptorHeap& GetRenderTargetDescriptorHeap() noexcept { return RenderTargetDescriptorHeap; }
 	D3D12DescriptorHeap& GetDepthStencilDescriptorHeap() noexcept { return DepthStencilDescriptorHeap; }
 
+	auto& GetRtvAllocator() noexcept { return RtvAllocator; }
+	auto& GetDsvAllocator() noexcept { return DsvAllocator; }
+
 	D3D12CommandContext& GetCommandContext(UINT ThreadIndex = 0) { return *AvailableCommandContexts[ThreadIndex]; }
 	D3D12CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0)
 	{
@@ -58,6 +61,9 @@ private:
 	D3D12DescriptorHeap SamplerDescriptorHeap;
 	D3D12DescriptorHeap RenderTargetDescriptorHeap;
 	D3D12DescriptorHeap DepthStencilDescriptorHeap;
+
+	D3D12DescriptorAllocator RtvAllocator;
+	D3D12DescriptorAllocator DsvAllocator;
 
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableCommandContexts;
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableAsyncCommandContexts;

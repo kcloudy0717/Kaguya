@@ -17,13 +17,7 @@ public:
 	{
 	}
 
-	void AddRenderPass(RenderPass* RenderPass)
-	{
-		RenderPass->DependencyLevel = this;
-		RenderPasses.push_back(RenderPass);
-		Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
-		Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
-	}
+	void AddRenderPass(RenderPass* RenderPass);
 
 	void PostInitialize();
 
@@ -54,33 +48,17 @@ public:
 	auto begin() const noexcept { return RenderPasses.begin(); }
 	auto end() const noexcept { return RenderPasses.end(); }
 
-	void AddRenderPass(const std::string& Name, RenderPassCallback Callback)
-	{
-		RenderPass* NewRenderPass = new RenderPass(this, Name);
-		Scheduler.SetCurrentRenderPass(NewRenderPass);
-		NewRenderPass->Callback = Callback(Scheduler, NewRenderPass->Scope);
-		Scheduler.SetCurrentRenderPass(nullptr);
+	void AddRenderPass(const std::string& Name, RenderPassCallback Callback);
 
-		RenderPasses.emplace_back(NewRenderPass);
-		LUT[Name] = NewRenderPass;
-	}
+	[[nodiscard]] RenderPass* GetRenderPass(const std::string& Name) const;
 
-	RenderPass* GetRenderPass(const std::string& Name) const
-	{
-		if (auto iter = LUT.find(Name); iter != LUT.end())
-		{
-			return iter->second;
-		}
-		return nullptr;
-	}
-
-	RenderScope& GetScope(const std::string& Name) const { return GetRenderPass(Name)->Scope; }
+	[[nodiscard]] RenderScope& GetScope(const std::string& Name) const;
 
 	RenderGraphScheduler& GetScheduler() { return Scheduler; }
 	RenderGraphRegistry&  GetRegistry() { return Registry; }
 
-	std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
-	std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
+	[[nodiscard]] std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
+	[[nodiscard]] std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
 
 	void Setup();
 	void Compile();
@@ -124,7 +102,7 @@ public:
 
 private:
 	std::vector<std::unique_ptr<RenderPass>>	 RenderPasses;
-	std::unordered_map<std::string, RenderPass*> LUT;
+	std::unordered_map<std::string, RenderPass*> Lut;
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;
 	std::vector<RenderPass*>		 TopologicalSortedPasses;

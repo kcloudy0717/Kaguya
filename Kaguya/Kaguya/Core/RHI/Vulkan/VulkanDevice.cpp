@@ -366,9 +366,13 @@ bool VulkanDevice::CheckDeviceExtensionSupport(VkPhysicalDevice PhysicalDevice) 
 
 void VulkanDevice::InitializeVulkanAPI()
 {
-	VulkanAPI::vkCmdPushDescriptorSetKHR =
-		reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(VkDevice, "vkCmdPushDescriptorSetKHR"));
-	assert(VulkanAPI::vkCmdPushDescriptorSetKHR);
+#define VULKAN_QUERY_API(API)                                                                                          \
+	VulkanAPI::API = reinterpret_cast<decltype(VulkanAPI::API)>(vkGetDeviceProcAddr(VkDevice, #API));                  \
+	assert(VulkanAPI::API)
+
+	VULKAN_QUERY_API(vkCmdPushDescriptorSetKHR);
+
+#undef VULKAN_QUERY_API
 }
 
 RefPtr<IRHIRenderPass> VulkanDevice::CreateRenderPass(const RenderPassDesc& Desc)

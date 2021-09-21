@@ -8,25 +8,6 @@ ShaderCompiler*				pShaderCompiler	   = nullptr;
 D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor = {};
 D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor = {};
 
-const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
-{
-	switch (Severity)
-	{
-	case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-		return "[Corruption]";
-	case D3D12_MESSAGE_SEVERITY_ERROR:
-		return "[Error]";
-	case D3D12_MESSAGE_SEVERITY_WARNING:
-		return "[Warning]";
-	case D3D12_MESSAGE_SEVERITY_INFO:
-		return "[Info]";
-	case D3D12_MESSAGE_SEVERITY_MESSAGE:
-		return "[Message]";
-	default:
-		return "<unknown>";
-	}
-}
-
 void Initialize()
 {
 	DeviceOptions  DeviceOptions	= { .EnableDebugLayer		  = true,
@@ -39,16 +20,6 @@ void Initialize()
 	pDevice = new D3D12Device();
 	pDevice->Initialize(DeviceOptions);
 	pDevice->InitializeDevice(DeviceFeatures);
-
-	pDevice->RegisterMessageCallback(
-		[](D3D12_MESSAGE_CATEGORY Category,
-		   D3D12_MESSAGE_SEVERITY Severity,
-		   D3D12_MESSAGE_ID		  ID,
-		   LPCSTR				  pDescription,
-		   void*				  pContext)
-		{
-			LOG_ERROR("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
-		});
 
 	pSwapChain = new D3D12SwapChain(
 		Application::GetWindowHandle(),
@@ -82,7 +53,6 @@ void Shutdown()
 	pDevice->GetDevice()->GetCopyQueue2()->WaitIdle();
 
 	ImGui_ImplDX12_Shutdown();
-	pDevice->UnregisterMessageCallback();
 
 	delete pShaderCompiler;
 	delete pSwapChain;
@@ -90,5 +60,4 @@ void Shutdown()
 
 	D3D12Device::ReportLiveObjects();
 }
-
 } // namespace RenderCore

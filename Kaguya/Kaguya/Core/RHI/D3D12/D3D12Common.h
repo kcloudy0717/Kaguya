@@ -1,5 +1,6 @@
 #pragma once
-#include <d3d12.h>
+#include <Core/RHI/D3D12/RHID3D12.h>
+
 #include "d3dx12.h"
 #include "D3D12Utility.h"
 #include "D3D12Profiler.h"

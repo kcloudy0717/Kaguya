@@ -21,7 +21,7 @@ public:
 		, ResourceState(D3D12_RESOURCE_STATE_UNINITIALIZED)
 	{
 	}
-	CResourceState(UINT NumSubresources)
+	explicit CResourceState(UINT NumSubresources)
 		: CResourceState()
 	{
 		SubresourceStates.resize(NumSubresources);

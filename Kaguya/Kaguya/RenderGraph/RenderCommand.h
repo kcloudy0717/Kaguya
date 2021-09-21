@@ -8,6 +8,9 @@
 
 enum class ERenderCommandType
 {
+	BeginRenderPass,
+	EndRenderPass,
+
 	PipelineState,
 	RaytracingPipelineState,
 
@@ -18,25 +21,44 @@ enum class ERenderCommandType
 	NumRenderCommandTypes
 };
 
+enum class ERenderPipelineType
+{
+	Graphics,
+	Compute
+};
+
 template<ERenderCommandType Type>
 struct TypedRenderCommand
 {
 	static constexpr ERenderCommandType Type = Type;
 };
 
+struct RenderCommandBeginRenderPass : TypedRenderCommand<ERenderCommandType::BeginRenderPass>
+{
+	RenderResourceHandle RenderPass;
+	RenderResourceHandle RenderTarget;
+};
+
+struct RenderCommandEndRenderPass : TypedRenderCommand<ERenderCommandType::EndRenderPass>
+{
+};
+
 struct RenderCommandPipelineState : TypedRenderCommand<ERenderCommandType::PipelineState>
 {
+	ERenderPipelineType	 PipelineType;
+	RenderResourceHandle RootSignature;
 	RenderResourceHandle PipelineState;
 };
 
 struct RenderCommandRaytracingPipelineState : TypedRenderCommand<ERenderCommandType::RaytracingPipelineState>
 {
+	RenderResourceHandle RootSignature;
 	RenderResourceHandle RaytracingPipelineState;
 };
 
 struct RenderCommandDraw : TypedRenderCommand<ERenderCommandType::Draw>
 {
-	UINT VertexCountPerInstance;
+	UINT VertexCount;
 	UINT InstanceCount;
 	UINT StartVertexLocation;
 	UINT StartInstanceLocation;
@@ -44,7 +66,7 @@ struct RenderCommandDraw : TypedRenderCommand<ERenderCommandType::Draw>
 
 struct RenderCommandDrawIndexed : TypedRenderCommand<ERenderCommandType::DrawIndexed>
 {
-	UINT IndexCountPerInstance;
+	UINT IndexCount;
 	UINT InstanceCount;
 	UINT StartIndexLocation;
 	INT	 BaseVertexLocation;
@@ -63,6 +85,8 @@ struct RenderCommand
 	ERenderCommandType Type;
 	union
 	{
+		RenderCommandBeginRenderPass		 BeginRenderPass;
+		RenderCommandEndRenderPass			 EndRenderPass;
 		RenderCommandPipelineState			 PipelineState;
 		RenderCommandRaytracingPipelineState RaytracingPipelineState;
 		RenderCommandDraw					 Draw;
@@ -74,6 +98,19 @@ struct RenderCommand
 struct RenderCommandList
 {
 	void Reset() { Recorded.clear(); }
+
+	void BeginRenderPass(const RenderCommandBeginRenderPass& Args)
+	{
+		RenderCommand& Command	= Recorded.emplace_back();
+		Command.Type			= Args.Type;
+		Command.BeginRenderPass = Args;
+	}
+
+	void EndRenderPass()
+	{
+		RenderCommand& Command = Recorded.emplace_back();
+		Command.Type		   = RenderCommandEndRenderPass::Type;
+	}
 
 	void SetPipelineState(const RenderCommandPipelineState& Args)
 	{

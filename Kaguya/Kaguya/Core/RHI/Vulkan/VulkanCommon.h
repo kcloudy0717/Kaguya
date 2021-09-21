@@ -1,8 +1,8 @@
 #pragma once
+#include <Core/RHI/Vulkan/RHIVulkan.h>
+
 #include "vk_mem_alloc.h"
 #include "spirv_reflect.h"
-#include <Core/RHI/RHICommon.h>
-#include <Core/RHI/Vulkan/RHIVulkan.h>
 
 class VulkanException : public Exception
 {

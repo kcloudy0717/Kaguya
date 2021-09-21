@@ -45,7 +45,7 @@ private:
 // Many of these came from the DirectX-Graphics samples (MiniEngine)
 class D3D12DescriptorPage;
 
-// Represents a contiguous CPU descriptor handle, mainly used to stage from CPU -> GPU
+// Represents a contiguous CPU descriptor handle
 class D3D12DescriptorArray
 {
 public:

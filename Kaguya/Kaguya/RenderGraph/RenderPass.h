@@ -11,27 +11,16 @@ class RenderPass : public RenderGraphChild
 public:
 	using ExecuteCallback = Delegate<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
 
-	RenderPass(RenderGraph* Parent, const std::string& Name)
-		: RenderGraphChild(Parent)
-		, Name(Name)
-	{
-	}
+	RenderPass(RenderGraph* Parent, const std::string& Name);
 
-	void Read(RenderResourceHandle Resource)
-	{
-		Reads.insert(Resource);
-		ReadWrites.insert(Resource);
-	}
+	void Read(RenderResourceHandle Resource);
+	void Write(RenderResourceHandle Resource);
 
-	void Write(RenderResourceHandle Resource)
-	{
-		Writes.insert(Resource);
-		ReadWrites.insert(Resource);
-	}
+	[[nodiscard]] bool HasDependency(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool HasWriteDependency(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool HasReadDependency(RenderResourceHandle Resource) const;
 
-	bool HasDependency(RenderResourceHandle Resource) const { return ReadWrites.find(Resource) != ReadWrites.end(); }
-
-	bool HasAnyDependencies() const { return !ReadWrites.empty(); }
+	[[nodiscard]] bool HasAnyDependencies() const noexcept;
 
 	std::string					Name;
 	size_t						TopologicalIndex = 0;

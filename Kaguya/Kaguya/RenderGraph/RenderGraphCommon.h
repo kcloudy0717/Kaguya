@@ -69,6 +69,9 @@ enum class ERGResourceType : UINT64
 	Buffer,
 	Texture,
 
+	RenderPass,
+	RenderTarget,
+
 	RootSignature,
 	PipelineState,
 	RaytracingPipelineState

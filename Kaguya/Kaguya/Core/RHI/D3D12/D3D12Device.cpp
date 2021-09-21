@@ -15,6 +15,25 @@ AutoConsoleVariable<bool> CVar_Dred(
 
 using Microsoft::WRL::ComPtr;
 
+const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
+{
+	switch (Severity)
+	{
+	case D3D12_MESSAGE_SEVERITY_CORRUPTION:
+		return "[Corruption]";
+	case D3D12_MESSAGE_SEVERITY_ERROR:
+		return "[Error]";
+	case D3D12_MESSAGE_SEVERITY_WARNING:
+		return "[Warning]";
+	case D3D12_MESSAGE_SEVERITY_INFO:
+		return "[Info]";
+	case D3D12_MESSAGE_SEVERITY_MESSAGE:
+		return "[Message]";
+	default:
+		return "<unknown>";
+	}
+}
+
 void D3D12Device::ReportLiveObjects()
 {
 #ifdef _DEBUG
@@ -34,6 +53,11 @@ D3D12Device::D3D12Device()
 
 D3D12Device::~D3D12Device()
 {
+	if (InfoQueue1)
+	{
+		VERIFY_D3D12_API(InfoQueue1->UnregisterMessageCallback(std::exchange(CallbackCookie, 0)));
+	}
+
 	if (CVar_Dred && DeviceRemovedFence)
 	{
 		// Need to gracefully exit the event
@@ -145,6 +169,22 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 		// InfoQueueFilter.DenyList.NumIDs			= ARRAYSIZE(IDs);
 		// InfoQueueFilter.DenyList.pIDList		= IDs;
 		// VERIFY_D3D12_API(InfoQueue->PushStorageFilter(&InfoQueueFilter));
+	}
+
+	if (InfoQueue1)
+	{
+		VERIFY_D3D12_API(InfoQueue1->RegisterMessageCallback(
+			[](D3D12_MESSAGE_CATEGORY Category,
+			   D3D12_MESSAGE_SEVERITY Severity,
+			   D3D12_MESSAGE_ID		  ID,
+			   LPCSTR				  pDescription,
+			   void*				  pContext)
+			{
+				LOG_ERROR("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
+			},
+			D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+			nullptr,
+			&CallbackCookie));
 	}
 
 	DeviceRemovedWaitHandle = INVALID_HANDLE_VALUE;

@@ -23,6 +23,8 @@ D3D12LinkedDevice::D3D12LinkedDevice(D3D12Device* Parent)
 	, SamplerDescriptorHeap(this)
 	, RenderTargetDescriptorHeap(this)
 	, DepthStencilDescriptorHeap(this)
+	, RtvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+	, DsvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
 {
 }
 

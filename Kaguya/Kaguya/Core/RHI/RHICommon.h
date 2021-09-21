@@ -349,20 +349,33 @@ DEFINE_ENUM_FLAG_OPERATORS(ERHIBufferFlags);
 
 struct RHIBufferDesc
 {
+	RHIBufferDesc() noexcept = default;
+	RHIBufferDesc(UINT64 SizeInBytes, UINT Stride, ERHIHeapType HeapType, ERHIBufferFlags Flags)
+		: SizeInBytes(SizeInBytes)
+		, Stride(Stride)
+		, HeapType(HeapType)
+		, Flags(Flags)
+	{
+	}
+
 	template<typename T>
 	static RHIBufferDesc StructuredBuffer(UINT NumElements, ERHIBufferFlags Flags = RHIBufferFlag_None)
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T), .Flags = Flags };
+		return RHIBufferDesc(static_cast<UINT64>(NumElements) * sizeof(T), sizeof(T), ERHIHeapType::DeviceLocal, Flags);
 	}
 
 	template<typename T>
 	static RHIBufferDesc RWStructuredBuffer(UINT NumElements, ERHIBufferFlags Flags = RHIBufferFlag_None)
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T),
-				 .Flags		  = Flags | ERHIBufferFlags::RHIBufferFlag_AllowUnorderedAccess };
+		return RHIBufferDesc(
+			static_cast<UINT64>(NumElements) * sizeof(T),
+			sizeof(T),
+			ERHIHeapType::DeviceLocal,
+			Flags | ERHIBufferFlags::RHIBufferFlag_AllowUnorderedAccess);
 	}
 
 	UINT64			SizeInBytes = 0;
+	UINT			Stride		= 0;
 	ERHIHeapType	HeapType	= ERHIHeapType::DeviceLocal;
 	ERHIBufferFlags Flags		= ERHIBufferFlags::RHIBufferFlag_None;
 };

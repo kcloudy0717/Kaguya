@@ -2,6 +2,8 @@
 #include <Core/RHI/RHICommon.h>
 #include "D3D12Common.h"
 #include "D3D12LinkedDevice.h"
+#include "D3D12RenderPass.h"
+#include "D3D12RenderTarget.h"
 #include "D3D12RootSignature.h"
 #include "D3D12PipelineState.h"
 #include "D3D12RaytracingPipelineState.h"
@@ -53,27 +55,6 @@ public:
 	UINT GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
 	{
 		return DescriptorHandleIncrementSizeCache[Type];
-	}
-
-	void RegisterMessageCallback(D3D12MessageFunc CallbackFunc)
-	{
-		if (InfoQueue1)
-		{
-			VERIFY_D3D12_API(InfoQueue1->RegisterMessageCallback(
-				CallbackFunc,
-				D3D12_MESSAGE_CALLBACK_FLAG_NONE,
-				nullptr,
-				&CallbackCookie));
-		}
-	}
-
-	void UnregisterMessageCallback()
-	{
-		if (InfoQueue1)
-		{
-			VERIFY_D3D12_API(InfoQueue1->UnregisterMessageCallback(CallbackCookie));
-			CallbackCookie = 0;
-		}
 	}
 
 	D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
