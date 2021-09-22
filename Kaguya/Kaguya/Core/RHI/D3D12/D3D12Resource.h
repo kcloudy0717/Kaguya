@@ -185,19 +185,6 @@ public:
 		std::optional<UINT>		  OptMipSlice	= std::nullopt) const;
 
 	void CreateRenderTargetView(
-		D3D12RenderTargetView& RenderTargetView,
-		std::optional<UINT>	   OptArraySlice = std::nullopt,
-		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
-		std::optional<UINT>	   OptArraySize	 = std::nullopt,
-		bool				   sRGB			 = false) const;
-
-	void CreateDepthStencilView(
-		D3D12DepthStencilView& DepthStencilView,
-		std::optional<UINT>	   OptArraySlice = std::nullopt,
-		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
-		std::optional<UINT>	   OptArraySize	 = std::nullopt) const;
-
-	void CreateRenderTargetView(
 		D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView,
 		std::optional<UINT>			OptArraySlice = std::nullopt,
 		std::optional<UINT>			OptMipSlice	  = std::nullopt,

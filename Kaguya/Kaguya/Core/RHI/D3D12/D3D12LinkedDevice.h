@@ -23,21 +23,17 @@ public:
 	D3D12CommandQueue* GetCopyQueue1() { return GetCommandQueue(ED3D12CommandQueueType::Copy1); }
 	D3D12CommandQueue* GetCopyQueue2() { return GetCommandQueue(ED3D12CommandQueueType::Copy2); }
 
+	auto& GetRtvAllocator() noexcept { return RtvAllocator; }
+	auto& GetDsvAllocator() noexcept { return DsvAllocator; }
+
 	// clang-format off
 	template <typename ViewDesc> D3D12DescriptorHeap& GetDescriptorHeap() noexcept;
 	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
 	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RenderTargetDescriptorHeap; }
-	template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return DepthStencilDescriptorHeap; }
 	// clang-format on
 
 	D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept { return ResourceDescriptorHeap; }
 	D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept { return SamplerDescriptorHeap; }
-	D3D12DescriptorHeap& GetRenderTargetDescriptorHeap() noexcept { return RenderTargetDescriptorHeap; }
-	D3D12DescriptorHeap& GetDepthStencilDescriptorHeap() noexcept { return DepthStencilDescriptorHeap; }
-
-	auto& GetRtvAllocator() noexcept { return RtvAllocator; }
-	auto& GetDsvAllocator() noexcept { return DsvAllocator; }
 
 	D3D12CommandContext& GetCommandContext(UINT ThreadIndex = 0) { return *AvailableCommandContexts[ThreadIndex]; }
 	D3D12CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0)
@@ -57,13 +53,10 @@ private:
 	D3D12CommandQueue CopyQueue1;
 	D3D12CommandQueue CopyQueue2;
 
-	D3D12DescriptorHeap ResourceDescriptorHeap;
-	D3D12DescriptorHeap SamplerDescriptorHeap;
-	D3D12DescriptorHeap RenderTargetDescriptorHeap;
-	D3D12DescriptorHeap DepthStencilDescriptorHeap;
-
 	D3D12DescriptorAllocator RtvAllocator;
 	D3D12DescriptorAllocator DsvAllocator;
+	D3D12DescriptorHeap		 ResourceDescriptorHeap;
+	D3D12DescriptorHeap		 SamplerDescriptorHeap;
 
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableCommandContexts;
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableAsyncCommandContexts;

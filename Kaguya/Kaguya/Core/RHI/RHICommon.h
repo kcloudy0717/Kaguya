@@ -901,10 +901,10 @@ struct ShaderResourceViewDesc
 	};
 };
 
-struct IndexPool
+struct DescriptorIndexPool
 {
-	IndexPool() = default;
-	IndexPool(size_t NumIndices)
+	DescriptorIndexPool() = default;
+	explicit DescriptorIndexPool(size_t NumIndices)
 	{
 		Elements.resize(NumIndices);
 		Reset();
@@ -929,9 +929,9 @@ struct IndexPool
 	{
 		assert(NumActiveElements < Elements.size() && "Consider increasing the size of the pool");
 		NumActiveElements++;
-		size_t index = FreeStart;
-		FreeStart	 = Elements[index];
-		return index;
+		size_t Index = FreeStart;
+		FreeStart	 = Elements[Index];
+		return Index;
 	}
 
 	void Release(size_t Index)

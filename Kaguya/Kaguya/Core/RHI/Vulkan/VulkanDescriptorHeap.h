@@ -22,7 +22,7 @@ public:
 	VkDescriptorSetLayout  DescriptorSetLayout = VK_NULL_HANDLE;
 	VkDescriptorPool	   DescriptorPool	   = VK_NULL_HANDLE;
 	VkDescriptorSet		   DescriptorSet	   = VK_NULL_HANDLE;
-	std::vector<IndexPool> IndexPoolArray;
+	std::vector<DescriptorIndexPool> IndexPoolArray;
 };
 
 class VulkanSamplerDescriptorHeap : public VulkanDeviceChild
@@ -40,7 +40,7 @@ public:
 	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
 	VkDescriptorPool	  DescriptorPool	  = VK_NULL_HANDLE;
 	VkDescriptorSet		  DescriptorSet		  = VK_NULL_HANDLE;
-	IndexPool			  IndexPool;
+	DescriptorIndexPool			  IndexPool;
 
 	std::unordered_map<UINT64, VkSampler> SamplerTable;
 };

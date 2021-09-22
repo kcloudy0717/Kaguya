@@ -3,6 +3,11 @@
 
 using Microsoft::WRL::ComPtr;
 
+static AutoConsoleVariable<int> CVar_DescriptorAllocatorPageSize(
+	"D3D12.DescriptorAllocatorPageSize",
+	"Descriptor Allocator Page Size",
+	4096);
+
 static AutoConsoleVariable<int> CVar_GlobalResourceViewHeapSize(
 	"D3D12.GlobalResourceViewHeapSize",
 	"Global Resource View Heap Size",
@@ -19,12 +24,10 @@ D3D12LinkedDevice::D3D12LinkedDevice(D3D12Device* Parent)
 	, AsyncComputeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
 	, CopyQueue1(this, D3D12_COMMAND_LIST_TYPE_COPY)
 	, CopyQueue2(this, D3D12_COMMAND_LIST_TYPE_COPY)
+	, RtvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CVar_DescriptorAllocatorPageSize)
+	, DsvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CVar_DescriptorAllocatorPageSize)
 	, ResourceDescriptorHeap(this)
 	, SamplerDescriptorHeap(this)
-	, RenderTargetDescriptorHeap(this)
-	, DepthStencilDescriptorHeap(this)
-	, RtvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
-	, DsvAllocator(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
 {
 }
 
@@ -39,16 +42,12 @@ void D3D12LinkedDevice::Initialize()
 	CopyQueue1.Initialize(ED3D12CommandQueueType::Copy1);
 	CopyQueue2.Initialize(ED3D12CommandQueueType::Copy2);
 
-	ResourceDescriptorHeap.Initialize(CVar_GlobalResourceViewHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	SamplerDescriptorHeap.Initialize(CVar_GlobalSamplerHeapSize, true, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-	RenderTargetDescriptorHeap.Initialize(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	DepthStencilDescriptorHeap.Initialize(512, false, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	ResourceDescriptorHeap.Initialize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_GlobalResourceViewHeapSize);
+	SamplerDescriptorHeap.Initialize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, CVar_GlobalSamplerHeapSize);
 
 #if _DEBUG
 	ResourceDescriptorHeap.SetName(L"Resource Descriptor Heap");
 	SamplerDescriptorHeap.SetName(L"Sampler Descriptor Heap");
-	RenderTargetDescriptorHeap.SetName(L"Render Target Descriptor Heap");
-	DepthStencilDescriptorHeap.SetName(L"Depth Stencil Descriptor Heap");
 #endif
 
 	// TODO: Implement a task-graph for rendering work

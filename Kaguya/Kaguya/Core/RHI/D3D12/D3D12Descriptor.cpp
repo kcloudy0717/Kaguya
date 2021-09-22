@@ -34,33 +34,3 @@ D3D12UnorderedAccessView::D3D12UnorderedAccessView(
 {
 	Descriptor.CreateView(Desc, Resource, CounterResource);
 }
-
-D3D12RenderTargetView::D3D12RenderTargetView(D3D12LinkedDevice* Device, ID3D12Resource* Resource)
-	: D3D12View(Device)
-{
-	Descriptor.CreateDefaultView(Resource);
-}
-
-D3D12RenderTargetView::D3D12RenderTargetView(
-	D3D12LinkedDevice*					 Device,
-	const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
-	ID3D12Resource*						 Resource)
-	: D3D12View(Device)
-{
-	Descriptor.CreateView(Desc, Resource);
-}
-
-D3D12DepthStencilView::D3D12DepthStencilView(D3D12LinkedDevice* Device, ID3D12Resource* Resource)
-	: D3D12View(Device)
-{
-	Descriptor.CreateDefaultView(Resource);
-}
-
-D3D12DepthStencilView::D3D12DepthStencilView(
-	D3D12LinkedDevice*					 Device,
-	const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc,
-	ID3D12Resource*						 Resource)
-	: D3D12View(Device)
-{
-	Descriptor.CreateView(Desc, Resource);
-}

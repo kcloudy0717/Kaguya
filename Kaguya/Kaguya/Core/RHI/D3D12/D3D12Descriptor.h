@@ -7,8 +7,6 @@ class D3D12Descriptor : public D3D12LinkedDeviceChild
 	// clang-format off
 	template<typename ViewDesc> struct Traits;
 	template<> struct Traits<D3D12_SHADER_RESOURCE_VIEW_DESC>	{ static decltype(&ID3D12Device::CreateShaderResourceView) Create() { return &ID3D12Device::CreateShaderResourceView; } };
-	template<> struct Traits<D3D12_RENDER_TARGET_VIEW_DESC>		{ static decltype(&ID3D12Device::CreateRenderTargetView) Create() { return &ID3D12Device::CreateRenderTargetView; } };
-	template<> struct Traits<D3D12_DEPTH_STENCIL_VIEW_DESC>		{ static decltype(&ID3D12Device::CreateDepthStencilView) Create() { return &ID3D12Device::CreateDepthStencilView; } };
 	template<> struct Traits<D3D12_UNORDERED_ACCESS_VIEW_DESC>	{ static decltype(&ID3D12Device::CreateUnorderedAccessView) Create() { return &ID3D12Device::CreateUnorderedAccessView; } };
 	// clang-format on
 
@@ -167,46 +165,4 @@ public:
 
 	DEFAULTMOVABLE(D3D12UnorderedAccessView);
 	NONCOPYABLE(D3D12UnorderedAccessView);
-};
-
-class D3D12RenderTargetView : public D3D12View<D3D12_RENDER_TARGET_VIEW_DESC>
-{
-public:
-	D3D12RenderTargetView() noexcept = default;
-
-	D3D12RenderTargetView(D3D12LinkedDevice* Device)
-		: D3D12View(Device)
-	{
-	}
-
-	D3D12RenderTargetView(D3D12LinkedDevice* Device, ID3D12Resource* Resource);
-
-	D3D12RenderTargetView(
-		D3D12LinkedDevice*					 Device,
-		const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
-		ID3D12Resource*						 Resource);
-
-	DEFAULTMOVABLE(D3D12RenderTargetView);
-	NONCOPYABLE(D3D12RenderTargetView);
-};
-
-class D3D12DepthStencilView : public D3D12View<D3D12_DEPTH_STENCIL_VIEW_DESC>
-{
-public:
-	D3D12DepthStencilView() noexcept = default;
-
-	D3D12DepthStencilView(D3D12LinkedDevice* Device)
-		: D3D12View(Device)
-	{
-	}
-
-	D3D12DepthStencilView(D3D12LinkedDevice* Device, ID3D12Resource* Resource);
-
-	D3D12DepthStencilView(
-		D3D12LinkedDevice*					 Device,
-		const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc,
-		ID3D12Resource*						 Resource);
-
-	DEFAULTMOVABLE(D3D12DepthStencilView);
-	NONCOPYABLE(D3D12DepthStencilView);
 };

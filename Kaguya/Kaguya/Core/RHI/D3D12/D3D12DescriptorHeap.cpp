@@ -1,28 +1,21 @@
 #include "D3D12DescriptorHeap.h"
 #include "D3D12LinkedDevice.h"
 
-static AutoConsoleVariable<int> CVar_DescriptorPageSize("D3D12.DescriptorPageSize", "Descriptor Page Size", 4096);
-
-void D3D12DescriptorHeap::Initialize(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+void D3D12DescriptorHeap::Initialize(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT NumDescriptors)
 {
-	// If you recorded a CPU descriptor handle into the command list (render target or depth stencil) then that
-	// descriptor can be reused immediately after the Set call, if you recorded a GPU descriptor handle into the command
-	// list (everything else) then that descriptor cannot be reused until gpu is done referencing them
-	Desc.Type			= Type;
-	Desc.NumDescriptors = NumDescriptors;
-	Desc.Flags			= ShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	Desc.NodeMask		= 0;
+	D3D12_DESCRIPTOR_HEAP_DESC Desc = {};
+	Desc.Type						= Type;
+	Desc.NumDescriptors				= NumDescriptors;
+	Desc.Flags						= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	Desc.NodeMask					= 0;
 
 	VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
-	DescriptorHandleIncrementSize = GetParentLinkedDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
 	CpuBaseAddress = DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	if (ShaderVisible)
-	{
-		GpuBaseAddress = DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-	}
+	GpuBaseAddress = DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	DescriptorSize = GetParentLinkedDevice()->GetParentDevice()->GetSizeOfDescriptor(Type);
 
-	IndexPool = { NumDescriptors };
+	IndexPool = DescriptorIndexPool(NumDescriptors);
 }
 
 void D3D12DescriptorHeap::Allocate(
@@ -46,27 +39,19 @@ void D3D12DescriptorHeap::Release(UINT Index)
 
 D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::GetCpuDescriptorHandle(UINT Index) const noexcept
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHandle = {};
-	CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(
-		DescriptorHandle,
-		CpuBaseAddress,
-		static_cast<INT>(Index),
-		DescriptorHandleIncrementSize);
-	return DescriptorHandle;
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuBaseAddress, static_cast<INT>(Index), DescriptorSize);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::GetGpuDescriptorHandle(UINT Index) const noexcept
 {
-	D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHandle = {};
-	CD3DX12_GPU_DESCRIPTOR_HANDLE::InitOffsetted(
-		DescriptorHandle,
-		GpuBaseAddress,
-		static_cast<INT>(Index),
-		DescriptorHandleIncrementSize);
-	return DescriptorHandle;
+	return CD3DX12_GPU_DESCRIPTOR_HANDLE(GpuBaseAddress, static_cast<INT>(Index), DescriptorSize);
 }
 
-void D3D12DescriptorPage::Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+D3D12DescriptorPage::D3D12DescriptorPage(
+	D3D12LinkedDevice*		   Parent,
+	D3D12_DESCRIPTOR_HEAP_TYPE Type,
+	UINT					   NumDescriptors)
+	: D3D12LinkedDeviceChild(Parent)
 {
 	Desc.Type			= Type;
 	Desc.NumDescriptors = NumDescriptors;
@@ -74,9 +59,9 @@ void D3D12DescriptorPage::Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_
 	Desc.NodeMask		= 0;
 
 	VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
-	DescriptorHandleIncrementSize = GetParentLinkedDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
 	CpuBaseAddress = DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	DescriptorSize = GetParentLinkedDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
 
 	AllocateFreeBlock(0, NumDescriptors);
 }
@@ -99,17 +84,17 @@ std::optional<D3D12DescriptorArray> D3D12DescriptorPage::Allocate(UINT NumDescri
 	}
 
 	// Query all information about this available block
-	TSize					   Size = iter->first;
-	FreeBlocksByOffsetPoolIter OffsetIter{ iter->second };
-	TOffset					   Offset = OffsetIter.Iterator->first;
+	SizeType				   Size = iter->first;
+	FreeBlocksByOffsetPoolIter OffsetIter(iter->second);
+	OffsetType				   Offset = OffsetIter.Iterator->first;
 
 	// Remove the block from the pool
 	SizePool.erase(Size);
 	FreeBlocksByOffsetPool.erase(OffsetIter.Iterator);
 
 	// Allocate a available block
-	TOffset NewOffset = Offset + NumDescriptors;
-	TSize	NewSize	  = Size - NumDescriptors;
+	OffsetType NewOffset = Offset + NumDescriptors;
+	SizeType   NewSize	 = Size - NumDescriptors;
 
 	// Return left over block to the pool
 	if (NewSize > 0)
@@ -121,7 +106,7 @@ std::optional<D3D12DescriptorArray> D3D12DescriptorPage::Allocate(UINT NumDescri
 
 	return D3D12DescriptorArray(
 		this,
-		CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuBaseAddress, static_cast<INT>(Offset), DescriptorHandleIncrementSize),
+		CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuBaseAddress, static_cast<INT>(Offset), DescriptorSize),
 		Offset,
 		NumDescriptors);
 }
@@ -131,14 +116,14 @@ void D3D12DescriptorPage::Release(D3D12DescriptorArray&& DescriptorArray)
 	FreeBlock(DescriptorArray.GetOffset(), DescriptorArray.GetNumDescriptors());
 }
 
-void D3D12DescriptorPage::AllocateFreeBlock(TOffset Offset, TSize Size)
+void D3D12DescriptorPage::AllocateFreeBlock(OffsetType Offset, SizeType Size)
 {
 	auto OffsetElement					 = FreeBlocksByOffsetPool.emplace(Offset, SizePool.begin());
 	auto SizeElement					 = SizePool.emplace(Size, OffsetElement.first);
 	OffsetElement.first->second.Iterator = SizeElement;
 }
 
-void D3D12DescriptorPage::FreeBlock(TOffset Offset, TSize Size)
+void D3D12DescriptorPage::FreeBlock(OffsetType Offset, SizeType Size)
 {
 	// upper_bound returns end if it there is no next block
 	auto NextIter = FreeBlocksByOffsetPool.upper_bound(Offset);
@@ -157,8 +142,8 @@ void D3D12DescriptorPage::FreeBlock(TOffset Offset, TSize Size)
 
 	if (PrevIter != FreeBlocksByOffsetPool.end())
 	{
-		TOffset PrevOffset = PrevIter->first;
-		TSize	PrevSize   = PrevIter->second.Iterator->first;
+		OffsetType PrevOffset = PrevIter->first;
+		SizeType   PrevSize	  = PrevIter->second.Iterator->first;
 		if (Offset == PrevOffset + PrevSize)
 		{
 			// Merge previous and current block
@@ -178,8 +163,8 @@ void D3D12DescriptorPage::FreeBlock(TOffset Offset, TSize Size)
 
 	if (NextIter != FreeBlocksByOffsetPool.end())
 	{
-		TOffset NextOffset = NextIter->first;
-		TSize	NextSize   = NextIter->second.Iterator->first;
+		OffsetType NextOffset = NextIter->first;
+		SizeType   NextSize	  = NextIter->second.Iterator->first;
 		if (Offset + Size == NextOffset)
 		{
 			// Merge current and next block
@@ -216,8 +201,7 @@ D3D12DescriptorArray::~D3D12DescriptorArray()
 D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorArray::operator[](UINT Index) const noexcept
 {
 	assert(Index < NumDescriptors);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHandle(CpuDescriptorHandle);
-	return DescriptorHandle.Offset(static_cast<INT>(Index), Parent->GetDescriptorHandleIncrementSize());
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuDescriptorHandle, static_cast<INT>(Index), Parent->GetDescriptorSize());
 }
 
 D3D12DescriptorArray D3D12DescriptorAllocator::Allocate(UINT NumDescriptors)
@@ -236,16 +220,15 @@ D3D12DescriptorArray D3D12DescriptorAllocator::Allocate(UINT NumDescriptors)
 
 	if (!DescriptorArray.IsValid())
 	{
-		auto NewPage = std::make_unique<D3D12DescriptorPage>(GetParentLinkedDevice());
-		NewPage->Initialize(CVar_DescriptorPageSize, Type);
-
+		auto& NewPage = DescriptorPages.emplace_back(
+			std::make_unique<D3D12DescriptorPage>(GetParentLinkedDevice(), Type, PageSize));
 		DescriptorArray = NewPage->Allocate(NumDescriptors).value();
-		DescriptorPages.push_back(std::move(NewPage));
 	}
 
 	return DescriptorArray;
 }
 
+#if 0
 void D3D12DescriptorHandleCache::StageDescriptors(
 	UINT						RootParameterIndex,
 	UINT						Offset,
@@ -256,17 +239,16 @@ void D3D12DescriptorHandleCache::StageDescriptors(
 		RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT &&
 		"Root parameter index exceeds the max descriptor table index");
 
-	D3D12DescriptorTableCache& descriptorTableCache = DescriptorTableCaches[RootParameterIndex];
+	D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
 
 	assert(
-		Offset + NumDescriptors <= descriptorTableCache.NumDescriptors &&
+		Offset + NumDescriptors <= DescriptorTableCache.NumDescriptors &&
 		"Number of descriptors exceeds the number of descripotrs in the descriptor table");
 
-	D3D12_CPU_DESCRIPTOR_HANDLE* DestDescriptor = descriptorTableCache.BaseDescriptor + Offset;
+	D3D12_CPU_DESCRIPTOR_HANDLE* DestDescriptor = DescriptorTableCache.BaseDescriptor + Offset;
 	for (UINT i = 0; i < NumDescriptors; ++i)
 	{
-		DestDescriptor[i] =
-			CD3DX12_CPU_DESCRIPTOR_HANDLE(SrcDescriptor, static_cast<INT>(i), DescriptorHandleIncrementSize);
+		DestDescriptor[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(SrcDescriptor, static_cast<INT>(i), DescriptorSize);
 	}
 
 	StaleDescriptorTableBitMask.set(RootParameterIndex, true);
@@ -313,8 +295,8 @@ UINT D3D12DescriptorHandleCache::CommitDescriptors(
 		(CommandList->*SetFunc)(RootParameterIndex, DestGpuHandle);
 
 		// Offset current descriptor handles.
-		DestCpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorHandleIncrementSize);
-		DestGpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorHandleIncrementSize);
+		DestCpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
+		DestGpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
 		NumDescriptorsCommitted += NumDescriptors;
 
 		// Flip the stale bit so the descriptor table is not recopied again unless it is updated with a new
@@ -325,21 +307,21 @@ UINT D3D12DescriptorHandleCache::CommitDescriptors(
 	return NumDescriptorsCommitted;
 }
 
-void D3D12DynamicDescriptorHeap::Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+void D3D12DynamicDescriptorHeap::Initialize()
 {
-	Desc.Type			= Type;
-	Desc.NumDescriptors = NumDescriptors;
-	Desc.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	Desc.NodeMask		= 0;
+	D3D12_DESCRIPTOR_HEAP_DESC Desc = {};
+	Desc.Type						= Type;
+	Desc.NumDescriptors				= NumDescriptors;
+	Desc.Flags						= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	Desc.NodeMask					= 0;
 
 	VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
-	DescriptorHandleIncrementSize = GetParentLinkedDevice()->GetDevice()->GetDescriptorHandleIncrementSize(Type);
-
-	GraphicsHandleCache.Initialize(Type, DescriptorHandleIncrementSize);
-	ComputeHandleCache.Initialize(Type, DescriptorHandleIncrementSize);
 
 	CpuBaseAddress = DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	GpuBaseAddress = DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+	GraphicsHandleCache.Initialize(Type, GetParentLinkedDevice()->GetParentDevice()->GetSizeOfDescriptor(Type));
+	ComputeHandleCache.Initialize(Type, GetParentLinkedDevice()->GetParentDevice()->GetSizeOfDescriptor(Type));
 }
 
 void D3D12DynamicDescriptorHeap::Reset()
@@ -353,12 +335,12 @@ void D3D12DynamicDescriptorHeap::Reset()
 
 void D3D12DynamicDescriptorHeap::ParseGraphicsRootSignature(const D3D12RootSignature& RootSignature)
 {
-	GraphicsHandleCache.ParseRootSignature(RootSignature, Desc.Type);
+	GraphicsHandleCache.ParseRootSignature(RootSignature, Type);
 }
 
 void D3D12DynamicDescriptorHeap::ParseComputeRootSignature(const D3D12RootSignature& RootSignature)
 {
-	ComputeHandleCache.ParseRootSignature(RootSignature, Desc.Type);
+	ComputeHandleCache.ParseRootSignature(RootSignature, Type);
 }
 
 void D3D12DynamicDescriptorHeap::SetGraphicsDescriptorHandles(
@@ -381,20 +363,21 @@ void D3D12DynamicDescriptorHeap::SetComputeDescriptorHandles(
 
 void D3D12DynamicDescriptorHeap::CommitGraphicsRootDescriptorTables(ID3D12GraphicsCommandList* CommandList)
 {
-	UINT NumDescriptors = GraphicsHandleCache.CommitDescriptors(
+	UINT NumDescriptorsCommitted = GraphicsHandleCache.CommitDescriptors(
 		CpuBaseAddress,
 		GpuBaseAddress,
 		CommandList,
 		&ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable);
-	Desc.NumDescriptors -= NumDescriptors;
+	this->NumDescriptors -= NumDescriptorsCommitted;
 }
 
 void D3D12DynamicDescriptorHeap::CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CommandList)
 {
-	UINT NumDescriptors = ComputeHandleCache.CommitDescriptors(
+	UINT NumDescriptorsCommitted = ComputeHandleCache.CommitDescriptors(
 		CpuBaseAddress,
 		GpuBaseAddress,
 		CommandList,
 		&ID3D12GraphicsCommandList::SetComputeRootDescriptorTable);
-	Desc.NumDescriptors -= NumDescriptors;
+	this->NumDescriptors -= NumDescriptorsCommitted;
 }
+#endif
