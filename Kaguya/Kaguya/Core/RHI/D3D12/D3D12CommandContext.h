@@ -3,6 +3,8 @@
 #include "D3D12Common.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12MemoryAllocator.h"
+#include "D3D12PipelineState.h"
+#include "D3D12RaytracingPipelineState.h"
 #include "D3D12RenderPass.h"
 #include "D3D12RenderTarget.h"
 
@@ -28,12 +30,17 @@ public:
 		D3D12Resource*		  Resource,
 		D3D12_RESOURCE_STATES State,
 		UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
 	void AliasingBarrier(D3D12Resource* BeforeResource, D3D12Resource* AfterResource);
-
 	void UAVBarrier(D3D12Resource* Resource);
-
 	void FlushResourceBarriers();
+
+	void SetViewport(const RHIViewport& Viewport);
+	void SetViewports(UINT NumViewports, RHIViewport* Viewports);
+	void SetScissorRect(const RHIRect& ScissorRect);
+	void SetScissorRects(UINT NumScissorRects, RHIRect* ScissorRects);
+
+	void SetPipelineState(D3D12PipelineState* PipelineState);
+	void SetPipelineState(D3D12RaytracingPipelineState* RaytracingPipelineState);
 
 	void BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget);
 
@@ -106,8 +113,32 @@ public:
 	// State Cache
 	struct StateCache
 	{
-		D3D12RenderPass*   RenderPass	= nullptr;
-		D3D12RenderTarget* RenderTarget = nullptr;
+		D3D12PipelineState*			  PipelineState			  = nullptr;
+		D3D12RaytracingPipelineState* RaytracingPipelineState = nullptr;
+
+		D3D12RootSignature* RootSignature = nullptr;
+
+		struct
+		{
+			// Viewport
+			UINT		   NumViewports														   = 0;
+			D3D12_VIEWPORT Viewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+
+			// Scissor Rect
+			UINT	   NumScissorRects														  = 0;
+			D3D12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+
+			D3D12RenderPass*   RenderPass	= nullptr;
+			D3D12RenderTarget* RenderTarget = nullptr;
+		} Graphics;
+
+		struct
+		{
+		} Compute;
+
+		struct
+		{
+		} Raytracing;
 	} Cache;
 };
 
@@ -116,7 +147,7 @@ class D3D12ScopedEventObject
 public:
 	D3D12ScopedEventObject(D3D12CommandContext& CommandContext, std::string_view Name)
 		: CommandContext(CommandContext)
-		, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
+		//, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
 		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
 	{
 #ifdef NVIDIA_NSIGHT_AFTERMATH
@@ -129,7 +160,7 @@ public:
 
 private:
 	D3D12CommandContext&							CommandContext;
-	PIXScopedEventObject<ID3D12GraphicsCommandList> PixEvent;
+	//PIXScopedEventObject<ID3D12GraphicsCommandList> PixEvent;
 	D3D12ProfileBlock								ProfileBlock;
 };
 

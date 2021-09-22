@@ -27,8 +27,8 @@ bool D3D12RenderCompileContext::CompileCommand(const RenderCommandEndRenderPass&
 
 bool D3D12RenderCompileContext::CompileCommand(const RenderCommandPipelineState& Command)
 {
-	const D3D12RootSignature& RootSignature = Device.GetRootSignature(Command.RootSignature);
-	const D3D12PipelineState& PipelineState = Device.GetPipelineState(Command.PipelineState);
+	/*D3D12RootSignature* RootSignature = Device.GetRootSignature(Command.RootSignature);
+	D3D12PipelineState* PipelineState = Device.GetPipelineState(Command.PipelineState);
 
 	switch (Command.PipelineType)
 	{
@@ -75,14 +75,14 @@ bool D3D12RenderCompileContext::CompileCommand(const RenderCommandPipelineState&
 	break;
 	}
 
-	Context->SetPipelineState(PipelineState);
+	Context->SetPipelineState(PipelineState);*/
 
 	return true;
 }
 
 bool D3D12RenderCompileContext::CompileCommand(const RenderCommandRaytracingPipelineState& Command)
 {
-	const D3D12RootSignature&			RootSignature = Device.GetRootSignature(Command.RootSignature);
+	/*const D3D12RootSignature&			RootSignature = Device.GetRootSignature(Command.RootSignature);
 	const D3D12RaytracingPipelineState& PipelineState =
 		Device.GetRaytracingPipelineState(Command.RaytracingPipelineState);
 
@@ -103,7 +103,7 @@ bool D3D12RenderCompileContext::CompileCommand(const RenderCommandRaytracingPipe
 		RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
 		SamplerDescriptor);
 
-	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(PipelineState);
+	Context.CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(PipelineState);*/
 
 	return true;
 }

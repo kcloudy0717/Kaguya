@@ -37,6 +37,9 @@ void D3D12CommandContext::OpenCommandList()
 
 		CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
 	}
+
+	// Reset cache
+	Cache = {};
 }
 
 void D3D12CommandContext::CloseCommandList()
@@ -83,10 +86,78 @@ void D3D12CommandContext::FlushResourceBarriers()
 	CommandListHandle.FlushResourceBarriers();
 }
 
+void D3D12CommandContext::SetViewport(const RHIViewport& Viewport)
+{
+	Cache.Graphics.NumViewports			 = 1;
+	Cache.Graphics.Viewports[0].TopLeftX = Viewport.TopLeftX;
+	Cache.Graphics.Viewports[0].TopLeftY = Viewport.TopLeftY;
+	Cache.Graphics.Viewports[0].Width	 = Viewport.Width;
+	Cache.Graphics.Viewports[0].Height	 = Viewport.Height;
+	Cache.Graphics.Viewports[0].MinDepth = Viewport.MinDepth;
+	Cache.Graphics.Viewports[0].MaxDepth = Viewport.MaxDepth;
+
+	CommandListHandle->RSSetViewports(Cache.Graphics.NumViewports, Cache.Graphics.Viewports);
+}
+
+void D3D12CommandContext::SetViewports(UINT NumViewports, RHIViewport* Viewports)
+{
+	Cache.Graphics.NumViewports = NumViewports;
+	for (UINT ViewportIndex = 0; ViewportIndex < NumViewports; ++ViewportIndex)
+	{
+		Cache.Graphics.Viewports[ViewportIndex].TopLeftX = Viewports[ViewportIndex].TopLeftX;
+		Cache.Graphics.Viewports[ViewportIndex].TopLeftY = Viewports[ViewportIndex].TopLeftY;
+		Cache.Graphics.Viewports[ViewportIndex].Width	 = Viewports[ViewportIndex].Width;
+		Cache.Graphics.Viewports[ViewportIndex].Height	 = Viewports[ViewportIndex].Height;
+		Cache.Graphics.Viewports[ViewportIndex].MinDepth = Viewports[ViewportIndex].MinDepth;
+		Cache.Graphics.Viewports[ViewportIndex].MaxDepth = Viewports[ViewportIndex].MaxDepth;
+	}
+
+	CommandListHandle->RSSetViewports(Cache.Graphics.NumViewports, Cache.Graphics.Viewports);
+}
+
+void D3D12CommandContext::SetScissorRect(const RHIRect& ScissorRect)
+{
+	Cache.Graphics.NumScissorRects		  = 1;
+	Cache.Graphics.ScissorRects[0].left	  = ScissorRect.Left;
+	Cache.Graphics.ScissorRects[0].top	  = ScissorRect.Top;
+	Cache.Graphics.ScissorRects[0].right  = ScissorRect.Right;
+	Cache.Graphics.ScissorRects[0].bottom = ScissorRect.Bottom;
+
+	CommandListHandle->RSSetScissorRects(Cache.Graphics.NumScissorRects, Cache.Graphics.ScissorRects);
+}
+
+void D3D12CommandContext::SetScissorRects(UINT NumScissorRects, RHIRect* ScissorRects)
+{
+	Cache.Graphics.NumScissorRects = NumScissorRects;
+	for (UINT ScissorRectIndex = 0; ScissorRectIndex < NumScissorRects; ++ScissorRectIndex)
+	{
+		Cache.Graphics.ScissorRects[ScissorRectIndex].left	 = ScissorRects[ScissorRectIndex].Left;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].top	 = ScissorRects[ScissorRectIndex].Top;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].right	 = ScissorRects[ScissorRectIndex].Right;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].bottom = ScissorRects[ScissorRectIndex].Bottom;
+	}
+
+	CommandListHandle->RSSetScissorRects(Cache.Graphics.NumScissorRects, Cache.Graphics.ScissorRects);
+}
+
+void D3D12CommandContext::SetPipelineState(D3D12PipelineState* PipelineState)
+{
+	Cache.PipelineState = PipelineState;
+
+	CommandListHandle->SetPipelineState(Cache.PipelineState->GetApiHandle());
+}
+
+void D3D12CommandContext::SetPipelineState(D3D12RaytracingPipelineState* RaytracingPipelineState)
+{
+	Cache.RaytracingPipelineState = RaytracingPipelineState;
+
+	CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RaytracingPipelineState->GetApiHandle());
+}
+
 void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget)
 {
-	Cache.RenderPass   = RenderPass;
-	Cache.RenderTarget = RenderTarget;
+	Cache.Graphics.RenderPass	= RenderPass;
+	Cache.Graphics.RenderTarget = RenderTarget;
 
 	assert(RenderPass->Desc.NumRenderTargets == RenderTarget->Desc.NumRenderTargets);
 
@@ -128,8 +199,8 @@ void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12Rend
 
 void D3D12CommandContext::EndRenderPass()
 {
-	Cache.RenderTarget = nullptr;
-	Cache.RenderPass   = nullptr;
+	Cache.Graphics.RenderTarget = nullptr;
+	Cache.Graphics.RenderPass	= nullptr;
 }
 
 void D3D12CommandContext::DrawInstanced(

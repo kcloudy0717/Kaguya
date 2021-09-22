@@ -730,7 +730,7 @@ private:
 	std::unordered_map<std::string, VulkanMesh>		Meshes;
 };
 
-int main(int /*argc*/, char* /*argv[]*/)
+int main(int /*argc*/, char* /*argv*/[])
 {
 	try
 	{
@@ -863,7 +863,7 @@ private:
 	std::unique_ptr<Renderer> Renderer;
 };
 
-int main(int /*argc*/, char* /*argv[]*/)
+int main(int /*argc*/, char* /*argv*/[])
 {
 	try
 	{

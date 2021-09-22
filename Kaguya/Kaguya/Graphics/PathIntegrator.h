@@ -48,7 +48,7 @@ private:
 	void Render(D3D12CommandContext& Context) override;
 
 private:
-	D3D12RenderPass	  TonemapRenderPass;
+	D3D12RenderPass TonemapRenderPass;
 
 	RaytracingAccelerationStructure AccelerationStructure;
 

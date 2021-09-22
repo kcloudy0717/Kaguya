@@ -229,6 +229,7 @@ public:
 
 	operator ID3D12RootSignature*() const { return RootSignature.Get(); }
 
+	[[nodiscard]] ID3D12RootSignature*		 GetApiHandle() const noexcept { return RootSignature.Get(); }
 	[[nodiscard]] D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return Desc.Desc_1_1; }
 
 	[[nodiscard]] std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> GetDescriptorTableBitMask(
@@ -237,8 +238,8 @@ public:
 	[[nodiscard]] UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept;
 
 private:
-	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
 
 	// Need to know the number of descriptors per descriptor table
 	UINT NumDescriptorsPerTable[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};

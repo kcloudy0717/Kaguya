@@ -72,7 +72,7 @@ void D3D12Device::Initialize(const DeviceOptions& Options)
 #ifdef _DEBUG
 	InitializeDxgiObjects(true);
 #else
-	InitializeDXGIObjects(false);
+	InitializeDxgiObjects(false);
 #endif
 
 	// The D3D debug layer (as well as Microsoft PIX and other graphics debugger

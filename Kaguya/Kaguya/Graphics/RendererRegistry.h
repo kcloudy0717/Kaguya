@@ -153,7 +153,7 @@ struct PipelineStates
 				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
 			} Stream;
 
-			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap);
+			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap)->GetApiHandle();
 			Stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 			Stream.VS					 = Shaders::VS::FullScreenTriangle;
 			Stream.PS					 = Shaders::PS::ToneMap;
@@ -164,14 +164,14 @@ struct PipelineStates
 		}
 		{
 			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR);
+			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
 			PSODesc.CS								  = Shaders::CS::EASU;
 
 			FSREASU = Device.CreatePipelineState(RenderCore::pDevice->CreateComputePipelineState(PSODesc));
 		}
 		{
 			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR);
+			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
 			PSODesc.CS								  = Shaders::CS::RCAS;
 
 			FSRRCAS = Device.CreatePipelineState(RenderCore::pDevice->CreateComputePipelineState(PSODesc));
@@ -256,9 +256,11 @@ struct RaytracingPipelineStates
 
 				Builder.AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {});
 
-				Builder.AddRootSignatureAssociation(Device.GetRootSignature(LocalHitGroupRS), { g_HitGroupExport });
+				Builder.AddRootSignatureAssociation(
+					Device.GetRootSignature(LocalHitGroupRS)->GetApiHandle(),
+					{ g_HitGroupExport });
 
-				Builder.SetGlobalRootSignature(Device.GetRootSignature(GlobalRS));
+				Builder.SetGlobalRootSignature(Device.GetRootSignature(GlobalRS)->GetApiHandle());
 
 				constexpr UINT PayloadSize = 12	  // p
 											 + 4  // materialID
@@ -278,9 +280,9 @@ struct RaytracingPipelineStates
 				Builder.SetRaytracingPipelineConfig(2);
 			}));
 
-		g_RayGenerationSID = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_RayGeneration);
-		g_MissSID		   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_Miss);
-		g_ShadowMissSID	   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_ShadowMiss);
-		g_DefaultSID	   = Device.GetRaytracingPipelineState(RTPSO).GetShaderIdentifier(g_HitGroupExport);
+		g_RayGenerationSID = Device.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_RayGeneration);
+		g_MissSID		   = Device.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_Miss);
+		g_ShadowMissSID	   = Device.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_ShadowMiss);
+		g_DefaultSID	   = Device.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_HitGroupExport);
 	}
 };

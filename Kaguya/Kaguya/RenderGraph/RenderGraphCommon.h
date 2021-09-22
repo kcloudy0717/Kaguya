@@ -9,6 +9,27 @@ struct RenderGraphViewData
 {
 	UINT RenderWidth, RenderHeight;
 	UINT ViewportWidth, ViewportHeight;
+
+	template<typename T>
+	T GetRenderWidth() const noexcept
+	{
+		return static_cast<T>(RenderWidth);
+	}
+	template<typename T>
+	T GetRenderHeight() const noexcept
+	{
+		return static_cast<T>(RenderHeight);
+	}
+	template<typename T>
+	T GetViewportWidth() const noexcept
+	{
+		return static_cast<T>(ViewportWidth);
+	}
+	template<typename T>
+	T GetViewportHeight() const noexcept
+	{
+		return static_cast<T>(ViewportHeight);
+	}
 };
 
 class RenderScope

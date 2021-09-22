@@ -18,7 +18,13 @@ struct DeviceOptions
 struct RHIViewport
 {
 	RHIViewport() noexcept = default;
-	RHIViewport(FLOAT TopLeftX, FLOAT TopLeftY, FLOAT Width, FLOAT Height, FLOAT MinDepth, FLOAT MaxDepth) noexcept
+	RHIViewport(
+		FLOAT TopLeftX,
+		FLOAT TopLeftY,
+		FLOAT Width,
+		FLOAT Height,
+		FLOAT MinDepth = 0.0f,
+		FLOAT MaxDepth = 1.0f) noexcept
 		: TopLeftX(TopLeftX)
 		, TopLeftY(TopLeftY)
 		, Width(Width)
@@ -27,8 +33,8 @@ struct RHIViewport
 		, MaxDepth(MaxDepth)
 	{
 	}
-	RHIViewport(FLOAT Width, FLOAT Height)
-		: RHIViewport(0.0f, 0.0f, Width, Height, 0.0f, 1.0f)
+	RHIViewport(FLOAT Width, FLOAT Height) noexcept
+		: RHIViewport(0.0f, 0.0f, Width, Height)
 	{
 	}
 
@@ -42,6 +48,19 @@ struct RHIViewport
 
 struct RHIRect
 {
+	RHIRect() noexcept = default;
+	RHIRect(LONG Left, LONG Top, LONG Right, LONG Bottom) noexcept
+		: Left(Left)
+		, Top(Top)
+		, Right(Right)
+		, Bottom(Bottom)
+	{
+	}
+	RHIRect(LONG Width, LONG Height) noexcept
+		: RHIRect(0, 0, Width, Height)
+	{
+	}
+
 	LONG Left;
 	LONG Top;
 	LONG Right;

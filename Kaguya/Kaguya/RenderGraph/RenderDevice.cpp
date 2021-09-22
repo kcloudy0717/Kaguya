@@ -21,22 +21,22 @@ auto RenderDevice::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& 
 	return RaytracingPipelineStateRegistry.Construct(std::move(RaytracingPipelineState));
 }
 
-const D3D12RenderPass& RenderDevice::GetRenderPass(RenderResourceHandle Handle) const
+D3D12RenderPass* RenderDevice::GetRenderPass(RenderResourceHandle Handle)
 {
 	return RenderPassRegistry.GetResource(Handle);
 }
 
-const D3D12RootSignature& RenderDevice::GetRootSignature(RenderResourceHandle Handle) const
+D3D12RootSignature* RenderDevice::GetRootSignature(RenderResourceHandle Handle)
 {
 	return RootSignatureRegistry.GetResource(Handle);
 }
 
-const D3D12PipelineState& RenderDevice::GetPipelineState(RenderResourceHandle Handle) const
+D3D12PipelineState* RenderDevice::GetPipelineState(RenderResourceHandle Handle)
 {
 	return PipelineStateRegistry.GetResource(Handle);
 }
 
-const D3D12RaytracingPipelineState& RenderDevice::GetRaytracingPipelineState(RenderResourceHandle Handle) const
+D3D12RaytracingPipelineState* RenderDevice::GetRaytracingPipelineState(RenderResourceHandle Handle)
 {
 	return RaytracingPipelineStateRegistry.GetResource(Handle);
 }

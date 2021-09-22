@@ -1,5 +1,7 @@
 #pragma once
 #include "VulkanCommon.h"
+#include "VulkanRenderPass.h"
+#include "VulkanRenderTarget.h"
 
 class VulkanRootSignature;
 class VulkanPipelineState;
@@ -41,4 +43,11 @@ public:
 	VkCommandBuffer		CommandBuffer	  = VK_NULL_HANDLE;
 	VkPipelineBindPoint PipelineBindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 	VkPipelineLayout	PipelineLayout	  = VK_NULL_HANDLE;
+
+	// State Cache
+	struct StateCache
+	{
+		VulkanRenderPass*	RenderPass	 = nullptr;
+		VulkanRenderTarget* RenderTarget = nullptr;
+	} Cache;
 };

@@ -30,10 +30,10 @@ public:
 		return NewHandle;
 	}
 
-	[[nodiscard]] auto GetResource(RenderResourceHandle Handle) const -> const T&
+	[[nodiscard]] auto GetResource(RenderResourceHandle Handle) -> T*
 	{
 		assert(this->Handle.Type == Handle.Type);
-		return Registry[Handle.Id];
+		return &Registry[Handle.Id];
 	}
 
 protected:
@@ -87,10 +87,10 @@ public:
 	[[nodiscard]] auto CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
 		-> RenderResourceHandle;
 
-	const D3D12RenderPass&				GetRenderPass(RenderResourceHandle Handle) const;
-	const D3D12RootSignature&			GetRootSignature(RenderResourceHandle Handle) const;
-	const D3D12PipelineState&			GetPipelineState(RenderResourceHandle Handle) const;
-	const D3D12RaytracingPipelineState& GetRaytracingPipelineState(RenderResourceHandle Handle) const;
+	D3D12RenderPass*			  GetRenderPass(RenderResourceHandle Handle);
+	D3D12RootSignature*			  GetRootSignature(RenderResourceHandle Handle);
+	D3D12PipelineState*			  GetPipelineState(RenderResourceHandle Handle);
+	D3D12RaytracingPipelineState* GetRaytracingPipelineState(RenderResourceHandle Handle);
 
 private:
 	RenderPassRegistry				RenderPassRegistry;
