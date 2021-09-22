@@ -8,11 +8,6 @@ class RenderResourceManager
 public:
 	RenderResourceManager()
 	{
-		BufferHandle.Type	 = ERGResourceType::Buffer;
-		BufferHandle.State	 = ERGHandleState::Dirty;
-		BufferHandle.Version = 0;
-		BufferHandle.Id		 = 0;
-
 		TextureHandle.Type	  = ERGResourceType::Texture;
 		TextureHandle.State	  = ERGHandleState::Dirty;
 		TextureHandle.Version = 0;
@@ -21,12 +16,6 @@ public:
 	virtual ~RenderResourceManager() = default;
 
 protected:
-	RenderResourceHandle GetNewBufferHandle()
-	{
-		RenderResourceHandle Handle = BufferHandle;
-		++BufferHandle.Id;
-		return Handle;
-	}
 	RenderResourceHandle GetNewTextureHandle()
 	{
 		RenderResourceHandle Handle = TextureHandle;
@@ -35,9 +24,6 @@ protected:
 	}
 
 private:
-	RenderResourceHandle   BufferHandle;
-	std::vector<RHIBuffer> Buffers;
-
 	RenderResourceHandle TextureHandle;
 };
 

@@ -23,8 +23,8 @@ public:
 	D3D12CommandQueue* GetCopyQueue1() { return GetCommandQueue(ED3D12CommandQueueType::Copy1); }
 	D3D12CommandQueue* GetCopyQueue2() { return GetCommandQueue(ED3D12CommandQueueType::Copy2); }
 
-	auto& GetRtvAllocator() noexcept { return RtvAllocator; }
-	auto& GetDsvAllocator() noexcept { return DsvAllocator; }
+	D3D12DescriptorAllocator& GetRtvAllocator() noexcept { return RtvAllocator; }
+	D3D12DescriptorAllocator& GetDsvAllocator() noexcept { return DsvAllocator; }
 
 	// clang-format off
 	template <typename ViewDesc> D3D12DescriptorHeap& GetDescriptorHeap() noexcept;

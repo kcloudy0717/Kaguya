@@ -15,40 +15,37 @@ D3D12CommandListHandle::D3D12CommandListHandle(D3D12LinkedDevice* Device, D3D12_
 
 std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()
 {
-	auto& PendingResourceBarriers = CommandList->ResourceStateTracker.GetPendingResourceBarriers();
+	const auto& PendingResourceBarriers = CommandList->ResourceStateTracker.GetPendingResourceBarriers();
 
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
 	ResourceBarriers.reserve(PendingResourceBarriers.size());
 
 	D3D12_RESOURCE_BARRIER Desc = {};
 	Desc.Type					= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	for (const auto& Pending : PendingResourceBarriers)
+	for (const auto& [Resource, State, Subresource] : PendingResourceBarriers)
 	{
-		CResourceState& ResourceState = Pending.Resource->GetResourceState();
+		CResourceState& ResourceState = Resource->GetResourceState();
 
-		Desc.Transition.Subresource = Pending.Subresource;
-
-		const D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Pending.Subresource);
-		const D3D12_RESOURCE_STATES StateAfter =
-			(Pending.State != D3D12_RESOURCE_STATE_UNKNOWN) ? Pending.State : StateBefore;
+		D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Subresource);
+		D3D12_RESOURCE_STATES StateAfter  = (State != D3D12_RESOURCE_STATE_UNKNOWN) ? State : StateBefore;
 
 		if (StateBefore != StateAfter)
 		{
-			Desc.Transition.pResource	= Pending.Resource->GetResource();
+			Desc.Transition.pResource	= Resource->GetResource();
+			Desc.Transition.Subresource = Subresource;
 			Desc.Transition.StateBefore = StateBefore;
 			Desc.Transition.StateAfter	= StateAfter;
 
 			ResourceBarriers.push_back(Desc);
 		}
 
-		const D3D12_RESOURCE_STATES StateCommandList =
-			GetResourceState(Pending.Resource).GetSubresourceState(Desc.Transition.Subresource);
-		const D3D12_RESOURCE_STATES StatePrevious =
+		D3D12_RESOURCE_STATES StateCommandList = this->GetResourceState(Resource).GetSubresourceState(Subresource);
+		D3D12_RESOURCE_STATES StatePrevious =
 			(StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN) ? StateCommandList : StateAfter;
 
 		if (StateBefore != StatePrevious)
 		{
-			ResourceState.SetSubresourceState(Desc.Transition.Subresource, StatePrevious);
+			ResourceState.SetSubresourceState(Subresource, StatePrevious);
 		}
 	}
 
@@ -62,30 +59,31 @@ void D3D12CommandListHandle::TransitionBarrier(
 {
 	// TODO: There might be some logic and cases here im missing, come back and edit if anything goes boom
 
-	D3D12ResourceStateTracker& resourceStateTracker = CommandList->ResourceStateTracker;
-	CResourceState&			   resourceState		= resourceStateTracker.GetResourceState(Resource);
+	D3D12ResourceStateTracker& ResourceStateTracker = CommandList->ResourceStateTracker;
+	CResourceState&			   ResourceState		= ResourceStateTracker.GetResourceState(Resource);
 	// First use on the command list
-	if (resourceState.IsUnknown())
+	if (ResourceState.IsUnknown())
 	{
-		PendingResourceBarrier pendingResourceBarrier = { .Resource	   = Resource,
-														  .State	   = State,
-														  .Subresource = Subresource };
-		resourceStateTracker.Add(pendingResourceBarrier);
+		PendingResourceBarrier PendingResourceBarrier;
+		PendingResourceBarrier.Resource	   = Resource;
+		PendingResourceBarrier.State	   = State;
+		PendingResourceBarrier.Subresource = Subresource;
+		ResourceStateTracker.Add(PendingResourceBarrier);
 	}
 	// Known state within the command list
 	else
 	{
 		// If we are applying transition to all subresources and we are in different tracking mode
 		// transition each subresource individually
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && !resourceState.IsUniform())
+		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && !ResourceState.IsUniform())
 		{
-			// First transition all of the subresources if they are different than the StateAfter
+			// First transition all of the subresources if they are different than the State
 			UINT i = 0;
-			for (D3D12_RESOURCE_STATES subresourceState : resourceState)
+			for (D3D12_RESOURCE_STATES SubresourceState : ResourceState)
 			{
-				if (subresourceState != State)
+				if (SubresourceState != State)
 				{
-					CommandList->ResourceBarrierBatch.AddTransition(Resource, subresourceState, State, i);
+					CommandList->ResourceBarrierBatch.AddTransition(Resource, SubresourceState, State, i);
 				}
 
 				i++;
@@ -93,16 +91,16 @@ void D3D12CommandListHandle::TransitionBarrier(
 		}
 		else
 		{
-			D3D12_RESOURCE_STATES stateKnown = resourceState.GetSubresourceState(Subresource);
-			if (stateKnown != State)
+			D3D12_RESOURCE_STATES StateKnown = ResourceState.GetSubresourceState(Subresource);
+			if (StateKnown != State)
 			{
-				CommandList->ResourceBarrierBatch.AddTransition(Resource, stateKnown, State, Subresource);
+				CommandList->ResourceBarrierBatch.AddTransition(Resource, StateKnown, State, Subresource);
 			}
 		}
 	}
 
 	// Update resource state, potentially change state tracking mode
-	resourceState.SetSubresourceState(Subresource, State);
+	ResourceState.SetSubresourceState(Subresource, State);
 }
 
 void D3D12CommandListHandle::AliasingBarrier(D3D12Resource* BeforeResource, D3D12Resource* AfterResource)

@@ -224,7 +224,7 @@ void RenderGraph::Compile()
 
 void RenderGraph::Execute(D3D12CommandContext& Context)
 {
-	for (RHITexture& Texture : Scheduler.Textures)
+	for (RGTexture& Texture : Scheduler.Textures)
 	{
 		if ((RenderResolutionResized && Texture.Desc.Resolution == ETextureResolution::Render) ||
 			(ViewportResolutionResized && Texture.Desc.Resolution == ETextureResolution::Viewport))

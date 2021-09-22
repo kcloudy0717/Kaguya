@@ -69,6 +69,9 @@ public:
 	[[nodiscard]] UINT						 GetNumSubresources() const noexcept { return NumSubresources; }
 	[[nodiscard]] CResourceState&			 GetResourceState() { return ResourceState; }
 
+	// Implicit state transition methods here are not used yet, this is because I am aware of the
+	// rules and I apply them myself, in the future this can perhaps be implemented by the resource state tracker
+
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
 	// https://devblogs.microsoft.com/directx/a-look-inside-d3d12-resource-state-barriers/
 	// Can this resource be promoted to State from common

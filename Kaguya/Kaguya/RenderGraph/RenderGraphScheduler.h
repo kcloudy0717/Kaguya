@@ -3,14 +3,9 @@
 
 class RenderPass;
 
-struct RHIBuffer
+struct RGTexture
 {
-	RenderResourceHandle Handle;
-	RGBufferDesc		 Desc;
-};
-
-struct RHITexture
-{
+	std::string			 Name;
 	RenderResourceHandle Handle;
 	RGTextureDesc		 Desc;
 };
@@ -41,11 +36,6 @@ public:
 	RenderGraphScheduler(RenderGraph* Parent)
 		: RenderGraphChild(Parent)
 	{
-		BufferHandle.Type	 = ERGResourceType::Buffer;
-		BufferHandle.State	 = ERGHandleState::Dirty;
-		BufferHandle.Version = 0;
-		BufferHandle.Id		 = 0;
-
 		TextureHandle.Type	  = ERGResourceType::Texture;
 		TextureHandle.State	  = ERGHandleState::Dirty;
 		TextureHandle.Version = 0;
@@ -89,7 +79,7 @@ public:
 	{
 		assert(Resource.Type == ERGResourceType::Texture);
 		assert(Resource.Id < Textures.size());
-		return TextureNames[Resource.Id];
+		return Textures[Resource.Id].Name;
 	}
 
 private:
@@ -102,15 +92,10 @@ private:
 
 	// Handles have a 1 : 1 mapping to resource containers
 
-	RenderPass* CurrentRenderPass;
+	RenderPass* CurrentRenderPass = nullptr;
 
-	RenderResourceHandle	 BufferHandle;
-	std::vector<RHIBuffer>	 Buffers;
-	std::vector<std::string> BufferNames;
-
-	RenderResourceHandle	 TextureHandle;
-	std::vector<RHITexture>	 Textures;
-	std::vector<std::string> TextureNames;
+	RenderResourceHandle   TextureHandle;
+	std::vector<RGTexture> Textures;
 
 	RenderResourceHandle			RenderTargetHandle;
 	std::vector<RGRenderTargetDesc> RenderTargets;

@@ -2,8 +2,6 @@
 
 bool D3D12RenderCompileContext::CompileCommand(const RenderCommandSetCBV& Command)
 {
-
-
 	return true;
 }
 
