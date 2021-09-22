@@ -1,7 +1,7 @@
 #ifndef RANDOM_HLSLI
 #define RANDOM_HLSLI
 
-#include <Math.hlsli>
+#include "Math.hlsli"
 
 uint WangHash(inout uint seed)
 {

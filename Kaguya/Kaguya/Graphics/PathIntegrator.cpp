@@ -373,12 +373,14 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 {
 	if (ImGui::Begin("Path Integrator"))
 	{
+		bool Dirty = false;
+
 		if (ImGui::Button("Restore Defaults"))
 		{
 			PathIntegratorState = {};
+			Dirty = true;
 		}
 
-		bool Dirty = false;
 		Dirty |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
 		Dirty |= ImGui::SliderScalar(
 			"Max Depth",

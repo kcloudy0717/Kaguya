@@ -1,12 +1,12 @@
 #ifndef HLSL_COMMON_HLSLI
 #define HLSL_COMMON_HLSLI
 
-#include <Vertex.hlsli>
-#include <Math.hlsli>
-#include <Sampling.hlsli>
-#include <Random.hlsli>
-#include <BSDF.hlsli>
-#include <SharedTypes.hlsli>
+#include "Vertex.hlsli"
+#include "Math.hlsli"
+#include "Sampling.hlsli"
+#include "Random.hlsli"
+#include "BSDF.hlsli"
+#include "SharedTypes.hlsli"
 
 float3 CartesianToSpherical(float x, float y, float z)
 {

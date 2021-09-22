@@ -1,9 +1,9 @@
 #ifndef BSDF_HLSLI
 #define BSDF_HLSLI
 
-#include <BxDF.hlsli>
-#include <Disney.hlsli>
-#include <SharedTypes.hlsli>
+#include "BxDF.hlsli"
+#include "Disney.hlsli"
+#include "SharedTypes.hlsli"
 
 #define BSDFType_Lambertian (0)
 #define BSDFType_Mirror		(1)

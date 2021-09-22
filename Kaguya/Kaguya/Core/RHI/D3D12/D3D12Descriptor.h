@@ -31,13 +31,17 @@ public:
 
 	D3D12Descriptor& operator=(D3D12Descriptor&& D3D12Descriptor) noexcept
 	{
-		if (this != &D3D12Descriptor)
+		if (this == &D3D12Descriptor)
 		{
-			Parent	  = std::exchange(D3D12Descriptor.Parent, {});
-			CpuHandle = std::exchange(D3D12Descriptor.CpuHandle, {});
-			GpuHandle = std::exchange(D3D12Descriptor.GpuHandle, {});
-			Index	  = std::exchange(D3D12Descriptor.Index, UINT_MAX);
+			return *this;
 		}
+
+		this->~D3D12Descriptor();
+		Parent	  = std::exchange(D3D12Descriptor.Parent, {});
+		CpuHandle = std::exchange(D3D12Descriptor.CpuHandle, {});
+		GpuHandle = std::exchange(D3D12Descriptor.GpuHandle, {});
+		Index	  = std::exchange(D3D12Descriptor.Index, UINT_MAX);
+
 		return *this;
 	}
 
