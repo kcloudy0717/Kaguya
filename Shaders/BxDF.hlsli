@@ -163,6 +163,8 @@ BSDFSample InitBSDFSample(float3 f, float3 wi, float pdf, BxDFFlags flags)
 
 struct LambertianReflection
 {
+	float3 R;
+
 	float3 f(float3 wo, float3 wi)
 	{
 		if (!SameHemisphere(wo, wi))
@@ -199,12 +201,12 @@ struct LambertianReflection
 	}
 
 	BxDFFlags Flags() { return BxDFFlags::DiffuseReflection; }
-
-	float3 R;
 };
 
 struct Mirror
 {
+	float3 R;
+
 	float3 f(float3 wo, float3 wi) { return float3(0.0f, 0.0f, 0.0f); }
 
 	float Pdf(float3 wo, float3 wi) { return 0.0f; }
@@ -219,12 +221,14 @@ struct Mirror
 	}
 
 	BxDFFlags Flags() { return BxDFFlags::SpecularReflection; }
-
-	float3 R;
 };
 
 struct Glass
 {
+	float3 R;
+	float3 T;
+	float  etaA, etaB;
+
 	float3 f(float3 wo, float3 wi) { return float3(0.0f, 0.0f, 0.0f); }
 
 	float Pdf(float3 wo, float3 wi) { return 0.0f; }
@@ -278,10 +282,6 @@ struct Glass
 	}
 
 	BxDFFlags Flags() { return BxDFFlags::Reflection | BxDFFlags::Transmission | BxDFFlags::Specular; }
-
-	float3 R;
-	float3 T;
-	float  etaA, etaB;
 };
 
 #endif // BXDF_HLSLI

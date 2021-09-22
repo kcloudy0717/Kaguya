@@ -7,9 +7,9 @@
 */
 
 // ShaderResource
-Texture2D	   g_Texture2DTable[]		: register(t0, space100);
-Texture2DArray g_Texture2DArrayTable[]	: register(t0, space101);
-TextureCube	   g_TextureCubeTable[]		: register(t0, space102);
+Texture2D	   g_Texture2DTable[] : register(t0, space100);
+Texture2DArray g_Texture2DArrayTable[] : register(t0, space101);
+TextureCube	   g_TextureCubeTable[] : register(t0, space102);
 
 // UnorderedAccess
 RWTexture2D<float4> g_RWTexture2DTable[] : register(u0, space100);

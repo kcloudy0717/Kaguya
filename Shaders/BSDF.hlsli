@@ -12,6 +12,12 @@
 
 struct BSDF
 {
+    float3 Ng;
+    Frame ShadingFrame;
+
+    Material Material;
+    BxDFFlags Flags;
+
 	float3 WorldToLocal(float3 v) { return ShadingFrame.ToLocal(v); }
 
 	float3 LocalToWorld(float3 v) { return ShadingFrame.ToWorld(v); }
@@ -206,12 +212,6 @@ struct BSDF
 		bsdfSample.wi = LocalToWorld(bsdfSample.wi);
 		return true;
 	}
-
-	float3 Ng;
-	Frame  ShadingFrame;
-
-	Material  Material;
-	BxDFFlags Flags;
 };
 
 BSDF InitBSDF(float3 Ng, Frame ShadingFrame, Material Material)
@@ -249,15 +249,19 @@ BSDF InitBSDF(float3 Ng, Frame ShadingFrame, Material Material)
 
 struct Interaction
 {
-	RayDesc SpawnRayTo(Interaction Interaction)
-	{
-		const float ShadowEpsilon = 0.0001f;
+	float3 p; // Hit point
+	float3 wo;
+	float3 n; // Normal
 
-		float3 d	= Interaction.p - p;
-		float  tmax = length(d);
-		d			= normalize(d);
+    RayDesc SpawnRayTo(Interaction Interaction)
+    {
+        const float ShadowEpsilon = 0.0001f;
 
-		RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
+        float3 d = Interaction.p - p;
+        float tmax = length(d);
+        d = normalize(d);
+
+        RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
 
 		// float3 d = Interaction.p - p;
 		//
@@ -266,19 +270,15 @@ struct Interaction
 		// ray.TMin	  = 0.001f;
 		// ray.Direction = normalize(d);
 		// ray.TMax	  = length(d);
-		return ray;
-	}
-
-	float3 p; // Hit point
-	float3 wo;
-	float3 n; // Normal
+        return ray;
+    }
 };
 
 struct SurfaceInteraction
 {
-	float3 p; // Hit point
+	float3 p;
 	float3 wo;
-	float3 n; // Normal
+	float3 n;
 	float2 uv;
 	Frame  GeometryFrame;
 	Frame  ShadingFrame;

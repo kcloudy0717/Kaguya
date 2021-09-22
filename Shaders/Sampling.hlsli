@@ -1,7 +1,7 @@
 #ifndef SAMPLING_HLSLI
 #define SAMPLING_HLSLI
 
-#include <Math.hlsli>
+#include "Math.hlsli"
 
 float2 SampleUniformDisk(float2 Xi)
 {

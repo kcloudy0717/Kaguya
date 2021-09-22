@@ -79,7 +79,7 @@ struct Camera
 	matrix InvProjection;
 	matrix InvViewProjection;
 
-	RayDesc GenerateCameraRay(float2 ndc, inout uint seed)
+	RayDesc GenerateCameraRay(float2 ndc)
 	{
 		// Setup the ray
 		RayDesc ray;

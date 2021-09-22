@@ -64,6 +64,21 @@ VertexAttributes GetVertexAttributes(BuiltInTriangleIntersectionAttributes Attri
 	return vertexAttributes;
 }
 
+struct Sampler
+{
+	RngStateType rng;
+
+	float Get1D() { return rand(rng); }
+
+	float2 Get2D() { return float2(rand(rng), rand(rng)); }
+};
+
+Sampler InitSampler(uint2 pixelCoords, uint2 resolution, uint frameNumber)
+{
+	Sampler object = { initRNG(pixelCoords, resolution, frameNumber) };
+	return object;
+}
+
 #define INVALID_ID -1
 
 struct RayPayload
@@ -96,7 +111,7 @@ float TraceShadowRay(RayDesc Ray)
 	TraceRay(
 		g_Scene,
 		RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
-		0xffffffff,
+		0xff,
 		RayTypePrimary,
 		NumRayTypes,
 		1,
@@ -143,7 +158,7 @@ float3 EstimateDirect(SurfaceInteraction si, Light light, float2 XiLight)
 	return Ld;
 }
 
-float3 UniformSampleOneLight(SurfaceInteraction si, inout uint seed)
+float3 UniformSampleOneLight(SurfaceInteraction si, inout Sampler Sampler)
 {
 	if (g_GlobalConstants.NumLights == 0)
 	{
@@ -152,17 +167,15 @@ float3 UniformSampleOneLight(SurfaceInteraction si, inout uint seed)
 
 	int numLights = g_GlobalConstants.NumLights;
 
-	int	  lightIndex = min(RandomFloat01(seed) * numLights, numLights - 1);
+    int lightIndex = min(Sampler.Get1D() * numLights, numLights - 1);
 	float lightPdf	 = 1.0f / float(numLights);
 
 	Light light = g_Lights[lightIndex];
 
-	float2 XiLight = float2(RandomFloat01(seed), RandomFloat01(seed));
-
-	return EstimateDirect(si, light, XiLight) / lightPdf;
+    return EstimateDirect(si, light, Sampler.Get2D()) / lightPdf;
 }
 
-float3 Li(RayDesc ray, inout uint Seed)
+float3 Li(RayDesc ray, inout Sampler Sampler)
 {
 	float3 L	= float3(0.0f, 0.0f, 0.0f);
 	float3 beta = float3(1.0f, 1.0f, 1.0f);
@@ -172,7 +185,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 	for (int bounce = 0;; ++bounce)
 	{
 		// Trace the ray
-		TraceRay(g_Scene, RAY_FLAG_NONE, 0xffffffff, RayTypePrimary, NumRayTypes, 0, ray, payload);
+		TraceRay(g_Scene, RAY_FLAG_NONE, 0xff, RayTypePrimary, NumRayTypes, 0, ray, payload);
 
 		// Ray missed
 		if (!payload.IsValid() || bounce >= g_GlobalConstants.MaxDepth)
@@ -182,7 +195,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 			break;
 		}
 
-        Material material = g_Materials[payload.materialID];
+		Material material = g_Materials[payload.materialID];
 
 		float3 Ng, Ns;
 		Ng = payload.Ng.Decode();
@@ -190,7 +203,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 
 		float3 wo = -ray.Direction;
 
-        if (material.BSDFType != 2 /* Glass */)
+		if (material.BSDFType != 2 /* Glass */)
 		{
 			if (dot(Ng, wo) < 0.0f)
 				Ng = -Ng;
@@ -223,12 +236,12 @@ float3 Li(RayDesc ray, inout uint Seed)
 		// (But skip this for perfectly specular BSDFs.)
 		if (si.BSDF.IsNonSpecular())
 		{
-			L += beta * UniformSampleOneLight(si, Seed);
-		}
+            L += beta * UniformSampleOneLight(si, Sampler);
+        }
 
 		// Sample BSDF to get new path direction
 		BSDFSample bsdfSample = (BSDFSample)0;
-		bool	   success	  = si.BSDF.Samplef(si.wo, float2(RandomFloat01(Seed), RandomFloat01(Seed)), bsdfSample);
+        bool success = si.BSDF.Samplef(si.wo, Sampler.Get2D(), bsdfSample);
 		if (!success)
 		{
 			// Used to debug
@@ -247,7 +260,7 @@ float3 Li(RayDesc ray, inout uint Seed)
 		if (rrMaxComponentValue < rrThreshold && bounce > 1)
 		{
 			float q = max(0.0f, 1.0f - rrMaxComponentValue);
-			if (RandomFloat01(Seed) < q)
+            if (Sampler.Get1D() < q)
 			{
 				break;
 			}
@@ -261,24 +274,60 @@ float3 Li(RayDesc ray, inout uint Seed)
 [shader("raygeneration")]
 void RayGeneration()
 {
-	const uint2 launchIndex		 = DispatchRaysIndex().xy;
-	const uint2 launchDimensions = DispatchRaysDimensions().xy;
-	uint		seed			 = uint(launchIndex.x * uint(1973) + launchIndex.y * uint(9277) + uint(g_GlobalConstants.TotalFrameCount) * uint(26699)) | uint(1);
+	uint2 launchIndex		 = DispatchRaysIndex().xy;
+	uint2 launchDimensions = DispatchRaysDimensions().xy;
+    Sampler pcgSampler = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
 
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
 	{
 		// TODO: Replace sampler with sobol
 		// Calculate subpixel camera jitter for anti aliasing
-		const float2 jitter = float2(RandomFloat01(seed), RandomFloat01(seed)) - 0.5f;
+        const float2 jitter = pcgSampler.Get2D() - 0.5f;
 		const float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
 
 		const float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 
 		// Initialize ray
-		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc, seed);
+		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
 
-		L += Li(ray, seed);
+        L += Li(ray, pcgSampler);
+    }
+	L /= float(SPP);
+
+	// Replace NaN components with zero. See explanation in Ray Tracing: The Rest of Your Life.
+	L.r = isnan(L.r) ? 0.0f : L.r;
+	L.g = isnan(L.g) ? 0.0f : L.g;
+	L.b = isnan(L.b) ? 0.0f : L.b;
+
+	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_GlobalConstants.RenderTarget];
+	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
+
+	// Progressive accumulation
+	if (g_GlobalConstants.NumAccumulatedSamples > 0)
+	{
+		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_GlobalConstants.NumAccumulatedSamples));
+	}
+
+	RenderTarget[launchIndex] = float4(L, 1);
+	uint2	launchIndex		  = DispatchRaysIndex().xy;
+	uint2	launchDimensions  = DispatchRaysDimensions().xy;
+	Sampler pcgSampler		  = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
+
+	float3 L = float3(0.0f, 0.0f, 0.0f);
+	for (int s = 0; s < SPP; ++s)
+	{
+		// TODO: Replace sampler with sobol
+		// Calculate subpixel camera jitter for anti aliasing
+		const float2 jitter = pcgSampler.Get2D() - 0.5f;
+		const float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
+
+		const float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
+
+		// Initialize ray
+		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
+
+		L += Li(ray, pcgSampler);
 	}
 	L /= float(SPP);
 
@@ -313,7 +362,7 @@ void ShadowMiss(inout ShadowRayPayload rayPayload : SV_RayPayload)
 }
 
 [shader("closesthit")]
-void ClosestHit(inout RayPayload rayPayload : SV_RayPayload, in BuiltInTriangleIntersectionAttributes Attributes)
+void ClosestHit(inout RayPayload rayPayload : SV_RayPayload, BuiltInTriangleIntersectionAttributes Attributes)
 {
 	VertexAttributes vertexAttributes = GetVertexAttributes(Attributes);
 
