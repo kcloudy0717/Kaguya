@@ -816,12 +816,12 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		ViewportWindow.SetContext(Renderer->GetViewportDescriptor());
-		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
+		HierarchyWindow.Render();
 		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
 
-		HierarchyWindow.Render();
 		ViewportWindow.Render();
+		ViewportWindow.SetContext(Renderer->GetViewportDescriptor());
+
 		AssetWindow.Render();
 		ConsoleWindow.Render();
 		InspectorWindow.Render();

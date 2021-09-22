@@ -12,11 +12,11 @@
 
 struct BSDF
 {
-    float3 Ng;
-    Frame ShadingFrame;
+	float3 Ng;
+	Frame  ShadingFrame;
 
-    Material Material;
-    BxDFFlags Flags;
+	Material  Material;
+	BxDFFlags Flags;
 
 	float3 WorldToLocal(float3 v) { return ShadingFrame.ToLocal(v); }
 
@@ -253,25 +253,20 @@ struct Interaction
 	float3 wo;
 	float3 n; // Normal
 
-    RayDesc SpawnRayTo(Interaction Interaction)
-    {
-        const float ShadowEpsilon = 0.0001f;
-
-        float3 d = Interaction.p - p;
-        float tmax = length(d);
-        d = normalize(d);
-
-        RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
-
-		// float3 d = Interaction.p - p;
+	RayDesc SpawnRayTo(Interaction Interaction)
+	{
+		// const float ShadowEpsilon = 0.0001f;
 		//
-		// RayDesc ray	  = (RayDesc)0;
-		// ray.Origin	  = OffsetRay(p, n);
-		// ray.TMin	  = 0.001f;
-		// ray.Direction = normalize(d);
-		// ray.TMax	  = length(d);
-        return ray;
-    }
+		// float3 d	= Interaction.p - p;
+		// float  tmax = length(d);
+		// d			= normalize(d);
+		//
+		// RayDesc ray = { p, 0.001f, d, tmax - ShadowEpsilon };
+
+		float3	d	= Interaction.p - p;
+		RayDesc ray = { OffsetRay(p, n), 0.0f, normalize(d), length(d) };
+		return ray;
+	}
 };
 
 struct SurfaceInteraction
@@ -286,15 +281,8 @@ struct SurfaceInteraction
 
 	RayDesc SpawnRay(float3 d)
 	{
-		RayDesc ray = { p, 0.001f, normalize(d), 10000.0f };
+		RayDesc ray = { OffsetRay(p, n), 0.0f, normalize(d), 10000.0f };
 		return ray;
-
-		// RayDesc ray	  = (RayDesc)0;
-		// ray.Origin	  = OffsetRay(p, n);
-		// ray.TMin	  = 0.001f;
-		// ray.Direction = normalize(d);
-		// ray.TMax	  = 10000.0f;
-		// return ray;
 	}
 };
 
@@ -312,6 +300,8 @@ float3 SampleLi(
 	out float			 pPdf,
 	out VisibilityTester pVisibilityTester)
 {
+	float3 I = float3(0.0f, 0.0f, 0.0f);
+
 	if (light.Type == LightType_Point)
 	{
 		pWi	 = normalize(light.Position - si.p);
@@ -327,10 +317,9 @@ float3 SampleLi(
 
 		float d	 = length(light.Position - si.p);
 		float d2 = d * d;
-		return light.I / d2;
+		I		 = light.I / d2;
 	}
-
-	if (light.Type == LightType_Quad)
+	else if (light.Type == LightType_Quad)
 	{
 		float3			   ex	 = light.Points[1] - light.Points[0];
 		float3			   ey	 = light.Points[3] - light.Points[0];
@@ -350,10 +339,10 @@ float3 SampleLi(
 		pVisibilityTester.I1.wo = float3(0.0f, 0.0f, 0.0f);
 		pVisibilityTester.I1.n	= float3(0.0f, 0.0f, 0.0f);
 
-		return light.I;
+		I = light.I;
 	}
 
-	return float3(0.0f, 0.0f, 0.0f);
+	return I;
 }
 
 #endif // BSDF_HLSLI

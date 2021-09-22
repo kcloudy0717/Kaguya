@@ -11,10 +11,13 @@ void HierarchyWindow::OnRender()
 
 			auto& Name = Entity.GetComponent<Tag>().Name;
 
-			ImGuiTreeNodeFlags TreeNodeFlags =
-				((SelectedEntity == Entity) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_SpanAvailWidth;
-			bool bOpened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
-			if (ImGui::IsItemClicked())
+			ImGuiTreeNodeFlags TreeNodeFlags = (SelectedEntity == Entity ? ImGuiTreeNodeFlags_Selected : 0);
+			TreeNodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
+			TreeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+			bool bOpened  = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
+			bool bClicked = ImGui::IsItemClicked();
+
+			if (bClicked)
 			{
 				SelectedEntity = Entity;
 			}
@@ -52,8 +55,8 @@ void HierarchyWindow::OnRender()
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity NewEntity  = pWorld->CreateEntity("");
-			SelectedEntity = NewEntity;
+			Entity NewEntity = pWorld->CreateEntity("");
+			SelectedEntity	 = NewEntity;
 		}
 
 		if (ImGui::MenuItem("Clear"))
@@ -83,11 +86,5 @@ void HierarchyWindow::OnRender()
 		}
 
 		ImGui::EndPopup();
-	}
-
-	// Reset entity is nothing is clicked
-	if (ImGui::IsItemClicked())
-	{
-		SelectedEntity = {};
 	}
 }

@@ -18,6 +18,8 @@ float RandomFloat01(inout uint seed)
 	return float(WangHash(seed)) / 4294967296.0;
 }
 
+// Raytracing Gems 2
+
 #define USE_PCG 1
 #if USE_PCG
 	#define RngStateType uint4

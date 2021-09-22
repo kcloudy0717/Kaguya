@@ -149,6 +149,8 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	Stopwatch.Restart();
 	do
 	{
+		Stopwatch.Signal();
+		Application.Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 	} while (ProcessMessages());
 
 	Application.Shutdown();
@@ -271,12 +273,12 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	}
 	break;
 
-	case WM_PAINT:
-	{
-		Stopwatch.Signal();
-		This->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
-	}
-	break;
+		// case WM_PAINT:
+		//{
+		//	Stopwatch.Signal();
+		//	This->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+		//}
+		// break;
 
 	case WM_SIZE:
 	{

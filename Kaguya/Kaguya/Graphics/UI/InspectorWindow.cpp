@@ -4,35 +4,25 @@
 
 #include <Graphics/AssetManager.h>
 
-template<class T, class Component>
-concept IsUIFunction = requires(T F, Component C)
-{
-	{
-		F(C)
-		} -> std::convertible_to<bool>;
-};
-
-template<is_component T, bool IsCoreComponent, IsUIFunction<T> UIFunction>
-static void RenderComponent(const char* pName, Entity Entity, UIFunction UI)
+template<is_component T, bool IsCoreComponent, typename UIFunction>
+static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
 {
 	if (Entity.HasComponent<T>())
 	{
 		bool  IsEdited	= false;
 		auto& Component = Entity.GetComponent<T>();
 
-		ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
-
-		const ImGuiTreeNodeFlags TreeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
-												 ImGuiTreeNodeFlags_SpanAvailWidth |
-												 ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
+		constexpr ImGuiTreeNodeFlags TreeNodeFlags =
+			ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth |
+			ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 		float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
 		ImGui::Separator();
-		bool Collapsed = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), TreeNodeFlags, pName);
+		bool Collapsed = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), TreeNodeFlags, Name);
 		ImGui::PopStyleVar();
 
-		ImGui::SameLine(contentRegionAvailable.x - lineHeight * 0.5f);
+		ImGui::SameLine(ImGui::GetContentRegionAvail().x - lineHeight * 0.5f);
 		if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
 		{
 			ImGui::OpenPopup("Component Settings");
@@ -54,7 +44,7 @@ static void RenderComponent(const char* pName, Entity Entity, UIFunction UI)
 
 		if (Collapsed)
 		{
-			IsEdited |= UI(Component);
+			IsEdited |= Func(Component);
 			ImGui::TreePop();
 		}
 
@@ -93,7 +83,7 @@ static void AddNewComponent(const char* pName, Entity Entity)
 static bool RenderButtonDragFloatControl(
 	std::string_view ButtonLabel,
 	std::string_view DragFloatLabel,
-	float*			 pFloat,
+	float*			 Float,
 	float			 ResetValue,
 	float			 Min,
 	float			 Max,
@@ -101,41 +91,39 @@ static bool RenderButtonDragFloatControl(
 	ImVec4			 ButtonHoveredColor,
 	ImVec4			 ButtonActiveColor)
 {
-	bool isEdited = false;
+	bool IsEdited = false;
 
-	ImGuiIO& IO		  = ImGui::GetIO();
-	auto	 boldFont = IO.Fonts->Fonts[0];
-
-	const float	 lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
-	const ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
+	ImFont* BoldFont   = ImGui::GetIO().Fonts->Fonts[0];
+	float	LineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
+	ImVec2	ButtonSize = { LineHeight + 3.0f, LineHeight };
 
 	ImGui::PushStyleColor(ImGuiCol_Button, ButtonColor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ButtonHoveredColor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ButtonActiveColor);
-	ImGui::PushFont(boldFont);
-	if (ImGui::Button(ButtonLabel.data(), buttonSize))
+	ImGui::PushFont(BoldFont);
+	if (ImGui::Button(ButtonLabel.data(), ButtonSize))
 	{
-		*pFloat = ResetValue;
-		isEdited |= true;
+		*Float = ResetValue;
+		IsEdited |= true;
 	}
 	ImGui::PopFont();
 	ImGui::PopStyleColor(3);
 
 	ImGui::SameLine();
-	isEdited |= ImGui::DragFloat(DragFloatLabel.data(), pFloat, 0.1f, Min, Max);
+	IsEdited |= ImGui::DragFloat(DragFloatLabel.data(), Float, 0.1f, Min, Max);
 	ImGui::PopItemWidth();
 
-	return isEdited;
+	return IsEdited;
 }
 
 static bool RenderFloatControl(
 	std::string_view Label,
-	float*			 pFloat,
+	float*			 Float,
 	float			 ResetValue = 0.0f,
 	float			 Min		= 0.0f,
 	float			 Max		= 0.0f)
 {
-	bool isEdited = false;
+	bool IsEdited = false;
 	if (ImGui::BeginTable("Float", 2, ImGuiTableFlags_BordersInnerV))
 	{
 		ImGui::TableNextRow();
@@ -149,10 +137,10 @@ static bool RenderFloatControl(
 
 		//==============================
 		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl(
+		IsEdited |= RenderButtonDragFloatControl(
 			"X",
 			"##X",
-			&pFloat[0],
+			&Float[0],
 			ResetValue,
 			Min,
 			Max,
@@ -164,17 +152,17 @@ static bool RenderFloatControl(
 
 		ImGui::EndTable();
 	}
-	return isEdited;
+	return IsEdited;
 }
 
 static bool RenderFloat2Control(
 	std::string_view Label,
-	float*			 pFloat2,
+	float*			 Float2,
 	float			 ResetValue = 0.0f,
 	float			 Min		= 0.0f,
 	float			 Max		= 0.0f)
 {
-	bool isEdited = false;
+	bool IsEdited = false;
 	if (ImGui::BeginTable("Float2", 3, ImGuiTableFlags_BordersInnerV))
 	{
 		ImGui::TableNextRow();
@@ -188,10 +176,10 @@ static bool RenderFloat2Control(
 
 		//==============================
 		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl(
+		IsEdited |= RenderButtonDragFloatControl(
 			"X",
 			"##X",
-			&pFloat2[0],
+			&Float2[0],
 			ResetValue,
 			Min,
 			Max,
@@ -201,10 +189,10 @@ static bool RenderFloat2Control(
 
 		//==============================
 		ImGui::TableSetColumnIndex(2);
-		isEdited |= RenderButtonDragFloatControl(
+		IsEdited |= RenderButtonDragFloatControl(
 			"Y",
 			"##Y",
-			&pFloat2[1],
+			&Float2[1],
 			ResetValue,
 			Min,
 			Max,
@@ -216,12 +204,12 @@ static bool RenderFloat2Control(
 
 		ImGui::EndTable();
 	}
-	return isEdited;
+	return IsEdited;
 }
 
 static bool RenderFloat3Control(
 	std::string_view Label,
-	float*			 pFloat3,
+	float*			 Float3,
 	float			 ResetValue = 0.0f,
 	float			 Min		= 0.0f,
 	float			 Max		= 0.0f)
@@ -243,7 +231,7 @@ static bool RenderFloat3Control(
 		isEdited |= RenderButtonDragFloatControl(
 			"X",
 			"##X",
-			&pFloat3[0],
+			&Float3[0],
 			ResetValue,
 			Min,
 			Max,
@@ -256,7 +244,7 @@ static bool RenderFloat3Control(
 		isEdited |= RenderButtonDragFloatControl(
 			"Y",
 			"##Y",
-			&pFloat3[1],
+			&Float3[1],
 			ResetValue,
 			Min,
 			Max,
@@ -269,7 +257,7 @@ static bool RenderFloat3Control(
 		isEdited |= RenderButtonDragFloatControl(
 			"Z",
 			"##Z",
-			&pFloat3[2],
+			&Float3[2],
 			ResetValue,
 			Min,
 			Max,
@@ -284,12 +272,12 @@ static bool RenderFloat3Control(
 	return isEdited;
 }
 
-static bool EditTransform(Transform& Transform, const float* pCameraView, float* pCameraProjection, float* pMatrix)
+static bool EditTransform(const float* ViewMatrix, float* ProjectMatrix, float* TransformMatrix)
 {
-	static bool			  UseSnap				= false;
-	static UINT			  CurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
-	static float		  s_Snap[3]				= { 1, 1, 1 };
-	static ImGuizmo::MODE s_CurrentGizmoMode	= ImGuizmo::WORLD;
+	static bool				   UseSnap				 = false;
+	static ImGuizmo::OPERATION CurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+	static float			   Snap[3]				 = { 1, 1, 1 };
+	static ImGuizmo::MODE	   CurrentGizmoMode		 = ImGuizmo::WORLD;
 
 	ImGui::Text("Operation");
 
@@ -316,24 +304,26 @@ static bool EditTransform(Transform& Transform, const float* pCameraView, float*
 	switch (CurrentGizmoOperation)
 	{
 	case ImGuizmo::TRANSLATE:
-		ImGui::InputFloat3("Snap", &s_Snap[0]);
+		ImGui::InputFloat3("Snap", &Snap[0]);
 		break;
 	case ImGuizmo::ROTATE:
-		ImGui::InputFloat("Angle Snap", &s_Snap[0]);
+		ImGui::InputFloat("Angle Snap", &Snap[0]);
 		break;
 	case ImGuizmo::SCALE:
-		ImGui::InputFloat("Scale Snap", &s_Snap[0]);
+		ImGui::InputFloat("Scale Snap", &Snap[0]);
+		break;
+	default:
 		break;
 	}
 
 	return ImGuizmo::Manipulate(
-		pCameraView,
-		pCameraProjection,
-		(ImGuizmo::OPERATION)CurrentGizmoOperation,
-		s_CurrentGizmoMode,
-		pMatrix,
+		ViewMatrix,
+		ProjectMatrix,
+		CurrentGizmoOperation,
+		CurrentGizmoMode,
+		TransformMatrix,
 		nullptr,
-		UseSnap ? s_Snap : nullptr);
+		UseSnap ? Snap : nullptr);
 }
 
 void InspectorWindow::OnRender()
@@ -346,7 +336,7 @@ void InspectorWindow::OnRender()
 			[&](Tag& Component)
 			{
 				char Buffer[MAX_PATH] = {};
-				std::memcpy(Buffer, Component.Name.data(), Component.Name.size());
+				strcpy_s(Buffer, MAX_PATH, Component.Name.data());
 				if (ImGui::InputText("Tag", Buffer, MAX_PATH))
 				{
 					Component.Name = Buffer;
@@ -367,20 +357,12 @@ void InspectorWindow::OnRender()
 				// Dont transpose this
 				XMStoreFloat4x4(&World, Component.Matrix());
 
-				float matrixTranslation[3], matrixRotation[3], matrixScale[3];
-				ImGuizmo::DecomposeMatrixToComponents(
-					reinterpret_cast<float*>(&World),
-					matrixTranslation,
-					matrixRotation,
-					matrixScale);
-				IsEdited |= RenderFloat3Control("Translation", matrixTranslation);
-				IsEdited |= RenderFloat3Control("Rotation", matrixRotation);
-				IsEdited |= RenderFloat3Control("Scale", matrixScale, 1.0f);
-				ImGuizmo::RecomposeMatrixFromComponents(
-					matrixTranslation,
-					matrixRotation,
-					matrixScale,
-					reinterpret_cast<float*>(&World));
+				float Translation[3], Rotation[3], Scale[3];
+				ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&World), Translation, Rotation, Scale);
+				IsEdited |= RenderFloat3Control("Translation", Translation);
+				IsEdited |= RenderFloat3Control("Rotation", Rotation);
+				IsEdited |= RenderFloat3Control("Scale", Scale, 1.0f);
+				ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
 
 				// Dont transpose this
 				XMStoreFloat4x4(&View, pWorld->ActiveCamera->ViewMatrix);
@@ -388,15 +370,13 @@ void InspectorWindow::OnRender()
 
 				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
 				IsEdited |= EditTransform(
-					Component,
 					reinterpret_cast<float*>(&View),
 					reinterpret_cast<float*>(&Projection),
 					reinterpret_cast<float*>(&World));
 
 				if (IsEdited)
 				{
-					DirectX::XMMATRIX mWorld = XMLoadFloat4x4(&World);
-					Component.SetTransform(mWorld);
+					Component.SetTransform(XMLoadFloat4x4(&World));
 				}
 
 				return IsEdited;
@@ -423,10 +403,10 @@ void InspectorWindow::OnRender()
 			{
 				bool IsEdited = false;
 
-				auto pType = (int*)&Component.Type;
+				auto Type = (int*)&Component.Type;
 
 				const char* LightTypes[] = { "Point", "Quad" };
-				IsEdited |= ImGui::Combo("Type", pType, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
+				IsEdited |= ImGui::Combo("Type", Type, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
 
 				switch (Component.Type)
 				{
@@ -468,7 +448,7 @@ void InspectorWindow::OnRender()
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH"); payload)
 					{
 						IM_ASSERT(payload->DataSize == sizeof(UINT64));
-						Component.Key  = (*(UINT64*)payload->Data);
+						Component.Key  = *(UINT64*)payload->Data;
 						Component.Mesh = AssetManager::GetMeshCache().Load(Component.Key);
 
 						IsEdited = true;
@@ -556,7 +536,7 @@ void InspectorWindow::OnRender()
 							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); payload)
 							{
 								IM_ASSERT(payload->DataSize == sizeof(UINT64));
-								Key = (*(UINT64*)payload->Data);
+								Key = *(UINT64*)payload->Data;
 
 								IsEdited = true;
 							}
