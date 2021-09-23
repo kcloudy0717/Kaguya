@@ -27,7 +27,7 @@ std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarri
 		CResourceState& ResourceState = Resource->GetResourceState();
 
 		D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Subresource);
-		D3D12_RESOURCE_STATES StateAfter  = (State != D3D12_RESOURCE_STATE_UNKNOWN) ? State : StateBefore;
+		D3D12_RESOURCE_STATES StateAfter  = State != D3D12_RESOURCE_STATE_UNKNOWN ? State : StateBefore;
 
 		if (StateBefore != StateAfter)
 		{
@@ -41,7 +41,7 @@ std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarri
 
 		D3D12_RESOURCE_STATES StateCommandList = this->GetResourceState(Resource).GetSubresourceState(Subresource);
 		D3D12_RESOURCE_STATES StatePrevious =
-			(StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN) ? StateCommandList : StateAfter;
+			StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN ? StateCommandList : StateAfter;
 
 		if (StateBefore != StatePrevious)
 		{
@@ -138,8 +138,6 @@ D3D12CommandListHandle::D3D12CommandList::D3D12CommandList(D3D12LinkedDevice* Pa
 	, CommandAllocator(nullptr)
 {
 #ifdef NVIDIA_NSIGHT_AFTERMATH
-	// GFSDK_Aftermath_DX12_CreateContextHandle fails if I used CreateCommandList1 with type thats not
-	// D3D12_COMMAND_LIST_TYPE_DIRECT
 	ComPtr<ID3D12CommandAllocator> temp;
 	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(temp.ReleaseAndGetAddressOf())));
 	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandList(

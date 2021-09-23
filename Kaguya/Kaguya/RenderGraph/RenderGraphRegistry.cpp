@@ -102,7 +102,7 @@ void RenderGraphRegistry::RealizeResources()
 			break;
 		}
 
-		Textures[i] = D3D12Texture(RenderCore::pDevice->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		Textures[i] = D3D12Texture(RenderCore::Device->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
 		ShaderViews& ShaderViews = TextureShaderViews[i];
 
 		if (ShaderViews.SRVs.empty())
@@ -149,7 +149,7 @@ void RenderGraphRegistry::RealizeResources()
 			ApiDesc.SetDepthStencil(&GetTexture(Desc.DepthStencil));
 		}
 
-		RenderTargets[i] = D3D12RenderTarget(RenderCore::pDevice->GetDevice(), ApiDesc);
+		RenderTargets[i] = D3D12RenderTarget(RenderCore::Device->GetDevice(), ApiDesc);
 	}
 }
 
@@ -182,7 +182,7 @@ auto RenderGraphRegistry::GetTextureSRV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.SRVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
+		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::Device->GetDevice());
 		Texture.CreateShaderResourceView(ShaderViews.SRVs[SubresourceIndex]);
 	}
 
@@ -203,7 +203,7 @@ auto RenderGraphRegistry::GetTextureUAV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.UAVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		auto UAV = D3D12UnorderedAccessView(RenderCore::pDevice->GetDevice());
+		auto UAV = D3D12UnorderedAccessView(RenderCore::Device->GetDevice());
 		Texture.CreateUnorderedAccessView(UAV, OptArraySlice, OptMipSlice);
 
 		ShaderViews.UAVs[SubresourceIndex] = std::move(UAV);

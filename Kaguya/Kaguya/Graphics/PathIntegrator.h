@@ -24,11 +24,11 @@ struct FSRState
 
 	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
 
-	int ViewportWidth;
-	int ViewportHeight;
+	UINT ViewportWidth;
+	UINT ViewportHeight;
 
-	int	  RenderWidth;
-	int	  RenderHeight;
+	UINT  RenderWidth;
+	UINT  RenderHeight;
 	float RCASAttenuation = 0.0f;
 };
 
@@ -54,10 +54,9 @@ private:
 
 	D3D12RaytracingAccelerationStructureManager Manager;
 
-	struct Settings
-	{
-		inline static UINT NumAccumulatedSamples = 0;
-	};
+	// Temporal accumulation
+	UINT NumTemporalSamples = 0;
+
 	PathIntegratorState PathIntegratorState;
 	FSRState			FSRState;
 

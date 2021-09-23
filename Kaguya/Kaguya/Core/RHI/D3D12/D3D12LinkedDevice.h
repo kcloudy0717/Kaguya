@@ -88,5 +88,6 @@ void D3D12Descriptor<ViewDesc>::Release()
 		CpuHandle = { NULL };
 		GpuHandle = { NULL };
 		Index	  = UINT_MAX;
+		Parent	  = nullptr;
 	}
 }

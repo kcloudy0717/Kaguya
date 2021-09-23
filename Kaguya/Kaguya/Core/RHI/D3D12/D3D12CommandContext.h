@@ -42,6 +42,23 @@ public:
 	void SetPipelineState(D3D12PipelineState* PipelineState);
 	void SetPipelineState(D3D12RaytracingPipelineState* RaytracingPipelineState);
 
+	void SetGraphicsRootSignature(D3D12RootSignature* RootSignature);
+	void SetComputeRootSignature(D3D12RootSignature* RootSignature);
+
+	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, void* Data)
+	{
+		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
+		CommandListHandle->SetGraphicsRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
+	}
+
+	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, void* Data)
+	{
+		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
+		CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
+	}
+
 	void BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget);
 
 	void EndRenderPass();
@@ -147,7 +164,7 @@ class D3D12ScopedEventObject
 public:
 	D3D12ScopedEventObject(D3D12CommandContext& CommandContext, std::string_view Name)
 		: CommandContext(CommandContext)
-		//, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
+		, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
 		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
 	{
 #ifdef NVIDIA_NSIGHT_AFTERMATH
@@ -160,7 +177,7 @@ public:
 
 private:
 	D3D12CommandContext&							CommandContext;
-	//PIXScopedEventObject<ID3D12GraphicsCommandList> PixEvent;
+	PIXScopedEventObject<ID3D12GraphicsCommandList> PixEvent;
 	D3D12ProfileBlock								ProfileBlock;
 };
 

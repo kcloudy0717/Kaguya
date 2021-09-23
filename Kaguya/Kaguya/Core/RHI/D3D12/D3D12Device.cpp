@@ -115,19 +115,19 @@ void D3D12Device::Initialize(const DeviceOptions& Options)
 
 	if (CVar_Dred)
 	{
-		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
-		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(DREDSettings.GetAddressOf())));
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DredSettings;
+		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(DredSettings.GetAddressOf())));
 
 		// Turn on auto-breadcrumbs and page fault reporting.
-		DREDSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-		DREDSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		DredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		DredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 	}
 }
 
 void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 {
 	VERIFY_D3D12_API(
-		D3D12CreateDevice(Adapter4.Get(), Features.FeatureLevel, IID_PPV_ARGS(Device.ReleaseAndGetAddressOf())));
+		D3D12CreateDevice(Adapter3.Get(), Features.FeatureLevel, IID_PPV_ARGS(Device.ReleaseAndGetAddressOf())));
 
 #ifdef NVIDIA_NSIGHT_AFTERMATH
 	AftermathCrashTracker.RegisterDevice(Device.Get());
@@ -336,25 +336,26 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 void D3D12Device::InitializeDxgiObjects(bool Debug)
 {
-	UINT Flags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
+	UINT FactoryFlags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	VERIFY_D3D12_API(CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
 
 	// Enumerate hardware for an adapter that supports D3D12
-	ComPtr<IDXGIAdapter4> pAdapter4;
-	UINT				  AdapterID = 0;
+	ComPtr<IDXGIAdapter3> AdapterIterator;
+	UINT				  AdapterId = 0;
 	while (SUCCEEDED(Factory6->EnumAdapterByGpuPreference(
-		AdapterID,
+		AdapterId,
 		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-		IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf()))))
+		IID_PPV_ARGS(AdapterIterator.ReleaseAndGetAddressOf()))))
 	{
-		if (SUCCEEDED(D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(
+				D3D12CreateDevice(AdapterIterator.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 		{
-			Adapter4 = std::move(pAdapter4);
+			Adapter3 = std::move(AdapterIterator);
 			break;
 		}
 
-		AdapterID++;
+		++AdapterId;
 	}
 }
 

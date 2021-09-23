@@ -1,9 +1,5 @@
 #include "Renderer.h"
-#include "World/Entity.h"
 #include "RendererRegistry.h"
-
-using namespace DirectX;
-using Microsoft::WRL::ComPtr;
 
 void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 {
@@ -31,7 +27,7 @@ void Renderer::OnRender()
 {
 	pWorld->ActiveCamera->AspectRatio = float(RenderWidth) / float(RenderHeight);
 
-	RenderCore::pDevice->OnBeginFrame();
+	RenderCore::Device->OnBeginFrame();
 
 	if (ImGui::Begin("GPU Timing"))
 	{
@@ -93,12 +89,12 @@ void Renderer::OnRender()
 	}
 	ImGui::End();
 
-	D3D12CommandContext& Context = RenderCore::pDevice->GetDevice()->GetCommandContext();
+	D3D12CommandContext& Context = RenderCore::Device->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
 
 	Render(Context);
 
-	auto [pRenderTarget, RenderTargetView] = RenderCore::pSwapChain->GetCurrentBackBufferResource();
+	auto [pRenderTarget, RenderTargetView] = RenderCore::SwapChain->GetCurrentBackBufferResource();
 
 	auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		pRenderTarget,
@@ -131,19 +127,21 @@ void Renderer::OnRender()
 	Context->ResourceBarrier(1, &Barrier);
 
 	Context.CloseCommandList();
+	// TODO: Present submits work, and if you don't Signal() after that, you can't safely know when to destroy/resize
+	// the swapchain, move signaling after present
 	D3D12CommandSyncPoint MainSyncPoint = Context.Execute(false);
 
-	RenderCore::pSwapChain->Present(false);
+	RenderCore::SwapChain->Present(false);
 
-	RenderCore::pDevice->OnEndFrame();
+	RenderCore::Device->OnEndFrame();
 
 	MainSyncPoint.WaitForCompletion();
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	RenderCore::pDevice->GetDevice()->GetGraphicsQueue()->WaitIdle();
-	RenderCore::pSwapChain->Resize(Width, Height);
+	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
+	RenderCore::SwapChain->Resize(Width, Height);
 }
 
 void Renderer::OnDestroy()

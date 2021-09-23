@@ -32,13 +32,13 @@ struct Shaders
 		inline static Shader RCAS;
 	};
 
-	static void Compile(const ShaderCompiler& ShaderCompiler)
+	static void Compile()
 	{
 		const auto& ExecutableDirectory = Application::ExecutableDirectory;
 
 		// VS
 		{
-			VS::FullScreenTriangle = ShaderCompiler.CompileShader(
+			VS::FullScreenTriangle = RenderCore::Compiler->CompileShader(
 				EShaderType::Vertex,
 				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
 				g_VSEntryPoint,
@@ -47,7 +47,7 @@ struct Shaders
 
 		// PS
 		{
-			PS::ToneMap = ShaderCompiler.CompileShader(
+			PS::ToneMap = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/PostProcess/ToneMap.hlsl",
 				g_PSEntryPoint,
@@ -56,7 +56,7 @@ struct Shaders
 
 		// CS
 		{
-			CS::EASU = ShaderCompiler.CompileShader(
+			CS::EASU = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
 				g_CSEntryPoint,
@@ -67,7 +67,7 @@ struct Shaders
 					{ L"SAMPLE_RCAS", L"0" },
 				});
 
-			CS::RCAS = ShaderCompiler.CompileShader(
+			CS::RCAS = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
 				g_CSEntryPoint,
@@ -85,11 +85,11 @@ struct Libraries
 {
 	inline static Library PathTrace;
 
-	static void Compile(const ShaderCompiler& ShaderCompiler)
+	static void Compile()
 	{
 		const auto& ExecutableDirectory = Application::ExecutableDirectory;
 
-		PathTrace = ShaderCompiler.CompileLibrary(ExecutableDirectory / L"Shaders/PathTrace.hlsl");
+		PathTrace = RenderCore::Compiler->CompileLibrary(ExecutableDirectory / L"Shaders/PathTrace.hlsl");
 	}
 };
 
@@ -100,7 +100,7 @@ struct RootSignatures
 
 	static void Compile(RenderDevice& Device)
 	{
-		Tonemap = Device.CreateRootSignature(RenderCore::pDevice->CreateRootSignature(
+		Tonemap = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
@@ -112,7 +112,7 @@ struct RootSignatures
 				Builder.AllowSampleDescriptorHeapIndexing();
 			}));
 
-		FSR = Device.CreateRootSignature(RenderCore::pDevice->CreateRootSignature(
+		FSR = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.Add32BitConstants<0, 0>(2);
@@ -160,21 +160,21 @@ struct PipelineStates
 			Stream.DepthStencilState	 = DepthStencilState;
 			Stream.RTVFormats			 = RTFormatArray;
 
-			Tonemap = Device.CreatePipelineState(RenderCore::pDevice->CreatePipelineState(Stream));
+			Tonemap = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 		{
 			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
 			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
 			PSODesc.CS								  = Shaders::CS::EASU;
 
-			FSREASU = Device.CreatePipelineState(RenderCore::pDevice->CreateComputePipelineState(PSODesc));
+			FSREASU = Device.CreatePipelineState(RenderCore::Device->CreateComputePipelineState(PSODesc));
 		}
 		{
 			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
 			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
 			PSODesc.CS								  = Shaders::CS::RCAS;
 
-			FSRRCAS = Device.CreatePipelineState(RenderCore::pDevice->CreateComputePipelineState(PSODesc));
+			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreateComputePipelineState(PSODesc));
 		}
 	}
 };
@@ -200,7 +200,7 @@ struct RaytracingPipelineStates
 
 	static void Compile(RenderDevice& Device)
 	{
-		GlobalRS = Device.CreateRootSignature(RenderCore::pDevice->CreateRootSignature(
+		GlobalRS = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
@@ -238,7 +238,7 @@ struct RaytracingPipelineStates
 					16); // g_SamplerAnisotropicClamp	s5 | space0;
 			}));
 
-		LocalHitGroupRS = Device.CreateRootSignature(RenderCore::pDevice->CreateRootSignature(
+		LocalHitGroupRS = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.Add32BitConstants<0, 1>(1); // RootConstants	b0 | space1
@@ -249,7 +249,7 @@ struct RaytracingPipelineStates
 				Builder.SetAsLocalRootSignature();
 			}));
 
-		RTPSO = Device.CreateRaytracingPipelineState(RenderCore::pDevice->CreateRaytracingPipelineState(
+		RTPSO = Device.CreateRaytracingPipelineState(RenderCore::Device->CreateRaytracingPipelineState(
 			[&](RaytracingPipelineStateBuilder& Builder)
 			{
 				Builder.AddLibrary(Libraries::PathTrace, { g_RayGeneration, g_Miss, g_ShadowMiss, g_ClosestHit });
@@ -268,12 +268,6 @@ struct RaytracingPipelineStates
 											 + 8  // Ng
 											 + 8; // Ns
 
-				// constexpr UINT PayloadSize = sizeof(float) * 3		 // L
-				//							 + sizeof(float) * 3	 // beta
-				//							 + sizeof(float) * 3	 // p
-				//							 + sizeof(float) * 3	 // wi
-				//							 + sizeof(unsigned int)	 // Seed
-				//							 + sizeof(unsigned int); // Depth
 				Builder.SetRaytracingShaderConfig(PayloadSize, D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES);
 
 				// +1 for Primary, +1 for Shadow

@@ -47,8 +47,8 @@ public:
 	void OnBeginFrame() { Profiler.OnBeginFrame(); }
 	void OnEndFrame() { Profiler.OnEndFrame(); }
 
-	auto GetFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
-	auto GetAdapter4() const noexcept -> IDXGIAdapter4* { return Adapter4.Get(); }
+	auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
+	auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
 	auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
 	auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
 
@@ -77,46 +77,6 @@ public:
 	[[nodiscard]] D3D12RaytracingPipelineState CreateRaytracingPipelineState(
 		Delegate<void(RaytracingPipelineStateBuilder&)> Configurator);
 
-	void BindGraphicsDescriptorTable(const D3D12RootSignature& RootSignature, D3D12CommandContext& Context)
-	{
-		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
-		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
-			GetDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
-			GetDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
-
-		Context->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
-			ResourceDescriptor);
-		Context->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
-			ResourceDescriptor);
-		Context->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
-			SamplerDescriptor);
-	}
-
-	void BindComputeDescriptorTable(const D3D12RootSignature& RootSignature, D3D12CommandContext& Context)
-	{
-		// Assumes the RootSignature was created with AddDescriptorTableRootParameterToBuilder function called.
-		const UINT Offset = RootSignature.GetDesc().NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		D3D12_GPU_DESCRIPTOR_HANDLE ResourceDescriptor =
-			GetDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
-		D3D12_GPU_DESCRIPTOR_HANDLE SamplerDescriptor =
-			GetDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
-
-		Context->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
-			ResourceDescriptor);
-		Context->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
-			ResourceDescriptor);
-		Context->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
-			SamplerDescriptor);
-	}
-
 private:
 	static void OnDeviceRemoved(PVOID Context, BOOLEAN);
 
@@ -127,7 +87,7 @@ private:
 private:
 	Microsoft::WRL::ComPtr<IDXGIFactory6> Factory6;
 
-	Microsoft::WRL::ComPtr<IDXGIAdapter4> Adapter4;
+	Microsoft::WRL::ComPtr<IDXGIAdapter3> Adapter3;
 	DXGI_ADAPTER_DESC3					  AdapterDesc = {};
 
 	Microsoft::WRL::ComPtr<ID3D12Device>  Device;
@@ -144,6 +104,8 @@ private:
 	HANDLE								DeviceRemovedWaitHandle = nullptr;
 	wil::unique_event					DeviceRemovedEvent;
 
+	// Presents a single node
+	// TODO: Add Multi-Adapter support
 	D3D12LinkedDevice LinkedDevice;
 
 	D3D12Profiler Profiler;

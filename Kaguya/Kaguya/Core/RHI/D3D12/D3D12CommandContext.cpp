@@ -154,6 +154,50 @@ void D3D12CommandContext::SetPipelineState(D3D12RaytracingPipelineState* Raytrac
 	CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RaytracingPipelineState->GetApiHandle());
 }
 
+void D3D12CommandContext::SetGraphicsRootSignature(D3D12RootSignature* RootSignature)
+{
+	Cache.RootSignature = RootSignature;
+
+	CommandListHandle->SetGraphicsRootSignature(RootSignature->GetApiHandle());
+
+	UINT NumParameters		= RootSignature->GetDesc().NumParameters;
+	UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+		SamplerDescriptor);
+}
+
+void D3D12CommandContext::SetComputeRootSignature(D3D12RootSignature* RootSignature)
+{
+	Cache.RootSignature = RootSignature;
+
+	CommandListHandle->SetComputeRootSignature(RootSignature->GetApiHandle());
+
+	UINT NumParameters		= RootSignature->GetDesc().NumParameters;
+	UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+		SamplerDescriptor);
+}
+
 void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget)
 {
 	Cache.Graphics.RenderPass	= RenderPass;

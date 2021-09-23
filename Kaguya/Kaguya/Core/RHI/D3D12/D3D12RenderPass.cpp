@@ -10,9 +10,9 @@ D3D12RenderPass::D3D12RenderPass(D3D12Device* Parent, const RenderPassDesc& Desc
 
 	for (UINT i = 0; i < NumRenderTargets; ++i)
 	{
-		const auto& RHIRenderTarget = Desc.RenderTargets[i];
+		const auto& Attachment = Desc.RenderTargets[i];
 
-		RenderTargetFormats.RTFormats[i] = ToDxgiFormat(RHIRenderTarget.Format);
+		RenderTargetFormats.RTFormats[i] = ToDxgiFormat(Attachment.Format);
 	}
 	RenderTargetFormats.NumRenderTargets = NumRenderTargets;
 

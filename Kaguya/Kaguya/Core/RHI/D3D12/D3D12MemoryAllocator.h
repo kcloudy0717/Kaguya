@@ -51,10 +51,14 @@ public:
 	// Versions all the current constant data with SyncPoint to ensure memory is not overriden when it GPU uses it
 	void Version(D3D12CommandSyncPoint SyncPoint);
 
-	D3D12Allocation Allocate(UINT64 Size, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	[[nodiscard]] D3D12Allocation Allocate(
+		UINT64 Size,
+		UINT   Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 	template<typename T>
-	D3D12Allocation Allocate(const T& Data, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
+	[[nodiscard]] D3D12Allocation Allocate(
+		const T& Data,
+		UINT	 Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
 	{
 		D3D12Allocation Allocation = Allocate(sizeof(T), Alignment);
 		std::memcpy(Allocation.CpuVirtualAddress, &Data, sizeof(T));
@@ -62,9 +66,9 @@ public:
 	}
 
 private:
-	D3D12LinearAllocatorPage* RequestPage();
+	[[nodiscard]] D3D12LinearAllocatorPage* RequestPage();
 
-	D3D12LinearAllocatorPage* CreateNewPage(UINT64 PageSize) const;
+	[[nodiscard]] D3D12LinearAllocatorPage* CreateNewPage(UINT64 PageSize) const;
 
 	void DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages);
 

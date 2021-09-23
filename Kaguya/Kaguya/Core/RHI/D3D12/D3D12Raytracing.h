@@ -35,7 +35,7 @@ public:
 	auto end() noexcept { return RaytracingInstanceDescs.end(); }
 
 	[[nodiscard]] UINT Size() const noexcept { return static_cast<UINT>(RaytracingInstanceDescs.size()); }
-	[[nodiscard]] bool Valid() const noexcept { return !RaytracingInstanceDescs.empty(); }
+	[[nodiscard]] bool IsValid() const noexcept { return !RaytracingInstanceDescs.empty(); }
 
 	void Reset() noexcept;
 
@@ -147,24 +147,23 @@ public:
 
 				// Search within a block to find space for a new allocation
 				// Modifies subBlock if able to suballocate in the block
-				bool foundFreeSubBlock = FindFreeSubBlock(Page, &Section, AlignedSizeInBytes);
-
-				bool continueBlockSearch = false;
+				bool FoundFreeSubBlock	 = FindFreeSubBlock(Page, &Section, AlignedSizeInBytes);
+				bool ContinueBlockSearch = false;
 
 				// No memory reuse opportunities available so add a new suballocation
-				if (foundFreeSubBlock == false)
+				if (!FoundFreeSubBlock)
 				{
-					const uint64_t offsetInBytes = Page->CurrentOffset + AlignedSizeInBytes;
+					UINT64 OffsetInBytes = Page->CurrentOffset + AlignedSizeInBytes;
 
 					// Add a suballocation to the current offset of an existing block
-					if (offsetInBytes <= Page->PageSize)
+					if (OffsetInBytes <= Page->PageSize)
 					{
 						// Only ever change the memory size if this is a new allocation
 						Section.Size		   = AlignedSizeInBytes;
 						Section.Offset		   = Page->CurrentOffset;
 						Section.VirtualAddress = Page->VirtualAddress + Page->CurrentOffset;
 
-						Page->CurrentOffset = offsetInBytes;
+						Page->CurrentOffset = OffsetInBytes;
 						Page->NumSubBlocks++;
 					}
 					// If this block can't support this allocation
@@ -175,16 +174,16 @@ public:
 						{
 							// If suballocation block size is too small then do custom allocation of
 							// individual blocks that match the resource's size
-							uint64_t newBlockSize =
+							UINT64 NewBlockSize =
 								AlignedSizeInBytes > DefaultPageSize ? AlignedSizeInBytes : DefaultPageSize;
-							CreatePage(newBlockSize);
+							CreatePage(NewBlockSize);
 							NumPages++;
 						}
-						continueBlockSearch = true;
+						ContinueBlockSearch = true;
 					}
 				}
 				// Assign SubBlock to the Block and discontinue suballocation search
-				if (continueBlockSearch == false)
+				if (ContinueBlockSearch == false)
 				{
 					Section.Parent = Pages[i].get();
 					break;

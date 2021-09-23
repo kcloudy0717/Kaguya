@@ -80,8 +80,8 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 
 void PathIntegrator::Initialize()
 {
-	Shaders::Compile(*RenderCore::pShaderCompiler);
-	Libraries::Compile(*RenderCore::pShaderCompiler);
+	Shaders::Compile();
+	Libraries::Compile();
 	RootSignatures::Compile(RenderDevice);
 	PipelineStates::Compile(RenderDevice);
 	RaytracingPipelineStates::Compile(RenderDevice);
@@ -93,16 +93,16 @@ void PathIntegrator::Initialize()
 							   .LoadOp	   = ELoadOp::Clear,
 							   .StoreOp	   = EStoreOp::Store,
 							   .ClearValue = ClearValue(D3D12SwapChain::RHIFormat, Color) });
-		TonemapRenderPass = D3D12RenderPass(RenderCore::pDevice, Desc);
+		TonemapRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
 	}
 
 	AccelerationStructure = RaytracingAccelerationStructure(1);
 	AccelerationStructure.Initialize();
 
-	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::pDevice->GetDevice(), 6_MiB);
+	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
 
 	Materials = D3D12Buffer(
-		RenderCore::pDevice->GetDevice(),
+		RenderCore::Device->GetDevice(),
 		sizeof(HLSL::Material) * World::MaterialLimit,
 		sizeof(HLSL::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -111,7 +111,7 @@ void PathIntegrator::Initialize()
 	pMaterial = Materials.GetCpuVirtualAddress<HLSL::Material>();
 
 	Lights = D3D12Buffer(
-		RenderCore::pDevice->GetDevice(),
+		RenderCore::Device->GetDevice(),
 		sizeof(HLSL::Light) * World::LightLimit,
 		sizeof(HLSL::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -134,7 +134,7 @@ void PathIntegrator::Initialize()
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
-				if (!AccelerationStructure.Valid())
+				if (!AccelerationStructure.IsValid())
 				{
 					return;
 				}
@@ -166,22 +166,16 @@ void PathIntegrator::Initialize()
 				g_GlobalConstants.NumLights				= NumLights;
 				g_GlobalConstants.TotalFrameCount		= Counter++;
 				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
-				g_GlobalConstants.NumAccumulatedSamples = Settings::NumAccumulatedSamples++;
+				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
 				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
 				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
 
-				D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(g_GlobalConstants);
-
 				Context.SetPipelineState(RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
-				Context->SetComputeRootSignature(*RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
-				Context->SetComputeRootConstantBufferView(0, Allocation.GpuVirtualAddress);
+				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
+				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
 				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
-
-				RenderCore::pDevice->BindComputeDescriptorTable(
-					*RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS),
-					Context);
 
 				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
 				Desc.Width					  = ViewData.RenderWidth;
@@ -226,10 +220,17 @@ void PathIntegrator::Initialize()
 			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
+				struct RootConstants
+				{
+					unsigned int InputIndex;
+				} Constants;
+				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
+
 				D3D12ScopedEvent(Context, "Tonemap");
 
 				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Tonemap));
-				Context->SetGraphicsRootSignature(*RenderDevice.GetRootSignature(RootSignatures::Tonemap));
+				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Tonemap));
+				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
 
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 				Context.SetViewport(
@@ -238,14 +239,6 @@ void PathIntegrator::Initialize()
 
 				Context.BeginRenderPass(&TonemapRenderPass, &Registry.GetRenderTarget(Parameter.RenderTarget));
 				{
-					struct RootConstants
-					{
-						unsigned int InputIndex;
-					} Constants;
-					Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
-
-					Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
-
 					Context.DrawInstanced(3, 1, 0, 0);
 				}
 				Context.EndRenderPass();
@@ -279,7 +272,7 @@ void PathIntegrator::Initialize()
 
 				D3D12ScopedEvent(Context, "FSR");
 
-				Context->SetComputeRootSignature(*RenderDevice.GetRootSignature(RootSignatures::FSR));
+				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
 
 				// This value is the image region dimension that each thread group of the FSR shader operates on
 				constexpr UINT ThreadSize		 = 16;
@@ -311,11 +304,8 @@ void PathIntegrator::Initialize()
 						static_cast<AF1>(ViewData.ViewportHeight));
 					FsrEasu.Sample.x = 0;
 
-					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
-					std::memcpy(Allocation.CpuVirtualAddress, &FsrEasu, sizeof(FSRConstants));
-
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context->SetComputeRootConstantBufferView(1, Allocation.GpuVirtualAddress);
+					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
 
 					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 				}
@@ -338,11 +328,8 @@ void PathIntegrator::Initialize()
 					FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
 					FsrRcas.Sample.x = 0;
 
-					D3D12Allocation Allocation = Context.CpuConstantAllocator.Allocate(sizeof(FSRConstants));
-					std::memcpy(Allocation.CpuVirtualAddress, &FsrRcas, sizeof(FSRConstants));
-
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context->SetComputeRootConstantBufferView(1, Allocation.GpuVirtualAddress);
+					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
 
 					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 				}
@@ -366,34 +353,30 @@ void PathIntegrator::Initialize()
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
 
-	ShaderBindingTable.Generate(RenderCore::pDevice->GetDevice());
+	ShaderBindingTable.Generate(RenderCore::Device->GetDevice());
 }
 
 void PathIntegrator::Render(D3D12CommandContext& Context)
 {
+	bool ResetPathIntegrator = false;
+
 	if (ImGui::Begin("Path Integrator"))
 	{
-		bool Dirty = false;
-
 		if (ImGui::Button("Restore Defaults"))
 		{
 			PathIntegratorState = {};
-			Dirty = true;
+			ResetPathIntegrator = true;
 		}
 
-		Dirty |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
-		Dirty |= ImGui::SliderScalar(
+		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
+		ResetPathIntegrator |= ImGui::SliderScalar(
 			"Max Depth",
 			ImGuiDataType_U32,
 			&PathIntegratorState.MaxDepth,
-			&PathIntegratorState.MinimumDepth,
-			&PathIntegratorState.MaximumDepth);
+			&PathIntegratorState::MinimumDepth,
+			&PathIntegratorState::MaximumDepth);
 
-		if (Dirty)
-		{
-			Settings::NumAccumulatedSamples = 0;
-		}
-		ImGui::Text("Num Samples Accumulated: %u", Settings::NumAccumulatedSamples);
+		ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
 	}
 	ImGui::End();
 
@@ -403,19 +386,19 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	FSRState.ViewportHeight = ViewportHeight;
 	if (ImGui::Begin("FSR"))
 	{
-		ImGui::Checkbox("Enable", &FSRState.Enable);
+		ResetPathIntegrator |= ImGui::Checkbox("Enable", &FSRState.Enable);
 
 		constexpr const char* QualityModes[] = { "Ultra Quality (1.3x)",
 												 "Quality (1.5x)",
 												 "Balanced (1.7x)",
 												 "Performance (2x)" };
-		ImGui::Combo(
+		ResetPathIntegrator |= ImGui::Combo(
 			"Quality",
 			reinterpret_cast<int*>(&FSRState.QualityMode),
 			QualityModes,
 			static_cast<int>(std::size(QualityModes)));
 
-		ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
+		ResetPathIntegrator |= ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
 
 		ImGui::Text("Render resolution: %dx%d", RenderWidth, RenderHeight);
 		ImGui::Text("Viewport resolution: %dx%d", ViewportWidth, ViewportHeight);
@@ -440,9 +423,9 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 		});
 
 	D3D12CommandSyncPoint CopySyncPoint;
-	if (AccelerationStructure.Valid())
+	if (AccelerationStructure.IsValid())
 	{
-		D3D12CommandContext& Copy = RenderCore::pDevice->GetDevice()->GetCopyContext1();
+		D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
 		Copy.OpenCommandList();
 
 		// Update shader table
@@ -471,9 +454,9 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	}
 
 	D3D12CommandSyncPoint ASBuildSyncPoint;
-	if (AccelerationStructure.Valid())
+	if (AccelerationStructure.IsValid())
 	{
-		D3D12CommandContext& AsyncCompute = RenderCore::pDevice->GetDevice()->GetAsyncComputeCommandContext();
+		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 
 		bool AnyBuild = false;
@@ -526,13 +509,17 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 	if (pWorld->WorldState & EWorldState::EWorldState_Update)
 	{
-		pWorld->WorldState				= EWorldState_Render;
-		Settings::NumAccumulatedSamples = 0;
+		pWorld->WorldState	= EWorldState_Render;
+		ResetPathIntegrator = true;
 	}
 
 	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
 	Context.GetCommandQueue()->WaitForSyncPoint(ASBuildSyncPoint);
 
+	if (ResetPathIntegrator)
+	{
+		NumTemporalSamples = 0;
+	}
 	RenderGraph.Execute(Context);
 	RenderGraph.ValidViewport = true;
 }
