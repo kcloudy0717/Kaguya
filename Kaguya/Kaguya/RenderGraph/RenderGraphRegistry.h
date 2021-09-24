@@ -18,7 +18,7 @@ public:
 
 	void Initialize();
 
-	void RealizeResources();
+	void RealizeResources(RenderGraph& RenderGraph);
 
 	[[nodiscard]] auto GetTexture(RenderResourceHandle Handle) -> D3D12Texture&;
 

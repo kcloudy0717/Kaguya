@@ -110,7 +110,15 @@ struct RenderResourceHandle
 {
 	auto operator<=>(const RenderResourceHandle&) const = default;
 
-	bool IsValid() const noexcept { return Type != ERGResourceType::Unknown && Id != UINT32_MAX; }
+	[[nodiscard]] bool IsValid() const noexcept { return Type != ERGResourceType::Unknown && Id != UINT_MAX; }
+
+	void Invalidate()
+	{
+		Type	= ERGResourceType::Unknown;
+		State	= ERGHandleState::Dirty;
+		Version = 0;
+		Id		= UINT_MAX;
+	}
 
 	ERGResourceType Type	: 16;
 	ERGHandleState	State	: 2;

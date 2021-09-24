@@ -89,7 +89,9 @@ void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
 
 void RenderGraph::AddRenderPass(const std::string& Name, RenderPassCallback Callback)
 {
-	RenderPass* NewRenderPass = new RenderPass(this, Name);
+	GraphDirty = true;
+
+	RenderPass* NewRenderPass = Allocator.Construct<RenderPass>(this, Name);
 	Scheduler.SetCurrentRenderPass(NewRenderPass);
 	NewRenderPass->Callback = Callback(Scheduler, NewRenderPass->Scope);
 	Scheduler.SetCurrentRenderPass(nullptr);
@@ -114,6 +116,15 @@ RenderScope& RenderGraph::GetScope(const std::string& Name) const
 
 void RenderGraph::Setup()
 {
+#define RENDER_GRAPH_DEBUG_LOG 0
+
+	if (!GraphDirty)
+	{
+		return;
+	}
+
+	GraphDirty = false;
+
 	// https://levelup.gitconnected.com/organizing-gpu-work-with-directed-acyclic-graphs-f3fd5f2c2af3
 	// https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/
 	// https://andrewcjp.wordpress.com/2019/09/28/the-render-graph-architecture/
@@ -125,7 +136,7 @@ void RenderGraph::Setup()
 
 	for (size_t i = 0; i < RenderPasses.size(); ++i)
 	{
-		RenderPass* Node = RenderPasses[i].get();
+		RenderPass* Node = RenderPasses[i];
 		if (!Node->HasAnyDependencies())
 		{
 			continue;
@@ -140,7 +151,7 @@ void RenderGraph::Setup()
 				continue;
 			}
 
-			RenderPass* Neighbor = RenderPasses[j].get();
+			RenderPass* Neighbor = RenderPasses[j];
 			for (auto ReadResource : Neighbor->Reads)
 			{
 				// If other pass reads a subresource written by the current node, then it depends on current node and is
@@ -166,17 +177,23 @@ void RenderGraph::Setup()
 		}
 	}
 
+#if RENDER_GRAPH_DEBUG_LOG
 	std::cout << "Topological Indices" << std::endl;
+#endif
 	while (!Stack.empty())
 	{
 		size_t i						  = Stack.top();
 		RenderPasses[i]->TopologicalIndex = i;
-		TopologicalSortedPasses.push_back(RenderPasses[i].get());
+		TopologicalSortedPasses.push_back(RenderPasses[i]);
 		// Debug
+#if RENDER_GRAPH_DEBUG_LOG
 		std::cout << Stack.top() << " ";
+#endif
 		Stack.pop();
 	}
+#if RENDER_GRAPH_DEBUG_LOG
 	std::cout << std::endl;
+#endif
 
 	// Longest path search
 	// Render passes in a dependency level share the same recursion depth,
@@ -209,12 +226,14 @@ void RenderGraph::Setup()
 		DependencyLevel.PostInitialize();
 	}
 
+#if RENDER_GRAPH_DEBUG_LOG
 	std::cout << "Longest Path" << std::endl;
 	for (auto d : Distances)
 	{
 		std::cout << d << " ";
 	}
 	std::cout << std::endl;
+#endif
 }
 
 void RenderGraph::Compile()
@@ -226,16 +245,19 @@ void RenderGraph::Execute(D3D12CommandContext& Context)
 {
 	for (RGTexture& Texture : Scheduler.Textures)
 	{
-		if ((RenderResolutionResized && Texture.Desc.Resolution == ETextureResolution::Render) ||
-			(ViewportResolutionResized && Texture.Desc.Resolution == ETextureResolution::Viewport))
+		if (ResolutionChanged)
 		{
-			Texture.Handle.State = ERGHandleState::Dirty;
+			if (Texture.Desc.Resolution == ETextureResolution::Render ||
+				Texture.Desc.Resolution == ETextureResolution::Viewport)
+			{
+				LOG_INFO("Handle dirty, resizing...");
+				Texture.Handle.State = ERGHandleState::Dirty;
+			}
 		}
 	}
+	ResolutionChanged = false;
 
-	RenderResolutionResized = ViewportResolutionResized = false;
-
-	Registry.RealizeResources();
+	Registry.RealizeResources(*this);
 	for (auto& RenderPass : RenderPasses)
 	{
 		auto& ViewData			= RenderPass->Scope.Get<RenderGraphViewData>();

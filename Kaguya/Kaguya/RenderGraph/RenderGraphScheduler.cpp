@@ -9,9 +9,9 @@ auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureD
 	}
 
 	RGTexture& Texture = Textures.emplace_back();
-	Texture.Name		= Name;
-	Texture.Handle		= TextureHandle;
-	Texture.Desc		= Desc;
+	Texture.Name	   = Name;
+	Texture.Handle	   = TextureHandle;
+	Texture.Desc	   = Desc;
 
 	++TextureHandle.Id;
 

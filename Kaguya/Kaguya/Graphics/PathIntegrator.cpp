@@ -34,14 +34,9 @@ struct FSR
 
 void* PathIntegrator::GetViewportDescriptor()
 {
-	if (RenderGraph.ValidViewport)
+	if (ValidViewport)
 	{
-		RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
-		RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
-
-		return FSRState.Enable
-				   ? reinterpret_cast<void*>(RenderGraph.GetRegistry().GetTextureSRV(FSROutput).GetGpuHandle().ptr)
-				   : reinterpret_cast<void*>(RenderGraph.GetRegistry().GetTextureSRV(TonemapOutput).GetGpuHandle().ptr);
+		return reinterpret_cast<void*>(Registry.GetTextureSRV(Viewport).GetGpuHandle().ptr);
 	}
 
 	return nullptr;
@@ -49,6 +44,14 @@ void* PathIntegrator::GetViewportDescriptor()
 
 void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
+	if (ViewportWidth != Width || ViewportHeight != Height)
+	{
+		ViewportWidth = Width;
+		ViewportHeight = Height;
+		ResolutionChanged = true;
+		ValidViewport = false;
+	}
+
 	float r = 1.5f;
 	switch (FSRState.QualityMode)
 	{
@@ -118,231 +121,6 @@ void PathIntegrator::Initialize()
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.Initialize();
 	pLights = Lights.GetCpuVirtualAddress<HLSL::Light>();
-
-	RenderGraph.AddRenderPass(
-		"Path Trace",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			auto&		Parameter = Scope.Get<PathTrace>();
-			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
-
-			Parameter.Output = Scheduler.CreateTexture(
-				"Path Trace Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
-
-			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
-			{
-				D3D12ScopedEvent(Context, "Path Trace");
-
-				if (!AccelerationStructure.IsValid())
-				{
-					return;
-				}
-
-				static unsigned int Counter = 0;
-				_declspec(align(256)) struct GlobalConstants
-				{
-					HLSL::Camera Camera;
-
-					// x, y = Resolution
-					// z, w = 1 / Resolution
-					DirectX::XMFLOAT4 Resolution;
-
-					unsigned int NumLights;
-					unsigned int TotalFrameCount;
-
-					unsigned int MaxDepth;
-					unsigned int NumAccumulatedSamples;
-
-					unsigned int RenderTarget;
-
-					float SkyIntensity;
-				} g_GlobalConstants						= {};
-				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*pWorld->ActiveCamera);
-				g_GlobalConstants.Resolution			= { static_cast<float>(ViewportWidth),
-													static_cast<float>(ViewportHeight),
-													1.0f / static_cast<float>(ViewportWidth),
-													1.0f / static_cast<float>(ViewportHeight) };
-				g_GlobalConstants.NumLights				= NumLights;
-				g_GlobalConstants.TotalFrameCount		= Counter++;
-				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
-				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
-				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
-
-				Context.SetPipelineState(RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
-				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
-				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
-				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
-				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
-
-				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
-				Desc.Width					  = ViewData.RenderWidth;
-				Desc.Height					  = ViewData.RenderHeight;
-				Desc.Depth					  = 1;
-
-				Context.DispatchRays(&Desc);
-				Context.UAVBarrier(nullptr);
-			};
-		});
-
-	RenderGraph.AddRenderPass(
-		"Tonemap",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			auto& PathTraceData = Scheduler.GetParentRenderGraph()->GetScope("Path Trace").Get<PathTrace>();
-
-			FLOAT Color[]	 = { 1, 1, 1, 1 };
-			auto  ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format_sRGB, Color);
-
-			auto&		Parameter = Scope.Get<Tonemap>();
-			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
-
-			Parameter.Output = Scheduler.CreateTexture(
-				"Tonemap Output",
-				RGTextureDesc::Texture2D(
-					ETextureResolution::Render,
-					D3D12SwapChain::Format,
-					0,
-					0,
-					1,
-					TextureFlag_AllowRenderTarget,
-					ClearValue));
-
-			{
-				RGRenderTargetDesc Desc = {};
-				Desc.AddRenderTarget(Parameter.Output, true);
-
-				Parameter.RenderTarget = Scheduler.CreateRenderTarget(Desc);
-			}
-
-			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
-			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
-			{
-				struct RootConstants
-				{
-					unsigned int InputIndex;
-				} Constants;
-				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
-
-				D3D12ScopedEvent(Context, "Tonemap");
-
-				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Tonemap));
-				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Tonemap));
-				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
-
-				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				Context.SetViewport(
-					RHIViewport(0.0f, 0.0f, ViewData.GetRenderWidth<FLOAT>(), ViewData.GetRenderHeight<FLOAT>()));
-				Context.SetScissorRect(RHIRect(0, 0, ViewData.RenderWidth, ViewData.RenderHeight));
-
-				Context.BeginRenderPass(&TonemapRenderPass, &Registry.GetRenderTarget(Parameter.RenderTarget));
-				{
-					Context.DrawInstanced(3, 1, 0, 0);
-				}
-				Context.EndRenderPass();
-			};
-		});
-
-	RenderGraph.AddRenderPass(
-		"FSR",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			auto& TonemapScope = Scheduler.GetParentRenderGraph()->GetScope("Tonemap");
-
-			auto&		Parameter = Scope.Get<FSR>();
-			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
-
-			Parameter.EASUOutput = Scheduler.CreateTexture(
-				"EASU Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
-			Parameter.RCASOutput = Scheduler.CreateTexture(
-				"RCAS Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
-
-			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);
-			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
-			{
-				struct RootConstants
-				{
-					unsigned int InputTID;
-					unsigned int OutputTID;
-				};
-
-				D3D12ScopedEvent(Context, "FSR");
-
-				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
-
-				// This value is the image region dimension that each thread group of the FSR shader operates on
-				constexpr UINT ThreadSize		 = 16;
-				UINT		   ThreadGroupCountX = (ViewData.ViewportWidth + (ThreadSize - 1)) / ThreadSize;
-				UINT		   ThreadGroupCountY = (ViewData.ViewportHeight + (ThreadSize - 1)) / ThreadSize;
-
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.EASUOutput),
-					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-				{
-					D3D12ScopedEvent(Context, "EASU");
-
-					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSREASU));
-
-					RootConstants RC	  = { Registry.GetTextureIndex(TonemapInput),
-										  Registry.GetRWTextureIndex(Parameter.EASUOutput) };
-					FSRConstants  FsrEasu = {};
-					FsrEasuCon(
-						reinterpret_cast<AU1*>(&FsrEasu.Const0),
-						reinterpret_cast<AU1*>(&FsrEasu.Const1),
-						reinterpret_cast<AU1*>(&FsrEasu.Const2),
-						reinterpret_cast<AU1*>(&FsrEasu.Const3),
-						static_cast<AF1>(FSRState.RenderWidth),
-						static_cast<AF1>(FSRState.RenderHeight),
-						static_cast<AF1>(FSRState.RenderWidth),
-						static_cast<AF1>(FSRState.RenderHeight),
-						static_cast<AF1>(ViewData.ViewportWidth),
-						static_cast<AF1>(ViewData.ViewportHeight));
-					FsrEasu.Sample.x = 0;
-
-					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
-
-					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
-				}
-
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.EASUOutput),
-					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.RCASOutput),
-					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-				{
-					D3D12ScopedEvent(Context, "RCAS");
-
-					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSRRCAS));
-
-					RootConstants RC	  = { Registry.GetTextureIndex(Parameter.EASUOutput),
-										  Registry.GetRWTextureIndex(Parameter.RCASOutput) };
-					FSRConstants  FsrRcas = {};
-					FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
-					FsrRcas.Sample.x = 0;
-
-					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
-
-					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
-				}
-
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.RCASOutput),
-					D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-				Context.FlushResourceBarriers();
-			};
-		});
-
-	RenderGraph.Setup();
-	RenderGraph.Compile();
 
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
@@ -520,6 +298,283 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	{
 		NumTemporalSamples = 0;
 	}
+
+	RenderGraph RenderGraph(Allocator, Scheduler, Registry);
+	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight, ResolutionChanged);
+	ResolutionChanged = false;
+
+	RenderGraph.AddRenderPass(
+		"Path Trace",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			auto&		Parameter = Scope.Get<PathTrace>();
+			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+
+			Parameter.Output = Scheduler.CreateTexture(
+				"Path Trace Output",
+				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
+
+			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+			{
+				D3D12ScopedEvent(Context, "Path Trace");
+
+				if (!AccelerationStructure.IsValid())
+				{
+					return;
+				}
+
+				_declspec(align(256)) struct GlobalConstants
+				{
+					HLSL::Camera Camera;
+
+					// x, y = Resolution
+					// z, w = 1 / Resolution
+					DirectX::XMFLOAT4 Resolution;
+
+					unsigned int NumLights;
+					unsigned int TotalFrameCount;
+
+					unsigned int MaxDepth;
+					unsigned int NumAccumulatedSamples;
+
+					unsigned int RenderTarget;
+
+					float SkyIntensity;
+				} g_GlobalConstants						= {};
+				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*pWorld->ActiveCamera);
+				g_GlobalConstants.Resolution			= { static_cast<float>(ViewportWidth),
+													static_cast<float>(ViewportHeight),
+													1.0f / static_cast<float>(ViewportWidth),
+													1.0f / static_cast<float>(ViewportHeight) };
+				g_GlobalConstants.NumLights				= NumLights;
+				g_GlobalConstants.TotalFrameCount		= FrameCounter++;
+				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
+				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
+				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
+				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
+
+				Context.SetPipelineState(RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
+				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
+				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
+				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
+				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
+				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
+
+				D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
+				Desc.Width					  = ViewData.RenderWidth;
+				Desc.Height					  = ViewData.RenderHeight;
+				Desc.Depth					  = 1;
+
+				Context.DispatchRays(&Desc);
+				Context.UAVBarrier(nullptr);
+			};
+		});
+
+	RenderGraph.AddRenderPass(
+		"Tonemap",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			auto& PathTraceData = RenderGraph.GetScope("Path Trace").Get<PathTrace>();
+
+			FLOAT Color[]	 = { 1, 1, 1, 1 };
+			auto  ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format_sRGB, Color);
+
+			auto&		Parameter = Scope.Get<Tonemap>();
+			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+
+			Parameter.Output = Scheduler.CreateTexture(
+				"Tonemap Output",
+				RGTextureDesc::Texture2D(
+					ETextureResolution::Render,
+					D3D12SwapChain::Format,
+					0,
+					0,
+					1,
+					TextureFlag_AllowRenderTarget,
+					ClearValue));
+
+			{
+				RGRenderTargetDesc Desc = {};
+				Desc.AddRenderTarget(Parameter.Output, true);
+
+				Parameter.RenderTarget = Scheduler.CreateRenderTarget(Desc);
+			}
+
+			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
+			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+			{
+				struct RootConstants
+				{
+					unsigned int InputIndex;
+				} Constants;
+				Constants.InputIndex = Registry.GetTextureIndex(PathTraceInput);
+
+				D3D12ScopedEvent(Context, "Tonemap");
+
+				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Tonemap));
+				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Tonemap));
+				Context->SetGraphicsRoot32BitConstants(0, 1, &Constants, 0);
+
+				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				Context.SetViewport(
+					RHIViewport(0.0f, 0.0f, ViewData.GetRenderWidth<FLOAT>(), ViewData.GetRenderHeight<FLOAT>()));
+				Context.SetScissorRect(RHIRect(0, 0, ViewData.RenderWidth, ViewData.RenderHeight));
+
+				Context.BeginRenderPass(&TonemapRenderPass, &Registry.GetRenderTarget(Parameter.RenderTarget));
+				{
+					Context.DrawInstanced(3, 1, 0, 0);
+				}
+				Context.EndRenderPass();
+			};
+		});
+
+	RenderGraph.AddRenderPass(
+		"FSR",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			auto& TonemapScope = RenderGraph.GetScope("Tonemap");
+
+			auto&		Parameter = Scope.Get<FSR>();
+			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+
+			Parameter.EASUOutput = Scheduler.CreateTexture(
+				"EASU Output",
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
+			Parameter.RCASOutput = Scheduler.CreateTexture(
+				"RCAS Output",
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
+
+			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);
+			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+			{
+				struct RootConstants
+				{
+					unsigned int InputTID;
+					unsigned int OutputTID;
+				};
+
+				D3D12ScopedEvent(Context, "FSR");
+
+				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
+
+				// This value is the image region dimension that each thread group of the FSR shader operates on
+				constexpr UINT ThreadSize		 = 16;
+				UINT		   ThreadGroupCountX = (ViewData.ViewportWidth + (ThreadSize - 1)) / ThreadSize;
+				UINT		   ThreadGroupCountY = (ViewData.ViewportHeight + (ThreadSize - 1)) / ThreadSize;
+
+				Context.TransitionBarrier(
+					&Registry.GetTexture(Parameter.EASUOutput),
+					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+				{
+					D3D12ScopedEvent(Context, "EASU");
+
+					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSREASU));
+
+					RootConstants RC	  = { Registry.GetTextureIndex(TonemapInput),
+										  Registry.GetRWTextureIndex(Parameter.EASUOutput) };
+					FSRConstants  FsrEasu = {};
+					FsrEasuCon(
+						reinterpret_cast<AU1*>(&FsrEasu.Const0),
+						reinterpret_cast<AU1*>(&FsrEasu.Const1),
+						reinterpret_cast<AU1*>(&FsrEasu.Const2),
+						reinterpret_cast<AU1*>(&FsrEasu.Const3),
+						static_cast<AF1>(FSRState.RenderWidth),
+						static_cast<AF1>(FSRState.RenderHeight),
+						static_cast<AF1>(FSRState.RenderWidth),
+						static_cast<AF1>(FSRState.RenderHeight),
+						static_cast<AF1>(ViewData.ViewportWidth),
+						static_cast<AF1>(ViewData.ViewportHeight));
+					FsrEasu.Sample.x = 0;
+
+					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
+
+					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
+				}
+
+				Context.TransitionBarrier(
+					&Registry.GetTexture(Parameter.EASUOutput),
+					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+				Context.TransitionBarrier(
+					&Registry.GetTexture(Parameter.RCASOutput),
+					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+				{
+					D3D12ScopedEvent(Context, "RCAS");
+
+					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSRRCAS));
+
+					RootConstants RC	  = { Registry.GetTextureIndex(Parameter.EASUOutput),
+										  Registry.GetRWTextureIndex(Parameter.RCASOutput) };
+					FSRConstants  FsrRcas = {};
+					FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
+					FsrRcas.Sample.x = 0;
+
+					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
+
+					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
+				}
+
+				Context.TransitionBarrier(
+					&Registry.GetTexture(Parameter.RCASOutput),
+					D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+				Context.FlushResourceBarriers();
+			};
+		});
+
+	RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
+	RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
+
+	Viewport	  = FSRState.Enable ? FSROutput : TonemapOutput;
+	ValidViewport = true;
+
+	RenderGraph.Setup();
+	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
-	RenderGraph.ValidViewport = true;
+
+	if (ImGui::Begin("Render Graph"))
+	{
+		for (const auto& RenderPass : RenderGraph)
+		{
+			char Label[MAX_PATH] = {};
+			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
+			if (ImGui::TreeNode(Label))
+			{
+				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
+													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+
+				ImGui::Text("Inputs");
+				if (ImGui::BeginTable("Inputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Reads)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::Text("Outputs");
+				if (ImGui::BeginTable("Outputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Writes)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::TreePop();
+			}
+		}
+	}
+	ImGui::End();
 }

@@ -8,6 +8,8 @@ class Renderer
 public:
 	Renderer(World* pWorld)
 		: pWorld(pWorld)
+		, Allocator(64 * 1024)
+		, Registry(Scheduler)
 	{
 	}
 	virtual ~Renderer() = default;
@@ -35,6 +37,11 @@ protected:
 	UINT ViewportWidth = 0, ViewportHeight = 0;
 	UINT RenderWidth = 0, RenderHeight = 0;
 
-	RenderDevice RenderDevice;
-	RenderGraph	 RenderGraph;
+	RenderDevice		 RenderDevice;
+	RenderGraphAllocator Allocator;
+	RenderGraphScheduler Scheduler;
+	RenderGraphRegistry	 Registry;
+
+	bool ResolutionChanged = true;
+	bool ValidViewport	   = false;
 };

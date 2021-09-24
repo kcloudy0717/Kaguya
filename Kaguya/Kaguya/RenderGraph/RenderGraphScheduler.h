@@ -30,21 +30,27 @@ struct RGRenderTargetDesc
 	RenderResourceHandle DepthStencil;
 };
 
-class RenderGraphScheduler : public RenderGraphChild
+class RenderGraphScheduler
 {
 public:
-	RenderGraphScheduler(RenderGraph* Parent)
-		: RenderGraphChild(Parent)
+	RenderGraphScheduler()
 	{
-		TextureHandle.Type	  = ERGResourceType::Texture;
-		TextureHandle.State	  = ERGHandleState::Dirty;
+		TextureHandle.Type		= ERGResourceType::Texture;
+		RenderTargetHandle.Type = ERGResourceType::RenderTarget;
+	}
+
+	void Reset()
+	{
+		TextureHandle.State	  = ERGHandleState::Ready;
 		TextureHandle.Version = 0;
 		TextureHandle.Id	  = 0;
 
-		RenderTargetHandle.Type	   = ERGResourceType::RenderTarget;
-		RenderTargetHandle.State   = ERGHandleState::Dirty;
+		RenderTargetHandle.State   = ERGHandleState::Ready;
 		RenderTargetHandle.Version = 0;
 		RenderTargetHandle.Id	   = 0;
+
+		Textures.clear();
+		RenderTargets.clear();
 	}
 
 	[[nodiscard]] auto CreateBuffer(std::string_view Name, const RGBufferDesc& Desc) -> RenderResourceHandle;
@@ -94,9 +100,9 @@ private:
 
 	RenderPass* CurrentRenderPass = nullptr;
 
-	RenderResourceHandle   TextureHandle;
-	std::vector<RGTexture> Textures;
+	RenderResourceHandle TextureHandle;
+	RenderResourceHandle RenderTargetHandle;
 
-	RenderResourceHandle			RenderTargetHandle;
+	std::vector<RGTexture>			Textures;
 	std::vector<RGRenderTargetDesc> RenderTargets;
 };

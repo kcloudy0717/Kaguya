@@ -8,14 +8,7 @@ void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 		return;
 	}
 
-	ViewportWidth  = Width;
-	ViewportHeight = Height;
-
 	SetViewportResolution(Width, Height);
-
-	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight);
-	RenderGraph.GetRegistry().RealizeResources();
-	RenderGraph.ValidViewport = false;
 }
 
 void Renderer::OnInitialize()
@@ -41,50 +34,6 @@ void Renderer::OnRender()
 			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AvgTime, iter.MaxTime);
 			ImGui::SameLine();
 			ImGui::NewLine();
-		}
-	}
-	ImGui::End();
-
-	if (ImGui::Begin("Render Graph"))
-	{
-		for (const auto& RenderPass : RenderGraph)
-		{
-			char Label[MAX_PATH] = {};
-			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
-			if (ImGui::TreeNode(Label))
-			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
-													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
-
-				ImGui::Text("Inputs");
-				if (ImGui::BeginTable("Inputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Reads)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::Text("Outputs");
-				if (ImGui::BeginTable("Outputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Writes)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::TreePop();
-			}
 		}
 	}
 	ImGui::End();

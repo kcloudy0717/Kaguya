@@ -56,6 +56,7 @@ private:
 
 	// Temporal accumulation
 	UINT NumTemporalSamples = 0;
+	UINT FrameCounter		= 0;
 
 	PathIntegratorState PathIntegratorState;
 	FSRState			FSRState;
@@ -79,4 +80,6 @@ private:
 	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable;
 	D3D12RaytracingShaderTable<void>*		  MissShaderTable;
 	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
+
+	RenderResourceHandle Viewport;
 };

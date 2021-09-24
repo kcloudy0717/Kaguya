@@ -33,16 +33,68 @@ private:
 	std::vector<D3D12_RESOURCE_STATES>		 WriteStates;
 };
 
+class RenderGraphAllocator
+{
+public:
+	explicit RenderGraphAllocator(size_t SizeInBytes)
+		: BaseAddress(std::make_unique<BYTE[]>(SizeInBytes))
+		, Ptr(BaseAddress.get())
+		, Sentinel(Ptr + SizeInBytes)
+	{
+	}
+
+	void* Allocate(size_t SizeInBytes, size_t Alignment)
+	{
+		SizeInBytes	 = AlignUp(SizeInBytes, Alignment);
+		BYTE* Result = Ptr += SizeInBytes;
+		assert(Result + SizeInBytes <= Sentinel);
+		return Result;
+	}
+
+	template<typename T, typename... TArgs>
+	T* Construct(TArgs&&... Args)
+	{
+		void* Memory = Allocate(sizeof(T), 16);
+		return new (Memory) T(std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T>
+	void Destruct(T* Ptr)
+	{
+		Ptr->~T();
+	}
+
+	void Reset() { Ptr = BaseAddress.get(); }
+
+private:
+	std::unique_ptr<BYTE[]> BaseAddress;
+	BYTE*					Ptr;
+	BYTE*					Sentinel;
+};
+
 class RenderGraph
 {
 public:
 	using RenderPassCallback =
 		Delegate<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
 
-	RenderGraph()
-		: Scheduler(this)
-		, Registry(Scheduler)
+	explicit RenderGraph(
+		RenderGraphAllocator& Allocator,
+		RenderGraphScheduler& Scheduler,
+		RenderGraphRegistry&  Registry)
+		: Allocator(Allocator)
+		, Scheduler(Scheduler)
+		, Registry(Registry)
 	{
+		Allocator.Reset();
+		Scheduler.Reset();
+	}
+	~RenderGraph()
+	{
+		for (auto RenderPass : RenderPasses)
+		{
+			Allocator.Destruct(RenderPass);
+		}
 	}
 
 	auto begin() const noexcept { return RenderPasses.begin(); }
@@ -64,21 +116,26 @@ public:
 	void Compile();
 	void Execute(D3D12CommandContext& Context);
 
-	void SetResolution(UINT RenderWidth, UINT RenderHeight, UINT ViewportWidth, UINT ViewportHeight)
+	void SetResolution(
+		UINT RenderWidth,
+		UINT RenderHeight,
+		UINT ViewportWidth,
+		UINT ViewportHeight,
+		bool ResolutionChanged)
 	{
 		if (this->RenderWidth != RenderWidth || this->RenderHeight != RenderHeight)
 		{
-			this->RenderWidth		= RenderWidth;
-			this->RenderHeight		= RenderHeight;
-			RenderResolutionResized = true;
+			this->RenderWidth  = RenderWidth;
+			this->RenderHeight = RenderHeight;
 		}
 
 		if (this->ViewportWidth != ViewportWidth || this->ViewportHeight != ViewportHeight)
 		{
-			this->ViewportWidth		  = ViewportWidth;
-			this->ViewportHeight	  = ViewportHeight;
-			ViewportResolutionResized = true;
+			this->ViewportWidth	 = ViewportWidth;
+			this->ViewportHeight = ViewportHeight;
 		}
+
+		this->ResolutionChanged = ResolutionChanged;
 	}
 
 private:
@@ -97,11 +154,14 @@ private:
 		Stack.push(n);
 	}
 
-public:
-	bool ValidViewport = false;
-
 private:
-	std::vector<std::unique_ptr<RenderPass>>	 RenderPasses;
+	RenderGraphAllocator& Allocator;
+	RenderGraphScheduler& Scheduler;
+	RenderGraphRegistry&  Registry;
+
+	bool GraphDirty = true;
+
+	std::vector<RenderPass*>					 RenderPasses;
 	std::unordered_map<std::string, RenderPass*> Lut;
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;
@@ -109,11 +169,7 @@ private:
 
 	std::vector<RenderGraphDependencyLevel> DependencyLevels;
 
-	RenderGraphScheduler Scheduler;
-	RenderGraphRegistry	 Registry;
-
-	bool RenderResolutionResized = false;
 	UINT RenderWidth, RenderHeight;
-	bool ViewportResolutionResized = false;
 	UINT ViewportWidth, ViewportHeight;
+	bool ResolutionChanged;
 };

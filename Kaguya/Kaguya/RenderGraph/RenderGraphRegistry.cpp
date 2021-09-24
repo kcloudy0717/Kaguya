@@ -10,7 +10,7 @@ void RenderGraphRegistry::Initialize()
 	RenderTargets.resize(Scheduler.RenderTargets.size());
 }
 
-void RenderGraphRegistry::RealizeResources()
+void RenderGraphRegistry::RealizeResources(RenderGraph& RenderGraph)
 {
 	for (size_t i = 0; i < Scheduler.Textures.size(); ++i)
 	{
@@ -27,13 +27,13 @@ void RenderGraphRegistry::RealizeResources()
 
 		if (Desc.Resolution == ETextureResolution::Render)
 		{
-			auto [w, h] = Scheduler.GetParentRenderGraph()->GetRenderResolution();
+			auto [w, h] = RenderGraph.GetRenderResolution();
 			Desc.Width	= w;
 			Desc.Height = h;
 		}
 		else if (Desc.Resolution == ETextureResolution::Viewport)
 		{
-			auto [w, h] = Scheduler.GetParentRenderGraph()->GetViewportResolution();
+			auto [w, h] = RenderGraph.GetViewportResolution();
 			Desc.Width	= w;
 			Desc.Height = h;
 		}
