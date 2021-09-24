@@ -310,42 +310,6 @@ void RayGeneration()
 	}
 
 	RenderTarget[launchIndex] = float4(L, 1);
-	uint2	launchIndex		  = DispatchRaysIndex().xy;
-	uint2	launchDimensions  = DispatchRaysDimensions().xy;
-	Sampler pcgSampler		  = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
-
-	float3 L = float3(0.0f, 0.0f, 0.0f);
-	for (int s = 0; s < SPP; ++s)
-	{
-		// TODO: Replace sampler with sobol
-		// Calculate subpixel camera jitter for anti aliasing
-		const float2 jitter = pcgSampler.Get2D() - 0.5f;
-		const float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
-
-		const float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
-
-		// Initialize ray
-		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
-
-		L += Li(ray, pcgSampler);
-	}
-	L /= float(SPP);
-
-	// Replace NaN components with zero. See explanation in Ray Tracing: The Rest of Your Life.
-	L.r = isnan(L.r) ? 0.0f : L.r;
-	L.g = isnan(L.g) ? 0.0f : L.g;
-	L.b = isnan(L.b) ? 0.0f : L.b;
-
-	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_GlobalConstants.RenderTarget];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
-
-	// Progressive accumulation
-	if (g_GlobalConstants.NumAccumulatedSamples > 0)
-	{
-		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_GlobalConstants.NumAccumulatedSamples));
-	}
-
-	RenderTarget[launchIndex] = float4(L, 1);
 }
 
 [shader("miss")]

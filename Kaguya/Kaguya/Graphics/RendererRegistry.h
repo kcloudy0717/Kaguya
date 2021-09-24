@@ -49,7 +49,7 @@ struct Shaders
 		{
 			PS::ToneMap = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
-				ExecutableDirectory / L"Shaders/PostProcess/ToneMap.hlsl",
+				ExecutableDirectory / L"Shaders/ToneMap.hlsl",
 				g_PSEntryPoint,
 				{});
 		}
@@ -58,7 +58,7 @@ struct Shaders
 		{
 			CS::EASU = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
-				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
+				ExecutableDirectory / L"Shaders/FSR.hlsl",
 				g_CSEntryPoint,
 				{
 					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
@@ -69,7 +69,7 @@ struct Shaders
 
 			CS::RCAS = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
-				ExecutableDirectory / L"Shaders/PostProcess/FSR.hlsl",
+				ExecutableDirectory / L"Shaders/FSR.hlsl",
 				g_CSEntryPoint,
 				{
 					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
@@ -104,9 +104,6 @@ struct RootSignatures
 			[](RootSignatureBuilder& Builder)
 			{
 				Builder.Add32BitConstants<0, 0>(1); // register(b0, space0)
-
-				// PointClamp
-				Builder.AddStaticSampler<0, 0>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
@@ -211,31 +208,6 @@ struct RaytracingPipelineStates
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
-
-				Builder.AddStaticSampler<0, 0>(
-					D3D12_FILTER_MIN_MAG_MIP_POINT,
-					D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					16); // g_SamplerPointWrap			s0 | space0;
-				Builder.AddStaticSampler<1, 0>(
-					D3D12_FILTER_MIN_MAG_MIP_POINT,
-					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-					16); // g_SamplerPointClamp			s1 | space0;
-				Builder.AddStaticSampler<2, 0>(
-					D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-					D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					16); // g_SamplerLinearWrap			s2 | space0;
-				Builder.AddStaticSampler<3, 0>(
-					D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-					16); // g_SamplerLinearClamp			s3 | space0;
-				Builder.AddStaticSampler<4, 0>(
-					D3D12_FILTER_ANISOTROPIC,
-					D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-					16); // g_SamplerAnisotropicWrap		s4 | space0;
-				Builder.AddStaticSampler<5, 0>(
-					D3D12_FILTER_ANISOTROPIC,
-					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-					16); // g_SamplerAnisotropicClamp	s5 | space0;
 			}));
 
 		LocalHitGroupRS = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(

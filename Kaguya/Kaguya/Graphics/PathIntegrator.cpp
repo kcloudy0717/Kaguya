@@ -247,42 +247,44 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
-
-		bool AnyBuild = false;
-
-		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 		{
-			if (Geometry->BlasValid)
+			D3D12ScopedEvent(AsyncCompute, "TLAS");
+
+			bool AnyBuild = false;
+
+			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 			{
-				continue;
+				if (Geometry->BlasValid)
+				{
+					continue;
+				}
+
+				Geometry->BlasValid = true;
+				AnyBuild |= Geometry->BlasValid;
+
+				D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
+				Geometry->BlasIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
 			}
 
-			Geometry->BlasValid = true;
-			AnyBuild |= Geometry->BlasValid;
+			if (AnyBuild)
+			{
+				AsyncCompute.UAVBarrier(nullptr);
+				AsyncCompute.FlushResourceBarriers();
+				Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
+			}
 
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
-			Geometry->BlasIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
+			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
+			{
+				Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+			}
+
+			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
+			{
+				Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
+			}
+
+			AccelerationStructure.Build(AsyncCompute);
 		}
-
-		if (AnyBuild)
-		{
-			AsyncCompute.UAVBarrier(nullptr);
-			AsyncCompute.FlushResourceBarriers();
-			Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
-		}
-
-		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-		{
-			Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
-		}
-
-		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-		{
-			Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
-		}
-
-		AccelerationStructure.Build(AsyncCompute);
-
 		AsyncCompute.CloseCommandList();
 
 		ASBuildSyncPoint = AsyncCompute.Execute(false);

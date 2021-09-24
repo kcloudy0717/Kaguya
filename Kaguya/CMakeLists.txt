@@ -91,23 +91,25 @@ add_executable(
 	${cityhash})
 
 file(GLOB_RECURSE inc_hlsl
-${CMAKE_SOURCE_DIR}/Shaders/*.hlsli)
+${PROJECT_SOURCE_DIR}/Shaders/*.hlsli)
 
 file(GLOB_RECURSE src_hlsl
-${CMAKE_SOURCE_DIR}/Shaders/*.hlsl)
+${PROJECT_SOURCE_DIR}/Shaders/*.hlsl)
 
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${inc_hlsl})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${src_hlsl})
+source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${inc_hlsl})
+source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${src_hlsl})
 set_source_files_properties(${src_hlsl} PROPERTIES VS_TOOL_OVERRIDE None)
 
 add_custom_target(Shaders
-ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders
-ALL SOURCES ${inc_hlsl} ${src_hlsl}
-)
+ALL SOURCES ${inc_hlsl} ${src_hlsl})
+add_custom_command(
+TARGET Shaders
+COMMAND ${CMAKE_COMMAND}
+-E copy_directory ${PROJECT_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders)
 
 add_dependencies(${PROJECTNAME} Shaders)
 
-set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
+set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
 target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})

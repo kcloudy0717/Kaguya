@@ -395,4 +395,20 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 		SamplerTable.AddSamplerRange<0, 100>(UINT_MAX, Flags, 0); // g_SamplerTable
 	}
 	RootSignatureBuilder.AddDescriptorTable(SamplerTable);
+
+	// g_SamplerPointWrap
+	RootSignatureBuilder.AddStaticSampler<0, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerPointClamp
+	RootSignatureBuilder.AddStaticSampler<1, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+	// g_SamplerLinearWrap
+	RootSignatureBuilder.AddStaticSampler<2, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerLinearClamp
+	RootSignatureBuilder.AddStaticSampler<3, 101>(
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		16);
+	// g_SamplerAnisotropicWrap
+	RootSignatureBuilder.AddStaticSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerAnisotropicClamp
+	RootSignatureBuilder.AddStaticSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 }
