@@ -52,7 +52,7 @@ public:
 		bool					WaitForCompletion);
 
 private:
-	bool ResolveResourceBarrierCommandList(
+	[[nodiscard]] bool ResolveResourceBarrierCommandList(
 		D3D12CommandListHandle& CommandListHandle,
 		D3D12CommandListHandle& ResourceBarrierCommandListHandle);
 
