@@ -281,7 +281,7 @@ struct SurfaceInteraction
 
 	RayDesc SpawnRay(float3 d)
 	{
-		RayDesc ray = { OffsetRay(p, n), 0.0f, normalize(d), 10000.0f };
+		RayDesc ray = { OffsetRay(p, n), 0.0001f, normalize(d), 10000.0f };
 		return ray;
 	}
 };
