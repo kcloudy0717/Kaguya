@@ -45,7 +45,7 @@ class D3D12DescriptorArray
 {
 public:
 	D3D12DescriptorArray() noexcept = default;
-	D3D12DescriptorArray(
+	explicit D3D12DescriptorArray(
 		D3D12DescriptorPage*		Parent,
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle,
 		UINT						Offset,
@@ -56,32 +56,13 @@ public:
 		, NumDescriptors(NumDescriptors)
 	{
 	}
-
-	D3D12DescriptorArray(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
-		: Parent(std::exchange(D3D12DescriptorArray.Parent, {}))
-		, CpuDescriptorHandle(std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {}))
-		, Offset(std::exchange(D3D12DescriptorArray.Offset, {}))
-		, NumDescriptors(std::exchange(D3D12DescriptorArray.NumDescriptors, {}))
-	{
-	}
-
-	D3D12DescriptorArray& operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
-	{
-		if (this == &D3D12DescriptorArray)
-		{
-			return *this;
-		}
-
-		this->~D3D12DescriptorArray();
-		Parent				= std::exchange(D3D12DescriptorArray.Parent, {});
-		CpuDescriptorHandle = std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {});
-		Offset				= std::exchange(D3D12DescriptorArray.Offset, {});
-		NumDescriptors		= std::exchange(D3D12DescriptorArray.NumDescriptors, {});
-
-		return *this;
-	}
-
 	~D3D12DescriptorArray();
+
+	D3D12DescriptorArray(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept;
+	D3D12DescriptorArray& operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept;
+
+	D3D12DescriptorArray(const D3D12DescriptorArray&) = delete;
+	D3D12DescriptorArray& operator=(const D3D12DescriptorArray&) = delete;
 
 	[[nodiscard]] bool IsValid() const noexcept { return Parent != nullptr; }
 
@@ -91,6 +72,8 @@ public:
 	[[nodiscard]] UINT GetNumDescriptors() const noexcept { return NumDescriptors; }
 
 private:
+	void InternalDestruct();
+
 	D3D12DescriptorPage*		Parent				= nullptr;
 	D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = {};
 	UINT						Offset				= 0;

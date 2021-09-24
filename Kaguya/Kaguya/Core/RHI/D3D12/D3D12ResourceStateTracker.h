@@ -35,6 +35,8 @@ struct ResourceBarrierBatch
 class D3D12ResourceStateTracker
 {
 public:
+	D3D12ResourceStateTracker() noexcept = default;
+
 	std::vector<PendingResourceBarrier>& GetPendingResourceBarriers();
 
 	CResourceState& GetResourceState(D3D12Resource* Resource);

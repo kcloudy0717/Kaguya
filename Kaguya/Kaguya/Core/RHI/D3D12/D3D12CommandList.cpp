@@ -8,14 +8,98 @@ D3D12CommandAllocator::D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND
 	VERIFY_D3D12_API(Device->CreateCommandAllocator(Type, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
 }
 
-D3D12CommandListHandle::D3D12CommandListHandle(D3D12LinkedDevice* Device, D3D12_COMMAND_LIST_TYPE Type)
+D3D12CommandListHandle::D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type)
+	: D3D12LinkedDeviceChild(Parent)
+	, Type(Type)
+	, CommandAllocator(nullptr)
 {
-	CommandList = std::make_shared<D3D12CommandList>(Device, Type);
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	ComPtr<ID3D12CommandAllocator> temp;
+	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(temp.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandList(
+		1,
+		Type,
+		temp.Get(),
+		nullptr,
+		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
+#else
+	VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(
+		1,
+		Type,
+		D3D12_COMMAND_LIST_FLAG_NONE,
+		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
+#endif
+
+	GraphicsCommandList.As(&GraphicsCommandList4);
+	GraphicsCommandList.As(&GraphicsCommandList6);
+
+#ifdef D3D12_DEBUG_RESOURCE_STATES
+	GraphicsCommandList.As(&DebugCommandList);
+#endif
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
+	GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle);
+	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
+	VERIFY_D3D12_API(GraphicsCommandList->Close());
+#endif
+}
+
+D3D12CommandListHandle::D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept
+	: D3D12LinkedDeviceChild(std::exchange(D3D12CommandListHandle.Parent, {}))
+	, Type(D3D12CommandListHandle.Type)
+	, GraphicsCommandList(std::exchange(D3D12CommandListHandle.GraphicsCommandList, {}))
+	, GraphicsCommandList4(std::exchange(D3D12CommandListHandle.GraphicsCommandList4, {}))
+	, GraphicsCommandList6(std::exchange(D3D12CommandListHandle.GraphicsCommandList6, {}))
+#ifdef D3D12_DEBUG_RESOURCE_STATES
+	, DebugCommandList(std::exchange(D3D12CommandListHandle.DebugCommandList, {}))
+#endif
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	, AftermathContextHandle(std::exchange(D3D12CommandListHandle.AftermathContextHandle, {}))
+#endif
+	, CommandAllocator(std::exchange(D3D12CommandListHandle.CommandAllocator, {}))
+	, ResourceStateTracker(std::move(D3D12CommandListHandle.ResourceStateTracker))
+	, ResourceBarrierBatch(std::move(D3D12CommandListHandle.ResourceBarrierBatch))
+{
+}
+
+D3D12CommandListHandle& D3D12CommandListHandle::operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept
+{
+	if (this == &D3D12CommandListHandle)
+	{
+		return *this;
+	}
+
+	Parent				 = std::exchange(D3D12CommandListHandle.Parent, {});
+	Type				 = D3D12CommandListHandle.Type;
+	GraphicsCommandList	 = std::exchange(D3D12CommandListHandle.GraphicsCommandList, {});
+	GraphicsCommandList4 = std::exchange(D3D12CommandListHandle.GraphicsCommandList4, {});
+	GraphicsCommandList6 = std::exchange(D3D12CommandListHandle.GraphicsCommandList6, {});
+#ifdef D3D12_DEBUG_RESOURCE_STATES
+	DebugCommandList = std::exchange(D3D12CommandListHandle.DebugCommandList, {});
+#endif
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	AftermathContextHandle = std::exchange(D3D12CommandListHandle.AftermathContextHandle, {});
+#endif
+	CommandAllocator	 = std::exchange(D3D12CommandListHandle.CommandAllocator, {});
+	ResourceStateTracker = std::move(D3D12CommandListHandle.ResourceStateTracker);
+	ResourceBarrierBatch = std::move(D3D12CommandListHandle.ResourceBarrierBatch);
+
+	return *this;
+}
+
+D3D12CommandListHandle::~D3D12CommandListHandle()
+{
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	if (AftermathContextHandle)
+	{
+		GFSDK_Aftermath_ReleaseContextHandle(std::exchange(AftermathContextHandle, {}));
+	}
+#endif
 }
 
 std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()
 {
-	const auto& PendingResourceBarriers = CommandList->ResourceStateTracker.GetPendingResourceBarriers();
+	const auto& PendingResourceBarriers = ResourceStateTracker.GetPendingResourceBarriers();
 
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
 	ResourceBarriers.reserve(PendingResourceBarriers.size());
@@ -59,8 +143,7 @@ void D3D12CommandListHandle::TransitionBarrier(
 {
 	// TODO: There might be some logic and cases here im missing, come back and edit if anything goes boom
 
-	D3D12ResourceStateTracker& ResourceStateTracker = CommandList->ResourceStateTracker;
-	CResourceState&			   ResourceState		= ResourceStateTracker.GetResourceState(Resource);
+	CResourceState& ResourceState = ResourceStateTracker.GetResourceState(Resource);
 	// First use on the command list
 	if (ResourceState.IsUnknown())
 	{
@@ -83,7 +166,7 @@ void D3D12CommandListHandle::TransitionBarrier(
 			{
 				if (SubresourceState != State)
 				{
-					CommandList->ResourceBarrierBatch.AddTransition(Resource, SubresourceState, State, i);
+					ResourceBarrierBatch.AddTransition(Resource, SubresourceState, State, i);
 				}
 
 				i++;
@@ -94,7 +177,7 @@ void D3D12CommandListHandle::TransitionBarrier(
 			D3D12_RESOURCE_STATES StateKnown = ResourceState.GetSubresourceState(Subresource);
 			if (StateKnown != State)
 			{
-				CommandList->ResourceBarrierBatch.AddTransition(Resource, StateKnown, State, Subresource);
+				ResourceBarrierBatch.AddTransition(Resource, StateKnown, State, Subresource);
 			}
 		}
 	}
@@ -105,94 +188,29 @@ void D3D12CommandListHandle::TransitionBarrier(
 
 void D3D12CommandListHandle::AliasingBarrier(D3D12Resource* BeforeResource, D3D12Resource* AfterResource)
 {
-	CommandList->ResourceBarrierBatch.AddAliasing(BeforeResource, AfterResource);
+	ResourceBarrierBatch.AddAliasing(BeforeResource, AfterResource);
 }
 
 void D3D12CommandListHandle::UAVBarrier(D3D12Resource* Resource)
 {
-	CommandList->ResourceBarrierBatch.AddUAV(Resource);
+	ResourceBarrierBatch.AddUAV(Resource);
 }
 
 void D3D12CommandListHandle::FlushResourceBarriers()
 {
-	CommandList->FlushResourceBarriers();
+	ResourceBarrierBatch.Flush(GraphicsCommandList.Get());
 }
 
 bool D3D12CommandListHandle::AssertResourceState(D3D12Resource* Resource, D3D12_RESOURCE_STATES State, UINT Subresource)
 {
 #ifdef D3D12_DEBUG_RESOURCE_STATES
-	if (CommandList->DebugCommandList)
+	if (DebugCommandList)
 	{
-		if (!CommandList->DebugCommandList->AssertResourceState(Resource->GetResource(), Subresource, State))
+		if (!DebugCommandList->AssertResourceState(Resource->GetResource(), Subresource, State))
 		{
 			return false;
 		}
 	}
 #endif
 	return true;
-}
-
-D3D12CommandListHandle::D3D12CommandList::D3D12CommandList(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type)
-	: D3D12LinkedDeviceChild(Parent)
-	, Type(Type)
-	, CommandAllocator(nullptr)
-{
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	ComPtr<ID3D12CommandAllocator> temp;
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(temp.ReleaseAndGetAddressOf())));
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandList(
-		1,
-		Type,
-		temp.Get(),
-		nullptr,
-		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-#else
-	VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(
-		1,
-		Type,
-		D3D12_COMMAND_LIST_FLAG_NONE,
-		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-#endif
-
-	GraphicsCommandList.As(&GraphicsCommandList4);
-	GraphicsCommandList.As(&GraphicsCommandList6);
-
-#ifdef D3D12_DEBUG_RESOURCE_STATES
-	GraphicsCommandList.As(&DebugCommandList);
-#endif
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
-	GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle);
-	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
-	VERIFY_D3D12_API(GraphicsCommandList->Close());
-#endif
-}
-
-D3D12CommandListHandle::D3D12CommandList::~D3D12CommandList()
-{
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	GFSDK_Aftermath_ReleaseContextHandle(AftermathContextHandle);
-#endif
-}
-
-void D3D12CommandListHandle::D3D12CommandList::Close()
-{
-	FlushResourceBarriers();
-	VERIFY_D3D12_API(GraphicsCommandList->Close());
-}
-
-void D3D12CommandListHandle::D3D12CommandList::Reset(D3D12CommandAllocator* CommandAllocator)
-{
-	this->CommandAllocator = CommandAllocator;
-
-	VERIFY_D3D12_API(GraphicsCommandList->Reset(*CommandAllocator, nullptr));
-
-	// Reset resource state tracking and resource barriers
-	ResourceStateTracker.Reset();
-	ResourceBarrierBatch.Reset();
-}
-
-void D3D12CommandListHandle::D3D12CommandList::FlushResourceBarriers()
-{
-	ResourceBarrierBatch.Flush(GraphicsCommandList.Get());
 }

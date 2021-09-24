@@ -16,10 +16,10 @@ struct D3D12RenderTargetDesc
 	UINT			 Width;
 	UINT			 Height;
 
-	UINT		  NumRenderTargets = 0;
-	D3D12Texture* RenderTargets[8] = {};
-	bool		  sRGB[8]		   = {};
-	D3D12Texture* DepthStencil	   = nullptr;
+	UINT		  NumRenderTargets										= 0;
+	D3D12Texture* RenderTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+	bool		  sRGB[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT]			= {};
+	D3D12Texture* DepthStencil											= nullptr;
 };
 
 class D3D12RenderTarget : public D3D12LinkedDeviceChild
@@ -35,7 +35,7 @@ public:
 	D3D12RenderTargetDesc Desc = {};
 
 	D3D12DescriptorArray		RenderTargetArray;
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetViews[8] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetViews[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
 	D3D12DescriptorArray		DepthStencilArray;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView = {};

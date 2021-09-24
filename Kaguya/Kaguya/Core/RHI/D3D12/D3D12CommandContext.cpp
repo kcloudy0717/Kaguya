@@ -7,7 +7,7 @@ D3D12CommandContext::D3D12CommandContext(
 	D3D12_COMMAND_LIST_TYPE CommandListType)
 	: D3D12LinkedDeviceChild(Parent)
 	, Type(Type)
-	, CommandListHandle(Parent, CommandListType)
+	, CommandListHandle()
 	, CommandAllocator(nullptr)
 	, CommandAllocatorPool(Parent, CommandListType)
 	, CpuConstantAllocator(Parent)

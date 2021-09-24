@@ -187,6 +187,42 @@ void D3D12DescriptorPage::FreeBlock(OffsetType Offset, SizeType Size)
 
 D3D12DescriptorArray::~D3D12DescriptorArray()
 {
+	InternalDestruct();
+}
+
+D3D12DescriptorArray::D3D12DescriptorArray(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
+	: Parent(std::exchange(D3D12DescriptorArray.Parent, {}))
+	, CpuDescriptorHandle(std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {}))
+	, Offset(std::exchange(D3D12DescriptorArray.Offset, {}))
+	, NumDescriptors(std::exchange(D3D12DescriptorArray.NumDescriptors, {}))
+{
+}
+
+D3D12DescriptorArray& D3D12DescriptorArray::operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
+{
+	if (this == &D3D12DescriptorArray)
+	{
+		return *this;
+	}
+
+	// Release any descriptors if we have any
+	InternalDestruct();
+	Parent				= std::exchange(D3D12DescriptorArray.Parent, {});
+	CpuDescriptorHandle = std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {});
+	Offset				= std::exchange(D3D12DescriptorArray.Offset, {});
+	NumDescriptors		= std::exchange(D3D12DescriptorArray.NumDescriptors, {});
+
+	return *this;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorArray::operator[](UINT Index) const noexcept
+{
+	assert(Index < NumDescriptors);
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuDescriptorHandle, static_cast<INT>(Index), Parent->GetDescriptorSize());
+}
+
+void D3D12DescriptorArray::InternalDestruct()
+{
 	if (IsValid())
 	{
 		Parent->Release(std::move(*this));
@@ -196,12 +232,6 @@ D3D12DescriptorArray::~D3D12DescriptorArray()
 		Offset				= 0;
 		NumDescriptors		= 0;
 	}
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorArray::operator[](UINT Index) const noexcept
-{
-	assert(Index < NumDescriptors);
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(CpuDescriptorHandle, static_cast<INT>(Index), Parent->GetDescriptorSize());
 }
 
 D3D12DescriptorArray D3D12DescriptorAllocator::Allocate(UINT NumDescriptors)

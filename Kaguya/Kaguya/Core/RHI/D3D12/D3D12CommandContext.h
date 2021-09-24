@@ -119,7 +119,7 @@ public:
 			sizeof(UINT));
 	}
 
-	const ED3D12CommandQueueType Type;
+	ED3D12CommandQueueType Type;
 
 	D3D12CommandListHandle	  CommandListHandle;
 	D3D12CommandAllocator*	  CommandAllocator;

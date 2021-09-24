@@ -104,7 +104,7 @@ private:
 	HANDLE								DeviceRemovedWaitHandle = nullptr;
 	wil::unique_event					DeviceRemovedEvent;
 
-	// Presents a single node
+	// Represents a single node
 	// TODO: Add Multi-Adapter support
 	D3D12LinkedDevice LinkedDevice;
 

@@ -85,9 +85,9 @@ void D3D12Descriptor<ViewDesc>::Release()
 	{
 		D3D12DescriptorHeap& DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
 		DescriptorHeap.Release(Index);
+		Parent	  = nullptr;
 		CpuHandle = { NULL };
 		GpuHandle = { NULL };
 		Index	  = UINT_MAX;
-		Parent	  = nullptr;
 	}
 }

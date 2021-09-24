@@ -13,7 +13,7 @@ public:
 	void DiscardCommandAllocator(D3D12CommandAllocator* CommandAllocator);
 
 private:
-	const D3D12_COMMAND_LIST_TYPE CommandListType;
+	D3D12_COMMAND_LIST_TYPE CommandListType;
 
 	std::vector<std::unique_ptr<D3D12CommandAllocator>> CommandAllocators;
 	std::queue<D3D12CommandAllocator*>					CommandAllocatorQueue;
@@ -42,25 +42,9 @@ public:
 
 	void WaitIdle() { HostWaitForValue(AdvanceGpu()); }
 
-	[[nodiscard]] D3D12CommandListHandle RequestCommandList(D3D12CommandAllocator* CommandAllocator)
-	{
-		D3D12CommandListHandle Handle;
-		if (!AvailableCommandListHandles.empty())
-		{
-			Handle = AvailableCommandListHandles.front();
-			AvailableCommandListHandles.pop();
+	[[nodiscard]] D3D12CommandListHandle RequestCommandList(D3D12CommandAllocator* CommandAllocator);
 
-			Handle.Reset(CommandAllocator);
-			return Handle;
-		}
-
-		return CreateCommandListHandle(CommandAllocator);
-	}
-
-	void DiscardCommandList(D3D12CommandListHandle& CommandListHandle)
-	{
-		AvailableCommandListHandles.push(CommandListHandle);
-	}
+	void DiscardCommandList(D3D12CommandListHandle&& CommandListHandle);
 
 	void ExecuteCommandLists(
 		UINT					NumCommandListHandles,
@@ -72,15 +56,10 @@ private:
 		D3D12CommandListHandle& CommandListHandle,
 		D3D12CommandListHandle& ResourceBarrierCommandListHandle);
 
-	D3D12CommandListHandle CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator)
-	{
-		D3D12CommandListHandle Handle = D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType);
-		Handle.Reset(CommandAllocator);
-		return Handle;
-	}
+	D3D12CommandListHandle CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator) const;
 
 private:
-	const D3D12_COMMAND_LIST_TYPE CommandListType;
+	D3D12_COMMAND_LIST_TYPE CommandListType;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 	UINT64									   Frequency = 0;
