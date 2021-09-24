@@ -34,14 +34,11 @@ protected:
 protected:
 	World* pWorld;
 
-	UINT ViewportWidth = 0, ViewportHeight = 0;
-	UINT RenderWidth = 0, RenderHeight = 0;
+	RenderDevice		  RenderDevice;
+	RenderGraphAllocator  Allocator;
+	RenderGraphScheduler  Scheduler;
+	RenderGraphRegistry	  Registry;
+	RenderGraphResolution Resolution = {};
 
-	RenderDevice		 RenderDevice;
-	RenderGraphAllocator Allocator;
-	RenderGraphScheduler Scheduler;
-	RenderGraphRegistry	 Registry;
-
-	bool ResolutionChanged = true;
-	bool ValidViewport	   = false;
+	bool ValidViewport = false;
 };

@@ -44,13 +44,14 @@ void* PathIntegrator::GetViewportDescriptor()
 
 void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	if (ViewportWidth != Width || ViewportHeight != Height)
+	if (Resolution.ViewportWidth != Width || Resolution.ViewportHeight != Height)
 	{
-		ViewportWidth = Width;
-		ViewportHeight = Height;
-		ResolutionChanged = true;
-		ValidViewport = false;
+		Resolution.ViewportWidth			 = Width;
+		Resolution.ViewportHeight			 = Height;
+		Resolution.ViewportResolutionResized = true;
 	}
+
+	ValidViewport = false;
 
 	float r = 1.5f;
 	switch (FSRState.QualityMode)
@@ -69,15 +70,23 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 		break;
 	}
 
+	UINT RenderWidth, RenderHeight;
 	if (FSRState.Enable)
 	{
-		RenderWidth	 = static_cast<UINT>(ViewportWidth / r);
-		RenderHeight = static_cast<UINT>(ViewportHeight / r);
+		RenderWidth	 = static_cast<UINT>(Resolution.ViewportWidth / r);
+		RenderHeight = static_cast<UINT>(Resolution.ViewportHeight / r);
 	}
 	else
 	{
-		RenderWidth	 = ViewportWidth;
-		RenderHeight = ViewportHeight;
+		RenderWidth	 = Resolution.ViewportWidth;
+		RenderHeight = Resolution.ViewportHeight;
+	}
+
+	if (Resolution.RenderWidth != RenderWidth || Resolution.RenderHeight != RenderHeight)
+	{
+		Resolution.RenderWidth			   = RenderWidth;
+		Resolution.RenderHeight			   = RenderHeight;
+		Resolution.RenderResolutionResized = true;
 	}
 }
 
@@ -158,28 +167,30 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 	}
 	ImGui::End();
 
-	FSRState.RenderWidth	= RenderWidth;
-	FSRState.RenderHeight	= RenderHeight;
-	FSRState.ViewportWidth	= ViewportWidth;
-	FSRState.ViewportHeight = ViewportHeight;
+	FSRState.RenderWidth	= Resolution.RenderWidth;
+	FSRState.RenderHeight	= Resolution.RenderHeight;
+	FSRState.ViewportWidth	= Resolution.ViewportWidth;
+	FSRState.ViewportHeight = Resolution.ViewportHeight;
 	if (ImGui::Begin("FSR"))
 	{
-		ResetPathIntegrator |= ImGui::Checkbox("Enable", &FSRState.Enable);
+		bool Dirty = ImGui::Checkbox("Enable", &FSRState.Enable);
 
 		constexpr const char* QualityModes[] = { "Ultra Quality (1.3x)",
 												 "Quality (1.5x)",
 												 "Balanced (1.7x)",
 												 "Performance (2x)" };
-		ResetPathIntegrator |= ImGui::Combo(
+		Dirty |= ImGui::Combo(
 			"Quality",
 			reinterpret_cast<int*>(&FSRState.QualityMode),
 			QualityModes,
 			static_cast<int>(std::size(QualityModes)));
 
-		ResetPathIntegrator |= ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
+		Dirty |= ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
 
-		ImGui::Text("Render resolution: %dx%d", RenderWidth, RenderHeight);
-		ImGui::Text("Viewport resolution: %dx%d", ViewportWidth, ViewportHeight);
+		ImGui::Text("Render resolution: %dx%d", Resolution.RenderWidth, Resolution.RenderHeight);
+		ImGui::Text("Viewport resolution: %dx%d", Resolution.ViewportWidth, Resolution.ViewportHeight);
+
+		ResetPathIntegrator |= Dirty;
 	}
 	ImGui::End();
 
@@ -299,9 +310,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 		NumTemporalSamples = 0;
 	}
 
-	RenderGraph RenderGraph(Allocator, Scheduler, Registry);
-	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight, ResolutionChanged);
-	ResolutionChanged = false;
+	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 
 	RenderGraph.AddRenderPass(
 		"Path Trace",
@@ -342,10 +351,10 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 					float SkyIntensity;
 				} g_GlobalConstants						= {};
 				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*pWorld->ActiveCamera);
-				g_GlobalConstants.Resolution			= { static_cast<float>(ViewportWidth),
-													static_cast<float>(ViewportHeight),
-													1.0f / static_cast<float>(ViewportWidth),
-													1.0f / static_cast<float>(ViewportHeight) };
+				g_GlobalConstants.Resolution			= { static_cast<float>(Resolution.ViewportWidth),
+													static_cast<float>(Resolution.ViewportHeight),
+													1.0f / static_cast<float>(Resolution.ViewportWidth),
+													1.0f / static_cast<float>(Resolution.ViewportHeight) };
 				g_GlobalConstants.NumLights				= NumLights;
 				g_GlobalConstants.TotalFrameCount		= FrameCounter++;
 				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
@@ -457,11 +466,6 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
 
-				// This value is the image region dimension that each thread group of the FSR shader operates on
-				constexpr UINT ThreadSize		 = 16;
-				UINT		   ThreadGroupCountX = (ViewData.ViewportWidth + (ThreadSize - 1)) / ThreadSize;
-				UINT		   ThreadGroupCountY = (ViewData.ViewportHeight + (ThreadSize - 1)) / ThreadSize;
-
 				Context.TransitionBarrier(
 					&Registry.GetTexture(Parameter.EASUOutput),
 					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -490,7 +494,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
 					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
 
-					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
+					Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
 				}
 
 				Context.TransitionBarrier(
@@ -514,7 +518,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
 					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
 
-					Context.Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
+					Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
 				}
 
 				Context.TransitionBarrier(

@@ -245,26 +245,22 @@ void RenderGraph::Execute(D3D12CommandContext& Context)
 {
 	for (RGTexture& Texture : Scheduler.Textures)
 	{
-		if (ResolutionChanged)
+		if ((Resolution.RenderResolutionResized && Texture.Desc.Resolution == ETextureResolution::Render) ||
+			(Resolution.ViewportResolutionResized && Texture.Desc.Resolution == ETextureResolution::Viewport))
 		{
-			if (Texture.Desc.Resolution == ETextureResolution::Render ||
-				Texture.Desc.Resolution == ETextureResolution::Viewport)
-			{
-				LOG_INFO("Handle dirty, resizing...");
-				Texture.Handle.State = ERGHandleState::Dirty;
-			}
+			Texture.Handle.State = ERGHandleState::Dirty;
 		}
 	}
-	ResolutionChanged = false;
+	Resolution.RenderResolutionResized = Resolution.ViewportResolutionResized = false;
 
 	Registry.RealizeResources(*this);
 	for (auto& RenderPass : RenderPasses)
 	{
 		auto& ViewData			= RenderPass->Scope.Get<RenderGraphViewData>();
-		ViewData.RenderWidth	= RenderWidth;
-		ViewData.RenderHeight	= RenderHeight;
-		ViewData.ViewportWidth	= ViewportWidth;
-		ViewData.ViewportHeight = ViewportHeight;
+		ViewData.RenderWidth	= Resolution.RenderWidth;
+		ViewData.RenderHeight	= Resolution.RenderHeight;
+		ViewData.ViewportWidth	= Resolution.ViewportWidth;
+		ViewData.ViewportHeight = Resolution.ViewportHeight;
 	}
 
 	D3D12ScopedEvent(Context, "Render Graph");

@@ -18,7 +18,7 @@ void Renderer::OnInitialize()
 
 void Renderer::OnRender()
 {
-	pWorld->ActiveCamera->AspectRatio = float(RenderWidth) / float(RenderHeight);
+	pWorld->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
 
 	RenderCore::Device->OnBeginFrame();
 

@@ -72,6 +72,14 @@ private:
 	BYTE*					Sentinel;
 };
 
+struct RenderGraphResolution
+{
+	bool RenderResolutionResized   = false;
+	bool ViewportResolutionResized = false;
+	UINT RenderWidth, RenderHeight;
+	UINT ViewportWidth, ViewportHeight;
+};
+
 class RenderGraph
 {
 public:
@@ -79,12 +87,14 @@ public:
 		Delegate<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
 
 	explicit RenderGraph(
-		RenderGraphAllocator& Allocator,
-		RenderGraphScheduler& Scheduler,
-		RenderGraphRegistry&  Registry)
+		RenderGraphAllocator&  Allocator,
+		RenderGraphScheduler&  Scheduler,
+		RenderGraphRegistry&   Registry,
+		RenderGraphResolution& Resolution)
 		: Allocator(Allocator)
 		, Scheduler(Scheduler)
 		, Registry(Registry)
+		, Resolution(Resolution)
 	{
 		Allocator.Reset();
 		Scheduler.Reset();
@@ -109,34 +119,18 @@ public:
 	RenderGraphScheduler& GetScheduler() { return Scheduler; }
 	RenderGraphRegistry&  GetRegistry() { return Registry; }
 
-	[[nodiscard]] std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
-	[[nodiscard]] std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
+	[[nodiscard]] std::pair<UINT, UINT> GetRenderResolution() const
+	{
+		return { Resolution.RenderWidth, Resolution.RenderHeight };
+	}
+	[[nodiscard]] std::pair<UINT, UINT> GetViewportResolution() const
+	{
+		return { Resolution.ViewportWidth, Resolution.ViewportHeight };
+	}
 
 	void Setup();
 	void Compile();
 	void Execute(D3D12CommandContext& Context);
-
-	void SetResolution(
-		UINT RenderWidth,
-		UINT RenderHeight,
-		UINT ViewportWidth,
-		UINT ViewportHeight,
-		bool ResolutionChanged)
-	{
-		if (this->RenderWidth != RenderWidth || this->RenderHeight != RenderHeight)
-		{
-			this->RenderWidth  = RenderWidth;
-			this->RenderHeight = RenderHeight;
-		}
-
-		if (this->ViewportWidth != ViewportWidth || this->ViewportHeight != ViewportHeight)
-		{
-			this->ViewportWidth	 = ViewportWidth;
-			this->ViewportHeight = ViewportHeight;
-		}
-
-		this->ResolutionChanged = ResolutionChanged;
-	}
 
 private:
 	void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack)
@@ -155,9 +149,10 @@ private:
 	}
 
 private:
-	RenderGraphAllocator& Allocator;
-	RenderGraphScheduler& Scheduler;
-	RenderGraphRegistry&  Registry;
+	RenderGraphAllocator&  Allocator;
+	RenderGraphScheduler&  Scheduler;
+	RenderGraphRegistry&   Registry;
+	RenderGraphResolution& Resolution;
 
 	bool GraphDirty = true;
 
@@ -168,8 +163,4 @@ private:
 	std::vector<RenderPass*>		 TopologicalSortedPasses;
 
 	std::vector<RenderGraphDependencyLevel> DependencyLevels;
-
-	UINT RenderWidth, RenderHeight;
-	UINT ViewportWidth, ViewportHeight;
-	bool ResolutionChanged;
 };
