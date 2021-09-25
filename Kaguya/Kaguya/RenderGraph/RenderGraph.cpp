@@ -1,9 +1,46 @@
 #include "RenderGraph.h"
 #include <iostream>
 
+RenderPass::RenderPass(RenderGraph* Parent, const std::string& Name)
+	: RenderGraphChild(Parent)
+	, Name(Name)
+{
+}
+
+void RenderPass::Read(RenderResourceHandle Resource)
+{
+	Reads.insert(Resource);
+	ReadWrites.insert(Resource);
+}
+
+void RenderPass::Write(RenderResourceHandle Resource)
+{
+	Writes.insert(Resource);
+	ReadWrites.insert(Resource);
+}
+
+bool RenderPass::HasDependency(RenderResourceHandle Resource) const
+{
+	return ReadWrites.find(Resource) != ReadWrites.end();
+}
+
+bool RenderPass::WritesTo(RenderResourceHandle Resource) const
+{
+	return Writes.find(Resource) != Writes.end();
+}
+
+bool RenderPass::ReadsFrom(RenderResourceHandle Resource) const
+{
+	return Reads.find(Resource) != Reads.end();
+}
+
+bool RenderPass::HasAnyDependencies() const noexcept
+{
+	return !ReadWrites.empty();
+}
+
 void RenderGraphDependencyLevel::AddRenderPass(RenderPass* RenderPass)
 {
-	RenderPass->DependencyLevel = this;
 	RenderPasses.push_back(RenderPass);
 	Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
 	Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
@@ -87,7 +124,7 @@ void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
 	}
 }
 
-void RenderGraph::AddRenderPass(const std::string& Name, RenderPassCallback Callback)
+RenderPass* RenderGraph::AddRenderPass(const std::string& Name, RenderPassCallback Callback)
 {
 	GraphDirty = true;
 
@@ -98,6 +135,7 @@ void RenderGraph::AddRenderPass(const std::string& Name, RenderPassCallback Call
 
 	RenderPasses.emplace_back(NewRenderPass);
 	Lut[Name] = NewRenderPass;
+	return NewRenderPass;
 }
 
 RenderPass* RenderGraph::GetRenderPass(const std::string& Name) const
@@ -156,7 +194,7 @@ void RenderGraph::Setup()
 			{
 				// If other pass reads a subresource written by the current node, then it depends on current node and is
 				// an adjacent dependency
-				if (Node->Writes.find(ReadResource) != Node->Writes.end())
+				if (Node->WritesTo(ReadResource))
 				{
 					Indices.push_back(j);
 					break;

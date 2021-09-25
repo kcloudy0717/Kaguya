@@ -1,5 +1,7 @@
 #include "D3D12Device.h"
 
+using Microsoft::WRL::ComPtr;
+
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
@@ -7,13 +9,11 @@ extern "C"
 	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
 }
 
-AutoConsoleVariable<bool> CVar_Dred(
+static ConsoleVariable CVar_Dred(
 	"D3D12.DRED",
 	"Enable Device Removed Extended Data\n"
 	"DRED delivers automatic breadcrumbs as well as GPU page fault reporting\n",
 	true);
-
-using Microsoft::WRL::ComPtr;
 
 const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
 {
@@ -284,9 +284,10 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					INT32 LastCompletedOp = *Node->pLastBreadcrumbValue;
 
 					LOG_WARN(
-						LR"([DRED] Commandlist "{}" on CommandQueue "{}", {0:d} completed of {})",
-						Node->pCommandListDebugNameW,
-						Node->pCommandQueueDebugNameW,
+						LR"({} Commandlist "{1}" on CommandQueue "{2}", {0:d}; completed of {4})",
+						L"[DRED]",
+						Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>",
+						Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>",
 						LastCompletedOp,
 						Node->BreadcrumbCount);
 
@@ -298,7 +299,7 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 						// uint32 LastOpIndex = (*Node->pLastBreadcrumbValue - 1) % 65536;
 						D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
 						LOG_WARN(
-							LR"(\tOp: {0:d}, {} {})",
+							LR"(    Op: {0:d};, {1} {2})",
 							Op,
 							GetAutoBreadcrumbOpString(BreadcrumbOp),
 							Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
@@ -308,15 +309,15 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 			if (SUCCEEDED(Dred->GetPageFaultAllocationOutput(&PageFaultOutput)))
 			{
-				LOG_WARN("[DRED] PageFault at VA GPUAddress: {0:x}", PageFaultOutput.PageFaultVA);
+				LOG_WARN("[DRED] PageFault at VA GPUAddress: {0:x};", PageFaultOutput.PageFaultVA);
 
 				LOG_WARN("[DRED] Active objects with VA ranges that match the faulting VA:");
 				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node;
 					 Node									= Node->pNext)
 				{
 					LOG_WARN(
-						L"\tName: {} (Type: {})",
-						Node->ObjectNameW,
+						L"    Name: {} (Type: {})",
+						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
 						GetDredAllocationTypeString(Node->AllocationType));
 				}
 
@@ -325,8 +326,8 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					 Node									= Node->pNext)
 				{
 					LOG_WARN(
-						L"\tName: {} (Type: {})",
-						Node->ObjectNameW,
+						L"    Name: {} (Type: {})",
+						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
 						GetDredAllocationTypeString(Node->AllocationType));
 				}
 			}

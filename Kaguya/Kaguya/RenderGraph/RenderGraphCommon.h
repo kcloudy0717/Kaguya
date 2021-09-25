@@ -32,32 +32,6 @@ struct RenderGraphViewData
 	}
 };
 
-class RenderScope
-{
-public:
-	// Every RenderScope will have RenderGraphViewData
-	RenderScope() { Get<RenderGraphViewData>(); }
-
-	template<typename T>
-	T& Get()
-	{
-		if (auto iter = DataTable.find(typeid(T)); iter != DataTable.end())
-		{
-			return *reinterpret_cast<T*>(iter->second.get());
-		}
-		else
-		{
-			DataTable[typeid(T)] = std::make_unique<BYTE[]>(sizeof(T));
-			T& Data				 = *reinterpret_cast<T*>(DataTable[typeid(T)].get());
-			Data				 = T(); // Explicit initialization
-			return Data;
-		}
-	}
-
-private:
-	std::unordered_map<std::type_index, std::unique_ptr<BYTE[]>> DataTable;
-};
-
 class RenderGraphChild
 {
 public:

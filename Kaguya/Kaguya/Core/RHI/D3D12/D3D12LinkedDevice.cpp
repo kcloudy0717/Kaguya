@@ -3,17 +3,17 @@
 
 using Microsoft::WRL::ComPtr;
 
-static AutoConsoleVariable<int> CVar_DescriptorAllocatorPageSize(
+static ConsoleVariable CVar_DescriptorAllocatorPageSize(
 	"D3D12.DescriptorAllocatorPageSize",
 	"Descriptor Allocator Page Size",
 	4096);
 
-static AutoConsoleVariable<int> CVar_GlobalResourceViewHeapSize(
+static ConsoleVariable CVar_GlobalResourceViewHeapSize(
 	"D3D12.GlobalResourceViewHeapSize",
 	"Global Resource View Heap Size",
 	4096);
 
-static AutoConsoleVariable<int> CVar_GlobalSamplerHeapSize(
+static ConsoleVariable CVar_GlobalSamplerHeapSize(
 	"D3D12.GlobalSamplerHeapSize",
 	"Global Sampler Heap Size",
 	D3D12_MAX_SHADER_VISIBLE_SAMPLER_HEAP_SIZE);

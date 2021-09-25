@@ -1,5 +1,5 @@
 #include "RenderGraphScheduler.h"
-#include "RenderPass.h"
+#include "RenderGraph.h"
 
 auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureDesc& Desc) -> RenderResourceHandle
 {

@@ -1,5 +1,4 @@
 #pragma once
-#include "RenderPass.h"
 #include "RenderGraphScheduler.h"
 #include "RenderGraphRegistry.h"
 
@@ -8,29 +7,12 @@
 
 #include <stack>
 
-class RenderGraphDependencyLevel : public RenderGraphChild
+struct RenderGraphResolution
 {
-public:
-	RenderGraphDependencyLevel() noexcept = default;
-	RenderGraphDependencyLevel(RenderGraph* Parent)
-		: RenderGraphChild(Parent)
-	{
-	}
-
-	void AddRenderPass(RenderPass* RenderPass);
-
-	void PostInitialize();
-
-	void Execute(D3D12CommandContext& Context);
-
-private:
-	std::vector<RenderPass*> RenderPasses;
-
-	// Apply barriers at a dependency level to reduce redudant barriers
-	std::unordered_set<RenderResourceHandle> Reads;
-	std::unordered_set<RenderResourceHandle> Writes;
-	std::vector<D3D12_RESOURCE_STATES>		 ReadStates;
-	std::vector<D3D12_RESOURCE_STATES>		 WriteStates;
+	bool RenderResolutionResized = false;
+	bool ViewportResolutionResized = false;
+	UINT RenderWidth, RenderHeight;
+	UINT ViewportWidth, ViewportHeight;
 };
 
 class RenderGraphAllocator
@@ -72,12 +54,84 @@ private:
 	BYTE*					Sentinel;
 };
 
-struct RenderGraphResolution
+class RenderScope
 {
-	bool RenderResolutionResized   = false;
-	bool ViewportResolutionResized = false;
-	UINT RenderWidth, RenderHeight;
-	UINT ViewportWidth, ViewportHeight;
+public:
+	// Every RenderScope will have RenderGraphViewData
+	RenderScope() { Get<RenderGraphViewData>(); }
+
+	template<typename T>
+	T& Get()
+	{
+		static_assert(std::is_trivial_v<T>, "typename T is not Pod");
+
+		if (auto iter = DataTable.find(typeid(T)); iter != DataTable.end())
+		{
+			return *reinterpret_cast<T*>(iter->second.get());
+		}
+		else
+		{
+			DataTable[typeid(T)] = std::make_unique<BYTE[]>(sizeof(T));
+			T& Data = *reinterpret_cast<T*>(DataTable[typeid(T)].get());
+			Data = T(); // Explicit initialization
+			return Data;
+		}
+	}
+
+private:
+	std::unordered_map<std::type_index, std::unique_ptr<BYTE[]>> DataTable;
+};
+
+class RenderPass : public RenderGraphChild
+{
+public:
+	using ExecuteCallback = Delegate<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
+
+	RenderPass(RenderGraph* Parent, const std::string& Name);
+
+	void Read(RenderResourceHandle Resource);
+	void Write(RenderResourceHandle Resource);
+
+	[[nodiscard]] bool HasDependency(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool WritesTo(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool ReadsFrom(RenderResourceHandle Resource) const;
+
+	[[nodiscard]] bool HasAnyDependencies() const noexcept;
+
+	std::string Name;
+	size_t		TopologicalIndex = 0;
+
+	std::unordered_set<RenderResourceHandle> Reads;
+	std::unordered_set<RenderResourceHandle> Writes;
+	std::unordered_set<RenderResourceHandle> ReadWrites;
+	RenderScope								 Scope;
+
+	ExecuteCallback Callback;
+};
+
+class RenderGraphDependencyLevel : public RenderGraphChild
+{
+public:
+	RenderGraphDependencyLevel() noexcept = default;
+	RenderGraphDependencyLevel(RenderGraph* Parent)
+		: RenderGraphChild(Parent)
+	{
+	}
+
+	void AddRenderPass(RenderPass* RenderPass);
+
+	void PostInitialize();
+
+	void Execute(D3D12CommandContext& Context);
+
+private:
+	std::vector<RenderPass*> RenderPasses;
+
+	// Apply barriers at a dependency level to reduce redudant barriers
+	std::unordered_set<RenderResourceHandle> Reads;
+	std::unordered_set<RenderResourceHandle> Writes;
+	std::vector<D3D12_RESOURCE_STATES>		 ReadStates;
+	std::vector<D3D12_RESOURCE_STATES>		 WriteStates;
 };
 
 class RenderGraph
@@ -105,12 +159,14 @@ public:
 		{
 			Allocator.Destruct(RenderPass);
 		}
+		RenderPasses.clear();
+		Lut.clear();
 	}
 
 	auto begin() const noexcept { return RenderPasses.begin(); }
 	auto end() const noexcept { return RenderPasses.end(); }
 
-	void AddRenderPass(const std::string& Name, RenderPassCallback Callback);
+	RenderPass* AddRenderPass(const std::string& Name, RenderPassCallback Callback);
 
 	[[nodiscard]] RenderPass* GetRenderPass(const std::string& Name) const;
 

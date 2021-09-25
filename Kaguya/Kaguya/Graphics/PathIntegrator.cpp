@@ -15,18 +15,18 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-struct PathTrace
+struct PathTraceParameter
 {
 	RenderResourceHandle Output;
 };
 
-struct Tonemap
+struct TonemapParameter
 {
 	RenderResourceHandle Output;
 	RenderResourceHandle RenderTarget;
 };
 
-struct FSR
+struct FSRParameter
 {
 	RenderResourceHandle EASUOutput;
 	RenderResourceHandle RCASOutput;
@@ -248,8 +248,6 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 		{
-			D3D12ScopedEvent(AsyncCompute, "TLAS");
-
 			bool AnyBuild = false;
 
 			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
@@ -273,9 +271,12 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
 			}
 
-			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
 			{
-				Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+				D3D12ScopedEvent(AsyncCompute, "BLAS Compact");
+				for (auto Geometry : AccelerationStructure.ReferencedGeometries)
+				{
+					Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+				}
 			}
 
 			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
@@ -283,6 +284,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
 			}
 
+			D3D12ScopedEvent(AsyncCompute, "TLAS");
 			AccelerationStructure.Build(AsyncCompute);
 		}
 		AsyncCompute.CloseCommandList();
@@ -314,11 +316,11 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 
-	RenderGraph.AddRenderPass(
+	RenderPass* PathTrace = RenderGraph.AddRenderPass(
 		"Path Trace",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
 		{
-			auto&		Parameter = Scope.Get<PathTrace>();
+			auto&		Parameter = Scope.Get<PathTraceParameter>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
 			Parameter.Output = Scheduler.CreateTexture(
@@ -381,16 +383,14 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 			};
 		});
 
-	RenderGraph.AddRenderPass(
+	RenderPass* Tonemap = RenderGraph.AddRenderPass(
 		"Tonemap",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
 		{
-			auto& PathTraceData = RenderGraph.GetScope("Path Trace").Get<PathTrace>();
-
 			FLOAT Color[]	 = { 1, 1, 1, 1 };
 			auto  ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format_sRGB, Color);
 
-			auto&		Parameter = Scope.Get<Tonemap>();
+			auto&		Parameter = Scope.Get<TonemapParameter>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
 			Parameter.Output = Scheduler.CreateTexture(
@@ -411,7 +411,8 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				Parameter.RenderTarget = Scheduler.CreateRenderTarget(Desc);
 			}
 
-			auto PathTraceInput = Scheduler.Read(PathTraceData.Output);
+			auto PathTraceInput = Scheduler.Read(PathTrace->Scope.Get<PathTraceParameter>().Output);
+
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				struct RootConstants
@@ -439,13 +440,11 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 			};
 		});
 
-	RenderGraph.AddRenderPass(
+	RenderPass* FSR = RenderGraph.AddRenderPass(
 		"FSR",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
 		{
-			auto& TonemapScope = RenderGraph.GetScope("Tonemap");
-
-			auto&		Parameter = Scope.Get<FSR>();
+			auto&		Parameter = Scope.Get<FSRParameter>();
 			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
 			Parameter.EASUOutput = Scheduler.CreateTexture(
@@ -455,7 +454,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				"RCAS Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
 
-			auto TonemapInput = Scheduler.Read(TonemapScope.Get<Tonemap>().Output);
+			auto TonemapInput = Scheduler.Read(Tonemap->Scope.Get<TonemapParameter>().Output);
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				struct RootConstants
@@ -530,10 +529,14 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 			};
 		});
 
-	RenderResourceHandle TonemapOutput = RenderGraph.GetScope("Tonemap").Get<Tonemap>().Output;
-	RenderResourceHandle FSROutput	   = RenderGraph.GetScope("FSR").Get<FSR>().RCASOutput;
-
-	Viewport	  = FSRState.Enable ? FSROutput : TonemapOutput;
+	if (FSRState.Enable)
+	{
+		Viewport = FSR->Scope.Get<FSRParameter>().RCASOutput;
+	}
+	else
+	{
+		Viewport = Tonemap->Scope.Get<TonemapParameter>().Output;
+	}
 	ValidViewport = true;
 
 	RenderGraph.Setup();

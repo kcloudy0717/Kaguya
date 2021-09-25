@@ -22,29 +22,9 @@ void HierarchyWindow::OnRender()
 				SelectedEntity = Entity;
 			}
 
-			bool bDelete = false;
-			if (ImGui::BeginPopupContextItem())
-			{
-				if (ImGui::MenuItem("Delete"))
-				{
-					bDelete = true;
-				}
-
-				ImGui::EndPopup();
-			}
-
 			if (bOpened)
 			{
 				ImGui::TreePop();
-			}
-
-			if (bDelete)
-			{
-				pWorld->DestroyEntity(Entity);
-				if (SelectedEntity == Entity)
-				{
-					SelectedEntity = {};
-				}
 			}
 		});
 
@@ -57,6 +37,14 @@ void HierarchyWindow::OnRender()
 		{
 			Entity NewEntity = pWorld->CreateEntity("");
 			SelectedEntity	 = NewEntity;
+		}
+
+		if (SelectedEntity)
+		{
+			if (ImGui::MenuItem("Delete Selected"))
+			{
+				pWorld->DestroyEntity(SelectedEntity);
+			}
 		}
 
 		if (ImGui::MenuItem("Clear"))

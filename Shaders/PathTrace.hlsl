@@ -281,12 +281,11 @@ void RayGeneration()
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
 	{
-		// TODO: Replace sampler with sobol
 		// Calculate subpixel camera jitter for anti aliasing
-        const float2 jitter = pcgSampler.Get2D() - 0.5f;
-		const float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
+        float2 jitter = pcgSampler.Get2D() - 0.5f;
+		float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
 
-		const float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
+		float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 
 		// Initialize ray
 		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
