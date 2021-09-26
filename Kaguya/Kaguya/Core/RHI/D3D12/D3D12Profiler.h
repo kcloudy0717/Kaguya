@@ -3,6 +3,8 @@
 
 struct ProfileData
 {
+	void Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData);
+
 	static constexpr UINT64 FilterSize = 64;
 
 	const char* Name = nullptr;
@@ -20,8 +22,6 @@ struct ProfileData
 	double MaxTime;
 
 	INT Depth = 0;
-
-	void Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData);
 };
 
 struct D3D12EventNode
@@ -39,20 +39,20 @@ struct D3D12EventNode
 			delete Child;
 		}
 		Children.clear();
-		LUT.clear();
+		Lut.clear();
 	}
 
 	D3D12EventNode* GetChild(const std::string& Name)
 	{
-		auto iter = LUT.find(Name);
-		if (iter != LUT.end())
+		auto iter = Lut.find(Name);
+		if (iter != Lut.end())
 		{
 			return iter->second;
 		}
 
 		auto EventNode = new D3D12EventNode(Depth + 1, Name, this);
 		Children.push_back(EventNode);
-		LUT[Name] = EventNode;
+		Lut[Name] = EventNode;
 		return EventNode;
 	}
 
@@ -65,7 +65,7 @@ struct D3D12EventNode
 	UINT											 Index = UINT_MAX;
 	D3D12EventNode*									 Parent;
 	std::vector<D3D12EventNode*>					 Children;
-	std::unordered_map<std::string, D3D12EventNode*> LUT;
+	std::unordered_map<std::string, D3D12EventNode*> Lut;
 };
 
 class D3D12EventGraph
@@ -94,7 +94,7 @@ class D3D12Profiler
 public:
 	static constexpr UINT MaxProfiles = 64;
 
-	D3D12Profiler(UINT FrameLatency);
+	explicit D3D12Profiler(UINT FrameLatency);
 
 	void Initialize(ID3D12Device* Device, UINT64 Frequency);
 

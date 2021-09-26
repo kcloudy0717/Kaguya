@@ -40,5 +40,7 @@ protected:
 	RenderGraphRegistry	  Registry;
 	RenderGraphResolution Resolution = {};
 
+	size_t FrameIndex = 0;
+
 	bool ValidViewport = false;
 };
