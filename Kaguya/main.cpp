@@ -783,6 +783,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	#include <Graphics/Renderer.h>
 	#include <Graphics/PathIntegrator.h>
+	#include <Graphics/DeferredRenderer.h>
 
 	#define RENDER_AT_1920x1080 0
 
@@ -809,7 +810,8 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		Renderer = std::make_unique<PathIntegrator>();
+		//Renderer = std::make_unique<PathIntegrator>();
+		Renderer = std::make_unique<DeferredRenderer>();
 		Renderer->OnInitialize();
 
 		return true;

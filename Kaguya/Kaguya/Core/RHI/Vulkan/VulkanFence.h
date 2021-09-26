@@ -11,7 +11,7 @@ public:
 	void Initialize(UINT64 InitialValue);
 	void Destroy();
 
-	UINT64 GetCompletedValue() const;
+	[[nodiscard]] UINT64 GetCompletedValue() const;
 
 	void Wait(UINT64 Value);
 

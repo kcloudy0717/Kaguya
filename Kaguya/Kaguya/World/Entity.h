@@ -59,7 +59,7 @@ public:
 
 	void OnComponentModified() { World->WorldState |= EWorldState_Update; }
 
-	operator bool() const noexcept { return Handle != entt::null; }
+	operator bool() const noexcept { return Handle != entt::null && World->Registry.valid(Handle); }
 
 	operator entt::entity() const noexcept { return Handle; }
 

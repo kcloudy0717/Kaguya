@@ -12,6 +12,7 @@ struct Shaders
 	struct VS
 	{
 		inline static Shader FullScreenTriangle;
+		inline static Shader GBuffer;
 	};
 
 	// Mesh Shaders
@@ -23,6 +24,7 @@ struct Shaders
 	struct PS
 	{
 		inline static Shader ToneMap;
+		inline static Shader GBuffer;
 	};
 
 	// Compute Shaders
@@ -43,6 +45,12 @@ struct Shaders
 				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
 				g_VSEntryPoint,
 				{});
+
+			VS::GBuffer = RenderCore::Compiler->CompileShader(
+				EShaderType::Vertex,
+				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
+				L"VSMain",
+				{});
 		}
 
 		// PS
@@ -51,6 +59,12 @@ struct Shaders
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/ToneMap.hlsl",
 				g_PSEntryPoint,
+				{});
+
+			PS::GBuffer = RenderCore::Compiler->CompileShader(
+				EShaderType::Pixel,
+				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
+				L"PSMain",
 				{});
 		}
 
@@ -98,6 +112,8 @@ struct RootSignatures
 	inline static RenderResourceHandle Tonemap;
 	inline static RenderResourceHandle FSR;
 
+	inline static RenderResourceHandle GBuffer;
+
 	static void Compile(RenderDevice& Device)
 	{
 		Tonemap = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
@@ -123,6 +139,21 @@ struct RootSignatures
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
 			}));
+
+		GBuffer = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.Add32BitConstants<0, 0>(1);
+				Builder.AddConstantBufferView<1, 0>();
+
+				Builder.AddShaderResourceView<0, 0>();
+				Builder.AddShaderResourceView<1, 0>();
+				Builder.AddShaderResourceView<2, 0>();
+
+				Builder.AllowInputLayout();
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			}));
 	}
 };
 
@@ -131,6 +162,8 @@ struct PipelineStates
 	inline static RenderResourceHandle Tonemap;
 	inline static RenderResourceHandle FSREASU;
 	inline static RenderResourceHandle FSRRCAS;
+
+	inline static RenderResourceHandle GBuffer;
 
 	static void Compile(RenderDevice& Device)
 	{
@@ -172,6 +205,43 @@ struct PipelineStates
 			PSODesc.CS								  = Shaders::CS::RCAS;
 
 			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreateComputePipelineState(PSODesc));
+		}
+		{
+			D3D12InputLayout InputLayout;
+			InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
+			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
+			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
+
+			auto DepthStencilState									  = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+			DepthStencilState.DepthEnable							  = TRUE;
+			D3D12_RT_FORMAT_ARRAY RTFormatArray						  = {};
+			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R16G16_FLOAT;
+			DXGI_FORMAT DepthStencilFormat							  = RenderCore::DepthFormat;
+
+			struct PipelineStateStream
+			{
+				CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE		pRootSignature;
+				CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT			InputLayout;
+				CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY	PrimitiveTopologyType;
+				CD3DX12_PIPELINE_STATE_STREAM_VS					VS;
+				CD3DX12_PIPELINE_STATE_STREAM_PS					PS;
+				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL			DepthStencilState;
+				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT	DepthStencilFormat;
+			} Stream;
+
+			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle();
+			Stream.InputLayout			 = InputLayout;
+			Stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			Stream.VS					 = Shaders::VS::GBuffer;
+			Stream.PS					 = Shaders::PS::GBuffer;
+			Stream.DepthStencilState	 = DepthStencilState;
+			Stream.RTVFormats			 = RTFormatArray;
+			Stream.DepthStencilFormat	 = DepthStencilFormat;
+
+			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 	}
 };

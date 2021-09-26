@@ -88,17 +88,10 @@ struct Light
 
 struct Mesh
 {
-	unsigned int			  VertexOffset;
-	unsigned int			  IndexOffset;
-	unsigned int			  MaterialIndex;
-	unsigned int			  InstanceID						  : 24;
-	unsigned int			  InstanceMask						  : 8;
-	unsigned int			  InstanceContributionToHitGroupIndex : 24;
-	unsigned int			  Flags								  : 8;
-	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
-	DirectX::XMFLOAT4X4		  World;
-	DirectX::XMFLOAT4X4		  PreviousWorld;
-	DirectX::XMFLOAT3X4		  Transform;
+	DirectX::XMFLOAT4X4 Transform;
+	DirectX::XMFLOAT4X4 PreviousTransform;
+
+	unsigned int MaterialIndex;
 };
 
 struct Camera
@@ -179,6 +172,13 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 			 .Points	  = { Points[0], Points[1], Points[2], Points[3] },
 
 			 .I = Light.I };
+}
+
+inline HLSL::Mesh GetHLSLMeshDesc(const Transform& Transform)
+{
+	HLSL::Mesh Mesh = {};
+	XMStoreFloat4x4(&Mesh.Transform, XMMatrixTranspose(Transform.Matrix()));
+	return Mesh;
 }
 
 inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
