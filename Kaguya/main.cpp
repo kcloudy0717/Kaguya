@@ -809,7 +809,7 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		Renderer = std::make_unique<PathIntegrator>(&World);
+		Renderer = std::make_unique<PathIntegrator>();
 		Renderer->OnInitialize();
 
 		return true;
@@ -851,7 +851,7 @@ public:
 		// Render
 		Renderer->OnSetViewportResolution(viewportWidth, viewportHeight);
 
-		Renderer->OnRender();
+		Renderer->OnRender(&World);
 	}
 
 	void Shutdown() override

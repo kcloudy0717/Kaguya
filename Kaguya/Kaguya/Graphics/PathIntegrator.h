@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer.h"
+#include "RaytracingAccelerationStructure.h"
 
 struct PathIntegratorState
 {
@@ -35,17 +36,12 @@ struct FSRState
 class PathIntegrator : public Renderer
 {
 public:
-	PathIntegrator(World* pWorld)
-		: Renderer(pWorld)
-	{
-	}
-
 	void* GetViewportDescriptor() override;
 
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
-	void Render(D3D12CommandContext& Context) override;
+	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
 	D3D12RenderPass TonemapRenderPass;

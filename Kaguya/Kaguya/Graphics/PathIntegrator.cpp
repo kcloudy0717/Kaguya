@@ -15,23 +15,6 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-struct PathTraceParameter
-{
-	RenderResourceHandle Output;
-};
-
-struct TonemapParameter
-{
-	RenderResourceHandle Output;
-	RenderResourceHandle RenderTarget;
-};
-
-struct FSRParameter
-{
-	RenderResourceHandle EASUOutput;
-	RenderResourceHandle RCASOutput;
-};
-
 void* PathIntegrator::GetViewportDescriptor()
 {
 	if (ValidViewport)
@@ -143,7 +126,7 @@ void PathIntegrator::Initialize()
 	ShaderBindingTable.Generate(RenderCore::Device->GetDevice());
 }
 
-void PathIntegrator::Render(D3D12CommandContext& Context)
+void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 {
 	bool ResetPathIntegrator = false;
 
@@ -196,7 +179,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 	NumMaterials = NumLights = 0;
 	AccelerationStructure.Reset();
-	pWorld->Registry.view<Transform, MeshFilter, MeshRenderer>().each(
+	World->Registry.view<Transform, MeshFilter, MeshRenderer>().each(
 		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
 		{
 			if (MeshFilter.Mesh)
@@ -205,7 +188,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
 			}
 		});
-	pWorld->Registry.view<Transform, Light>().each(
+	World->Registry.view<Transform, Light>().each(
 		[&](auto&& Transform, auto&& Light)
 		{
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
@@ -300,9 +283,9 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 		}
 	}
 
-	if (pWorld->WorldState & EWorldState::EWorldState_Update)
+	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
-		pWorld->WorldState	= EWorldState_Render;
+		World->WorldState	= EWorldState_Render;
 		ResetPathIntegrator = true;
 	}
 
@@ -316,6 +299,10 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 
+	struct PathTraceParameter
+	{
+		RenderResourceHandle Output;
+	};
 	RenderPass* PathTrace = RenderGraph.AddRenderPass(
 		"Path Trace",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
@@ -327,7 +314,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 				"Path Trace Output",
 				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
 
-			return [&Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
@@ -354,7 +341,7 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 
 					float SkyIntensity;
 				} g_GlobalConstants						= {};
-				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*pWorld->ActiveCamera);
+				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*World->ActiveCamera);
 				g_GlobalConstants.Resolution			= { static_cast<float>(Resolution.ViewportWidth),
 													static_cast<float>(Resolution.ViewportHeight),
 													1.0f / static_cast<float>(Resolution.ViewportWidth),
@@ -383,6 +370,11 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 			};
 		});
 
+	struct TonemapParameter
+	{
+		RenderResourceHandle Output;
+		RenderResourceHandle RenderTarget;
+	};
 	RenderPass* Tonemap = RenderGraph.AddRenderPass(
 		"Tonemap",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
@@ -440,6 +432,11 @@ void PathIntegrator::Render(D3D12CommandContext& Context)
 			};
 		});
 
+	struct FSRParameter
+	{
+		RenderResourceHandle EASUOutput;
+		RenderResourceHandle RCASOutput;
+	};
 	RenderPass* FSR = RenderGraph.AddRenderPass(
 		"FSR",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)

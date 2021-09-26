@@ -16,9 +16,9 @@ void Renderer::OnInitialize()
 	Initialize();
 }
 
-void Renderer::OnRender()
+void Renderer::OnRender(World* World)
 {
-	pWorld->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
+	World->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
 
 	RenderCore::Device->OnBeginFrame();
 
@@ -81,7 +81,7 @@ void Renderer::OnRender()
 	Context.OpenCommandList();
 	{
 		D3D12ScopedEvent(Context, "Render");
-		Render(Context);
+		Render(World, Context);
 
 		auto [pRenderTarget, RenderTargetView] = RenderCore::SwapChain->GetCurrentBackBufferResource();
 

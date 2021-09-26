@@ -1,14 +1,12 @@
 #pragma once
-#include "RaytracingAccelerationStructure.h"
 #include "RenderGraph/RenderGraph.h"
 #include "World/World.h"
 
 class Renderer
 {
 public:
-	Renderer(World* pWorld)
-		: pWorld(pWorld)
-		, Allocator(64 * 1024)
+	Renderer()
+		: Allocator(64 * 1024)
 		, Registry(Scheduler)
 	{
 	}
@@ -18,7 +16,7 @@ public:
 
 	void OnInitialize();
 
-	void OnRender();
+	void OnRender(World* World);
 
 	void OnResize(uint32_t Width, uint32_t Height);
 
@@ -29,11 +27,9 @@ public:
 protected:
 	virtual void SetViewportResolution(uint32_t Width, uint32_t Height) = 0;
 	virtual void Initialize()											= 0;
-	virtual void Render(D3D12CommandContext& Context)					= 0;
+	virtual void Render(World* World, D3D12CommandContext& Context)		= 0;
 
 protected:
-	World* pWorld;
-
 	RenderDevice		  RenderDevice;
 	RenderGraphAllocator  Allocator;
 	RenderGraphScheduler  Scheduler;
