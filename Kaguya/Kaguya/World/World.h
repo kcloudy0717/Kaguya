@@ -49,7 +49,7 @@ public:
 	Camera*		   ActiveCamera = nullptr;
 };
 
-namespace HLSL
+namespace Hlsl
 {
 struct Material
 {
@@ -103,22 +103,24 @@ struct Camera
 
 	float FocalLength;
 	float RelativeAperture;
-	float __Padding0;
-	float __Padding1;
+	float DEADBEEF0;
+	float DEADBEEF1;
 
 	DirectX::XMFLOAT4 Position;
 
-	DirectX::XMFLOAT4X4 World;
 	DirectX::XMFLOAT4X4 View;
 	DirectX::XMFLOAT4X4 Projection;
 	DirectX::XMFLOAT4X4 ViewProjection;
+
 	DirectX::XMFLOAT4X4 InvView;
 	DirectX::XMFLOAT4X4 InvProjection;
 	DirectX::XMFLOAT4X4 InvViewProjection;
-};
-} // namespace HLSL
 
-inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
+	DirectX::XMFLOAT4X4 PrevViewProjection;
+};
+} // namespace Hlsl
+
+inline Hlsl::Material GetHLSLMaterialDesc(const Material& Material)
 {
 	return { .BSDFType		 = (unsigned int)Material.BSDFType,
 			 .baseColor		 = Material.baseColor,
@@ -140,7 +142,7 @@ inline HLSL::Material GetHLSLMaterialDesc(const Material& Material)
 			 .Albedo = Material.TextureIndices[0] };
 }
 
-inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Light)
+inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const Light& Light)
 {
 	using namespace DirectX;
 
@@ -174,48 +176,42 @@ inline HLSL::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 			 .I = Light.I };
 }
 
-inline HLSL::Mesh GetHLSLMeshDesc(const Transform& Transform)
+inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform)
 {
-	HLSL::Mesh Mesh = {};
+	Hlsl::Mesh Mesh = {};
 	XMStoreFloat4x4(&Mesh.Transform, XMMatrixTranspose(Transform.Matrix()));
 	return Mesh;
 }
 
-inline HLSL::Camera GetHLSLCameraDesc(const Camera& Camera)
+inline Hlsl::Camera GetHLSLCameraDesc(const Camera& Camera)
 {
 	using namespace DirectX;
 
-	XMFLOAT4   Position = { Camera.pTransform->Position.x,
+	Hlsl::Camera HlslCamera = {};
+
+	HlslCamera.FoVY		   = Camera.FoVY;
+	HlslCamera.AspectRatio = Camera.AspectRatio;
+	HlslCamera.NearZ	   = Camera.NearZ;
+	HlslCamera.FarZ		   = Camera.FarZ;
+
+	HlslCamera.FocalLength		= Camera.FocalLength;
+	HlslCamera.RelativeAperture = Camera.RelativeAperture;
+	HlslCamera.DEADBEEF0		= (float)0xDEADBEEF;
+	HlslCamera.DEADBEEF1		= (float)0xDEADBEEF;
+
+	HlslCamera.Position = { Camera.pTransform->Position.x,
 							Camera.pTransform->Position.y,
 							Camera.pTransform->Position.z,
 							1.0f };
-	XMFLOAT4X4 World, View, Projection, ViewProjection, InvView, InvProjection, InvViewProjection;
 
-	XMStoreFloat4x4(&World, XMMatrixTranspose(Camera.pTransform->Matrix()));
-	XMStoreFloat4x4(&View, XMMatrixTranspose(Camera.ViewMatrix));
-	XMStoreFloat4x4(&Projection, XMMatrixTranspose(Camera.ProjectionMatrix));
-	XMStoreFloat4x4(&ViewProjection, XMMatrixTranspose(Camera.ViewProjectionMatrix));
-	XMStoreFloat4x4(&InvView, XMMatrixTranspose(Camera.InverseViewMatrix));
-	XMStoreFloat4x4(&InvProjection, XMMatrixTranspose(Camera.InverseProjectionMatrix));
-	XMStoreFloat4x4(&InvViewProjection, XMMatrixTranspose(Camera.InverseViewProjectionMatrix));
+	HlslCamera.View			  = Camera.View;
+	HlslCamera.Projection	  = Camera.Projection;
+	HlslCamera.ViewProjection = Camera.ViewProjection;
 
-	return { .FoVY		  = Camera.FoVY,
-			 .AspectRatio = Camera.AspectRatio,
-			 .NearZ		  = Camera.NearZ,
-			 .FarZ		  = Camera.FarZ,
+	HlslCamera.InvView			 = Camera.InverseView;
+	HlslCamera.InvProjection	 = Camera.InverseProjection;
+	HlslCamera.InvViewProjection = Camera.InverseViewProjection;
 
-			 .FocalLength	   = Camera.FocalLength,
-			 .RelativeAperture = Camera.RelativeAperture,
-			 .__Padding0	   = (float)0xDEADBEEF,
-			 .__Padding1	   = (float)0xDEADBEEF,
-
-			 .Position = Position,
-
-			 .World				= World,
-			 .View				= View,
-			 .Projection		= Projection,
-			 .ViewProjection	= ViewProjection,
-			 .InvView			= InvView,
-			 .InvProjection		= InvProjection,
-			 .InvViewProjection = InvViewProjection };
+	HlslCamera.PrevViewProjection = Camera.PrevViewProjection;
+	return HlslCamera;
 }

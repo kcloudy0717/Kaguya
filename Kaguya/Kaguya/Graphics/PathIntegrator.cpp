@@ -98,21 +98,21 @@ void PathIntegrator::Initialize()
 
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(HLSL::Material) * World::MaterialLimit,
-		sizeof(HLSL::Material),
+		sizeof(Hlsl::Material) * World::MaterialLimit,
+		sizeof(Hlsl::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Materials.Initialize();
-	pMaterial = Materials.GetCpuVirtualAddress<HLSL::Material>();
+	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
 
 	Lights = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(HLSL::Light) * World::LightLimit,
-		sizeof(HLSL::Light),
+		sizeof(Hlsl::Light) * World::LightLimit,
+		sizeof(Hlsl::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.Initialize();
-	pLights = Lights.GetCpuVirtualAddress<HLSL::Light>();
+	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
 
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
@@ -325,7 +325,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 				_declspec(align(256)) struct GlobalConstants
 				{
-					HLSL::Camera Camera;
+					Hlsl::Camera Camera;
 
 					// x, y = Resolution
 					// z, w = 1 / Resolution

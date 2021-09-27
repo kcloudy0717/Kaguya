@@ -2,9 +2,9 @@
 
 struct Camera : Component
 {
-	DirectX::XMVECTOR GetUVector() const;
-	DirectX::XMVECTOR GetVVector() const;
-	DirectX::XMVECTOR GetWVector() const;
+	[[nodiscard]] DirectX::XMVECTOR GetUVector() const;
+	[[nodiscard]] DirectX::XMVECTOR GetVVector() const;
+	[[nodiscard]] DirectX::XMVECTOR GetWVector() const;
 
 	void SetLookAt(DirectX::XMVECTOR EyePosition, DirectX::XMVECTOR FocusPosition, DirectX::XMVECTOR UpDirection);
 
@@ -24,15 +24,15 @@ struct Camera : Component
 	float FocalLength	   = 10.0f; // controls the focus distance of the camera. Impacts the depth of field.
 	float RelativeAperture = 0.0f;	// controls how wide the aperture is opened. Impacts the depth of field.
 
-	DirectX::XMMATRIX ViewMatrix		   = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX ProjectionMatrix	   = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX ViewProjectionMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMFLOAT4X4 View;
+	DirectX::XMFLOAT4X4 Projection;
+	DirectX::XMFLOAT4X4 ViewProjection;
 
-	DirectX::XMMATRIX InverseViewMatrix			  = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX InverseProjectionMatrix	  = DirectX::XMMatrixIdentity();
-	DirectX::XMMATRIX InverseViewProjectionMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMFLOAT4X4 InverseView;
+	DirectX::XMFLOAT4X4 InverseProjection;
+	DirectX::XMFLOAT4X4 InverseViewProjection;
 
-	DirectX::XMMATRIX PrevViewProjectionMatrix = DirectX::XMMatrixIdentity();
+	DirectX::XMFLOAT4X4 PrevViewProjection;
 
 	bool Dirty = true;
 	bool Main  = true;

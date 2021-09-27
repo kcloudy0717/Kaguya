@@ -7,8 +7,7 @@ cbuffer RootConstants : register(b0, space0)
 
 struct GlobalConstants
 {
-	Camera CurrentCamera;
-	Camera PreviousCamera;
+	Camera Camera;
 
 	uint NumLights;
 };
@@ -31,6 +30,7 @@ struct MRT
 struct VSOutput
 {
 	float4 Position : SV_POSITION;
+	float4 CurrPosition : CURR_POSITION;
 	float4 PrevPosition : PREV_POSITION;
 	float2 TexCoord : TEXCOORD;
 	float3 T : TANGENT;
@@ -44,10 +44,13 @@ VSOutput VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOORD, floa
 
 	Mesh mesh = g_Meshes[MeshIndex];
 
-	output.Position		= mul(float4(Position, 1.0f), mesh.Transform);
-	output.Position		= mul(output.Position, g_GlobalConstants.CurrentCamera.ViewProjection);
+	output.Position = mul(float4(Position, 1.0f), mesh.Transform);
+	output.Position = mul(output.Position, g_GlobalConstants.Camera.ViewProjection);
+
+	output.CurrPosition = mul(float4(Position, 1.0f), mesh.Transform);
+	output.CurrPosition = mul(output.CurrPosition, g_GlobalConstants.Camera.ViewProjection);
 	output.PrevPosition = mul(float4(Position, 1.0f), mesh.PreviousTransform);
-	output.PrevPosition = mul(output.PrevPosition, g_GlobalConstants.PreviousCamera.ViewProjection);
+	output.PrevPosition = mul(output.PrevPosition, g_GlobalConstants.Camera.PrevViewProjection);
 	output.TexCoord		= TextureCoord;
 	output.N			= normalize(mul(Normal, (float3x3)mesh.Transform));
 
@@ -70,7 +73,7 @@ MRT PSMain(VSOutput input)
 		material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, input.TexCoord, 0.0f).rgb;
 	}
 
-	float3 currentPosNDC  = input.Position.xyz / input.Position.w;
+	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;
 	float3 previousPosNDC = input.PrevPosition.xyz / input.PrevPosition.w;
 	float2 velocity		  = currentPosNDC.xy - previousPosNDC.xy;
 

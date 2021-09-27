@@ -62,30 +62,30 @@ void DeferredRenderer::Initialize()
 
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(HLSL::Material) * World::MaterialLimit,
-		sizeof(HLSL::Material),
+		sizeof(Hlsl::Material) * World::MaterialLimit,
+		sizeof(Hlsl::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Materials.Initialize();
-	pMaterial = Materials.GetCpuVirtualAddress<HLSL::Material>();
+	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
 
 	Lights = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(HLSL::Light) * World::LightLimit,
-		sizeof(HLSL::Light),
+		sizeof(Hlsl::Light) * World::LightLimit,
+		sizeof(Hlsl::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.Initialize();
-	pLights = Lights.GetCpuVirtualAddress<HLSL::Light>();
+	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
 
 	Meshes = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(HLSL::Mesh) * World::InstanceLimit,
-		sizeof(HLSL::Mesh),
+		sizeof(Hlsl::Mesh) * World::InstanceLimit,
+		sizeof(Hlsl::Mesh),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Meshes.Initialize();
-	pMeshes = Meshes.GetCpuVirtualAddress<HLSL::Mesh>();
+	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
 	MeshRenderers.reserve(World::InstanceLimit);
 	HlslMeshes.resize(World::InstanceLimit);
@@ -95,7 +95,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 {
 	if (ImGui::Begin("GBuffer"))
 	{
-		constexpr const char* View[] = { "Albedo", "Normal", "Motion", "Depth"};
+		constexpr const char* View[] = { "Albedo", "Normal", "Motion", "Depth" };
 		ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
 
 		ImGui::Text("Render resolution: %dx%d", Resolution.RenderWidth, Resolution.RenderHeight);
@@ -112,7 +112,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			if (MeshFilter.Mesh)
 			{
 				pMaterial[NumMaterials]					= GetHLSLMaterialDesc(MeshRenderer.Material);
-				HLSL::Mesh Mesh							= GetHLSLMeshDesc(Transform);
+				Hlsl::Mesh Mesh							= GetHLSLMeshDesc(Transform);
 				HlslMeshes[NumMeshes].PreviousTransform = HlslMeshes[NumMeshes].Transform;
 				HlslMeshes[NumMeshes].Transform			= Mesh.Transform;
 				HlslMeshes[NumMeshes].MaterialIndex		= NumMaterials;
@@ -127,7 +127,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		{
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
 		});
-	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(HLSL::Mesh) * World::InstanceLimit);
+	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::InstanceLimit);
 
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
@@ -210,14 +210,13 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 				_declspec(align(256)) struct GlobalConstants
 				{
-					HLSL::Camera CurrentCamera;
-					HLSL::Camera PreviousCamera;
+					Hlsl::Camera Camera;
 
 					unsigned int NumLights;
-				} g_GlobalConstants				 = {};
-				g_GlobalConstants.CurrentCamera	 = GetHLSLCameraDesc(*World->ActiveCamera);
-				g_GlobalConstants.PreviousCamera = GetHLSLCameraDesc(*World->ActiveCamera);
-				g_GlobalConstants.NumLights		 = NumLights;
+				} g_GlobalConstants		 = {};
+				g_GlobalConstants.Camera = GetHLSLCameraDesc(*World->ActiveCamera);
+
+				g_GlobalConstants.NumLights = NumLights;
 
 				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::GBuffer));
 				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::GBuffer));

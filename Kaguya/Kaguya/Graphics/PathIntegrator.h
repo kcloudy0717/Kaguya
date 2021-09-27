@@ -58,9 +58,9 @@ private:
 	FSRState			FSRState;
 
 	D3D12Buffer		Materials;
-	HLSL::Material* pMaterial = nullptr;
+	Hlsl::Material* pMaterial = nullptr;
 	D3D12Buffer		Lights;
-	HLSL::Light*	pLights		 = nullptr;
+	Hlsl::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;
 
 	// Pad local root arguments explicitly
