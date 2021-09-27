@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2021, assimp team
+Copyright (c) 2006-2020, assimp team
 
 All rights reserved.
 
@@ -305,9 +305,9 @@ struct aiString {
 
     /** Copy a const char* to the aiString */
     void Set(const char *sz) {
-        ai_int32 len = (ai_uint32)::strlen(sz);
+        const ai_int32 len = (ai_uint32)::strlen(sz);
         if (len > (ai_int32)MAXLEN - 1) {
-            len = (ai_int32) MAXLEN - 1;
+            return;
         }
         length = len;
         memcpy(data, sz, len);
@@ -321,10 +321,7 @@ struct aiString {
         }
 
         length = rOther.length;
-        if (length >(MAXLEN - 1)) {
-            length = (ai_int32) MAXLEN - 1;
-        }
-
+        ;
         memcpy(data, rOther.data, length);
         data[length] = '\0';
         return *this;

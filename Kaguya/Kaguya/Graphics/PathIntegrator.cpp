@@ -138,7 +138,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			ResetPathIntegrator = true;
 		}
 
-		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 5.0f);
+		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
 		ResetPathIntegrator |= ImGui::SliderScalar(
 			"Max Depth",
 			ImGuiDataType_U32,

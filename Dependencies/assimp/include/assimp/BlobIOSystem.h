@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2021, assimp team
+Copyright (c) 2006-2020, assimp team
 
 
 
@@ -194,14 +194,8 @@ class BlobIOSystem : public IOSystem {
     friend class BlobIOStream;
     typedef std::pair<std::string, aiExportDataBlob *> BlobEntry;
 
-
 public:
-    BlobIOSystem() :
-            baseName{AI_BLOBIO_MAGIC} {
-    }
-
-    BlobIOSystem(const std::string &baseName) :
-            baseName(baseName) {
+    BlobIOSystem() {
     }
 
     virtual ~BlobIOSystem() {
@@ -213,32 +207,27 @@ public:
 public:
     // -------------------------------------------------------------------
     const char *GetMagicFileName() const {
-        return baseName.c_str();
+        return AI_BLOBIO_MAGIC;
     }
 
     // -------------------------------------------------------------------
     aiExportDataBlob *GetBlobChain() {
-        const auto magicName = std::string(this->GetMagicFileName());
-        const bool hasBaseName = baseName != AI_BLOBIO_MAGIC;
-
         // one must be the master
         aiExportDataBlob *master = nullptr, *cur;
-
         for (const BlobEntry &blobby : blobs) {
-            if (blobby.first == magicName) {
+            if (blobby.first == AI_BLOBIO_MAGIC) {
                 master = blobby.second;
-                master->name.Set(hasBaseName ? blobby.first : "");
                 break;
             }
         }
-
         if (!master) {
             ASSIMP_LOG_ERROR("BlobIOSystem: no data written or master file was not closed properly.");
             return nullptr;
         }
 
-        cur = master;
+        master->name.Set("");
 
+        cur = master;
         for (const BlobEntry &blobby : blobs) {
             if (blobby.second == master) {
                 continue;
@@ -247,13 +236,9 @@ public:
             cur->next = blobby.second;
             cur = cur->next;
 
-            if (hasBaseName) {
-                cur->name.Set(blobby.first);
-            } else {
-                // extract the file extension from the file written
-                const std::string::size_type s = blobby.first.find_first_of('.');
-                cur->name.Set(s == std::string::npos ? blobby.first : blobby.first.substr(s + 1));
-            }
+            // extract the file extension from the file written
+            const std::string::size_type s = blobby.first.find_first_of('.');
+            cur->name.Set(s == std::string::npos ? blobby.first : blobby.first.substr(s + 1));
         }
 
         // give up blob ownership
@@ -298,7 +283,6 @@ private:
     }
 
 private:
-    std::string baseName;
     std::set<std::string> created;
     std::vector<BlobEntry> blobs;
 };

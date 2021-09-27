@@ -810,8 +810,8 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		// Renderer = std::make_unique<PathIntegrator>();
-		Renderer = std::make_unique<DeferredRenderer>();
+		Renderer = std::make_unique<PathIntegrator>();
+		//Renderer = std::make_unique<DeferredRenderer>();
 		Renderer->OnInitialize();
 
 		return true;

@@ -9,7 +9,7 @@
  */
 
 // Samples per pixel
-#define SPP 4
+#define SPP 8
 
 // HitGroup Local Root Signature
 // ====================
@@ -167,12 +167,12 @@ float3 UniformSampleOneLight(SurfaceInteraction si, inout Sampler Sampler)
 
 	int numLights = g_GlobalConstants.NumLights;
 
-    int lightIndex = min(Sampler.Get1D() * numLights, numLights - 1);
+	int	  lightIndex = min(Sampler.Get1D() * numLights, numLights - 1);
 	float lightPdf	 = 1.0f / float(numLights);
 
 	Light light = g_Lights[lightIndex];
 
-    return EstimateDirect(si, light, Sampler.Get2D()) / lightPdf;
+	return EstimateDirect(si, light, Sampler.Get2D()) / lightPdf;
 }
 
 float3 Li(RayDesc ray, inout Sampler Sampler)
@@ -182,13 +182,13 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 
 	RayPayload payload = (RayPayload)0;
 
-	for (int bounce = 0;; ++bounce)
+	for (int bounce = 0; bounce < g_GlobalConstants.MaxDepth; ++bounce)
 	{
 		// Trace the ray
 		TraceRay(g_Scene, RAY_FLAG_NONE, 0xff, RayTypePrimary, NumRayTypes, 0, ray, payload);
 
 		// Ray missed
-		if (!payload.IsValid() || bounce >= g_GlobalConstants.MaxDepth)
+		if (!payload.IsValid())
 		{
 			float t = 0.5f * (ray.Direction.y + 1.0f);
 			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_GlobalConstants.SkyIntensity;
@@ -236,12 +236,18 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 		// (But skip this for perfectly specular BSDFs.)
 		if (si.BSDF.IsNonSpecular())
 		{
-            L += beta * UniformSampleOneLight(si, Sampler);
-        }
+			L += beta * UniformSampleOneLight(si, Sampler);
+		}
+
+		// Terminate loop early on last bounce (we don't need to sample BRDF)
+        //if (bounce == g_GlobalConstants.MaxDepth - 1)
+		//{
+		//	break;
+		//}
 
 		// Sample BSDF to get new path direction
 		BSDFSample bsdfSample = (BSDFSample)0;
-        bool success = si.BSDF.Samplef(si.wo, Sampler.Get2D(), bsdfSample);
+		bool	   success	  = si.BSDF.Samplef(si.wo, Sampler.Get2D(), bsdfSample);
 		if (!success)
 		{
 			// Used to debug
@@ -260,7 +266,7 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 		if (rrMaxComponentValue < rrThreshold && bounce > 1)
 		{
 			float q = max(0.0f, 1.0f - rrMaxComponentValue);
-            if (Sampler.Get1D() < q)
+			if (Sampler.Get1D() < q)
 			{
 				break;
 			}
@@ -274,24 +280,24 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 [shader("raygeneration")]
 void RayGeneration()
 {
-	uint2 launchIndex		 = DispatchRaysIndex().xy;
-	uint2 launchDimensions = DispatchRaysDimensions().xy;
-    Sampler pcgSampler = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
+	uint2	launchIndex		 = DispatchRaysIndex().xy;
+	uint2	launchDimensions = DispatchRaysDimensions().xy;
+	Sampler pcgSampler		 = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
 
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
 	{
 		// Calculate subpixel camera jitter for anti aliasing
-        float2 jitter = pcgSampler.Get2D() - 0.5f;
-		float2 pixel	= (float2(launchIndex) + jitter) / float2(launchDimensions);
+		float2 jitter = pcgSampler.Get2D() - 0.5f;
+		float2 pixel  = (float2(launchIndex) + jitter) / float2(launchDimensions);
 
 		float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 
 		// Initialize ray
 		RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
 
-        L += Li(ray, pcgSampler);
-    }
+		L += Li(ray, pcgSampler);
+	}
 	L /= float(SPP);
 
 	// Replace NaN components with zero. See explanation in Ray Tracing: The Rest of Your Life.

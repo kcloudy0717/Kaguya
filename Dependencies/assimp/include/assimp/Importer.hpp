@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2021, assimp team
+Copyright (c) 2006-2020, assimp team
 
 
 
@@ -58,8 +58,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Public ASSIMP data structures
 #include <assimp/types.h>
-
-#include <exception>
 
 namespace Assimp {
 // =======================================================================
@@ -286,7 +284,7 @@ public:
      * @see GetPropertyInteger()
      */
     std::string GetPropertyString(const char *szName,
-            const std::string &sErrorReturn = std::string()) const;
+            const std::string &sErrorReturn = "") const;
 
     // -------------------------------------------------------------------
     /** Get a matrix configuration property

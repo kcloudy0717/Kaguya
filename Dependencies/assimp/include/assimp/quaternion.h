@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2021, assimp team
+Copyright (c) 2006-2020, assimp team
 
 
 All rights reserved.
@@ -57,7 +57,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 template <typename TReal> class aiVector3t;
 template <typename TReal> class aiMatrix3x3t;
-template <typename TReal> class aiMatrix4x4t;
 
 // ---------------------------------------------------------------------------
 /** Represents a quaternion in a 4D vector. */
@@ -73,7 +72,7 @@ public:
     explicit aiQuaterniont( const aiMatrix3x3t<TReal>& pRotMatrix);
 
     /** Construct from euler angles */
-    aiQuaterniont( TReal roty, TReal rotz, TReal rotx);
+    aiQuaterniont( TReal rotx, TReal roty, TReal rotz);
 
     /** Construct from an axis-angle pair */
     aiQuaterniont( aiVector3t<TReal> axis, TReal angle);
@@ -88,9 +87,6 @@ public:
 
     bool operator== (const aiQuaterniont& o) const;
     bool operator!= (const aiQuaterniont& o) const;
-
-    // transform vector by matrix
-    aiQuaterniont& operator *= (const aiMatrix4x4t<TReal>& mat);
 
     bool Equal(const aiQuaterniont& o, TReal epsilon = 1e-6) const;
 
