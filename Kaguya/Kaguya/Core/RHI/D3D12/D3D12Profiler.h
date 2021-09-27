@@ -16,9 +16,9 @@ struct ProfileData
 	INT64 EndTime	= 0;
 
 	double TimeSamples[FilterSize] = {};
-	UINT64 CurrSample			   = 0;
+	UINT64 Sample				   = 0;
 
-	double AvgTime;
+	double AverageTime;
 	double MaxTime;
 
 	INT Depth = 0;

@@ -31,7 +31,7 @@ void Renderer::OnRender(World* World)
 				ImGui::Text("    ");
 				ImGui::SameLine();
 			}
-			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AvgTime, iter.MaxTime);
+			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AverageTime, iter.MaxTime);
 			ImGui::SameLine();
 			ImGui::NewLine();
 		}
@@ -54,7 +54,7 @@ void Renderer::OnRender(World* World)
 		if (!D3D12Profiler::Data.empty())
 		{
 			Recent						  = 0;
-			FrameTimeArray[NumFrames - 1] = static_cast<float>(D3D12Profiler::Data.begin()->AvgTime);
+			FrameTimeArray[NumFrames - 1] = static_cast<float>(D3D12Profiler::Data.begin()->AverageTime);
 			for (size_t i = 0; i < NumFrames - 1; i++)
 			{
 				FrameTimeArray[i] = FrameTimeArray[i + 1];

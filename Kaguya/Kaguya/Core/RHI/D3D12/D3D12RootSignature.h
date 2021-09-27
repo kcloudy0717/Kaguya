@@ -26,7 +26,7 @@
 class D3D12DescriptorTable
 {
 public:
-	D3D12DescriptorTable() noexcept = default;
+	explicit D3D12DescriptorTable(size_t NumRanges) { DescriptorRanges.reserve(NumRanges); }
 
 	template<UINT BaseShaderRegister, UINT RegisterSpace>
 	void AddSRVRange(

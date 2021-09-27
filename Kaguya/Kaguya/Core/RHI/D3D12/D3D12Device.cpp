@@ -17,21 +17,17 @@ static ConsoleVariable CVar_Dred(
 
 const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
 {
+	// clang-format off
 	switch (Severity)
 	{
-	case D3D12_MESSAGE_SEVERITY_CORRUPTION:
-		return "[Corruption]";
-	case D3D12_MESSAGE_SEVERITY_ERROR:
-		return "[Error]";
-	case D3D12_MESSAGE_SEVERITY_WARNING:
-		return "[Warning]";
-	case D3D12_MESSAGE_SEVERITY_INFO:
-		return "[Info]";
-	case D3D12_MESSAGE_SEVERITY_MESSAGE:
-		return "[Message]";
-	default:
-		return "<unknown>";
+	case D3D12_MESSAGE_SEVERITY_CORRUPTION: return "[Corruption]";
+	case D3D12_MESSAGE_SEVERITY_ERROR:		return "[Error]";
+	case D3D12_MESSAGE_SEVERITY_WARNING:	return "[Warning]";
+	case D3D12_MESSAGE_SEVERITY_INFO:		return "[Info]";
+	case D3D12_MESSAGE_SEVERITY_MESSAGE:	return "[Message]";
+	default:								return "<unknown>";
 	}
+	// clang-format on
 }
 
 void D3D12Device::ReportLiveObjects()
@@ -296,7 +292,6 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 					for (INT32 Op = FirstOp; Op <= LastOp; ++Op)
 					{
-						// uint32 LastOpIndex = (*Node->pLastBreadcrumbValue - 1) % 65536;
 						D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
 						LOG_WARN(
 							LR"(    Op: {0:d};, {1} {2})",
@@ -366,7 +361,7 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	/* Descriptor Tables */
 
 	// ShaderResource
-	D3D12DescriptorTable ShaderResourceTable;
+	D3D12DescriptorTable ShaderResourceTable(3);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
@@ -378,7 +373,7 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddDescriptorTable(ShaderResourceTable);
 
 	// UnorderedAccess
-	D3D12DescriptorTable UnorderedAccessTable;
+	D3D12DescriptorTable UnorderedAccessTable(2);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
@@ -389,7 +384,7 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddDescriptorTable(UnorderedAccessTable);
 
 	// Sampler
-	D3D12DescriptorTable SamplerTable;
+	D3D12DescriptorTable SamplerTable(1);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 
