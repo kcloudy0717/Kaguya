@@ -312,7 +312,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 			Parameter.Output = Scheduler.CreateTexture(
 				"Path Trace Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, 1));
+				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 1));
 
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
@@ -390,8 +390,6 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
 					D3D12SwapChain::Format,
-					0,
-					0,
 					1,
 					TextureFlag_AllowRenderTarget,
 					ClearValue));
@@ -446,10 +444,10 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 			Parameter.EASUOutput = Scheduler.CreateTexture(
 				"EASU Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
 			Parameter.RCASOutput = Scheduler.CreateTexture(
 				"RCAS Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 0, 0, 1));
+				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
 
 			auto TonemapInput = Scheduler.Read(Tonemap->Scope.Get<TonemapParameter>().Output);
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)

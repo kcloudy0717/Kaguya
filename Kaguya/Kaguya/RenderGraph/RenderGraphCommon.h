@@ -166,151 +166,43 @@ DEFINE_ENUM_FLAG_OPERATORS(ETextureFlags);
 struct RGTextureDesc
 {
 	[[nodiscard]] static auto RWTexture2D(
+		DXGI_FORMAT	  Format,
+		UINT		  Width,
+		UINT		  Height,
+		UINT16		  MipLevels = 1,
+		ETextureFlags Flags		= TextureFlag_None) -> RGTextureDesc;
+	[[nodiscard]] static auto RWTexture2D(
 		ETextureResolution Resolution,
 		DXGI_FORMAT		   Format,
-		UINT			   Width,
-		UINT			   Height,
 		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
-	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::Texture2D,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = 1,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags | TextureFlag_AllowUnorderedAccess,
-		};
-	}
-
-	[[nodiscard]] static auto RWTexture2DArray(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT			   Width,
-		UINT			   Height,
-		UINT16			   ArraySize,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
-	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::Texture2DArray,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = ArraySize,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags | TextureFlag_AllowUnorderedAccess,
-		};
-	}
-
-	[[nodiscard]] static auto RWTexture3D(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT			   Width,
-		UINT			   Height,
-		UINT16			   Depth,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
-	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::Texture3D,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = Depth,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags | TextureFlag_AllowUnorderedAccess,
-		};
-	}
+		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc;
 
 	[[nodiscard]] static auto Texture2D(
-		ETextureResolution				 Resolution,
 		DXGI_FORMAT						 Format,
 		UINT							 Width,
 		UINT							 Height,
 		UINT16							 MipLevels			 = 1,
 		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc
-	{
-		return { .Resolution		  = Resolution,
-				 .Format			  = Format,
-				 .Type				  = ETextureType::Texture2D,
-				 .Width				  = Width,
-				 .Height			  = Height,
-				 .DepthOrArraySize	  = 1,
-				 .MipLevels			  = MipLevels,
-				 .Flags				  = Flags,
-				 .OptimizedClearValue = OptimizedClearValue };
-	}
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc;
+	[[nodiscard]] static auto Texture2D(
+		ETextureResolution				 Resolution,
+		DXGI_FORMAT						 Format,
+		UINT16							 MipLevels			 = 1,
+		ETextureFlags					 Flags				 = TextureFlag_None,
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc;
 
-	[[nodiscard]] static auto Texture2DArray(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT			   Width,
-		UINT			   Height,
-		UINT16			   ArraySize,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
+	[[nodiscard]] bool AllowRenderTarget() const noexcept
 	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::Texture2DArray,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = ArraySize,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags,
-		};
+		return Flags & ETextureFlags::TextureFlag_AllowRenderTarget;
 	}
-
-	[[nodiscard]] static auto Texture3D(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT			   Width,
-		UINT			   Height,
-		UINT16			   Depth,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
+	[[nodiscard]] bool AllowDepthStencil() const noexcept
 	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::Texture3D,
-			.Width			  = Width,
-			.Height			  = Height,
-			.DepthOrArraySize = Depth,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags,
-		};
+		return Flags & ETextureFlags::TextureFlag_AllowDepthStencil;
 	}
-
-	[[nodiscard]] static auto TextureCube(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT			   Dimension,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc
+	[[nodiscard]] bool AllowUnorderedAccess() const noexcept
 	{
-		return {
-			.Resolution		  = Resolution,
-			.Format			  = Format,
-			.Type			  = ETextureType::TextureCube,
-			.Width			  = Dimension,
-			.Height			  = Dimension,
-			.DepthOrArraySize = 6,
-			.MipLevels		  = MipLevels,
-			.Flags			  = Flags,
-		};
+		return Flags & ETextureFlags::TextureFlag_AllowUnorderedAccess;
 	}
-
-	bool AllowRenderTarget() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowRenderTarget; }
-	bool AllowDepthStencil() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowDepthStencil; }
-	bool AllowUnorderedAccess() const noexcept { return Flags & ETextureFlags::TextureFlag_AllowUnorderedAccess; }
 
 	ETextureResolution				 Resolution			 = ETextureResolution::Static;
 	DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;

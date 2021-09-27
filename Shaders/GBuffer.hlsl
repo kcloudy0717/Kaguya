@@ -33,8 +33,6 @@ struct VSOutput
 	float4 CurrPosition : CURR_POSITION;
 	float4 PrevPosition : PREV_POSITION;
 	float2 TexCoord : TEXCOORD;
-	float3 T : TANGENT;
-	float3 B : BINORMAL;
 	float3 N : NORMAL;
 };
 
@@ -54,10 +52,8 @@ VSOutput VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOORD, floa
 	output.TexCoord		= TextureCoord;
 	output.N			= normalize(mul(Normal, (float3x3)mesh.Transform));
 
-	float3 t, b;
-	CoordinateSystem(output.N, t, b);
-	output.T = t;
-	output.B = b;
+	// float3 t, b;
+	// CoordinateSystem(output.N, t, b);
 
 	return output;
 }
@@ -68,9 +64,9 @@ MRT PSMain(VSOutput input)
 	Material material = g_Materials[mesh.MaterialIndex];
 	if (material.Albedo != -1)
 	{
-		// Texture2D Texture = ResourceDescriptorHeap[material.Albedo];
-		Texture2D Texture  = g_Texture2DTable[material.Albedo];
-		material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, input.TexCoord, 0.0f).rgb;
+		// Texture2D texture = ResourceDescriptorHeap[material.Albedo];
+		Texture2D texture  = g_Texture2DTable[material.Albedo];
+		material.baseColor = texture.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
 	}
 
 	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;

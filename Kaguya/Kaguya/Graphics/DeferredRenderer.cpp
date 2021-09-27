@@ -158,8 +158,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R32G32B32A32_FLOAT,
-					0,
-					0,
 					1,
 					TextureFlag_AllowRenderTarget,
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
@@ -168,8 +166,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R32G32B32A32_FLOAT,
-					0,
-					0,
 					1,
 					TextureFlag_AllowRenderTarget,
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
@@ -178,8 +174,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R16G16_FLOAT,
-					0,
-					0,
 					1,
 					TextureFlag_AllowRenderTarget,
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
@@ -188,8 +182,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				RGTextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_D32_FLOAT,
-					0,
-					0,
 					1,
 					TextureFlag_AllowDepthStencil,
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
