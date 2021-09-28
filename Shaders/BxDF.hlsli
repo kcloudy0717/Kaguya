@@ -1,5 +1,4 @@
-#ifndef BXDF_HLSLI
-#define BXDF_HLSLI
+#pragma once
 
 #include "Math.hlsli"
 #include "Sampling.hlsli"
@@ -283,5 +282,3 @@ struct Glass
 
 	BxDFFlags Flags() { return BxDFFlags::Reflection | BxDFFlags::Transmission | BxDFFlags::Specular; }
 };
-
-#endif // BXDF_HLSLI

@@ -99,7 +99,8 @@ source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${src_hlsl})
 set_source_files_properties(${src_hlsl} PROPERTIES VS_TOOL_OVERRIDE None)
 
 add_custom_target(Shaders
-ALL SOURCES ${inc_hlsl} ${src_hlsl})
+ALL SOURCES ${inc_hlsl} ${src_hlsl}
+DEPENDS ${inc_hlsl} ${src_hlsl})
 add_custom_command(
 TARGET Shaders
 COMMAND ${CMAKE_COMMAND}

@@ -1,5 +1,4 @@
-#ifndef MATH_HLSLI
-#define MATH_HLSLI
+#pragma once
 
 static const float g_EPSILON = 1e-4f;
 
@@ -176,5 +175,3 @@ float3 OffsetRay(float3 p, float3 ng)
 		abs(p.y) < origin ? p.y + float_scale * ng.y : p_i.y,
 		abs(p.z) < origin ? p.z + float_scale * ng.z : p_i.z);
 }
-
-#endif // MATH_HLSLI

@@ -1,5 +1,4 @@
-#ifndef DISNEY_HLSLI
-#define DISNEY_HLSLI
+#pragma once
 
 #include "BxDF.hlsli"
 
@@ -236,5 +235,3 @@ struct Disney
 
 	BxDFFlags Flags() { return BxDFFlags::Reflection | BxDFFlags::Diffuse | BxDFFlags::Glossy; }
 };
-
-#endif // DISNEY_HLSLI

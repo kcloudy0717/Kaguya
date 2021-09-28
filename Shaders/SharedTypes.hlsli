@@ -1,5 +1,4 @@
-#ifndef SHARED_TYPES_HLSLI
-#define SHARED_TYPES_HLSLI
+#pragma once
 
 // ==================== Material ====================
 struct Material
@@ -96,5 +95,3 @@ struct Camera
 		return ray;
 	}
 };
-
-#endif // SHARED_TYPES_HLSLI

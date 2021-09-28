@@ -1,5 +1,4 @@
-#ifndef SAMPLING_HLSLI
-#define SAMPLING_HLSLI
+#pragma once
 
 #include "Math.hlsli"
 
@@ -175,5 +174,3 @@ float3 SampleSphericalRectangle(SphericalRectangle squad, float2 Xi)
 	// 4. transform (xu, yv, z0) to world coords
 	return squad.o + xu * squad.x + yv * squad.y + squad.z0 * squad.z;
 }
-
-#endif // SAMPLING_HLSLI

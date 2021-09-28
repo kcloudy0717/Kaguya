@@ -1,5 +1,4 @@
-#ifndef VERTEX_HLSLI
-#define VERTEX_HLSLI
+#pragma once
 
 struct Vertex
 {
@@ -32,5 +31,3 @@ Vertex BarycentricInterpolation(Vertex v0, Vertex v1, Vertex v2, float3 barycent
 
 	return vertex;
 }
-
-#endif

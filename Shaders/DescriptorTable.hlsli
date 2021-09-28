@@ -1,5 +1,4 @@
-#ifndef DESCRIPTOR_TABLE_HLSLI
-#define DESCRIPTOR_TABLE_HLSLI
+#pragma once
 
 /*
 	Defines bindless descriptor table, resources are grouped together based on their usage [Read/Write] within
@@ -24,5 +23,3 @@ SamplerState g_SamplerLinearWrap : register(s2, space101);
 SamplerState g_SamplerLinearClamp : register(s3, space101);
 SamplerState g_SamplerAnisotropicWrap : register(s4, space101);
 SamplerState g_SamplerAnisotropicClamp : register(s5, space101);
-
-#endif // DESCRIPTOR_TABLE_HLSLI

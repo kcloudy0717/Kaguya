@@ -1,7 +1,6 @@
-#ifndef SCATTERING_HLSLI
-#define SCATTERING_HLSLI
+#pragma once
 
-#include <Math.hlsli>
+#include "Math.hlsli"
 
 float PhaseHenyeyGreenstein(float cosTheta, float g)
 {
@@ -22,5 +21,3 @@ struct HenyeyGreenstein
 
 	float g;
 };
-
-#endif // SCATTERING_HLSLI

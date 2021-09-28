@@ -14,9 +14,9 @@ DEFINE_ENUM_FLAG_OPERATORS(EWorldState);
 class World
 {
 public:
-	static constexpr UINT64 MaterialLimit = 1024;
-	static constexpr UINT64 LightLimit	  = 100;
-	static constexpr UINT64 InstanceLimit = 1024;
+	static constexpr size_t MaterialLimit = 1024;
+	static constexpr size_t LightLimit	  = 100;
+	static constexpr size_t InstanceLimit = 1024;
 
 	World() { AddDefaultEntities(); }
 

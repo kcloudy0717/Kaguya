@@ -1,5 +1,4 @@
-#ifndef HLSL_COMMON_HLSLI
-#define HLSL_COMMON_HLSLI
+#pragma once
 
 #include "Vertex.hlsli"
 #include "Math.hlsli"
@@ -64,5 +63,3 @@ float3 GenerateWorldCameraRayDirection(float2 ScreenSpaceUV, Camera Camera)
 {
 	return normalize(NDCDepthToWorldPosition(1.0f, ScreenSpaceUV, Camera) - Camera.Position.xyz);
 }
-
-#endif // HLSL_COMMON_HLSLI

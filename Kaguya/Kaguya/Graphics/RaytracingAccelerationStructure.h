@@ -9,7 +9,7 @@ class RaytracingAccelerationStructure
 {
 public:
 	RaytracingAccelerationStructure() noexcept = default;
-	RaytracingAccelerationStructure(UINT NumHitGroups);
+	RaytracingAccelerationStructure(UINT NumHitGroups, size_t NumInstances);
 
 	void Initialize();
 
@@ -23,7 +23,8 @@ public:
 
 	void Build(D3D12CommandContext& Context);
 
-	UINT NumHitGroups = 0;
+	UINT   NumHitGroups = 0;
+	size_t NumInstances = 0;
 
 	D3D12RaytracingScene			   TopLevelAccelerationStructure;
 	std::vector<MeshRenderer*>		   MeshRenderers;

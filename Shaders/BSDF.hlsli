@@ -1,5 +1,4 @@
-#ifndef BSDF_HLSLI
-#define BSDF_HLSLI
+#pragma once
 
 #include "BxDF.hlsli"
 #include "Disney.hlsli"
@@ -344,5 +343,3 @@ float3 SampleLi(
 
 	return I;
 }
-
-#endif // BSDF_HLSLI

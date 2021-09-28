@@ -1,16 +1,18 @@
 #include "RaytracingAccelerationStructure.h"
 #include <RenderCore/RenderCore.h>
 
-RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGroups)
+RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGroups, size_t NumInstances)
 	: NumHitGroups(NumHitGroups)
+	, NumInstances(NumInstances)
 {
+	MeshRenderers.reserve(NumInstances);
 }
 
 void RaytracingAccelerationStructure::Initialize()
 {
 	InstanceDescs = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
+		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * NumInstances,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);

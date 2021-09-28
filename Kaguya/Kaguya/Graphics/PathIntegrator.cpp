@@ -91,7 +91,7 @@ void PathIntegrator::Initialize()
 		TonemapRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
 	}
 
-	AccelerationStructure = RaytracingAccelerationStructure(1);
+	AccelerationStructure = RaytracingAccelerationStructure(1, World::InstanceLimit);
 	AccelerationStructure.Initialize();
 
 	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);

@@ -1,30 +1,14 @@
-#ifndef RANDOM_HLSLI
-#define RANDOM_HLSLI
+#pragma once
 
 #include "Math.hlsli"
-
-uint WangHash(inout uint seed)
-{
-	seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-	seed *= uint(9);
-	seed = seed ^ (seed >> 4);
-	seed *= uint(0x27d4eb2d);
-	seed = seed ^ (seed >> 15);
-	return seed;
-}
-
-float RandomFloat01(inout uint seed)
-{
-	return float(WangHash(seed)) / 4294967296.0;
-}
 
 // Raytracing Gems 2
 
 #define USE_PCG 1
 #if USE_PCG
-	#define RngStateType uint4
+#define RngStateType uint4
 #else
-	#define RngStateType uint
+#define RngStateType uint
 #endif
 
 // PCG random numbers generator
@@ -79,8 +63,8 @@ float uintToFloat(uint x)
 // Initialize RNG for given pixel, and frame number (PCG version)
 RngStateType initRNG(uint2 pixelCoords, uint2 resolution, uint frameNumber)
 {
-	return RngStateType(pixelCoords.xy, frameNumber, 0); //< Seed for PCG uses a sequential sample number in 4th
-														 //channel, which increments on every RNG call and starts from 0
+	// Seed for PCG uses a sequential sample number in 4th channel, which increments on every RNG call and starts from 0
+	return RngStateType(pixelCoords.xy, frameNumber, 0);
 }
 
 // Return random float in <0; 1) range  (PCG version)
@@ -106,5 +90,3 @@ float rand(inout RngStateType rngState)
 }
 
 #endif
-
-#endif // RANDOM_HLSLI
