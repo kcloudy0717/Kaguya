@@ -21,7 +21,7 @@ public:
 		, ResourceState(D3D12_RESOURCE_STATE_UNINITIALIZED)
 	{
 	}
-	CResourceState(UINT NumSubresources)
+	explicit CResourceState(UINT NumSubresources)
 		: CResourceState()
 	{
 		SubresourceStates.resize(NumSubresources);
@@ -68,6 +68,9 @@ public:
 	[[nodiscard]] const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }
 	[[nodiscard]] UINT						 GetNumSubresources() const noexcept { return NumSubresources; }
 	[[nodiscard]] CResourceState&			 GetResourceState() { return ResourceState; }
+
+	// Implicit state transition methods here are not used yet, this is because I am aware of the
+	// rules and I apply them myself, in the future this can perhaps be implemented by the resource state tracker
 
 	// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
 	// https://devblogs.microsoft.com/directx/a-look-inside-d3d12-resource-state-barriers/
@@ -185,15 +188,15 @@ public:
 		std::optional<UINT>		  OptMipSlice	= std::nullopt) const;
 
 	void CreateRenderTargetView(
-		D3D12RenderTargetView& RenderTargetView,
-		std::optional<UINT>	   OptArraySlice = std::nullopt,
-		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
-		std::optional<UINT>	   OptArraySize	 = std::nullopt,
-		bool				   sRGB			 = false) const;
+		D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView,
+		std::optional<UINT>			OptArraySlice = std::nullopt,
+		std::optional<UINT>			OptMipSlice	  = std::nullopt,
+		std::optional<UINT>			OptArraySize  = std::nullopt,
+		bool						sRGB		  = false) const;
 
 	void CreateDepthStencilView(
-		D3D12DepthStencilView& DepthStencilView,
-		std::optional<UINT>	   OptArraySlice = std::nullopt,
-		std::optional<UINT>	   OptMipSlice	 = std::nullopt,
-		std::optional<UINT>	   OptArraySize	 = std::nullopt) const;
+		D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView,
+		std::optional<UINT>			OptArraySlice = std::nullopt,
+		std::optional<UINT>			OptMipSlice	  = std::nullopt,
+		std::optional<UINT>			OptArraySize  = std::nullopt) const;
 };

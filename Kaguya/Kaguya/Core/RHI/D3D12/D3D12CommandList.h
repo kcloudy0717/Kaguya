@@ -35,36 +35,51 @@ private:
 	D3D12CommandSyncPoint						   CommandSyncPoint;
 };
 
-class D3D12CommandListHandle
+class D3D12CommandListHandle : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12CommandListHandle() noexcept = default;
-	D3D12CommandListHandle(D3D12LinkedDevice* Device, D3D12_COMMAND_LIST_TYPE Type);
+	D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type);
+	~D3D12CommandListHandle();
 
-	ID3D12CommandList*			GetCommandList() const { return CommandList->GraphicsCommandList.Get(); }
-	ID3D12GraphicsCommandList*	GetGraphicsCommandList() const { return CommandList->GraphicsCommandList.Get(); }
-	ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const { return CommandList->GraphicsCommandList4.Get(); }
-	ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const { return CommandList->GraphicsCommandList6.Get(); }
+	D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
+	D3D12CommandListHandle& operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
+
+	D3D12CommandListHandle(const D3D12CommandListHandle&) = delete;
+	D3D12CommandListHandle& operator=(const D3D12CommandListHandle&) = delete;
+
+	[[nodiscard]] ID3D12CommandList*		  GetCommandList() const { return GraphicsCommandList.Get(); }
+	[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const { return GraphicsCommandList.Get(); }
+	[[nodiscard]] ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const { return GraphicsCommandList4.Get(); }
+	[[nodiscard]] ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const { return GraphicsCommandList6.Get(); }
 #ifdef NVIDIA_NSIGHT_AFTERMATH
-	GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return CommandList->AftermathContextHandle; }
+	[[nodiscard]] GFSDK_Aftermath_ContextHandle GetAftermathContextHandle() const { return AftermathContextHandle; }
 #endif
 
 	ID3D12GraphicsCommandList* operator->() const { return GetGraphicsCommandList(); }
 
-	operator bool() const { return CommandList != nullptr; }
-
-	void Close() { CommandList->Close(); }
-
-	void Reset(D3D12CommandAllocator* CommandAllocator) { CommandList->Reset(CommandAllocator); }
-
-	void SetSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
+	void Close()
 	{
-		CommandList->CommandAllocator->SetSyncPoint(SyncPoint);
+		FlushResourceBarriers();
+		VERIFY_D3D12_API(GraphicsCommandList->Close());
 	}
+
+	void Reset(D3D12CommandAllocator* CommandAllocator)
+	{
+		this->CommandAllocator = CommandAllocator;
+
+		VERIFY_D3D12_API(GraphicsCommandList->Reset(*CommandAllocator, nullptr));
+
+		// Reset resource state tracking and resource barriers
+		ResourceStateTracker.Reset();
+		ResourceBarrierBatch.Reset();
+	}
+
+	void SetSyncPoint(const D3D12CommandSyncPoint& SyncPoint) { CommandAllocator->SetSyncPoint(SyncPoint); }
 
 	CResourceState& GetResourceState(D3D12Resource* Resource)
 	{
-		return CommandList->ResourceStateTracker.GetResourceState(Resource);
+		return ResourceStateTracker.GetResourceState(Resource);
 	}
 
 	std::vector<D3D12_RESOURCE_BARRIER> ResolveResourceBarriers();
@@ -83,36 +98,20 @@ public:
 	bool AssertResourceState(D3D12Resource* Resource, D3D12_RESOURCE_STATES State, UINT Subresource);
 
 private:
-	class D3D12CommandList : public D3D12LinkedDeviceChild
-	{
-	public:
-		D3D12CommandList(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type);
-		~D3D12CommandList();
+	D3D12_COMMAND_LIST_TYPE Type;
 
-		void Close();
-
-		void Reset(D3D12CommandAllocator* CommandAllocator);
-
-		void FlushResourceBarriers();
-
-		const D3D12_COMMAND_LIST_TYPE Type;
-
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>  GraphicsCommandList;
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> GraphicsCommandList4;
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> GraphicsCommandList6;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>  GraphicsCommandList;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> GraphicsCommandList4;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> GraphicsCommandList6;
 
 #ifdef D3D12_DEBUG_RESOURCE_STATES
-		Microsoft::WRL::ComPtr<ID3D12DebugCommandList> DebugCommandList;
+	Microsoft::WRL::ComPtr<ID3D12DebugCommandList> DebugCommandList;
 #endif
 #ifdef NVIDIA_NSIGHT_AFTERMATH
-		GFSDK_Aftermath_ContextHandle AftermathContextHandle = nullptr;
+	GFSDK_Aftermath_ContextHandle AftermathContextHandle = nullptr;
 #endif
 
-		D3D12CommandAllocator*	  CommandAllocator;
-		D3D12ResourceStateTracker ResourceStateTracker;
-		ResourceBarrierBatch	  ResourceBarrierBatch;
-	};
-
-private:
-	std::shared_ptr<D3D12CommandList> CommandList;
+	D3D12CommandAllocator*	  CommandAllocator;
+	D3D12ResourceStateTracker ResourceStateTracker;
+	ResourceBarrierBatch	  ResourceBarrierBatch;
 };

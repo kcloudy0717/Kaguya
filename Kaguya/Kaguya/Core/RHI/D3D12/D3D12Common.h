@@ -1,5 +1,7 @@
 #pragma once
-#include <d3d12.h>
+#include "RHID3D12.h"
+#include "D3D12Config.h"
+
 #include "d3dx12.h"
 #include "D3D12Utility.h"
 #include "D3D12Profiler.h"
@@ -16,19 +18,6 @@
 #define D3D12_ROOT_DESCRIPTOR_COST					   (2)
 
 #define D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT	   ((D3D12_MAX_ROOT_COST) / (D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_COST))
-
-#ifdef _DEBUG
-	#define D3D12_DEBUG_RESOURCE_STATES
-
-// The D3D debug layer (as well as Microsoft PIX and other graphics debugger
-// tools using an injection library) is not compatible with Nsight Aftermath!
-// If Aftermath detects that any of these tools are present it will fail
-// initialization.
-
-// Feel free to comment this out
-
-//#define NVIDIA_NSIGHT_AFTERMATH
-#endif
 
 enum class ED3D12CommandQueueType
 {

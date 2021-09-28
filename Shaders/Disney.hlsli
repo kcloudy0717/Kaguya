@@ -1,7 +1,7 @@
 #ifndef DISNEY_HLSLI
 #define DISNEY_HLSLI
 
-#include <BxDF.hlsli>
+#include "BxDF.hlsli"
 
 // Sampling functions for disney brdf
 // Refer to B in paper for sampling functions and distribution functions
@@ -78,23 +78,22 @@ inline float SchlickR0FromEta(float eta)
 
 struct DisneySheen
 {
-	float3 f(float3 wo, float3 wi)
+	float3 R;
+
+	float3 f(float3 wo, float3 wi, float3 wh)
 	{
-		float3 wh		 = normalize(wi + wo);
-		float  cosThetaD = dot(wi, wh);
+		float cosThetaD = dot(wi, wh);
 
 		return R * SchlickWeight(cosThetaD);
 	}
-
-	float3 R;
 };
 
 struct DisneyClearcoat
 {
-	float3 f(float3 wo, float3 wi)
-	{
-		float3 wh = normalize(wi + wo);
+	float weight, gloss;
 
+	float3 f(float3 wo, float3 wi, float3 wh)
+	{
 		// Clearcoat has ior = 1.5 hardcoded -> F0 = 0.04. It then uses the
 		// GTR1 distribution, which has even fatter tails than Trowbridge-Reitz
 		// (which is GTR2).
@@ -105,12 +104,22 @@ struct DisneyClearcoat
 
 		return weight * Gr * Fr * Dr / 4.0f;
 	}
-
-	float weight, gloss;
 };
 
 struct Disney
 {
+	float3 baseColor;
+	float  metallic;
+	float  subsurface;
+	float  specular;
+	float  roughness;
+	float  specularTint;
+	float  anisotropic;
+	float  sheen;
+	float  sheenTint;
+	float  clearcoat;
+	float  clearcoatGloss;
+
 	float3 f(float3 wo, float3 wi)
 	{
 		float3 wh		 = normalize(wi + wo);
@@ -152,8 +161,8 @@ struct Disney
 		DisneyClearcoat.weight = clearcoat;
 		DisneyClearcoat.gloss  = lerp(0.1f, 0.001f, clearcoatGloss);
 
-		return ((1.0f / g_PI) * lerp(Fd, ss, subsurface) * baseColor + DisneySheen.f(wo, wi)) * (1.0f - metallic) +
-			   Gs * Fs * Ds + DisneyClearcoat.f(wo, wi);
+		return ((1.0f / g_PI) * lerp(Fd, ss, subsurface) * baseColor + DisneySheen.f(wo, wi, wh)) * (1.0f - metallic) +
+			   Gs * Fs * Ds + DisneyClearcoat.f(wo, wi, wh);
 	}
 
 	float Pdf(float3 wo, float3 wi)
@@ -164,19 +173,19 @@ struct Disney
 		float specularAlpha	 = max(0.001f, roughness);
 		float clearcoatAlpha = lerp(0.1f, 0.001f, clearcoatGloss);
 
-		float diffuseRatio	= 0.5f * (1.0f - metallic);
-		float specularRatio = 1.0f - diffuseRatio;
+		float diffuseR	= 0.5f * (1.0f - metallic);
+		float specularR = 1.0f - diffuseR;
 
 		float pdfGTR2 = D_GTR2(cosTheta, specularAlpha) * cosTheta;
 		float pdfGTR1 = D_GTR1(cosTheta, clearcoatAlpha) * cosTheta;
 
 		// calculate diffuse and specular pdfs and mix ratio
-		float ratio	  = 1.0f / (1.0f + clearcoat);
-		float pdfSpec = lerp(pdfGTR1, pdfGTR2, ratio) / (4.0 * abs(dot(wi, wh)));
+		float GTR2R	  = 1.0f / (1.0f + clearcoat);
+		float pdfSpec = lerp(pdfGTR1, pdfGTR2, GTR2R) / (4.0 * abs(dot(wi, wh)));
 		float pdfDiff = AbsCosTheta(wi) * g_1DIVPI;
 
 		// weight pdfs according to ratios
-		return diffuseRatio * pdfDiff + specularRatio * pdfSpec;
+		return diffuseR * pdfDiff + specularR * pdfSpec;
 	}
 
 	bool Samplef(float3 wo, float2 Xi, out BSDFSample bsdfSample)
@@ -184,43 +193,39 @@ struct Disney
 		// http://simon-kallweit.me/rendercompo2015/report/#disneybrdf, refer to this link
 		// for how to importance sample the disney brdf
 
+		float2 remappedXi;
 		float3 wi;
-
-		float diffuse_ratio = 0.5f * (1.0f - metallic);
+		float  diffuseR = 0.5f * (1.0f - metallic);
 
 		// Sample diffuse
-		if (Xi[0] < diffuse_ratio)
+		if (Xi[0] < diffuseR)
 		{
-			float2 _Xi = float2(Xi[0] / diffuse_ratio, Xi[1]);
-
-			wi = SampleCosineHemisphere(_Xi);
-
+			remappedXi = float2(Xi[0] / diffuseR, Xi[1]);
+			wi		   = SampleCosineHemisphere(remappedXi);
 			bsdfSample = InitBSDFSample(f(wo, wi), wi, Pdf(wo, wi), Flags());
 		}
 		// Sample specular
 		else
 		{
-			float2 _Xi = float2((Xi[0] - diffuse_ratio) / (1.0f - diffuse_ratio), Xi[1]);
+			remappedXi = float2((Xi[0] - diffuseR) / (1.0f - diffuseR), Xi[1]);
 
-			float gtr2_ratio = 1.0f / (1.0f + clearcoat);
+			float GTR2R = 1.0f / (1.0f + clearcoat);
 
-			if (_Xi[0] < gtr2_ratio)
+			if (remappedXi[0] < GTR2R)
 			{
-				_Xi[0] /= gtr2_ratio;
+				remappedXi[0] /= GTR2R;
 
 				float  alpha = max(0.01f, pow(roughness, 2.0f));
-				float3 wh	 = SampleGTR2(_Xi, alpha);
-
-				wi = normalize(Reflect(wo, wh));
+				float3 wh	 = SampleGTR2(remappedXi, alpha);
+				wi			 = normalize(Reflect(wo, wh));
 			}
 			else
 			{
-				_Xi[0] = (_Xi[0] - gtr2_ratio) / (1 - gtr2_ratio);
+				remappedXi[0] = (remappedXi[0] - GTR2R) / (1 - GTR2R);
 
 				float  alpha = lerp(0.1f, 0.001f, clearcoatGloss);
-				float3 wh	 = SampleGTR1(_Xi, alpha);
-
-				wi = normalize(Reflect(wo, wh));
+				float3 wh	 = SampleGTR1(remappedXi, alpha);
+				wi			 = normalize(Reflect(wo, wh));
 			}
 
 			bsdfSample = InitBSDFSample(f(wo, wi), wi, Pdf(wo, wi), Flags());
@@ -230,18 +235,6 @@ struct Disney
 	}
 
 	BxDFFlags Flags() { return BxDFFlags::Reflection | BxDFFlags::Diffuse | BxDFFlags::Glossy; }
-
-	float3 baseColor;
-	float  metallic;
-	float  subsurface;
-	float  specular;
-	float  roughness;
-	float  specularTint;
-	float  anisotropic;
-	float  sheen;
-	float  sheenTint;
-	float  clearcoat;
-	float  clearcoatGloss;
 };
 
 #endif // DISNEY_HLSLI

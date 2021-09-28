@@ -3,13 +3,13 @@
 #include <type_traits>
 
 template<typename T>
-class TObjectPool
+class ObjectPool
 {
 public:
 	using ValueType = T;
 	using Pointer	= T*;
 
-	explicit TObjectPool(std::size_t Size)
+	explicit ObjectPool(std::size_t Size)
 		: Size(Size)
 		, ActiveElements(0)
 	{
@@ -17,34 +17,52 @@ public:
 
 		for (std::size_t i = 1; i < Size; ++i)
 		{
-			Pool[i - 1].pNext = &Pool[i];
+			Pool[i - 1].Next = &Pool[i];
 		}
 		FreeStart = &Pool[0];
 	}
-	~TObjectPool() = default;
+	~ObjectPool() = default;
 
-	TObjectPool(TObjectPool&& TPool) noexcept
-		: Pool(std::exchange(TPool.Pool, {}))
-		, FreeStart(std::exchange(TPool.FreeStart, {}))
-		, Size(std::exchange(TPool.Size, {}))
-		, ActiveElements(std::exchange(TPool.ActiveElements, {}))
+	ObjectPool(ObjectPool&& ObjectPool) noexcept
+		: Pool(std::exchange(ObjectPool.Pool, {}))
+		, FreeStart(std::exchange(ObjectPool.FreeStart, {}))
+		, Size(std::exchange(ObjectPool.Size, {}))
+		, ActiveElements(std::exchange(ObjectPool.ActiveElements, {}))
 	{
 	}
-	TObjectPool& operator=(TObjectPool&& TPool) noexcept
+	ObjectPool& operator=(ObjectPool&& ObjectPool) noexcept
 	{
-		if (this != &TPool)
+		if (this == &ObjectPool)
 		{
-			Pool		   = std::exchange(TPool.Pool, {});
-			FreeStart	   = std::exchange(TPool.FreeStart, {});
-			Size		   = std::exchange(TPool.Size, {});
-			ActiveElements = std::exchange(TPool.ActiveElements, {});
+			return *this;
 		}
+
+		Pool		   = std::exchange(ObjectPool.Pool, {});
+		FreeStart	   = std::exchange(ObjectPool.FreeStart, {});
+		Size		   = std::exchange(ObjectPool.Size, {});
+		ActiveElements = std::exchange(ObjectPool.ActiveElements, {});
 		return *this;
 	}
 
-	TObjectPool(const TObjectPool&) = delete;
-	TObjectPool& operator=(const TObjectPool&) = delete;
+	ObjectPool(const ObjectPool&) = delete;
+	ObjectPool& operator=(const ObjectPool&) = delete;
 
+	template<typename... TArgs>
+	[[nodiscard]] Pointer Construct(TArgs&&... Args)
+	{
+		return new (Allocate()) ValueType(std::forward<TArgs>(Args)...);
+	}
+
+	void Destruct(Pointer Pointer) noexcept
+	{
+		if (Pointer)
+		{
+			Pointer->~T();
+			Deallocate(Pointer);
+		}
+	}
+
+private:
 	[[nodiscard]] Pointer Allocate()
 	{
 		if (!FreeStart)
@@ -53,7 +71,7 @@ public:
 		}
 
 		const auto AvailableElement = FreeStart;
-		FreeStart					= AvailableElement->pNext;
+		FreeStart					= AvailableElement->Next;
 
 		ActiveElements++;
 		return reinterpret_cast<Pointer>(&AvailableElement->Storage);
@@ -62,30 +80,16 @@ public:
 	void Deallocate(Pointer Pointer) noexcept
 	{
 		const auto pElement = reinterpret_cast<Element*>(Pointer);
-		pElement->pNext		= FreeStart;
+		pElement->Next		= FreeStart;
 		FreeStart			= pElement;
 		--ActiveElements;
-	}
-
-	template<typename... TArgs>
-	[[nodiscard]] Pointer Construct(TArgs&&... Args)
-	{
-		return new (Allocate()) ValueType(std::forward<TArgs>(Args)...);
-	}
-
-	void Destruct(Pointer p) noexcept
-	{
-		if (p)
-		{
-			Deallocate(p);
-		}
 	}
 
 private:
 	union Element
 	{
 		std::aligned_storage_t<sizeof(ValueType), alignof(ValueType)> Storage;
-		Element*													  pNext;
+		Element*													  Next;
 	};
 
 	std::unique_ptr<Element[]> Pool;

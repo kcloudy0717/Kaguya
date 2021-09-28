@@ -1,5 +1,7 @@
 #include "D3D12Device.h"
 
+using Microsoft::WRL::ComPtr;
+
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
@@ -7,13 +9,26 @@ extern "C"
 	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
 }
 
-AutoConsoleVariable<bool> CVar_Dred(
+static ConsoleVariable CVar_Dred(
 	"D3D12.DRED",
 	"Enable Device Removed Extended Data\n"
 	"DRED delivers automatic breadcrumbs as well as GPU page fault reporting\n",
 	true);
 
-using Microsoft::WRL::ComPtr;
+const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
+{
+	// clang-format off
+	switch (Severity)
+	{
+	case D3D12_MESSAGE_SEVERITY_CORRUPTION: return "[Corruption]";
+	case D3D12_MESSAGE_SEVERITY_ERROR:		return "[Error]";
+	case D3D12_MESSAGE_SEVERITY_WARNING:	return "[Warning]";
+	case D3D12_MESSAGE_SEVERITY_INFO:		return "[Info]";
+	case D3D12_MESSAGE_SEVERITY_MESSAGE:	return "[Message]";
+	default:								return "<unknown>";
+	}
+	// clang-format on
+}
 
 void D3D12Device::ReportLiveObjects()
 {
@@ -34,6 +49,11 @@ D3D12Device::D3D12Device()
 
 D3D12Device::~D3D12Device()
 {
+	if (InfoQueue1)
+	{
+		InfoQueue1->UnregisterMessageCallback(std::exchange(CallbackCookie, 0));
+	}
+
 	if (CVar_Dred && DeviceRemovedFence)
 	{
 		// Need to gracefully exit the event
@@ -48,7 +68,7 @@ void D3D12Device::Initialize(const DeviceOptions& Options)
 #ifdef _DEBUG
 	InitializeDxgiObjects(true);
 #else
-	InitializeDXGIObjects(false);
+	InitializeDxgiObjects(false);
 #endif
 
 	// The D3D debug layer (as well as Microsoft PIX and other graphics debugger
@@ -91,26 +111,26 @@ void D3D12Device::Initialize(const DeviceOptions& Options)
 
 	if (CVar_Dred)
 	{
-		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DREDSettings;
-		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(DREDSettings.GetAddressOf())));
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DredSettings;
+		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(DredSettings.GetAddressOf())));
 
 		// Turn on auto-breadcrumbs and page fault reporting.
-		DREDSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-		DREDSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		DredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		DredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 	}
 }
 
 void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 {
 	VERIFY_D3D12_API(
-		D3D12CreateDevice(Adapter4.Get(), Features.FeatureLevel, IID_PPV_ARGS(Device.ReleaseAndGetAddressOf())));
+		D3D12CreateDevice(Adapter3.Get(), Features.FeatureLevel, IID_PPV_ARGS(Device.ReleaseAndGetAddressOf())));
 
 #ifdef NVIDIA_NSIGHT_AFTERMATH
 	AftermathCrashTracker.RegisterDevice(Device.Get());
 #endif
 
 	VERIFY_D3D12_API(Device.As(&Device5));
-	VERIFY_D3D12_API(Device.As(&InfoQueue1));
+	Device.As(&InfoQueue1);
 
 	if (FAILED(FeatureSupport.Init(Device.Get())))
 	{
@@ -123,7 +143,7 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 													 D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
 	for (size_t i = 0; i < std::size(Types); ++i)
 	{
-		DescriptorHandleIncrementSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
+		DescriptorSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
 	}
 
 	ComPtr<ID3D12InfoQueue> InfoQueue;
@@ -145,6 +165,22 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 		// InfoQueueFilter.DenyList.NumIDs			= ARRAYSIZE(IDs);
 		// InfoQueueFilter.DenyList.pIDList		= IDs;
 		// VERIFY_D3D12_API(InfoQueue->PushStorageFilter(&InfoQueueFilter));
+	}
+
+	if (InfoQueue1)
+	{
+		VERIFY_D3D12_API(InfoQueue1->RegisterMessageCallback(
+			[](D3D12_MESSAGE_CATEGORY Category,
+			   D3D12_MESSAGE_SEVERITY Severity,
+			   D3D12_MESSAGE_ID		  ID,
+			   LPCSTR				  pDescription,
+			   void*				  pContext)
+			{
+				LOG_ERROR("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
+			},
+			D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+			nullptr,
+			&CallbackCookie));
 	}
 
 	DeviceRemovedWaitHandle = INVALID_HANDLE_VALUE;
@@ -201,22 +237,22 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
 }
 
-D3D12RootSignature D3D12Device::CreateRootSignature(
-	std::function<void(RootSignatureBuilder&)> Configurator,
-	bool									   AddDescriptorTableRootParameters)
+D3D12RootSignature D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
 {
 	RootSignatureBuilder Builder = {};
 	Configurator(Builder);
-	if (AddDescriptorTableRootParameters)
+	if (!Builder.IsLocal())
 	{
+		// If a root signature is local we don't add bindless descriptor table because it will conflict with global root
+		// signature
 		AddDescriptorTableRootParameterToBuilder(Builder);
 	}
 
-	return D3D12RootSignature(GetD3D12Device(), Builder);
+	return D3D12RootSignature(this, Builder);
 }
 
 D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(
-	std::function<void(RaytracingPipelineStateBuilder&)> Configurator)
+	Delegate<void(RaytracingPipelineStateBuilder&)> Configurator)
 {
 	RaytracingPipelineStateBuilder Builder = {};
 	Configurator(Builder);
@@ -244,9 +280,10 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					INT32 LastCompletedOp = *Node->pLastBreadcrumbValue;
 
 					LOG_WARN(
-						LR"([DRED] Commandlist "{}" on CommandQueue "{}", {0:d} completed of {})",
-						Node->pCommandListDebugNameW,
-						Node->pCommandQueueDebugNameW,
+						LR"({} Commandlist "{1}" on CommandQueue "{2}", {0:d}; completed of {4})",
+						L"[DRED]",
+						Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>",
+						Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>",
 						LastCompletedOp,
 						Node->BreadcrumbCount);
 
@@ -255,10 +292,9 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 					for (INT32 Op = FirstOp; Op <= LastOp; ++Op)
 					{
-						// uint32 LastOpIndex = (*Node->pLastBreadcrumbValue - 1) % 65536;
 						D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
 						LOG_WARN(
-							LR"(\tOp: {0:d}, {} {})",
+							LR"(    Op: {0:d};, {1} {2})",
 							Op,
 							GetAutoBreadcrumbOpString(BreadcrumbOp),
 							Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
@@ -268,15 +304,15 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 			if (SUCCEEDED(Dred->GetPageFaultAllocationOutput(&PageFaultOutput)))
 			{
-				LOG_WARN("[DRED] PageFault at VA GPUAddress: {0:x}", PageFaultOutput.PageFaultVA);
+				LOG_WARN("[DRED] PageFault at VA GPUAddress: {0:x};", PageFaultOutput.PageFaultVA);
 
 				LOG_WARN("[DRED] Active objects with VA ranges that match the faulting VA:");
 				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node;
 					 Node									= Node->pNext)
 				{
 					LOG_WARN(
-						L"\tName: {} (Type: {})",
-						Node->ObjectNameW,
+						L"    Name: {} (Type: {})",
+						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
 						GetDredAllocationTypeString(Node->AllocationType));
 				}
 
@@ -285,8 +321,8 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					 Node									= Node->pNext)
 				{
 					LOG_WARN(
-						L"\tName: {} (Type: {})",
-						Node->ObjectNameW,
+						L"    Name: {} (Type: {})",
+						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
 						GetDredAllocationTypeString(Node->AllocationType));
 				}
 			}
@@ -296,25 +332,26 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 void D3D12Device::InitializeDxgiObjects(bool Debug)
 {
-	UINT Flags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
+	UINT FactoryFlags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	VERIFY_D3D12_API(::CreateDXGIFactory2(Flags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
 
 	// Enumerate hardware for an adapter that supports D3D12
-	ComPtr<IDXGIAdapter4> pAdapter4;
-	UINT				  AdapterID = 0;
+	ComPtr<IDXGIAdapter3> AdapterIterator;
+	UINT				  AdapterId = 0;
 	while (SUCCEEDED(Factory6->EnumAdapterByGpuPreference(
-		AdapterID,
+		AdapterId,
 		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-		IID_PPV_ARGS(pAdapter4.ReleaseAndGetAddressOf()))))
+		IID_PPV_ARGS(AdapterIterator.ReleaseAndGetAddressOf()))))
 	{
-		if (SUCCEEDED(::D3D12CreateDevice(pAdapter4.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(
+				D3D12CreateDevice(AdapterIterator.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 		{
-			Adapter4 = std::move(pAdapter4);
+			Adapter3 = std::move(AdapterIterator);
 			break;
 		}
 
-		AdapterID++;
+		++AdapterId;
 	}
 }
 
@@ -324,7 +361,7 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	/* Descriptor Tables */
 
 	// ShaderResource
-	D3D12DescriptorTable ShaderResourceTable;
+	D3D12DescriptorTable ShaderResourceTable(3);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
@@ -336,7 +373,7 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddDescriptorTable(ShaderResourceTable);
 
 	// UnorderedAccess
-	D3D12DescriptorTable UnorderedAccessTable;
+	D3D12DescriptorTable UnorderedAccessTable(2);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
@@ -347,11 +384,27 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddDescriptorTable(UnorderedAccessTable);
 
 	// Sampler
-	D3D12DescriptorTable SamplerTable;
+	D3D12DescriptorTable SamplerTable(1);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 
 		SamplerTable.AddSamplerRange<0, 100>(UINT_MAX, Flags, 0); // g_SamplerTable
 	}
 	RootSignatureBuilder.AddDescriptorTable(SamplerTable);
+
+	// g_SamplerPointWrap
+	RootSignatureBuilder.AddStaticSampler<0, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerPointClamp
+	RootSignatureBuilder.AddStaticSampler<1, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+	// g_SamplerLinearWrap
+	RootSignatureBuilder.AddStaticSampler<2, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerLinearClamp
+	RootSignatureBuilder.AddStaticSampler<3, 101>(
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		16);
+	// g_SamplerAnisotropicWrap
+	RootSignatureBuilder.AddStaticSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	// g_SamplerAnisotropicClamp
+	RootSignatureBuilder.AddStaticSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 }

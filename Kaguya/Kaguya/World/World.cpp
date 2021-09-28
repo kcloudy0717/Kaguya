@@ -88,7 +88,9 @@ void World::ResolveComponentDependencies()
 			MeshFilter.Mesh = AssetManager::GetMeshCache().Load(MeshFilter.Key);
 			if (MeshFilter.Mesh)
 			{
-				MeshFilter.Path = std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory).string();
+				MeshFilter.Path =
+					std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory)
+						.string();
 			}
 			else
 			{
@@ -106,7 +108,8 @@ void World::ResolveComponentDependencies()
 
 			if (Texture)
 			{
-				MeshRenderer.Material.Albedo.Path		= std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string();
+				MeshRenderer.Material.Albedo.Path =
+					std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string();
 				MeshRenderer.Material.TextureIndices[0] = Texture->SRV.GetIndex();
 			}
 			else
@@ -135,7 +138,7 @@ void World::UpdateScripts(float dt)
 	Registry.view<NativeScript>().each(
 		[&](auto Handle, NativeScript& NativeScript)
 		{
-			if (NativeScript.Instance == nullptr)
+			if (!NativeScript.Instance)
 			{
 				NativeScript.Instance		  = NativeScript.InstantiateScript();
 				NativeScript.Instance->Entity = Entity{ Handle, this };

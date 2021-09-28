@@ -318,44 +318,43 @@ void D3D12Texture::CreateShaderResourceView(
 	std::optional<UINT>		 OptMostDetailedMip /*= std::nullopt*/,
 	std::optional<UINT>		 OptMipLevels /*= std::nullopt*/) const
 {
-	if (!(Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+	assert(!(Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE));
+
+	UINT MostDetailedMip = OptMostDetailedMip.value_or(0);
+	UINT MipLevels		 = OptMipLevels.value_or(Desc.MipLevels);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
+	ShaderResourceViewDesc.Format						   = GetValidSRVFormat(Desc.Format);
+	ShaderResourceViewDesc.Shader4ComponentMapping		   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	switch (Desc.Dimension)
 	{
-		UINT MostDetailedMip = OptMostDetailedMip.value_or(0);
-		UINT MipLevels		 = OptMipLevels.value_or(Desc.MipLevels);
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
-		ShaderResourceViewDesc.Format						   = GetValidSRVFormat(ShaderResourceViewDesc.Format);
-		ShaderResourceViewDesc.Shader4ComponentMapping		   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-		switch (Desc.Dimension)
+	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+		if (Desc.DepthOrArraySize > 1)
 		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				ShaderResourceViewDesc.ViewDimension					  = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-				ShaderResourceViewDesc.Texture2DArray.MostDetailedMip	  = MostDetailedMip;
-				ShaderResourceViewDesc.Texture2DArray.MipLevels			  = MipLevels;
-				ShaderResourceViewDesc.Texture2DArray.ArraySize			  = Desc.DepthOrArraySize;
-				ShaderResourceViewDesc.Texture2DArray.PlaneSlice		  = 0;
-				ShaderResourceViewDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
-			}
-			else
-			{
-				ShaderResourceViewDesc.ViewDimension				 = D3D12_SRV_DIMENSION_TEXTURE2D;
-				ShaderResourceViewDesc.Texture2D.MostDetailedMip	 = MostDetailedMip;
-				ShaderResourceViewDesc.Texture2D.MipLevels			 = MipLevels;
-				ShaderResourceViewDesc.Texture2D.PlaneSlice			 = 0;
-				ShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-			}
-			break;
-
-		default:
-			break;
+			ShaderResourceViewDesc.ViewDimension					  = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+			ShaderResourceViewDesc.Texture2DArray.MostDetailedMip	  = MostDetailedMip;
+			ShaderResourceViewDesc.Texture2DArray.MipLevels			  = MipLevels;
+			ShaderResourceViewDesc.Texture2DArray.ArraySize			  = Desc.DepthOrArraySize;
+			ShaderResourceViewDesc.Texture2DArray.PlaneSlice		  = 0;
+			ShaderResourceViewDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
 		}
+		else
+		{
+			ShaderResourceViewDesc.ViewDimension				 = D3D12_SRV_DIMENSION_TEXTURE2D;
+			ShaderResourceViewDesc.Texture2D.MostDetailedMip	 = MostDetailedMip;
+			ShaderResourceViewDesc.Texture2D.MipLevels			 = MipLevels;
+			ShaderResourceViewDesc.Texture2D.PlaneSlice			 = 0;
+			ShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		}
+		break;
 
-		ShaderResourceView.Desc = ShaderResourceViewDesc;
-		ShaderResourceView.Descriptor.CreateView(ShaderResourceViewDesc, Resource.Get());
+	default:
+		break;
 	}
+
+	ShaderResourceView.Desc = ShaderResourceViewDesc;
+	ShaderResourceView.Descriptor.CreateView(ShaderResourceViewDesc, Resource.Get());
 }
 
 void D3D12Texture::CreateUnorderedAccessView(
@@ -363,131 +362,128 @@ void D3D12Texture::CreateUnorderedAccessView(
 	std::optional<UINT>		  OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>		  OptMipSlice /*= std::nullopt*/) const
 {
-	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+	UINT ArraySlice = OptArraySlice.value_or(0);
+	UINT MipSlice	= OptMipSlice.value_or(0);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
+	UnorderedAccessViewDesc.Format							 = Desc.Format;
+
+	switch (Desc.Dimension)
 	{
-		UINT ArraySlice = OptArraySlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
-		UnorderedAccessViewDesc.Format							 = Desc.Format;
-
-		switch (Desc.Dimension)
+	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+		if (Desc.DepthOrArraySize > 1)
 		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				UnorderedAccessViewDesc.ViewDimension				   = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-				UnorderedAccessViewDesc.Texture2DArray.MipSlice		   = MipSlice;
-				UnorderedAccessViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
-				UnorderedAccessViewDesc.Texture2DArray.ArraySize	   = Desc.DepthOrArraySize;
-				UnorderedAccessViewDesc.Texture2DArray.PlaneSlice	   = 0;
-			}
-			else
-			{
-				UnorderedAccessViewDesc.ViewDimension		 = D3D12_UAV_DIMENSION_TEXTURE2D;
-				UnorderedAccessViewDesc.Texture2D.MipSlice	 = MipSlice;
-				UnorderedAccessViewDesc.Texture2D.PlaneSlice = 0;
-			}
-			break;
-
-		default:
-			break;
+			UnorderedAccessViewDesc.ViewDimension				   = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+			UnorderedAccessViewDesc.Texture2DArray.MipSlice		   = MipSlice;
+			UnorderedAccessViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+			UnorderedAccessViewDesc.Texture2DArray.ArraySize	   = Desc.DepthOrArraySize;
+			UnorderedAccessViewDesc.Texture2DArray.PlaneSlice	   = 0;
 		}
+		else
+		{
+			UnorderedAccessViewDesc.ViewDimension		 = D3D12_UAV_DIMENSION_TEXTURE2D;
+			UnorderedAccessViewDesc.Texture2D.MipSlice	 = MipSlice;
+			UnorderedAccessViewDesc.Texture2D.PlaneSlice = 0;
+		}
+		break;
 
-		UnorderedAccessView.Desc = UnorderedAccessViewDesc;
-		UnorderedAccessView.Descriptor.CreateView(UnorderedAccessViewDesc, Resource.Get(), nullptr);
+	default:
+		break;
 	}
+
+	UnorderedAccessView.Desc = UnorderedAccessViewDesc;
+	UnorderedAccessView.Descriptor.CreateView(UnorderedAccessViewDesc, Resource.Get(), nullptr);
 }
 
 void D3D12Texture::CreateRenderTargetView(
-	D3D12RenderTargetView& RenderTargetView,
-	std::optional<UINT>	   OptArraySlice /*= std::nullopt*/,
-	std::optional<UINT>	   OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	   OptArraySize /*= std::nullopt*/,
-	bool				   sRGB /*= false*/) const
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView,
+	std::optional<UINT>			OptArraySlice /*= std::nullopt*/,
+	std::optional<UINT>			OptMipSlice /*= std::nullopt*/,
+	std::optional<UINT>			OptArraySize /*= std::nullopt*/,
+	bool						sRGB /*= false*/) const
 {
-	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+	UINT ArraySlice = OptArraySlice.value_or(0);
+	UINT MipSlice	= OptMipSlice.value_or(0);
+	UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
+
+	D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {};
+	RenderTargetViewDesc.Format						   = sRGB ? DirectX::MakeSRGB(Desc.Format) : Desc.Format;
+
+	// TODO: Add 1D/3D support
+	switch (Desc.Dimension)
 	{
-		UINT ArraySlice = OptArraySlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-		UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
-
-		D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {};
-		RenderTargetViewDesc.Format						   = sRGB ? DirectX::MakeSRGB(Desc.Format) : Desc.Format;
-
-		// TODO: Add 1D/3D support
-		switch (Desc.Dimension)
+	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+		if (Desc.DepthOrArraySize > 1)
 		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				RenderTargetViewDesc.ViewDimension					= D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				RenderTargetViewDesc.Texture2DArray.MipSlice		= MipSlice;
-				RenderTargetViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
-				RenderTargetViewDesc.Texture2DArray.ArraySize		= ArraySize;
-				RenderTargetViewDesc.Texture2DArray.PlaneSlice		= 0;
-			}
-			else
-			{
-				RenderTargetViewDesc.ViewDimension		  = D3D12_RTV_DIMENSION_TEXTURE2D;
-				RenderTargetViewDesc.Texture2D.MipSlice	  = MipSlice;
-				RenderTargetViewDesc.Texture2D.PlaneSlice = 0;
-			}
-			break;
-
-		default:
-			break;
+			RenderTargetViewDesc.ViewDimension					= D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+			RenderTargetViewDesc.Texture2DArray.MipSlice		= MipSlice;
+			RenderTargetViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+			RenderTargetViewDesc.Texture2DArray.ArraySize		= ArraySize;
+			RenderTargetViewDesc.Texture2DArray.PlaneSlice		= 0;
 		}
+		else
+		{
+			RenderTargetViewDesc.ViewDimension		  = D3D12_RTV_DIMENSION_TEXTURE2D;
+			RenderTargetViewDesc.Texture2D.MipSlice	  = MipSlice;
+			RenderTargetViewDesc.Texture2D.PlaneSlice = 0;
+		}
+		break;
 
-		RenderTargetView.Desc = RenderTargetViewDesc;
-		RenderTargetView.Descriptor.CreateView(RenderTargetViewDesc, Resource.Get());
+	default:
+		break;
 	}
+	GetParentLinkedDevice()->GetDevice()->CreateRenderTargetView(
+		Resource.Get(),
+		&RenderTargetViewDesc,
+		RenderTargetView);
 }
 
 void D3D12Texture::CreateDepthStencilView(
-	D3D12DepthStencilView& DepthStencilView,
-	std::optional<UINT>	   OptArraySlice /*= std::nullopt*/,
-	std::optional<UINT>	   OptMipSlice /*= std::nullopt*/,
-	std::optional<UINT>	   OptArraySize /*= std::nullopt*/) const
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView,
+	std::optional<UINT>			OptArraySlice /*= std::nullopt*/,
+	std::optional<UINT>			OptMipSlice /*= std::nullopt*/,
+	std::optional<UINT>			OptArraySize /*= std::nullopt*/) const
 {
-	assert(DepthStencilView.Descriptor.IsValid());
+	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
-	if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+	UINT ArraySlice = OptArraySlice.value_or(0);
+	UINT MipSlice	= OptMipSlice.value_or(0);
+	UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {};
+	DepthStencilViewDesc.Format						   = GetValidDepthStencilViewFormat(Desc.Format);
+	DepthStencilViewDesc.Flags						   = D3D12_DSV_FLAG_NONE;
+
+	switch (Desc.Dimension)
 	{
-		UINT ArraySlice = OptArraySlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-		UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {};
-		DepthStencilViewDesc.Format						   = GetValidDepthStencilViewFormat(Desc.Format);
-		DepthStencilViewDesc.Flags						   = D3D12_DSV_FLAG_NONE;
-
-		switch (Desc.Dimension)
+	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+		if (Desc.DepthOrArraySize > 1)
 		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				DepthStencilViewDesc.ViewDimension					= D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-				DepthStencilViewDesc.Texture2DArray.MipSlice		= MipSlice;
-				DepthStencilViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
-				DepthStencilViewDesc.Texture2DArray.ArraySize		= ArraySize;
-			}
-			else
-			{
-				DepthStencilViewDesc.ViewDimension		= D3D12_DSV_DIMENSION_TEXTURE2D;
-				DepthStencilViewDesc.Texture2D.MipSlice = MipSlice;
-			}
-			break;
-
-		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
-			assert(false && "Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
-			break;
-
-		default:
-			break;
+			DepthStencilViewDesc.ViewDimension					= D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+			DepthStencilViewDesc.Texture2DArray.MipSlice		= MipSlice;
+			DepthStencilViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
+			DepthStencilViewDesc.Texture2DArray.ArraySize		= ArraySize;
 		}
+		else
+		{
+			DepthStencilViewDesc.ViewDimension		= D3D12_DSV_DIMENSION_TEXTURE2D;
+			DepthStencilViewDesc.Texture2D.MipSlice = MipSlice;
+		}
+		break;
 
-		DepthStencilView.Desc = DepthStencilViewDesc;
-		DepthStencilView.Descriptor.CreateView(DepthStencilViewDesc, Resource.Get());
+	case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+		assert(false && "Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
+		break;
+
+	default:
+		break;
 	}
+	GetParentLinkedDevice()->GetDevice()->CreateDepthStencilView(
+		Resource.Get(),
+		&DepthStencilViewDesc,
+		DepthStencilView);
 }

@@ -26,7 +26,7 @@
 class D3D12DescriptorTable
 {
 public:
-	D3D12DescriptorTable() noexcept = default;
+	explicit D3D12DescriptorTable(size_t NumRanges) { DescriptorRanges.reserve(NumRanges); }
 
 	template<UINT BaseShaderRegister, UINT RegisterSpace>
 	void AddSRVRange(
@@ -203,6 +203,8 @@ public:
 	void AllowResourceDescriptorHeapIndexing() noexcept;
 	void AllowSampleDescriptorHeapIndexing() noexcept;
 
+	[[nodiscard]] bool IsLocal() const noexcept { return Flags & D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE; }
+
 private:
 	void AddParameter(D3D12_ROOT_PARAMETER1 Parameter)
 	{
@@ -219,14 +221,15 @@ private:
 	std::vector<D3D12DescriptorTable> DescriptorTables;
 };
 
-class D3D12RootSignature
+class D3D12RootSignature final : public D3D12DeviceChild
 {
 public:
 	D3D12RootSignature() noexcept = default;
-	D3D12RootSignature(ID3D12Device* Device, RootSignatureBuilder& Builder);
+	D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder);
 
 	operator ID3D12RootSignature*() const { return RootSignature.Get(); }
 
+	[[nodiscard]] ID3D12RootSignature*		 GetApiHandle() const noexcept { return RootSignature.Get(); }
 	[[nodiscard]] D3D12_ROOT_SIGNATURE_DESC1 GetDesc() const noexcept { return Desc.Desc_1_1; }
 
 	[[nodiscard]] std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> GetDescriptorTableBitMask(
@@ -235,8 +238,8 @@ public:
 	[[nodiscard]] UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept;
 
 private:
-	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC			Desc = {};
 
 	// Need to know the number of descriptors per descriptor table
 	UINT NumDescriptorsPerTable[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};

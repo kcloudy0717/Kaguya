@@ -79,12 +79,10 @@ void from_json(const json& json, Material& OutMaterial)
 
 static void SerializeImages(json& Json)
 {
-	auto& ImageCache = AssetManager::GetImageCache();
-
 	auto& JsonImages = Json["Images"];
 
 	std::map<std::string, AssetHandle<Asset::Image>> SortedImages;
-	ImageCache.Each_ThreadSafe(
+	AssetManager::GetImageCache().Each(
 		[&](UINT64 Key, AssetHandle<Asset::Image> Resource)
 		{
 			SortedImages.insert({ Resource->Metadata.Path.string(), Resource });
@@ -100,12 +98,10 @@ static void SerializeImages(json& Json)
 
 static void SerializeMeshes(json& Json)
 {
-	auto& MeshCache = AssetManager::GetMeshCache();
-
 	auto& JsonMeshes = Json["Meshes"];
 
 	std::map<std::string, AssetHandle<Asset::Mesh>> SortedMeshes;
-	MeshCache.Each_ThreadSafe(
+	AssetManager::GetMeshCache().Each(
 		[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
 		{
 			SortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });

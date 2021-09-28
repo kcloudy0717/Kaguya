@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.16)
 find_package(Vulkan REQUIRED)
 
 set(DEPDIR "${CMAKE_SOURCE_DIR}/Dependencies")
-set(DEPONLINEDIR "${DEPDIR}/Online")
-set(DEPOFFLINEDIR "${DEPDIR}/Offline")
 
 set(PROJECTNAME Kaguya)
 set(PROJECTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Kaguya")
@@ -18,46 +16,46 @@ ${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.cpp)
 
 # Online
 set(imgui
-	${DEPONLINEDIR}/imgui/imconfig.h
-	${DEPONLINEDIR}/imgui/imgui.cpp
-	${DEPONLINEDIR}/imgui/imgui.h
-	${DEPONLINEDIR}/imgui/imgui_demo.cpp
-	${DEPONLINEDIR}/imgui/imgui_draw.cpp
-	${DEPONLINEDIR}/imgui/imgui_internal.h
-	${DEPONLINEDIR}/imgui/imgui_tables.cpp
-	${DEPONLINEDIR}/imgui/imgui_widgets.cpp
-	${DEPONLINEDIR}/imgui/imstb_rectpack.h
-	${DEPONLINEDIR}/imgui/imstb_textedit.h
-	${DEPONLINEDIR}/imgui/imstb_truetype.h
+	${DEPDIR}/imgui/imconfig.h
+	${DEPDIR}/imgui/imgui.cpp
+	${DEPDIR}/imgui/imgui.h
+	${DEPDIR}/imgui/imgui_demo.cpp
+	${DEPDIR}/imgui/imgui_draw.cpp
+	${DEPDIR}/imgui/imgui_internal.h
+	${DEPDIR}/imgui/imgui_tables.cpp
+	${DEPDIR}/imgui/imgui_widgets.cpp
+	${DEPDIR}/imgui/imstb_rectpack.h
+	${DEPDIR}/imgui/imstb_textedit.h
+	${DEPDIR}/imgui/imstb_truetype.h
 	# Backend
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.cpp
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_vulkan.h
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.cpp
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_dx12.h
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_win32.cpp
-	${DEPONLINEDIR}/imgui/backends/imgui_impl_win32.h)
+	${DEPDIR}/imgui/backends/imgui_impl_vulkan.cpp
+	${DEPDIR}/imgui/backends/imgui_impl_vulkan.h
+	${DEPDIR}/imgui/backends/imgui_impl_dx12.cpp
+	${DEPDIR}/imgui/backends/imgui_impl_dx12.h
+	${DEPDIR}/imgui/backends/imgui_impl_win32.cpp
+	${DEPDIR}/imgui/backends/imgui_impl_win32.h)
 set(ImGuizmo
-	${DEPONLINEDIR}/ImGuizmo/ImCurveEdit.cpp
-	${DEPONLINEDIR}/ImGuizmo/ImCurveEdit.h
-	${DEPONLINEDIR}/ImGuizmo/ImGradient.cpp
-	${DEPONLINEDIR}/ImGuizmo/ImGradient.h
-	${DEPONLINEDIR}/ImGuizmo/ImGuizmo.cpp
-	${DEPONLINEDIR}/ImGuizmo/ImGuizmo.h
-	${DEPONLINEDIR}/ImGuizmo/ImSequencer.cpp
-	${DEPONLINEDIR}/ImGuizmo/ImSequencer.h
-	${DEPONLINEDIR}/ImGuizmo/ImZoomSlider.h)
+	${DEPDIR}/ImGuizmo/ImCurveEdit.cpp
+	${DEPDIR}/ImGuizmo/ImCurveEdit.h
+	${DEPDIR}/ImGuizmo/ImGradient.cpp
+	${DEPDIR}/ImGuizmo/ImGradient.h
+	${DEPDIR}/ImGuizmo/ImGuizmo.cpp
+	${DEPDIR}/ImGuizmo/ImGuizmo.h
+	${DEPDIR}/ImGuizmo/ImSequencer.cpp
+	${DEPDIR}/ImGuizmo/ImSequencer.h
+	${DEPDIR}/ImGuizmo/ImZoomSlider.h)
 set(json
-	${DEPONLINEDIR}/json/single_include/nlohmann/json.hpp)
+	${DEPDIR}/json/single_include/nlohmann/json.hpp)
 set(spdlog
-	${DEPONLINEDIR}/spdlog/include/spdlog/spdlog.h)
+	${DEPDIR}/spdlog/include/spdlog/spdlog.h)
 
 # Offline
 set(dxc
-	${DEPOFFLINEDIR}/dxc/d3d12shader.h
-	${DEPOFFLINEDIR}/dxc/dxcapi.h)
+	${DEPDIR}/dxc/d3d12shader.h
+	${DEPDIR}/dxc/dxcapi.h)
 set(cityhash
-	${DEPOFFLINEDIR}/google/cityhash/city.h
-	${DEPOFFLINEDIR}/google/cityhash/city.cc)
+	${DEPDIR}/google/cityhash/city.h
+	${DEPDIR}/google/cityhash/city.cc)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
@@ -91,88 +89,90 @@ add_executable(
 	${cityhash})
 
 file(GLOB_RECURSE inc_hlsl
-${CMAKE_SOURCE_DIR}/Shaders/*.hlsli)
+${PROJECT_SOURCE_DIR}/Shaders/*.hlsli)
 
 file(GLOB_RECURSE src_hlsl
-${CMAKE_SOURCE_DIR}/Shaders/*.hlsl)
+${PROJECT_SOURCE_DIR}/Shaders/*.hlsl)
 
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${inc_hlsl})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${src_hlsl})
+source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${inc_hlsl})
+source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${src_hlsl})
 set_source_files_properties(${src_hlsl} PROPERTIES VS_TOOL_OVERRIDE None)
 
 add_custom_target(Shaders
-ALL COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders
-ALL SOURCES ${inc_hlsl} ${src_hlsl}
-)
+ALL SOURCES ${inc_hlsl} ${src_hlsl})
+add_custom_command(
+TARGET Shaders
+COMMAND ${CMAKE_COMMAND}
+-E copy_directory ${PROJECT_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders)
 
 add_dependencies(${PROJECTNAME} Shaders)
 
-set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 20)
+set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
 target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})
 
 # Online
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/entt/single_include/entt")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/imgui")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/ImGuizmo")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/json/single_include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/spdlog/include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPONLINEDIR}/wil/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/entt/single_include/entt")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/imgui")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/ImGuizmo")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/json/single_include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/spdlog/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/wil/include")
 
 # Offline
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/assimp/include")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/assimp/include")
+target_link_libraries(${PROJECTNAME} ${DEPDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/DirectXTex/include")
-target_link_libraries(${PROJECTNAME} debug ${DEPOFFLINEDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
-target_link_libraries(${PROJECTNAME} optimized ${DEPOFFLINEDIR}/DirectXTex/lib/Release/DirectXTex.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXTex/include")
+target_link_libraries(${PROJECTNAME} debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
+target_link_libraries(${PROJECTNAME} optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/dxc")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/dxc/dxcompiler.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
+target_link_libraries(${PROJECTNAME} ${DEPDIR}/dxc/dxcompiler.lib)
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/google/cityhash")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/google/cityhash")
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
+target_link_libraries(${PROJECTNAME} ${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 
 set(PhysX_SDK
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/LowLevel_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/LowLevelAABB_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/LowLevelDynamics_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysX_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXCharacterKinematic_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXCommon_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXCooking_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXExtensions_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXFoundation_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXPvdSDK_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXTask_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/PhysXVehicle_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/SceneQuery_static_64.lib
-	debug ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/debug/SimulationController_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevel_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevelAABB_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevelDynamics_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysX_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCharacterKinematic_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCommon_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCooking_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXExtensions_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXFoundation_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXPvdSDK_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXTask_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXVehicle_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/SceneQuery_static_64.lib
+	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/SimulationController_static_64.lib
 
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/LowLevel_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/LowLevelAABB_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/LowLevelDynamics_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysX_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXCharacterKinematic_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXCommon_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXCooking_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXExtensions_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXFoundation_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXPvdSDK_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXTask_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
-	optimized ${DEPOFFLINEDIR}/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/PhysX-4.0.1/include")
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevel_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevelAABB_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevelDynamics_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysX_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCharacterKinematic_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCommon_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCooking_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXExtensions_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXFoundation_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXPvdSDK_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXTask_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
+	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/PhysX-4.0.1/include")
 target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
-target_link_libraries(${PROJECTNAME} ${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
+target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
 # Linking
 target_include_directories(${PROJECTNAME} PUBLIC Vulkan::Headers)
@@ -182,15 +182,15 @@ target_link_libraries(${PROJECTNAME} Vulkan::Vulkan)
 add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy 
-	${DEPOFFLINEDIR}/assimp/bin/release/assimp-vc142-mt.dll
+	${DEPDIR}/assimp/bin/release/assimp-vc142-mt.dll
 
-	${DEPOFFLINEDIR}/dxc/dxcompiler.dll
-	${DEPOFFLINEDIR}/dxc/dxil.dll
+	${DEPDIR}/dxc/dxcompiler.dll
+	${DEPDIR}/dxc/dxil.dll
 
-	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
-	${DEPOFFLINEDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
+	${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
+	${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
 
-	${DEPOFFLINEDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
+	${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
 
 	${CMAKE_SOURCE_DIR}/imgui.ini
 
@@ -201,7 +201,7 @@ DEPENDS ${PROJECTNAME})
 add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${DEPOFFLINEDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
+	${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
 
 	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 DEPENDS ${PROJECTNAME})
@@ -210,12 +210,12 @@ DEPENDS ${PROJECTNAME})
 add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy 
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
-	${DEPOFFLINEDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
+	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
 
 	$<TARGET_FILE_DIR:${PROJECTNAME}>
 DEPENDS ${PROJECTNAME})

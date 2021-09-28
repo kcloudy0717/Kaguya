@@ -12,8 +12,8 @@ VulkanResourceDescriptorHeap::VulkanResourceDescriptorHeap(VulkanDevice* Parent,
 	std::vector<VkDescriptorBindingFlagsEXT>  BindingFlags;
 
 	IndexPoolArray.resize(std::size(PoolSizes));
-	IndexPoolArray[0] = IndexPool(Desc.NumTextureDescriptors);
-	IndexPoolArray[1] = IndexPool(Desc.NumRWTextureDescriptors);
+	IndexPoolArray[0] = DescriptorIndexPool(Desc.NumTextureDescriptors);
+	IndexPoolArray[1] = DescriptorIndexPool(Desc.NumRWTextureDescriptors);
 
 	Bindings.reserve(std::size(PoolSizes));
 	BindingFlags.reserve(std::size(PoolSizes));

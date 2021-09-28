@@ -3,73 +3,94 @@
 
 class RenderPass;
 
-struct RHIBuffer
+struct RGTexture
 {
-	RenderResourceHandle Handle;
-	RGBufferDesc		 Desc;
-};
-
-struct RHITexture
-{
+	std::string			 Name;
 	RenderResourceHandle Handle;
 	RGTextureDesc		 Desc;
 };
 
-class RenderGraphScheduler : public RenderGraphChild
+struct RGRenderTargetDesc
+{
+	void AddRenderTarget(RenderResourceHandle RenderTarget, bool sRGB)
+	{
+		RenderTargets[NumRenderTargets] = RenderTarget;
+		this->sRGB[NumRenderTargets]	= sRGB;
+		NumRenderTargets++;
+	}
+	void SetDepthStencil(RenderResourceHandle DepthStencil) { this->DepthStencil = DepthStencil; }
+
+	RenderResourceHandle RenderPass;
+	UINT				 Width;
+	UINT				 Height;
+
+	UINT				 NumRenderTargets = 0;
+	RenderResourceHandle RenderTargets[8] = {};
+	bool				 sRGB[8]		  = {};
+	RenderResourceHandle DepthStencil;
+};
+
+class RenderGraphScheduler
 {
 public:
-	RenderGraphScheduler(RenderGraph* Parent)
-		: RenderGraphChild(Parent)
+	RenderGraphScheduler()
 	{
-		BufferHandle.Type	 = ERGResourceType::Buffer;
-		BufferHandle.State	 = ERGHandleState::Dirty;
-		BufferHandle.Version = 0;
-		BufferHandle.Id		 = 0;
+		TextureHandle.Type		= ERGResourceType::Texture;
+		RenderTargetHandle.Type = ERGResourceType::RenderTarget;
+	}
 
-		TextureHandle.Type	  = ERGResourceType::Texture;
-		TextureHandle.State	  = ERGHandleState::Dirty;
+	void Reset()
+	{
+		TextureHandle.State	  = ERGHandleState::Ready;
 		TextureHandle.Version = 0;
 		TextureHandle.Id	  = 0;
+
+		RenderTargetHandle.State   = ERGHandleState::Ready;
+		RenderTargetHandle.Version = 0;
+		RenderTargetHandle.Id	   = 0;
+
+		Textures.clear();
+		RenderTargets.clear();
 	}
 
 	[[nodiscard]] auto CreateBuffer(std::string_view Name, const RGBufferDesc& Desc) -> RenderResourceHandle;
 	[[nodiscard]] auto CreateTexture(std::string_view Name, const RGTextureDesc& Desc) -> RenderResourceHandle;
+	[[nodiscard]] auto CreateRenderTarget(const RGRenderTargetDesc& Desc) -> RenderResourceHandle;
+
 	[[nodiscard]] auto Read(RenderResourceHandle Resource) -> RenderResourceHandle;
 	[[nodiscard]] auto Write(RenderResourceHandle Resource) -> RenderResourceHandle;
 
-	bool AllowRenderTarget(RenderResourceHandle Resource) const noexcept
+	[[nodiscard]] bool AllowRenderTarget(RenderResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == ERGResourceType::Texture);
-		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		assert(Resource.Id < Textures.size());
 		return Textures[Resource.Id].Desc.AllowRenderTarget();
 	}
 
-	bool AllowDepthStencil(RenderResourceHandle Resource) const noexcept
+	[[nodiscard]] bool AllowDepthStencil(RenderResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == ERGResourceType::Texture);
-		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
+		assert(Resource.Id < Textures.size());
 		return Textures[Resource.Id].Desc.AllowDepthStencil();
 	}
 
-	bool AllowUnorderedAccess(RenderResourceHandle Resource) const noexcept
+	[[nodiscard]] bool AllowUnorderedAccess(RenderResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == ERGResourceType::Buffer || Resource.Type == ERGResourceType::Texture);
-		if (Resource.Type == ERGResourceType::Buffer)
-		{
-		}
+		// TODO: Buffer
 		return Textures[Resource.Id].Desc.AllowUnorderedAccess();
 	}
 
-	const std::string& GetTextureName(RenderResourceHandle Resource) const noexcept
+	[[nodiscard]] const std::string& GetTextureName(RenderResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == ERGResourceType::Texture);
-		assert(Resource.Id >= 0 && Resource.Id < Textures.size());
-		return TextureNames[Resource.Id];
+		assert(Resource.Id < Textures.size());
+		return Textures[Resource.Id].Name;
 	}
 
 private:
 	// Sets the current render pass to be scheduled
-	void SetCurrentRenderPass(RenderPass* pRenderPass) { CurrentRenderPass = pRenderPass; }
+	void SetCurrentRenderPass(RenderPass* RenderPass) { CurrentRenderPass = RenderPass; }
 
 private:
 	friend class RenderGraph;
@@ -77,13 +98,11 @@ private:
 
 	// Handles have a 1 : 1 mapping to resource containers
 
-	RenderPass* CurrentRenderPass;
+	RenderPass* CurrentRenderPass = nullptr;
 
-	RenderResourceHandle	 BufferHandle;
-	std::vector<RHIBuffer>	 Buffers;
-	std::vector<std::string> BufferNames;
+	RenderResourceHandle TextureHandle;
+	RenderResourceHandle RenderTargetHandle;
 
-	RenderResourceHandle	 TextureHandle;
-	std::vector<RHITexture>	 Textures;
-	std::vector<std::string> TextureNames;
+	std::vector<RGTexture>			Textures;
+	std::vector<RGRenderTargetDesc> RenderTargets;
 };

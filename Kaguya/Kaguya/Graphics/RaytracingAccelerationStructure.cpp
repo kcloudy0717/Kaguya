@@ -9,7 +9,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 void RaytracingAccelerationStructure::Initialize()
 {
 	InstanceDescs = D3D12Buffer(
-		RenderCore::pDevice->GetDevice(),
+		RenderCore::Device->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * World::InstanceLimit,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -51,9 +51,9 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		Instance.AccelerationStructure = MeshRenderers[i]->pMeshFilter->Mesh->AccelerationStructure;
 	}
 
-	UINT64 ScratchSize, ResultSize;
+	UINT64 ScratchSize = 0, ResultSize = 0;
 	TopLevelAccelerationStructure.ComputeMemoryRequirements(
-		RenderCore::pDevice->GetD3D12Device5(),
+		RenderCore::Device->GetD3D12Device5(),
 		&ScratchSize,
 		&ResultSize);
 
@@ -61,7 +61,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	{
 		// TLAS Scratch
 		TlasScratch = D3D12Buffer(
-			RenderCore::pDevice->GetDevice(),
+			RenderCore::Device->GetDevice(),
 			ScratchSize,
 			0,
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -71,7 +71,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	if (!TlasResult || TlasResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TlasResult = D3D12ASBuffer(RenderCore::pDevice->GetDevice(), ResultSize);
+		TlasResult = D3D12ASBuffer(RenderCore::Device->GetDevice(), ResultSize);
 	}
 
 	// Create the description for each instance

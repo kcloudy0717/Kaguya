@@ -45,15 +45,10 @@ struct Light
 // ==================== Mesh ====================
 struct Mesh
 {
-	uint	 VertexOffset;
-	uint	 IndexOffset;
-	uint	 MaterialIndex;
-	uint	 InstanceIDAndMask;
-	uint	 InstanceContributionToHitGroupIndexAndFlags;
-	uint64_t AccelerationStructure;
-	matrix	 World;
-	matrix	 PreviousWorld;
-	float3x4 Transform;
+	matrix Transform;
+	matrix PreviousTransform;
+
+	unsigned int MaterialIndex;
 };
 
 // ==================== Camera ====================
@@ -66,24 +61,26 @@ struct Camera
 
 	float FocalLength;
 	float RelativeAperture;
-	float __Padding0;
-	float __Padding1;
+	float DEADBEEF0;
+	float DEADBEEF1;
 
 	float4 Position;
 
-	matrix World;
 	matrix View;
 	matrix Projection;
 	matrix ViewProjection;
+
 	matrix InvView;
 	matrix InvProjection;
 	matrix InvViewProjection;
 
-	RayDesc GenerateCameraRay(float2 ndc, inout uint seed)
+	matrix PrevViewProjection;
+
+	RayDesc GenerateCameraRay(float2 ndc)
 	{
 		// Setup the ray
 		RayDesc ray;
-		ray.Origin = World[3].xyz;
+		ray.Origin = InvView[3].xyz;
 		ray.TMin   = NearZ;
 		ray.TMax   = FarZ;
 
@@ -91,8 +88,10 @@ struct Camera
 		float tanHalfFoVY = tan(radians(FoVY) * 0.5f);
 
 		// Compute the ray direction for this pixel
-		ray.Direction = normalize(
-			(ndc.x * World[0].xyz * tanHalfFoVY * AspectRatio) + (ndc.y * World[1].xyz * tanHalfFoVY) + World[2].xyz);
+		float3 right   = ndc.x * InvView[0].xyz * tanHalfFoVY * AspectRatio;
+		float3 up	   = ndc.y * InvView[1].xyz * tanHalfFoVY;
+		float3 forward = InvView[2].xyz;
+		ray.Direction  = normalize(right + up + forward);
 
 		return ray;
 	}

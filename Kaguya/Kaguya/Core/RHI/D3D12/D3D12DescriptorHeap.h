@@ -13,7 +13,7 @@ public:
 
 	void SetName(LPCWSTR Name) const { DescriptorHeap->SetName(Name); }
 
-	void Initialize(UINT NumDescriptors, bool ShaderVisible, D3D12_DESCRIPTOR_HEAP_TYPE Type);
+	void Initialize(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT NumDescriptors);
 
 	operator ID3D12DescriptorHeap*() const { return DescriptorHeap.Get(); }
 
@@ -28,29 +28,24 @@ public:
 	[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(UINT Index) const noexcept;
 
 private:
-	D3D12_DESCRIPTOR_HEAP_DESC					 Desc = {};
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DescriptorHeap;
-	D3D12_CPU_DESCRIPTOR_HANDLE					 CpuBaseAddress				   = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE					 GpuBaseAddress				   = {};
-	UINT										 DescriptorHandleIncrementSize = 0;
-	IndexPool									 IndexPool;
-	CriticalSection								 Mutex;
-};
 
-// Everything below is not used anymore, I exclusively use D3D12DescriptorHeap for bindless
-// resource indexing, these classes are used in my older D3D12 project when I first started it learning
-// D3D12 overtime I adapted to bindless model, the older project is now archived and these are here for book keeping
-// purposes
+	D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
+	D3D12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
+	UINT						DescriptorSize = 0;
+	DescriptorIndexPool			IndexPool;
+	CriticalSection				Mutex;
+};
 
 // Many of these came from the DirectX-Graphics samples (MiniEngine)
 class D3D12DescriptorPage;
 
-// Represents a contiguous CPU descriptor handle, mainly used to stage from CPU -> GPU
+// Represents a contiguous CPU descriptor handle
 class D3D12DescriptorArray
 {
 public:
 	D3D12DescriptorArray() noexcept = default;
-	D3D12DescriptorArray(
+	explicit D3D12DescriptorArray(
 		D3D12DescriptorPage*		Parent,
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle,
 		UINT						Offset,
@@ -61,28 +56,13 @@ public:
 		, NumDescriptors(NumDescriptors)
 	{
 	}
-
-	D3D12DescriptorArray(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
-		: Parent(std::exchange(D3D12DescriptorArray.Parent, {}))
-		, CpuDescriptorHandle(std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {}))
-		, Offset(std::exchange(D3D12DescriptorArray.Offset, {}))
-		, NumDescriptors(std::exchange(D3D12DescriptorArray.NumDescriptors, {}))
-	{
-	}
-
-	D3D12DescriptorArray& operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept
-	{
-		if (this != &D3D12DescriptorArray)
-		{
-			Parent				= std::exchange(D3D12DescriptorArray.Parent, {});
-			CpuDescriptorHandle = std::exchange(D3D12DescriptorArray.CpuDescriptorHandle, {});
-			Offset				= std::exchange(D3D12DescriptorArray.Offset, {});
-			NumDescriptors		= std::exchange(D3D12DescriptorArray.NumDescriptors, {});
-		}
-		return *this;
-	}
-
 	~D3D12DescriptorArray();
+
+	D3D12DescriptorArray(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept;
+	D3D12DescriptorArray& operator=(D3D12DescriptorArray&& D3D12DescriptorArray) noexcept;
+
+	D3D12DescriptorArray(const D3D12DescriptorArray&) = delete;
+	D3D12DescriptorArray& operator=(const D3D12DescriptorArray&) = delete;
 
 	[[nodiscard]] bool IsValid() const noexcept { return Parent != nullptr; }
 
@@ -92,6 +72,8 @@ public:
 	[[nodiscard]] UINT GetNumDescriptors() const noexcept { return NumDescriptors; }
 
 private:
+	void InternalDestruct();
+
 	D3D12DescriptorPage*		Parent				= nullptr;
 	D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = {};
 	UINT						Offset				= 0;
@@ -101,54 +83,56 @@ private:
 class D3D12DescriptorPage : public D3D12LinkedDeviceChild
 {
 public:
-	D3D12DescriptorPage() noexcept = default;
-	explicit D3D12DescriptorPage(D3D12LinkedDevice* Parent) noexcept
-		: D3D12LinkedDeviceChild(Parent)
-	{
-	}
+	explicit D3D12DescriptorPage(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT NumDescriptors);
 
-	void Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE Type);
-
-	[[nodiscard]] UINT GetDescriptorHandleIncrementSize() const noexcept { return DescriptorHandleIncrementSize; }
+	[[nodiscard]] UINT GetDescriptorSize() const noexcept { return DescriptorSize; }
 
 	std::optional<D3D12DescriptorArray> Allocate(UINT NumDescriptors);
 	void								Release(D3D12DescriptorArray&& DescriptorArray);
 
 private:
-	using TOffset = UINT;
-	using TSize	  = UINT;
+	using OffsetType = UINT;
+	using SizeType	 = UINT;
 
 	struct FreeBlocksByOffsetPoolIter;
 	struct FreeBlocksBySizePoolIter;
-	using CFreeBlocksByOffsetPool = std::map<TOffset, FreeBlocksBySizePoolIter>;
-	using CFreeBlocksBySizePool	  = std::multimap<TSize, FreeBlocksByOffsetPoolIter>;
+	using CFreeBlocksByOffsetPool = std::map<OffsetType, FreeBlocksBySizePoolIter>;
+	using CFreeBlocksBySizePool	  = std::multimap<SizeType, FreeBlocksByOffsetPoolIter>;
 
 	struct FreeBlocksByOffsetPoolIter
 	{
-		CFreeBlocksByOffsetPool::iterator Iterator;
-		FreeBlocksByOffsetPoolIter(CFreeBlocksByOffsetPool::iterator Iterator)
+		using IteratorType = CFreeBlocksByOffsetPool::iterator;
+
+		explicit FreeBlocksByOffsetPoolIter(IteratorType Iterator)
 			: Iterator(Iterator)
 		{
 		}
+
+		IteratorType Iterator;
 	};
 
 	struct FreeBlocksBySizePoolIter
 	{
-		CFreeBlocksBySizePool::iterator Iterator;
-		FreeBlocksBySizePoolIter(CFreeBlocksBySizePool::iterator Iterator)
+		using IteratorType = CFreeBlocksBySizePool::iterator;
+
+		explicit FreeBlocksBySizePoolIter(IteratorType Iterator)
 			: Iterator(Iterator)
 		{
 		}
+
+		IteratorType Iterator;
 	};
 
-	void AllocateFreeBlock(TOffset Offset, TSize Size);
-	void FreeBlock(TOffset Offset, TSize Size);
+	void AllocateFreeBlock(OffsetType Offset, SizeType Size);
+	void FreeBlock(OffsetType Offset, SizeType Size);
 
 private:
-	D3D12_DESCRIPTOR_HEAP_DESC					 Desc = {};
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DescriptorHeap;
-	D3D12_CPU_DESCRIPTOR_HANDLE					 CpuBaseAddress				   = {};
-	UINT										 DescriptorHandleIncrementSize = 0;
+
+	D3D12_DESCRIPTOR_HEAP_DESC Desc = {};
+
+	D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
+	UINT						DescriptorSize = 0;
 
 	CFreeBlocksByOffsetPool FreeBlocksByOffsetPool;
 	CFreeBlocksBySizePool	SizePool;
@@ -158,9 +142,13 @@ private:
 class D3D12DescriptorAllocator : public D3D12LinkedDeviceChild
 {
 public:
-	explicit D3D12DescriptorAllocator(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type) noexcept
+	explicit D3D12DescriptorAllocator(
+		D3D12LinkedDevice*		   Parent,
+		D3D12_DESCRIPTOR_HEAP_TYPE Type,
+		UINT					   PageSize) noexcept
 		: D3D12LinkedDeviceChild(Parent)
 		, Type(Type)
+		, PageSize(PageSize)
 	{
 	}
 
@@ -168,9 +156,16 @@ public:
 
 private:
 	D3D12_DESCRIPTOR_HEAP_TYPE						  Type;
+	UINT											  PageSize;
 	std::vector<std::unique_ptr<D3D12DescriptorPage>> DescriptorPages;
 };
 
+// Everything below it not used anymore, I exclusively use D3D12DescriptorHeap for bindless
+// resource indexing, these classes are used in my older D3D12 project when I first started it learning
+// D3D12, overtime I adapted to bindless model, the older project is now archived and these are here for book keeping
+// purposes
+
+#if 0
 struct D3D12DescriptorTableCache
 {
 	// The pointer to the descriptor in the descriptor handle cache.
@@ -188,10 +183,10 @@ public:
 	{
 	}
 
-	void Initialize(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT DescriptorHandleIncrementSize)
+	void Initialize(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT DescriptorSize)
 	{
-		this->Type							= Type;
-		this->DescriptorHandleIncrementSize = DescriptorHandleIncrementSize;
+		this->Type			 = Type;
+		this->DescriptorSize = DescriptorSize;
 	}
 
 	void Reset()
@@ -251,8 +246,8 @@ public:
 		void (STDMETHODCALLTYPE ID3D12GraphicsCommandList::*SetFunc)(UINT, D3D12_GPU_DESCRIPTOR_HANDLE));
 
 private:
-	D3D12_DESCRIPTOR_HEAP_TYPE Type							 = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-	UINT					   DescriptorHandleIncrementSize = 0;
+	D3D12_DESCRIPTOR_HEAP_TYPE Type			  = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+	UINT					   DescriptorSize = 0;
 
 	// Each bit in the bit mask represents the index in the root signature
 	// that contains a descriptor table.
@@ -270,14 +265,19 @@ private:
 class D3D12DynamicDescriptorHeap : public D3D12LinkedDeviceChild
 {
 public:
-	explicit D3D12DynamicDescriptorHeap(D3D12LinkedDevice* Parent) noexcept
+	explicit D3D12DynamicDescriptorHeap(
+		D3D12LinkedDevice*		   Parent,
+		D3D12_DESCRIPTOR_HEAP_TYPE Type,
+		UINT					   NumDescriptors) noexcept
 		: D3D12LinkedDeviceChild(Parent)
+		, Type(Type)
+		, NumDescriptors(NumDescriptors)
 		, GraphicsHandleCache(Parent)
 		, ComputeHandleCache(Parent)
 	{
 	}
 
-	void Initialize(UINT NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE Type);
+	void Initialize();
 
 	void Reset();
 
@@ -299,12 +299,15 @@ public:
 	void CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CommandList);
 
 private:
-	D3D12_DESCRIPTOR_HEAP_DESC					 Desc = {};
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DescriptorHeap;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE				 CpuBaseAddress				   = {};
-	CD3DX12_GPU_DESCRIPTOR_HANDLE				 GpuBaseAddress				   = {};
-	UINT										 DescriptorHandleIncrementSize = 0;
+
+	D3D12_DESCRIPTOR_HEAP_TYPE Type			  = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+	UINT					   NumDescriptors = 0;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
 
 	D3D12DescriptorHandleCache GraphicsHandleCache;
 	D3D12DescriptorHandleCache ComputeHandleCache;
 };
+#endif

@@ -1,6 +1,5 @@
 #pragma once
 #include "World/World.h"
-#include "World/Entity.h"
 
 #define RAYTRACING_INSTANCEMASK_ALL	   (0xff)
 #define RAYTRACING_INSTANCEMASK_OPAQUE (1 << 0)
@@ -16,7 +15,7 @@ public:
 
 	operator auto() const { return TlasResult.GetGpuVirtualAddress(); }
 
-	[[nodiscard]] bool Valid() const noexcept { return TopLevelAccelerationStructure.Valid(); }
+	[[nodiscard]] bool IsValid() const noexcept { return TopLevelAccelerationStructure.IsValid(); }
 
 	void Reset();
 

@@ -1,14 +1,25 @@
 // main.cpp : Defines the entry point for the application.
+#if defined(_DEBUG)
+// memory leak
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
+#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
+#define SET_LEAK_BREAKPOINT(x)	_CrtSetBreakAlloc(x)
+#else
+#define ENABLE_LEAK_DETECTION() 0
+#define SET_LEAK_BREAKPOINT(X)	X
+#endif
 
 #define VULKAN_PLAYGROUND 0
 
 #if VULKAN_PLAYGROUND
 
-	#include <Core/Application.h>
-	#include <World/World.h>
-	#include <Physics/PhysicsManager.h>
+#include <Core/Application.h>
+#include <World/World.h>
+#include <Physics/PhysicsManager.h>
 
-	#include <iostream>
+#include <iostream>
 
 struct MeshPushConstants
 {
@@ -730,8 +741,13 @@ private:
 	std::unordered_map<std::string, VulkanMesh>		Meshes;
 };
 
-int main(int /*argc*/, char* /*argv[]*/)
+int main(int /*argc*/, char* /*argv*/[])
 {
+#if defined(_DEBUG)
+	ENABLE_LEAK_DETECTION();
+	SET_LEAK_BREAKPOINT(-1);
+#endif
+
 	try
 	{
 		ApplicationOptions Options = {};
@@ -754,23 +770,22 @@ int main(int /*argc*/, char* /*argv[]*/)
 
 #else
 
-// main.cpp : Defines the entry point for the application.
-//
-	#include <Core/Application.h>
-	#include <Physics/PhysicsManager.h>
-	#include <RenderCore/RenderCore.h>
+#include <Core/Application.h>
+#include <Physics/PhysicsManager.h>
+#include <RenderCore/RenderCore.h>
 
-	#include <Graphics/AssetManager.h>
-	#include <Graphics/UI/HierarchyWindow.h>
-	#include <Graphics/UI/ViewportWindow.h>
-	#include <Graphics/UI/InspectorWindow.h>
-	#include <Graphics/UI/AssetWindow.h>
-	#include <Graphics/UI/ConsoleWindow.h>
+#include <Graphics/AssetManager.h>
+#include <Graphics/UI/HierarchyWindow.h>
+#include <Graphics/UI/ViewportWindow.h>
+#include <Graphics/UI/InspectorWindow.h>
+#include <Graphics/UI/AssetWindow.h>
+#include <Graphics/UI/ConsoleWindow.h>
 
-	#include <Graphics/Renderer.h>
-	#include <Graphics/PathIntegrator.h>
+#include <Graphics/Renderer.h>
+#include <Graphics/PathIntegrator.h>
+#include <Graphics/DeferredRenderer.h>
 
-	#define RENDER_AT_1920x1080 0
+#define RENDER_AT_1920x1080 0
 
 class Editor final : public Application
 {
@@ -795,7 +810,8 @@ public:
 		InspectorWindow.SetContext(&World, {});
 		AssetWindow.SetContext(&World);
 
-		Renderer = std::make_unique<PathIntegrator>(&World);
+		Renderer = std::make_unique<PathIntegrator>();
+		//Renderer = std::make_unique<DeferredRenderer>();
 		Renderer->OnInitialize();
 
 		return true;
@@ -816,28 +832,28 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		ViewportWindow.SetContext(Renderer->GetViewportDescriptor());
-		// Update selected entity here in case Clear is called on HierarchyWindow to ensure entity is invalidated
+		HierarchyWindow.Render();
 		InspectorWindow.SetContext(&World, HierarchyWindow.GetSelectedEntity());
 
-		HierarchyWindow.Render();
 		ViewportWindow.Render();
+		ViewportWindow.SetContext(Renderer->GetViewportDescriptor());
+
 		AssetWindow.Render();
 		ConsoleWindow.Render();
 		InspectorWindow.Render();
 
-	#if RENDER_AT_1920x1080
+#if RENDER_AT_1920x1080
 		const uint32_t viewportWidth = 1920, viewportHeight = 1080;
-	#else
+#else
 		const uint32_t viewportWidth = ViewportWindow.Resolution.x, viewportHeight = ViewportWindow.Resolution.y;
-	#endif
+#endif
 
 		World.Update(DeltaTime);
 
 		// Render
 		Renderer->OnSetViewportResolution(viewportWidth, viewportHeight);
 
-		Renderer->OnRender();
+		Renderer->OnRender(&World);
 	}
 
 	void Shutdown() override
@@ -863,8 +879,13 @@ private:
 	std::unique_ptr<Renderer> Renderer;
 };
 
-int main(int /*argc*/, char* /*argv[]*/)
+int main(int /*argc*/, char* /*argv*/[])
 {
+#if defined(_DEBUG)
+	ENABLE_LEAK_DETECTION();
+	SET_LEAK_BREAKPOINT(-1);
+#endif
+
 	try
 	{
 		ApplicationOptions Options = {};

@@ -120,6 +120,25 @@ void D3D12CommandQueue::WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
 	}
 }
 
+D3D12CommandListHandle D3D12CommandQueue::RequestCommandList(D3D12CommandAllocator* CommandAllocator)
+{
+	if (!AvailableCommandListHandles.empty())
+	{
+		D3D12CommandListHandle Handle = std::move(AvailableCommandListHandles.front());
+		AvailableCommandListHandles.pop();
+
+		Handle.Reset(CommandAllocator);
+		return Handle;
+	}
+
+	return CreateCommandListHandle(CommandAllocator);
+}
+
+void D3D12CommandQueue::DiscardCommandList(D3D12CommandListHandle&& CommandListHandle)
+{
+	AvailableCommandListHandles.push(std::move(CommandListHandle));
+}
+
 bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 	D3D12CommandListHandle& CommandListHandle,
 	D3D12CommandListHandle& ResourceBarrierCommandListHandle)
@@ -144,6 +163,13 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 	return AnyResolved;
 }
 
+D3D12CommandListHandle D3D12CommandQueue::CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator) const
+{
+	D3D12CommandListHandle Handle = D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType);
+	Handle.Reset(CommandAllocator);
+	return Handle;
+}
+
 void D3D12CommandQueue::ExecuteCommandLists(
 	UINT					NumCommandListHandles,
 	D3D12CommandListHandle* CommandListHandles,
@@ -163,9 +189,8 @@ void D3D12CommandQueue::ExecuteCommandLists(
 
 		if (ResolveResourceBarrierCommandList(CommandListHandle, BarrierCommandListHandle))
 		{
-			BarrierCommandLists[NumBarrierCommandList++] = BarrierCommandListHandle;
-
-			CommandLists[NumCommandLists++] = BarrierCommandListHandle.GetCommandList();
+			CommandLists[NumCommandLists++]				 = BarrierCommandListHandle.GetCommandList();
+			BarrierCommandLists[NumBarrierCommandList++] = std::move(BarrierCommandListHandle);
 		}
 
 		CommandLists[NumCommandLists++] = CommandListHandle.GetCommandList();
@@ -180,13 +205,13 @@ void D3D12CommandQueue::ExecuteCommandLists(
 	{
 		D3D12CommandListHandle& CommandListHandle = CommandListHandles[i];
 		CommandListHandle.SetSyncPoint(SyncPoint);
-		DiscardCommandList(CommandListHandle);
+		DiscardCommandList(std::move(CommandListHandle));
 	}
 	for (UINT i = 0; i < NumBarrierCommandList; ++i)
 	{
 		D3D12CommandListHandle& CommandListHandle = BarrierCommandLists[i];
 		CommandListHandle.SetSyncPoint(SyncPoint);
-		DiscardCommandList(CommandListHandle);
+		DiscardCommandList(std::move(CommandListHandle));
 	}
 
 	// Discard command allocator used exclusively to resolve resource barriers

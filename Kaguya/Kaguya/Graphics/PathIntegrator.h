@@ -1,5 +1,6 @@
 #pragma once
 #include "Renderer.h"
+#include "RaytracingAccelerationStructure.h"
 
 struct PathIntegratorState
 {
@@ -24,45 +25,42 @@ struct FSRState
 
 	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
 
-	int ViewportWidth;
-	int ViewportHeight;
+	UINT ViewportWidth;
+	UINT ViewportHeight;
 
-	int	  RenderWidth;
-	int	  RenderHeight;
+	UINT  RenderWidth;
+	UINT  RenderHeight;
 	float RCASAttenuation = 0.0f;
 };
 
 class PathIntegrator : public Renderer
 {
 public:
-	PathIntegrator(World* pWorld)
-		: Renderer(pWorld)
-	{
-	}
-
 	void* GetViewportDescriptor() override;
 
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
-	void Render(D3D12CommandContext& Context) override;
+	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
+	D3D12RenderPass TonemapRenderPass;
+
 	RaytracingAccelerationStructure AccelerationStructure;
 
 	D3D12RaytracingAccelerationStructureManager Manager;
 
-	struct Settings
-	{
-		inline static UINT NumAccumulatedSamples = 0;
-	};
+	// Temporal accumulation
+	UINT NumTemporalSamples = 0;
+	UINT FrameCounter		= 0;
+
 	PathIntegratorState PathIntegratorState;
 	FSRState			FSRState;
 
 	D3D12Buffer		Materials;
-	HLSL::Material* pMaterial = nullptr;
+	Hlsl::Material* pMaterial = nullptr;
 	D3D12Buffer		Lights;
-	HLSL::Light*	pLights		 = nullptr;
+	Hlsl::Light*	pLights		 = nullptr;
 	UINT			NumMaterials = 0, NumLights = 0;
 
 	// Pad local root arguments explicitly
@@ -78,4 +76,6 @@ private:
 	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable;
 	D3D12RaytracingShaderTable<void>*		  MissShaderTable;
 	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
+
+	RenderResourceHandle Viewport;
 };

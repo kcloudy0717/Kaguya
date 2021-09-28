@@ -20,7 +20,7 @@ class AssetHandle
 	}
 
 public:
-	AssetHandle() = default;
+	AssetHandle() noexcept = default;
 
 	auto operator<=>(const AssetHandle&) const = default;
 
@@ -57,14 +57,28 @@ public:
 		Cache.clear();
 	}
 
-	template<typename... Args>
-	void Create(UINT64 Key, Args&&... args)
+	template<typename... TArgs>
+	Handle Create(UINT64 Key, TArgs&&... Args)
+	{
+		ScopedWriteLock _(RWLock);
+
+		Handle Handle = std::make_shared<T>(std::forward<TArgs>(Args)...);
+
+		if (Cache.find(Key) == Cache.end())
+		{
+			Cache[Key] = Handle;
+		}
+
+		return Handle;
+	}
+
+	void Emplace(UINT64 Key, std::shared_ptr<T> Resource)
 	{
 		ScopedWriteLock _(RWLock);
 
 		if (Cache.find(Key) == Cache.end())
 		{
-			Cache[Key] = std::make_shared<T>(std::forward<Args>(args)...);
+			Cache[Key] = Resource;
 		}
 	}
 
@@ -72,21 +86,20 @@ public:
 	{
 		ScopedWriteLock _(RWLock);
 
-		if (auto it = Cache.find(Key); it != Cache.end())
+		if (auto iter = Cache.find(Key); iter != Cache.end())
 		{
-			Cache.erase(it);
+			Cache.erase(iter);
 		}
 	}
 
-	template<typename... Args>
-	Handle Load(UINT64 Key, Args&&... args) const
+	Handle Load(UINT64 Key) const
 	{
 		ScopedReadLock _(RWLock);
 
 		Handle Handle = {};
-		if (auto it = Cache.find(Key); it != Cache.end())
+		if (auto iter = Cache.find(Key); iter != Cache.end())
 		{
-			Handle = it->second;
+			Handle = iter->second;
 		}
 
 		return Handle;
@@ -104,32 +117,6 @@ public:
 	{
 		auto begin = Cache.begin();
 		auto end   = Cache.end();
-		while (begin != end)
-		{
-			auto current = begin++;
-
-			if constexpr (std::is_invocable_v<Functor, UINT64>)
-			{
-				F(current->first);
-			}
-			else if constexpr (std::is_invocable_v<Functor, Handle>)
-			{
-				F(Handle(current->second));
-			}
-			else
-			{
-				F(current->first, Handle(current->second));
-			}
-		}
-	}
-
-	// Acquires RWLock
-	template<typename Functor>
-	void Each_ThreadSafe(Functor F) const
-	{
-		ScopedWriteLock _(RWLock);
-		auto			begin = Cache.begin();
-		auto			end	  = Cache.end();
 		while (begin != end)
 		{
 			auto current = begin++;

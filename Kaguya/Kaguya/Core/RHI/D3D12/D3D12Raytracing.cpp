@@ -70,8 +70,8 @@ void D3D12RaytracingScene::Generate(
 
 void D3D12RaytracingMemoryPage::Initialize(D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState)
 {
-	const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
-	D3D12_RESOURCE_DESC			ResourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
+	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
+	D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 	if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
 	{

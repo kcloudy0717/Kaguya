@@ -16,8 +16,8 @@ void ProfileData::Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQue
 		Time		 = (static_cast<double>(Delta) / static_cast<double>(GpuFrequency)) * 1000.0;
 	}
 
-	TimeSamples[CurrSample] = Time;
-	CurrSample				= (CurrSample + 1) % FilterSize;
+	TimeSamples[Sample] = Time;
+	Sample				= (Sample + 1) % FilterSize;
 
 	UINT64 AvgTimeSamples = 0;
 	for (double TimeSample : TimeSamples)
@@ -27,13 +27,13 @@ void ProfileData::Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQue
 			continue;
 		}
 		MaxTime = std::max(TimeSample, MaxTime);
-		AvgTime += TimeSample;
+		AverageTime += TimeSample;
 		++AvgTimeSamples;
 	}
 
 	if (AvgTimeSamples > 0)
 	{
-		AvgTime /= static_cast<double>(AvgTimeSamples);
+		AverageTime /= static_cast<double>(AvgTimeSamples);
 	}
 }
 
@@ -140,16 +140,16 @@ void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Inde
 	assert(ProfileData.QueryFinished == false);
 
 	// Insert the end timestamp
-	UINT StartQueryIdx = Index * 2 + 0;
-	UINT EndQueryIdx   = Index * 2 + 1;
-	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndQueryIdx);
+	UINT StartIndex = Index * 2 + 0;
+	UINT EndIndex	= Index * 2 + 1;
+	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndIndex);
 
 	// Resolve the data
-	const UINT64 AlignedDestinationBufferOffset = ((FrameIndex * MaxProfiles * 2) + StartQueryIdx) * sizeof(UINT64);
+	UINT64 AlignedDestinationBufferOffset = ((FrameIndex * MaxProfiles * 2) + StartIndex) * sizeof(UINT64);
 	CommandList->ResolveQueryData(
 		QueryHeap.Get(),
 		D3D12_QUERY_TYPE_TIMESTAMP,
-		StartQueryIdx,
+		StartIndex,
 		2,
 		QueryReadback.Get(),
 		AlignedDestinationBufferOffset);

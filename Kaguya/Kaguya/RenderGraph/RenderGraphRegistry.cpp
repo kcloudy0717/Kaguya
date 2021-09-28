@@ -6,9 +6,11 @@ void RenderGraphRegistry::Initialize()
 {
 	Textures.resize(Scheduler.Textures.size());
 	TextureShaderViews.resize(Scheduler.Textures.size());
+
+	RenderTargets.resize(Scheduler.RenderTargets.size());
 }
 
-void RenderGraphRegistry::RealizeResources()
+void RenderGraphRegistry::RealizeResources(RenderGraph& RenderGraph)
 {
 	for (size_t i = 0; i < Scheduler.Textures.size(); ++i)
 	{
@@ -25,13 +27,13 @@ void RenderGraphRegistry::RealizeResources()
 
 		if (Desc.Resolution == ETextureResolution::Render)
 		{
-			auto [w, h] = Scheduler.GetParentRenderGraph()->GetRenderResolution();
+			auto [w, h] = RenderGraph.GetRenderResolution();
 			Desc.Width	= w;
 			Desc.Height = h;
 		}
 		else if (Desc.Resolution == ETextureResolution::Viewport)
 		{
-			auto [w, h] = Scheduler.GetParentRenderGraph()->GetViewportResolution();
+			auto [w, h] = RenderGraph.GetViewportResolution();
 			Desc.Width	= w;
 			Desc.Height = h;
 		}
@@ -100,7 +102,7 @@ void RenderGraphRegistry::RealizeResources()
 			break;
 		}
 
-		Textures[i]				 = D3D12Texture(RenderCore::pDevice->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+		Textures[i] = D3D12Texture(RenderCore::Device->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
 		ShaderViews& ShaderViews = TextureShaderViews[i];
 
 		if (ShaderViews.SRVs.empty())
@@ -132,13 +134,37 @@ void RenderGraphRegistry::RealizeResources()
 			}
 		}
 	}
+
+	size_t i = 0;
+	for (const auto& Desc : Scheduler.RenderTargets)
+	{
+		D3D12RenderTargetDesc ApiDesc = {};
+
+		for (UINT j = 0; j < Desc.NumRenderTargets; ++j)
+		{
+			ApiDesc.AddRenderTarget(&GetTexture(Desc.RenderTargets[j]), Desc.sRGB[i]);
+		}
+		if (Desc.DepthStencil.IsValid())
+		{
+			ApiDesc.SetDepthStencil(&GetTexture(Desc.DepthStencil));
+		}
+
+		RenderTargets[i] = D3D12RenderTarget(RenderCore::Device->GetDevice(), ApiDesc);
+	}
 }
 
 auto RenderGraphRegistry::GetTexture(RenderResourceHandle Handle) -> D3D12Texture&
 {
 	assert(Handle.Type == ERGResourceType::Texture);
-	assert(Handle.Id >= 0 && Handle.Id < Textures.size());
+	assert(Handle.Id < Textures.size());
 	return Textures[Handle.Id];
+}
+
+auto RenderGraphRegistry::GetRenderTarget(RenderResourceHandle Handle) -> D3D12RenderTarget&
+{
+	assert(Handle.Type == ERGResourceType::RenderTarget);
+	assert(Handle.Id < RenderTargets.size());
+	return RenderTargets[Handle.Id];
 }
 
 auto RenderGraphRegistry::GetTextureSRV(
@@ -156,7 +182,7 @@ auto RenderGraphRegistry::GetTextureSRV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.SRVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::pDevice->GetDevice());
+		ShaderViews.SRVs[SubresourceIndex] = D3D12ShaderResourceView(RenderCore::Device->GetDevice());
 		Texture.CreateShaderResourceView(ShaderViews.SRVs[SubresourceIndex]);
 	}
 
@@ -177,7 +203,7 @@ auto RenderGraphRegistry::GetTextureUAV(
 	auto& ShaderViews = TextureShaderViews[Handle.Id];
 	if (!ShaderViews.UAVs[SubresourceIndex].Descriptor.IsValid())
 	{
-		auto UAV = D3D12UnorderedAccessView(RenderCore::pDevice->GetDevice());
+		auto UAV = D3D12UnorderedAccessView(RenderCore::Device->GetDevice());
 		Texture.CreateUnorderedAccessView(UAV, OptArraySlice, OptMipSlice);
 
 		ShaderViews.UAVs[SubresourceIndex] = std::move(UAV);

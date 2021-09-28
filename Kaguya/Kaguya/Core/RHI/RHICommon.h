@@ -18,7 +18,13 @@ struct DeviceOptions
 struct RHIViewport
 {
 	RHIViewport() noexcept = default;
-	RHIViewport(FLOAT TopLeftX, FLOAT TopLeftY, FLOAT Width, FLOAT Height, FLOAT MinDepth, FLOAT MaxDepth) noexcept
+	RHIViewport(
+		FLOAT TopLeftX,
+		FLOAT TopLeftY,
+		FLOAT Width,
+		FLOAT Height,
+		FLOAT MinDepth = 0.0f,
+		FLOAT MaxDepth = 1.0f) noexcept
 		: TopLeftX(TopLeftX)
 		, TopLeftY(TopLeftY)
 		, Width(Width)
@@ -27,8 +33,8 @@ struct RHIViewport
 		, MaxDepth(MaxDepth)
 	{
 	}
-	RHIViewport(FLOAT Width, FLOAT Height)
-		: RHIViewport(0.0f, 0.0f, Width, Height, 0.0f, 1.0f)
+	RHIViewport(FLOAT Width, FLOAT Height) noexcept
+		: RHIViewport(0.0f, 0.0f, Width, Height)
 	{
 	}
 
@@ -42,6 +48,19 @@ struct RHIViewport
 
 struct RHIRect
 {
+	RHIRect() noexcept = default;
+	RHIRect(LONG Left, LONG Top, LONG Right, LONG Bottom) noexcept
+		: Left(Left)
+		, Top(Top)
+		, Right(Right)
+		, Bottom(Bottom)
+	{
+	}
+	RHIRect(LONG Width, LONG Height) noexcept
+		: RHIRect(0, 0, Width, Height)
+	{
+	}
+
 	LONG Left;
 	LONG Top;
 	LONG Right;
@@ -349,20 +368,33 @@ DEFINE_ENUM_FLAG_OPERATORS(ERHIBufferFlags);
 
 struct RHIBufferDesc
 {
+	RHIBufferDesc() noexcept = default;
+	RHIBufferDesc(UINT64 SizeInBytes, UINT Stride, ERHIHeapType HeapType, ERHIBufferFlags Flags)
+		: SizeInBytes(SizeInBytes)
+		, Stride(Stride)
+		, HeapType(HeapType)
+		, Flags(Flags)
+	{
+	}
+
 	template<typename T>
 	static RHIBufferDesc StructuredBuffer(UINT NumElements, ERHIBufferFlags Flags = RHIBufferFlag_None)
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T), .Flags = Flags };
+		return RHIBufferDesc(static_cast<UINT64>(NumElements) * sizeof(T), sizeof(T), ERHIHeapType::DeviceLocal, Flags);
 	}
 
 	template<typename T>
 	static RHIBufferDesc RWStructuredBuffer(UINT NumElements, ERHIBufferFlags Flags = RHIBufferFlag_None)
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T),
-				 .Flags		  = Flags | ERHIBufferFlags::RHIBufferFlag_AllowUnorderedAccess };
+		return RHIBufferDesc(
+			static_cast<UINT64>(NumElements) * sizeof(T),
+			sizeof(T),
+			ERHIHeapType::DeviceLocal,
+			Flags | ERHIBufferFlags::RHIBufferFlag_AllowUnorderedAccess);
 	}
 
 	UINT64			SizeInBytes = 0;
+	UINT			Stride		= 0;
 	ERHIHeapType	HeapType	= ERHIHeapType::DeviceLocal;
 	ERHIBufferFlags Flags		= ERHIBufferFlags::RHIBufferFlag_None;
 };
@@ -888,10 +920,10 @@ struct ShaderResourceViewDesc
 	};
 };
 
-struct IndexPool
+struct DescriptorIndexPool
 {
-	IndexPool() = default;
-	IndexPool(size_t NumIndices)
+	DescriptorIndexPool() = default;
+	explicit DescriptorIndexPool(size_t NumIndices)
 	{
 		Elements.resize(NumIndices);
 		Reset();
@@ -916,9 +948,9 @@ struct IndexPool
 	{
 		assert(NumActiveElements < Elements.size() && "Consider increasing the size of the pool");
 		NumActiveElements++;
-		size_t index = FreeStart;
-		FreeStart	 = Elements[index];
-		return index;
+		size_t Index = FreeStart;
+		FreeStart	 = Elements[Index];
+		return Index;
 	}
 
 	void Release(size_t Index)

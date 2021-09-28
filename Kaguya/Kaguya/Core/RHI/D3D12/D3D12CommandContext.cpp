@@ -7,7 +7,7 @@ D3D12CommandContext::D3D12CommandContext(
 	D3D12_COMMAND_LIST_TYPE CommandListType)
 	: D3D12LinkedDeviceChild(Parent)
 	, Type(Type)
-	, CommandListHandle(Parent, CommandListType)
+	, CommandListHandle()
 	, CommandAllocator(nullptr)
 	, CommandAllocatorPool(Parent, CommandListType)
 	, CpuConstantAllocator(Parent)
@@ -37,6 +37,9 @@ void D3D12CommandContext::OpenCommandList()
 
 		CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);
 	}
+
+	// Reset cache
+	Cache = {};
 }
 
 void D3D12CommandContext::CloseCommandList()
@@ -81,6 +84,167 @@ void D3D12CommandContext::UAVBarrier(D3D12Resource* Resource)
 void D3D12CommandContext::FlushResourceBarriers()
 {
 	CommandListHandle.FlushResourceBarriers();
+}
+
+void D3D12CommandContext::SetViewport(const RHIViewport& Viewport)
+{
+	Cache.Graphics.NumViewports			 = 1;
+	Cache.Graphics.Viewports[0].TopLeftX = Viewport.TopLeftX;
+	Cache.Graphics.Viewports[0].TopLeftY = Viewport.TopLeftY;
+	Cache.Graphics.Viewports[0].Width	 = Viewport.Width;
+	Cache.Graphics.Viewports[0].Height	 = Viewport.Height;
+	Cache.Graphics.Viewports[0].MinDepth = Viewport.MinDepth;
+	Cache.Graphics.Viewports[0].MaxDepth = Viewport.MaxDepth;
+
+	CommandListHandle->RSSetViewports(Cache.Graphics.NumViewports, Cache.Graphics.Viewports);
+}
+
+void D3D12CommandContext::SetViewports(UINT NumViewports, RHIViewport* Viewports)
+{
+	Cache.Graphics.NumViewports = NumViewports;
+	for (UINT ViewportIndex = 0; ViewportIndex < NumViewports; ++ViewportIndex)
+	{
+		Cache.Graphics.Viewports[ViewportIndex].TopLeftX = Viewports[ViewportIndex].TopLeftX;
+		Cache.Graphics.Viewports[ViewportIndex].TopLeftY = Viewports[ViewportIndex].TopLeftY;
+		Cache.Graphics.Viewports[ViewportIndex].Width	 = Viewports[ViewportIndex].Width;
+		Cache.Graphics.Viewports[ViewportIndex].Height	 = Viewports[ViewportIndex].Height;
+		Cache.Graphics.Viewports[ViewportIndex].MinDepth = Viewports[ViewportIndex].MinDepth;
+		Cache.Graphics.Viewports[ViewportIndex].MaxDepth = Viewports[ViewportIndex].MaxDepth;
+	}
+
+	CommandListHandle->RSSetViewports(Cache.Graphics.NumViewports, Cache.Graphics.Viewports);
+}
+
+void D3D12CommandContext::SetScissorRect(const RHIRect& ScissorRect)
+{
+	Cache.Graphics.NumScissorRects		  = 1;
+	Cache.Graphics.ScissorRects[0].left	  = ScissorRect.Left;
+	Cache.Graphics.ScissorRects[0].top	  = ScissorRect.Top;
+	Cache.Graphics.ScissorRects[0].right  = ScissorRect.Right;
+	Cache.Graphics.ScissorRects[0].bottom = ScissorRect.Bottom;
+
+	CommandListHandle->RSSetScissorRects(Cache.Graphics.NumScissorRects, Cache.Graphics.ScissorRects);
+}
+
+void D3D12CommandContext::SetScissorRects(UINT NumScissorRects, RHIRect* ScissorRects)
+{
+	Cache.Graphics.NumScissorRects = NumScissorRects;
+	for (UINT ScissorRectIndex = 0; ScissorRectIndex < NumScissorRects; ++ScissorRectIndex)
+	{
+		Cache.Graphics.ScissorRects[ScissorRectIndex].left	 = ScissorRects[ScissorRectIndex].Left;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].top	 = ScissorRects[ScissorRectIndex].Top;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].right	 = ScissorRects[ScissorRectIndex].Right;
+		Cache.Graphics.ScissorRects[ScissorRectIndex].bottom = ScissorRects[ScissorRectIndex].Bottom;
+	}
+
+	CommandListHandle->RSSetScissorRects(Cache.Graphics.NumScissorRects, Cache.Graphics.ScissorRects);
+}
+
+void D3D12CommandContext::SetPipelineState(D3D12PipelineState* PipelineState)
+{
+	Cache.PipelineState = PipelineState;
+
+	CommandListHandle->SetPipelineState(Cache.PipelineState->GetApiHandle());
+}
+
+void D3D12CommandContext::SetPipelineState(D3D12RaytracingPipelineState* RaytracingPipelineState)
+{
+	Cache.RaytracingPipelineState = RaytracingPipelineState;
+
+	CommandListHandle.GetGraphicsCommandList4()->SetPipelineState1(RaytracingPipelineState->GetApiHandle());
+}
+
+void D3D12CommandContext::SetGraphicsRootSignature(D3D12RootSignature* RootSignature)
+{
+	Cache.RootSignature = RootSignature;
+
+	CommandListHandle->SetGraphicsRootSignature(RootSignature->GetApiHandle());
+
+	UINT NumParameters		= RootSignature->GetDesc().NumParameters;
+	UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetGraphicsRootDescriptorTable(
+		RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+		SamplerDescriptor);
+}
+
+void D3D12CommandContext::SetComputeRootSignature(D3D12RootSignature* RootSignature)
+{
+	Cache.RootSignature = RootSignature;
+
+	CommandListHandle->SetComputeRootSignature(RootSignature->GetApiHandle());
+
+	UINT NumParameters		= RootSignature->GetDesc().NumParameters;
+	UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
+		ResourceDescriptor);
+	CommandListHandle->SetComputeRootDescriptorTable(
+		RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
+		SamplerDescriptor);
+}
+
+void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget)
+{
+	Cache.Graphics.RenderPass	= RenderPass;
+	Cache.Graphics.RenderTarget = RenderTarget;
+
+	assert(RenderPass->Desc.NumRenderTargets == RenderTarget->Desc.NumRenderTargets);
+
+	bool HasDepthStencil = RenderPass->Desc.DepthStencil.IsValid();
+
+	UINT						 NumRenderTargets  = RenderTarget->Desc.NumRenderTargets;
+	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->RenderTargetViews;
+	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = nullptr;
+	if (HasDepthStencil)
+	{
+		DepthStencilView = &RenderTarget->DepthStencilView;
+	}
+
+	for (UINT i = 0; i < NumRenderTargets; ++i)
+	{
+		const RenderPassAttachment& Attachment = RenderPass->Desc.RenderTargets[i];
+
+		if (ToD3D12BeginAccessType(Attachment.LoadOp) == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			CommandListHandle->ClearRenderTargetView(RenderTargetViews[i], Attachment.ClearValue.Color, 0, nullptr);
+		}
+	}
+	if (HasDepthStencil)
+	{
+		const RenderPassAttachment& Attachment = RenderPass->Desc.DepthStencil;
+
+		if (ToD3D12BeginAccessType(Attachment.LoadOp) == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+		{
+			D3D12_CLEAR_FLAGS ClearFlags = D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL;
+			FLOAT			  Depth		 = Attachment.ClearValue.DepthStencil.Depth;
+			UINT8			  Stencil	 = Attachment.ClearValue.DepthStencil.Stencil;
+
+			CommandListHandle->ClearDepthStencilView(*DepthStencilView, ClearFlags, Depth, Stencil, 0, nullptr);
+		}
+	}
+
+	CommandListHandle->OMSetRenderTargets(NumRenderTargets, RenderTargetViews, TRUE, DepthStencilView);
+}
+
+void D3D12CommandContext::EndRenderPass()
+{
+	Cache.Graphics.RenderTarget = nullptr;
+	Cache.Graphics.RenderPass	= nullptr;
 }
 
 void D3D12CommandContext::DrawInstanced(

@@ -1,18 +1,5 @@
 #include "RenderGraphScheduler.h"
-#include "RenderPass.h"
-
-auto RenderGraphScheduler::CreateBuffer(std::string_view Name, const RGBufferDesc& Desc) -> RenderResourceHandle
-{
-	RHIBuffer& Buffer = Buffers.emplace_back();
-	BufferNames.emplace_back(Name.data());
-	Buffer.Handle = BufferHandle;
-	Buffer.Desc	  = Desc;
-
-	++BufferHandle.Id;
-
-	CurrentRenderPass->Write(Buffer.Handle);
-	return Buffer.Handle;
-}
+#include "RenderGraph.h"
 
 auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureDesc& Desc) -> RenderResourceHandle
 {
@@ -21,15 +8,25 @@ auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureD
 		assert(Desc.Type == ETextureType::Texture2D);
 	}
 
-	RHITexture& Texture = Textures.emplace_back();
-	TextureNames.emplace_back(Name.data());
-	Texture.Handle = TextureHandle;
-	Texture.Desc   = Desc;
+	RGTexture& Texture = Textures.emplace_back();
+	Texture.Name	   = Name;
+	Texture.Handle	   = TextureHandle;
+	Texture.Desc	   = Desc;
 
 	++TextureHandle.Id;
 
 	CurrentRenderPass->Write(Texture.Handle);
 	return Texture.Handle;
+}
+
+auto RenderGraphScheduler::CreateRenderTarget(const RGRenderTargetDesc& Desc) -> RenderResourceHandle
+{
+	RenderTargets.emplace_back(Desc);
+	RenderResourceHandle Handle = RenderTargetHandle;
+
+	++RenderTargetHandle.Id;
+
+	return Handle;
 }
 
 auto RenderGraphScheduler::Read(RenderResourceHandle Resource) -> RenderResourceHandle

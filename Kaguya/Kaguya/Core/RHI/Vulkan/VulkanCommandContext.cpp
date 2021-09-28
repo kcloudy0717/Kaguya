@@ -17,52 +17,52 @@ void VulkanCommandContext::CloseCommandList()
 	VERIFY_VULKAN_API(vkEndCommandBuffer(CommandBuffer));
 }
 
-void VulkanCommandContext::SetGraphicsRootSignature(VulkanRootSignature* pRootSignature)
+void VulkanCommandContext::SetGraphicsRootSignature(VulkanRootSignature* RootSignature)
 {
 	PipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	PipelineLayout	  = pRootSignature->GetApiHandle();
+	PipelineLayout	  = RootSignature->GetApiHandle();
 }
 
-void VulkanCommandContext::SetComputeRootSignature(VulkanRootSignature* pRootSignature)
+void VulkanCommandContext::SetComputeRootSignature(VulkanRootSignature* RootSignature)
 {
 	PipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-	PipelineLayout	  = pRootSignature->GetApiHandle();
+	PipelineLayout	  = RootSignature->GetApiHandle();
 }
 
-void VulkanCommandContext::SetGraphicsPipelineState(VulkanPipelineState* pPipelineState)
+void VulkanCommandContext::SetGraphicsPipelineState(VulkanPipelineState* PipelineState)
 {
 	PipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-	const VkPipeline Pipeline = pPipelineState->GetApiHandle();
+	const VkPipeline Pipeline = PipelineState->GetApiHandle();
 	vkCmdBindPipeline(CommandBuffer, PipelineBindPoint, Pipeline);
 }
 
-void VulkanCommandContext::SetViewports(UINT NumViewports, RHIViewport* pViewports, RHIRect* pScissorRects)
+void VulkanCommandContext::SetViewports(UINT NumViewports, RHIViewport* Viewports, RHIRect* ScissorRects)
 {
 	VkViewport VkViewports[8]	 = {};
 	VkRect2D   VkScissorRects[8] = {};
 
 	for (UINT ViewportIndex = 0; ViewportIndex < NumViewports; ++ViewportIndex)
 	{
-		VkViewports[ViewportIndex].x		= pViewports[ViewportIndex].TopLeftX;
-		VkViewports[ViewportIndex].y		= pViewports[ViewportIndex].TopLeftY;
-		VkViewports[ViewportIndex].width	= pViewports[ViewportIndex].Width;
-		VkViewports[ViewportIndex].height	= pViewports[ViewportIndex].Height;
-		VkViewports[ViewportIndex].minDepth = pViewports[ViewportIndex].MinDepth;
-		VkViewports[ViewportIndex].maxDepth = pViewports[ViewportIndex].MaxDepth;
+		VkViewports[ViewportIndex].x		= Viewports[ViewportIndex].TopLeftX;
+		VkViewports[ViewportIndex].y		= Viewports[ViewportIndex].TopLeftY;
+		VkViewports[ViewportIndex].width	= Viewports[ViewportIndex].Width;
+		VkViewports[ViewportIndex].height	= Viewports[ViewportIndex].Height;
+		VkViewports[ViewportIndex].minDepth = Viewports[ViewportIndex].MinDepth;
+		VkViewports[ViewportIndex].maxDepth = Viewports[ViewportIndex].MaxDepth;
 
-		VkScissorRects[ViewportIndex].offset.x		= pScissorRects[ViewportIndex].Left;
-		VkScissorRects[ViewportIndex].offset.y		= pScissorRects[ViewportIndex].Top;
-		VkScissorRects[ViewportIndex].extent.width	= pScissorRects[ViewportIndex].Right;
-		VkScissorRects[ViewportIndex].extent.height = pScissorRects[ViewportIndex].Bottom;
+		VkScissorRects[ViewportIndex].offset.x		= ScissorRects[ViewportIndex].Left;
+		VkScissorRects[ViewportIndex].offset.y		= ScissorRects[ViewportIndex].Top;
+		VkScissorRects[ViewportIndex].extent.width	= ScissorRects[ViewportIndex].Right;
+		VkScissorRects[ViewportIndex].extent.height = ScissorRects[ViewportIndex].Bottom;
 	}
 	vkCmdSetViewport(CommandBuffer, 0, NumViewports, VkViewports);
 	vkCmdSetScissor(CommandBuffer, 0, NumViewports, VkScissorRects);
 }
 
-void VulkanCommandContext::SetPushConstants(UINT Size, const void* pSrcData)
+void VulkanCommandContext::SetPushConstants(UINT Size, const void* SrcData)
 {
-	vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_ALL, 0, Size, pSrcData);
+	vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_ALL, 0, Size, SrcData);
 }
 
 void VulkanCommandContext::SetConstantBufferView(UINT Binding, IRHIBuffer* Buffer)

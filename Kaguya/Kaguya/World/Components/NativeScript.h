@@ -7,7 +7,7 @@ struct NativeScript : Component
 	template<typename T, typename... TArgs>
 	void Bind(TArgs&&... Args)
 	{
-		static_assert(std::is_base_of<ScriptableEntity, T>::value);
+		static_assert(std::is_base_of_v<ScriptableEntity, T>);
 		InstantiateScript = [... Args = std::forward<TArgs>(Args)]() mutable
 		{
 			return std::make_unique<T>(std::forward<TArgs>(Args)...);

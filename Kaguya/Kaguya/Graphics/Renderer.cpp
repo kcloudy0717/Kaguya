@@ -1,9 +1,5 @@
 #include "Renderer.h"
-#include "World/Entity.h"
 #include "RendererRegistry.h"
-
-using namespace DirectX;
-using Microsoft::WRL::ComPtr;
 
 void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 {
@@ -12,14 +8,7 @@ void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 		return;
 	}
 
-	ViewportWidth  = Width;
-	ViewportHeight = Height;
-
 	SetViewportResolution(Width, Height);
-
-	RenderGraph.SetResolution(RenderWidth, RenderHeight, ViewportWidth, ViewportHeight);
-	RenderGraph.GetRegistry().RealizeResources();
-	RenderGraph.ValidViewport = false;
 }
 
 void Renderer::OnInitialize()
@@ -27,11 +16,11 @@ void Renderer::OnInitialize()
 	Initialize();
 }
 
-void Renderer::OnRender()
+void Renderer::OnRender(World* World)
 {
-	pWorld->ActiveCamera->AspectRatio = float(RenderWidth) / float(RenderHeight);
+	World->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
 
-	RenderCore::pDevice->OnBeginFrame();
+	RenderCore::Device->OnBeginFrame();
 
 	if (ImGui::Begin("GPU Timing"))
 	{
@@ -42,108 +31,109 @@ void Renderer::OnRender()
 				ImGui::Text("    ");
 				ImGui::SameLine();
 			}
-			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AvgTime, iter.MaxTime);
+			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AverageTime, iter.MaxTime);
 			ImGui::SameLine();
 			ImGui::NewLine();
 		}
-	}
-	ImGui::End();
 
-	if (ImGui::Begin("Render Graph"))
-	{
-		for (const auto& RenderPass : RenderGraph)
+		constexpr size_t NumFrames				   = 128;
+		static float	 FrameTimeArray[NumFrames] = { 0 };
+
+		// track highest frame rate and determine the max value of the graph based on the measured highest value
+		static float	Recent	 = 0.0f;
+		constexpr float MaxFps[] = { 800.0f, 240.0f, 120.0f, 90.0f, 60.0f, 45.0f, 30.0f,
+									 15.0f,	 10.0f,	 5.0f,	 4.0f,	3.0f,  2.0f,  1.0f };
+
+		static float MaxFpsScale[std::size(MaxFps)] = { 0 }; // ms
+		for (size_t i = 0; i < std::size(MaxFps); ++i)
 		{
-			char Label[MAX_PATH] = {};
-			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
-			if (ImGui::TreeNode(Label))
+			MaxFpsScale[i] = 1000.0f / MaxFps[i];
+		}
+
+		// scrolling data and average FPS computing
+		if (!D3D12Profiler::Data.empty())
+		{
+			Recent						  = 0;
+			FrameTimeArray[NumFrames - 1] = static_cast<float>(D3D12Profiler::Data.begin()->AverageTime);
+			for (size_t i = 0; i < NumFrames - 1; i++)
 			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
-													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+				FrameTimeArray[i] = FrameTimeArray[i + 1];
+			}
+			Recent = std::max(Recent, FrameTimeArray[NumFrames - 1]);
+		}
 
-				ImGui::Text("Inputs");
-				if (ImGui::BeginTable("Inputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Reads)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::Text("Outputs");
-				if (ImGui::BeginTable("Outputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Writes)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::TreePop();
+		// find the index of the FrameTimeGraphMaxValue as the next higher-than-recent-highest-frame-time in the
+		// pre-determined value list
+		size_t ScaleIndex = 0;
+		for (size_t i = 0; i < std::size(MaxFps); ++i)
+		{
+			if (Recent < MaxFpsScale[i]) // MaxFpsScale are in increasing order
+			{
+				ScaleIndex = std::min<size_t>(std::size(MaxFps) - 1, i + 1);
+				break;
 			}
 		}
+		ImGui::PlotLines("", FrameTimeArray, NumFrames, 0, "", 0.0f, MaxFpsScale[ScaleIndex], ImVec2(0, 80));
 	}
 	ImGui::End();
 
-	D3D12CommandContext& Context = RenderCore::pDevice->GetDevice()->GetCommandContext();
+	D3D12CommandContext& Context = RenderCore::Device->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
-
-	Render(Context);
-
-	auto [pRenderTarget, RenderTargetView] = RenderCore::pSwapChain->GetCurrentBackBufferResource();
-
-	auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		pRenderTarget,
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Context->ResourceBarrier(1, &Barrier);
 	{
-		auto Viewport = CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
-		auto ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
+		D3D12ScopedEvent(Context, "Render");
+		Render(World, Context);
 
-		Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		Context->RSSetViewports(1, &Viewport);
-		Context->RSSetScissorRects(1, &ScissorRect);
-		Context->OMSetRenderTargets(1, &RenderTargetView, TRUE, nullptr);
-		FLOAT white[] = { 1, 1, 1, 1 };
-		Context->ClearRenderTargetView(RenderTargetView, white, 0, nullptr);
+		auto [pRenderTarget, RenderTargetView] = RenderCore::SwapChain->GetCurrentBackBufferResource();
 
-		// ImGui Render
+		auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			pRenderTarget,
+			D3D12_RESOURCE_STATE_PRESENT,
+			D3D12_RESOURCE_STATE_RENDER_TARGET);
+		Context->ResourceBarrier(1, &Barrier);
 		{
-			D3D12ScopedEvent(Context, "ImGui Render");
+			auto Viewport =
+				CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
+			auto ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
 
-			ImGui::Render();
-			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.CommandListHandle.GetGraphicsCommandList());
+			Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			Context->RSSetViewports(1, &Viewport);
+			Context->RSSetScissorRects(1, &ScissorRect);
+			Context->OMSetRenderTargets(1, &RenderTargetView, TRUE, nullptr);
+			FLOAT white[] = { 1, 1, 1, 1 };
+			Context->ClearRenderTargetView(RenderTargetView, white, 0, nullptr);
+
+			// ImGui Render
+			{
+				D3D12ScopedEvent(Context, "ImGui Render");
+
+				ImGui::Render();
+				ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.CommandListHandle.GetGraphicsCommandList());
+			}
 		}
+		Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+			pRenderTarget,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PRESENT);
+		Context->ResourceBarrier(1, &Barrier);
 	}
-	Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		pRenderTarget,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PRESENT);
-	Context->ResourceBarrier(1, &Barrier);
-
 	Context.CloseCommandList();
+	// TODO: Present submits work, and if you don't Signal() after that, you can't safely know when to destroy/resize
+	// the swapchain, move signaling after present
 	D3D12CommandSyncPoint MainSyncPoint = Context.Execute(false);
 
-	RenderCore::pSwapChain->Present(false);
+	RenderCore::SwapChain->Present(false);
 
-	RenderCore::pDevice->OnEndFrame();
+	RenderCore::Device->OnEndFrame();
 
 	MainSyncPoint.WaitForCompletion();
+
+	++FrameIndex;
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	RenderCore::pDevice->GetDevice()->GetGraphicsQueue()->WaitIdle();
-	RenderCore::pSwapChain->Resize(Width, Height);
+	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
+	RenderCore::SwapChain->Resize(Width, Height);
 }
 
 void Renderer::OnDestroy()

@@ -1,12 +1,112 @@
 #pragma once
-#include "RenderPass.h"
 #include "RenderGraphScheduler.h"
 #include "RenderGraphRegistry.h"
 
 #include "RenderDevice.h"
-#include "RenderCompileContext.h"
 
 #include <stack>
+
+struct RenderGraphResolution
+{
+	bool RenderResolutionResized = false;
+	bool ViewportResolutionResized = false;
+	UINT RenderWidth, RenderHeight;
+	UINT ViewportWidth, ViewportHeight;
+};
+
+class RenderGraphAllocator
+{
+public:
+	explicit RenderGraphAllocator(size_t SizeInBytes)
+		: BaseAddress(std::make_unique<BYTE[]>(SizeInBytes))
+		, Ptr(BaseAddress.get())
+		, Sentinel(Ptr + SizeInBytes)
+	{
+	}
+
+	void* Allocate(size_t SizeInBytes, size_t Alignment)
+	{
+		SizeInBytes	 = AlignUp(SizeInBytes, Alignment);
+		BYTE* Result = Ptr += SizeInBytes;
+		assert(Result + SizeInBytes <= Sentinel);
+		return Result;
+	}
+
+	template<typename T, typename... TArgs>
+	T* Construct(TArgs&&... Args)
+	{
+		void* Memory = Allocate(sizeof(T), 16);
+		return new (Memory) T(std::forward<TArgs>(Args)...);
+	}
+
+	template<typename T>
+	void Destruct(T* Ptr)
+	{
+		Ptr->~T();
+	}
+
+	void Reset() { Ptr = BaseAddress.get(); }
+
+private:
+	std::unique_ptr<BYTE[]> BaseAddress;
+	BYTE*					Ptr;
+	BYTE*					Sentinel;
+};
+
+class RenderScope
+{
+public:
+	// Every RenderScope will have RenderGraphViewData
+	RenderScope() { Get<RenderGraphViewData>(); }
+
+	template<typename T>
+	T& Get()
+	{
+		static_assert(std::is_trivial_v<T>, "typename T is not Pod");
+
+		if (auto iter = DataTable.find(typeid(T)); iter != DataTable.end())
+		{
+			return *reinterpret_cast<T*>(iter->second.get());
+		}
+		else
+		{
+			DataTable[typeid(T)] = std::make_unique<BYTE[]>(sizeof(T));
+			T& Data = *reinterpret_cast<T*>(DataTable[typeid(T)].get());
+			Data = T(); // Explicit initialization
+			return Data;
+		}
+	}
+
+private:
+	std::unordered_map<std::type_index, std::unique_ptr<BYTE[]>> DataTable;
+};
+
+class RenderPass : public RenderGraphChild
+{
+public:
+	using ExecuteCallback = Delegate<void(RenderGraphRegistry& Registry, D3D12CommandContext& Context)>;
+
+	RenderPass(RenderGraph* Parent, const std::string& Name);
+
+	void Read(RenderResourceHandle Resource);
+	void Write(RenderResourceHandle Resource);
+
+	[[nodiscard]] bool HasDependency(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool WritesTo(RenderResourceHandle Resource) const;
+	[[nodiscard]] bool ReadsFrom(RenderResourceHandle Resource) const;
+
+	[[nodiscard]] bool HasAnyDependencies() const noexcept;
+
+	std::string Name;
+	size_t		TopologicalIndex = 0;
+
+	std::unordered_set<RenderResourceHandle> Reads;
+	std::unordered_set<RenderResourceHandle> Writes;
+	std::unordered_set<RenderResourceHandle> ReadWrites;
+	RenderScope								 Scope;
+
+	ExecuteCallback Callback;
+};
 
 class RenderGraphDependencyLevel : public RenderGraphChild
 {
@@ -17,13 +117,7 @@ public:
 	{
 	}
 
-	void AddRenderPass(RenderPass* RenderPass)
-	{
-		RenderPass->DependencyLevel = this;
-		RenderPasses.push_back(RenderPass);
-		Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
-		Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
-	}
+	void AddRenderPass(RenderPass* RenderPass);
 
 	void PostInitialize();
 
@@ -45,63 +139,53 @@ public:
 	using RenderPassCallback =
 		Delegate<RenderPass::ExecuteCallback(RenderGraphScheduler& Scheduler, RenderScope& Scope)>;
 
-	RenderGraph()
-		: Scheduler(this)
-		, Registry(Scheduler)
+	explicit RenderGraph(
+		RenderGraphAllocator&  Allocator,
+		RenderGraphScheduler&  Scheduler,
+		RenderGraphRegistry&   Registry,
+		RenderGraphResolution& Resolution)
+		: Allocator(Allocator)
+		, Scheduler(Scheduler)
+		, Registry(Registry)
+		, Resolution(Resolution)
 	{
+		Allocator.Reset();
+		Scheduler.Reset();
+	}
+	~RenderGraph()
+	{
+		for (auto RenderPass : RenderPasses)
+		{
+			Allocator.Destruct(RenderPass);
+		}
+		RenderPasses.clear();
+		Lut.clear();
 	}
 
 	auto begin() const noexcept { return RenderPasses.begin(); }
 	auto end() const noexcept { return RenderPasses.end(); }
 
-	void AddRenderPass(const std::string& Name, RenderPassCallback Callback)
-	{
-		RenderPass* NewRenderPass = new RenderPass(this, Name);
-		Scheduler.SetCurrentRenderPass(NewRenderPass);
-		NewRenderPass->Callback = Callback(Scheduler, NewRenderPass->Scope);
-		Scheduler.SetCurrentRenderPass(nullptr);
+	RenderPass* AddRenderPass(const std::string& Name, RenderPassCallback Callback);
 
-		RenderPasses.emplace_back(NewRenderPass);
-		LUT[Name] = NewRenderPass;
-	}
+	[[nodiscard]] RenderPass* GetRenderPass(const std::string& Name) const;
 
-	RenderPass* GetRenderPass(const std::string& Name) const
-	{
-		if (auto iter = LUT.find(Name); iter != LUT.end())
-		{
-			return iter->second;
-		}
-		return nullptr;
-	}
-
-	RenderScope& GetScope(const std::string& Name) const { return GetRenderPass(Name)->Scope; }
+	[[nodiscard]] RenderScope& GetScope(const std::string& Name) const;
 
 	RenderGraphScheduler& GetScheduler() { return Scheduler; }
 	RenderGraphRegistry&  GetRegistry() { return Registry; }
 
-	std::pair<UINT, UINT> GetRenderResolution() const { return { RenderWidth, RenderHeight }; }
-	std::pair<UINT, UINT> GetViewportResolution() const { return { ViewportWidth, ViewportHeight }; }
+	[[nodiscard]] std::pair<UINT, UINT> GetRenderResolution() const
+	{
+		return { Resolution.RenderWidth, Resolution.RenderHeight };
+	}
+	[[nodiscard]] std::pair<UINT, UINT> GetViewportResolution() const
+	{
+		return { Resolution.ViewportWidth, Resolution.ViewportHeight };
+	}
 
 	void Setup();
 	void Compile();
 	void Execute(D3D12CommandContext& Context);
-
-	void SetResolution(UINT RenderWidth, UINT RenderHeight, UINT ViewportWidth, UINT ViewportHeight)
-	{
-		if (this->RenderWidth != RenderWidth || this->RenderHeight != RenderHeight)
-		{
-			this->RenderWidth		= RenderWidth;
-			this->RenderHeight		= RenderHeight;
-			RenderResolutionResized = true;
-		}
-
-		if (this->ViewportWidth != ViewportWidth || this->ViewportHeight != ViewportHeight)
-		{
-			this->ViewportWidth		  = ViewportWidth;
-			this->ViewportHeight	  = ViewportHeight;
-			ViewportResolutionResized = true;
-		}
-	}
 
 private:
 	void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack)
@@ -119,23 +203,19 @@ private:
 		Stack.push(n);
 	}
 
-public:
-	bool ValidViewport = false;
-
 private:
-	std::vector<std::unique_ptr<RenderPass>>	 RenderPasses;
-	std::unordered_map<std::string, RenderPass*> LUT;
+	RenderGraphAllocator&  Allocator;
+	RenderGraphScheduler&  Scheduler;
+	RenderGraphRegistry&   Registry;
+	RenderGraphResolution& Resolution;
+
+	bool GraphDirty = true;
+
+	std::vector<RenderPass*>					 RenderPasses;
+	std::unordered_map<std::string, RenderPass*> Lut;
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;
 	std::vector<RenderPass*>		 TopologicalSortedPasses;
 
 	std::vector<RenderGraphDependencyLevel> DependencyLevels;
-
-	RenderGraphScheduler Scheduler;
-	RenderGraphRegistry	 Registry;
-
-	bool RenderResolutionResized = false;
-	UINT RenderWidth, RenderHeight;
-	bool ViewportResolutionResized = false;
-	UINT ViewportWidth, ViewportHeight;
 };

@@ -1,10 +1,10 @@
 #pragma once
 #include <string_view>
 
-class IConsoleVariable
+class IConsoleObject
 {
 public:
-	virtual ~IConsoleVariable() = default;
+	virtual ~IConsoleObject() = default;
 
 	[[nodiscard]] virtual bool		  GetBool() const	= 0;
 	[[nodiscard]] virtual int		  GetInt() const	= 0;
@@ -19,24 +19,24 @@ public:
 };
 
 template<typename T>
-class AutoConsoleVariable
+class ConsoleVariable
 {
 public:
-	AutoConsoleVariable(IConsoleVariable* ConsoleVariable)
-		: ConsoleVariable(ConsoleVariable)
+	ConsoleVariable(IConsoleObject* ConsoleVariable)
+		: Variable(ConsoleVariable)
 	{
 	}
-	AutoConsoleVariable(std::string_view Name, std::string_view Description, const T& DefaultValue) {}
+	ConsoleVariable(std::string_view Name, std::string_view Description, const T& DefaultValue) {}
 
 	operator T();
 
-	IConsoleVariable&		operator*() { return *ConsoleVariable; }
-	const IConsoleVariable& operator*() const { return *ConsoleVariable; }
-	IConsoleVariable*		operator->() { return ConsoleVariable; }
-	const IConsoleVariable* operator->() const { return ConsoleVariable; }
+	IConsoleObject&		  operator*() { return *Variable; }
+	const IConsoleObject& operator*() const { return *Variable; }
+	IConsoleObject*		  operator->() { return Variable; }
+	const IConsoleObject* operator->() const { return Variable; }
 
 private:
-	IConsoleVariable* ConsoleVariable;
+	IConsoleObject* Variable;
 };
 
 class IConsole
@@ -46,84 +46,78 @@ public:
 
 	static IConsole& Instance();
 
-	virtual IConsoleVariable* Register(
-		std::string_view Name,
-		std::string_view Description,
-		const bool&		 DefaultValue) = 0;
+	virtual IConsoleObject* Register(std::string_view Name, std::string_view Description, const bool& DefaultValue) = 0;
 
-	virtual IConsoleVariable* Register(
-		std::string_view Name,
-		std::string_view Description,
-		const int&		 DefaultValue) = 0;
+	virtual IConsoleObject* Register(std::string_view Name, std::string_view Description, const int& DefaultValue) = 0;
 
-	virtual IConsoleVariable* Register(
+	virtual IConsoleObject* Register(
 		std::string_view Name,
 		std::string_view Description,
 		const float&	 DefaultValue) = 0;
 
-	virtual IConsoleVariable* Register(
+	virtual IConsoleObject* Register(
 		std::string_view   Name,
 		std::string_view   Description,
 		const std::string& DefaultValue) = 0;
 
-	virtual AutoConsoleVariable<bool>		 FindBoolCVar(std::string_view Name)   = 0;
-	virtual AutoConsoleVariable<int>		 FindIntCVar(std::string_view Name)	   = 0;
-	virtual AutoConsoleVariable<float>		 FindFloatCVar(std::string_view Name)  = 0;
-	virtual AutoConsoleVariable<std::string> FindStringCVar(std::string_view Name) = 0;
+	virtual ConsoleVariable<bool>		 FindBoolCVar(std::string_view Name)   = 0;
+	virtual ConsoleVariable<int>		 FindIntCVar(std::string_view Name)	   = 0;
+	virtual ConsoleVariable<float>		 FindFloatCVar(std::string_view Name)  = 0;
+	virtual ConsoleVariable<std::string> FindStringCVar(std::string_view Name) = 0;
 };
 
 template<>
-inline AutoConsoleVariable<bool>::AutoConsoleVariable(
+inline ConsoleVariable<bool>::ConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const bool&		 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
+	: Variable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
-inline AutoConsoleVariable<bool>::operator bool()
+inline ConsoleVariable<bool>::operator bool()
 {
-	return ConsoleVariable->GetBool();
+	return Variable->GetBool();
 }
 
 template<>
-inline AutoConsoleVariable<int>::AutoConsoleVariable(
+inline ConsoleVariable<int>::ConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const int&		 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
+	: Variable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
-inline AutoConsoleVariable<int>::operator int()
+inline ConsoleVariable<int>::operator int()
 {
-	return ConsoleVariable->GetInt();
+	return Variable->GetInt();
 }
 
 template<>
-inline AutoConsoleVariable<float>::AutoConsoleVariable(
+inline ConsoleVariable<float>::ConsoleVariable(
 	std::string_view Name,
 	std::string_view Description,
 	const float&	 DefaultValue)
-	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
+	: Variable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
-inline AutoConsoleVariable<float>::operator float()
+inline ConsoleVariable<float>::operator float()
 {
-	return ConsoleVariable->GetFloat();
+	return Variable->GetFloat();
 }
 
 template<>
-inline AutoConsoleVariable<std::string>::AutoConsoleVariable(
+inline ConsoleVariable<std::string>::ConsoleVariable(
 	std::string_view   Name,
 	std::string_view   Description,
 	const std::string& DefaultValue)
-	: ConsoleVariable(IConsole::Instance().Register(Name, Description, DefaultValue))
+	: Variable(IConsole::Instance().Register(Name, Description, DefaultValue))
 {
 }
 template<>
-inline AutoConsoleVariable<std::string>::operator std::string()
+inline ConsoleVariable<std::string>::operator std::string()
 {
-	return ConsoleVariable->GetString();
+	return Variable->GetString();
 }

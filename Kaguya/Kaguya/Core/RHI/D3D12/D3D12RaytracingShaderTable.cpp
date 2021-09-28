@@ -31,8 +31,8 @@ void D3D12RaytracingShaderBindingTable::Write()
 
 void D3D12RaytracingShaderBindingTable::CopyToGpu(D3D12CommandContext& Context) const
 {
-	BYTE* CPUVirtualAddress = SBTUploadBuffer.GetCpuVirtualAddress<BYTE>();
-	std::memcpy(CPUVirtualAddress, CpuData.get(), SizeInBytes);
+	BYTE* Address = SBTUploadBuffer.GetCpuVirtualAddress<BYTE>();
+	std::memcpy(Address, CpuData.get(), SizeInBytes);
 
 	Context->CopyBufferRegion(SBTBuffer.GetResource(), 0, SBTUploadBuffer.GetResource(), 0, SizeInBytes);
 }

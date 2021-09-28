@@ -4,9 +4,12 @@
 class D3D12SwapChain
 {
 public:
-	static constexpr UINT		 BackBufferCount = 3;
-	static constexpr DXGI_FORMAT Format			 = DXGI_FORMAT_R8G8B8A8_UNORM;
-	static constexpr DXGI_FORMAT Format_sRGB	 = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	static constexpr UINT BackBufferCount = 3;
+
+	static constexpr ERHIFormat RHIFormat = ERHIFormat::RGBA8_UNORM;
+
+	static constexpr DXGI_FORMAT Format		 = DXGI_FORMAT_R8G8B8A8_UNORM;
+	static constexpr DXGI_FORMAT Format_sRGB = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
 	D3D12SwapChain() noexcept = default;
 	D3D12SwapChain(HWND hWnd, IDXGIFactory5* Factory5, ID3D12Device* Device, ID3D12CommandQueue* CommandQueue);

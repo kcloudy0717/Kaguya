@@ -92,7 +92,7 @@ IndentCaseBlocks: false
 IndentCaseLabels: false
 IndentExternBlock: AfterExternBlock
 IndentGotoLabels: false
-IndentPPDirectives: BeforeHash
+IndentPPDirectives: None
 IndentRequires: false
 IndentWrappedFunctionNames: false
 InsertTrailingCommas: None

@@ -15,20 +15,20 @@ static const float FLT_MAX = asfloat(0x7F7FFFFF);
 
 float3 Faceforward(float3 n, float3 v)
 {
-	return (dot(n, v) < 0.f) ? -n : n;
+	return (dot(n, v) < 0.0f) ? -n : n;
 }
 
-inline float Sqr(float x)
+float Sqr(float x)
 {
 	return x * x;
 }
 
-inline float SphericalTheta(float3 v)
+float SphericalTheta(float3 v)
 {
-	return acos(clamp(v.z, -1, 1));
+	return acos(clamp(v.z, -1.0f, 1.0f));
 }
 
-inline float SphericalPhi(float3 v)
+float SphericalPhi(float3 v)
 {
 	float p = atan2(v.y, v.x);
 	return (p < 0) ? (p + g_2PI) : p;
@@ -36,7 +36,7 @@ inline float SphericalPhi(float3 v)
 
 void CoordinateSystem(float3 v1, out float3 v2, out float3 v3)
 {
-	float sign = (v1.z >= 0.0) * 2.0 - 1.0; // copysign(1.0f, v1.z); // No HLSL support yet
+	float sign = (v1.z >= 0.0f) * 2.0f - 1.0f; // copysign(1.0f, v1.z); // No HLSL support yet
 	float a	   = -1.0f / (sign + v1.z);
 	float b	   = v1.x * v1.y * a;
 	v2		   = float3(1.0f + sign * v1.x * v1.x * a, sign * b, -sign * v1.x);
@@ -45,13 +45,13 @@ void CoordinateSystem(float3 v1, out float3 v2, out float3 v3)
 
 struct Frame
 {
-	float3 ToWorld(float3 v) { return x * v.x + y * v.y + z * v.z; }
-
-	float3 ToLocal(float3 v) { return float3(dot(v, x), dot(v, y), dot(v, z)); }
-
 	float3 x;
 	float3 y;
 	float3 z;
+
+	float3 ToWorld(float3 v) { return x * v.x + y * v.y + z * v.z; }
+
+	float3 ToLocal(float3 v) { return float3(dot(v, x), dot(v, y), dot(v, z)); }
 };
 
 Frame InitFrameFromZ(float3 z)
@@ -134,10 +134,10 @@ struct OctahedralVector
 
 	float3 Decode()
 	{
-		float3 v = float3(x, y, 1.0f - abs(x) - abs(y));
+		float3 v   = float3(x, y, 1.0f - abs(x) - abs(y));
 		float2 tmp = (v.z < 0.0f) ? octWrap(float2(v.x, v.y)) : float2(v.x, v.y);
-		v.x = tmp.x;
-		v.y = tmp.y;
+		v.x		   = tmp.x;
+		v.y		   = tmp.y;
 		return normalize(v);
 	}
 };
@@ -145,9 +145,9 @@ struct OctahedralVector
 OctahedralVector InitOctahedralVector(float3 v)
 {
 	OctahedralVector ov;
-	
+
 	float2 p = float2(v.x, v.y) * (1.0f / (abs(v.x) + abs(v.y) + abs(v.z)));
-	p = (v.z < 0.0f) ? octWrap(p) : p;
+	p		 = (v.z < 0.0f) ? octWrap(p) : p;
 
 	ov.x = p.x;
 	ov.y = p.y;

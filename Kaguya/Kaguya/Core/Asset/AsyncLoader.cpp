@@ -88,7 +88,8 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 
 	if (!paiScene || !paiScene->HasMeshes())
 	{
-		LOG_ERROR("Assimp::Importer error: {}", s_Importer.GetErrorString());
+		LOG_ERROR("Assimp::Importer error when loading {}", Path.data());
+		LOG_ERROR("Error: {}", s_Importer.GetErrorString());
 		return {};
 	}
 

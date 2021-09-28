@@ -33,8 +33,7 @@ void D3D12InputLayout::AddVertexLayoutElement(
 	std::string_view SemanticName,
 	UINT			 SemanticIndex,
 	DXGI_FORMAT		 Format,
-	UINT			 InputSlot,
-	UINT			 AlignedByteOffset)
+	UINT			 InputSlot)
 {
 	SemanticNames.emplace_back(SemanticName);
 
@@ -43,7 +42,7 @@ void D3D12InputLayout::AddVertexLayoutElement(
 	Desc.SemanticIndex			   = SemanticIndex;
 	Desc.Format					   = Format;
 	Desc.InputSlot				   = InputSlot;
-	Desc.AlignedByteOffset		   = AlignedByteOffset;
+	Desc.AlignedByteOffset		   = D3D12_APPEND_ALIGNED_ELEMENT;
 	Desc.InputSlotClass			   = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	Desc.InstanceDataStepRate	   = 0;
 }

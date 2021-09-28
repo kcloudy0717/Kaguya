@@ -62,8 +62,7 @@ public:
 		std::string_view SemanticName,
 		UINT			 SemanticIndex,
 		DXGI_FORMAT		 Format,
-		UINT			 InputSlot,
-		UINT			 AlignedByteOffset);
+		UINT			 InputSlot);
 
 private:
 	std::vector<std::string>					  SemanticNames;

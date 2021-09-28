@@ -5,48 +5,45 @@
 
 struct D3D12Allocation
 {
-	ID3D12Resource*			  pResource;
+	ID3D12Resource*			  Resource;
 	UINT64					  Offset;
 	UINT64					  Size;
-	BYTE*					  CPUVirtualAddress;
-	D3D12_GPU_VIRTUAL_ADDRESS GPUVirtualAddress;
+	BYTE*					  CpuVirtualAddress;
+	D3D12_GPU_VIRTUAL_ADDRESS GpuVirtualAddress;
 };
 
 class D3D12LinearAllocatorPage
 {
 public:
-	D3D12LinearAllocatorPage(Microsoft::WRL::ComPtr<ID3D12Resource> pResource, UINT64 PageSize)
-		: pResource(pResource)
+	D3D12LinearAllocatorPage(Microsoft::WRL::ComPtr<ID3D12Resource> Resource, UINT64 PageSize)
+		: Resource(Resource)
 		, Offset(0)
 		, PageSize(PageSize)
 	{
-		pResource->Map(0, nullptr, reinterpret_cast<void**>(&CPUVirtualAddress));
-		GPUVirtualAddress = pResource->GetGPUVirtualAddress();
+		Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress));
+		GpuVirtualAddress = Resource->GetGPUVirtualAddress();
 	}
 
-	~D3D12LinearAllocatorPage() { pResource->Unmap(0, nullptr); }
+	~D3D12LinearAllocatorPage() { Resource->Unmap(0, nullptr); }
 
 	std::optional<D3D12Allocation> Suballocate(UINT64 Size, UINT Alignment);
 
 	void Reset();
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12Resource> pResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
 	UINT64								   Offset;
 	UINT64								   PageSize;
-	BYTE*								   CPUVirtualAddress;
-	D3D12_GPU_VIRTUAL_ADDRESS			   GPUVirtualAddress;
+	BYTE*								   CpuVirtualAddress;
+	D3D12_GPU_VIRTUAL_ADDRESS			   GpuVirtualAddress;
 };
 
 class D3D12LinearAllocator : public D3D12LinkedDeviceChild
 {
 public:
-	enum
-	{
-		CpuAllocatorPageSize = 64 * 1024
-	};
+	static constexpr UINT64 CpuAllocatorPageSize = 64 * 1024;
 
-	D3D12LinearAllocator(D3D12LinkedDevice* Parent)
+	explicit D3D12LinearAllocator(D3D12LinkedDevice* Parent)
 		: D3D12LinkedDeviceChild(Parent)
 	{
 	}
@@ -54,20 +51,24 @@ public:
 	// Versions all the current constant data with SyncPoint to ensure memory is not overriden when it GPU uses it
 	void Version(D3D12CommandSyncPoint SyncPoint);
 
-	D3D12Allocation Allocate(UINT64 Size, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+	[[nodiscard]] D3D12Allocation Allocate(
+		UINT64 Size,
+		UINT   Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 	template<typename T>
-	D3D12Allocation Allocate(const T& Data, UINT Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
+	[[nodiscard]] D3D12Allocation Allocate(
+		const T& Data,
+		UINT	 Alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)
 	{
 		D3D12Allocation Allocation = Allocate(sizeof(T), Alignment);
-		std::memcpy(Allocation.CPUVirtualAddress, &Data, sizeof(T));
+		std::memcpy(Allocation.CpuVirtualAddress, &Data, sizeof(T));
 		return Allocation;
 	}
 
 private:
-	D3D12LinearAllocatorPage* RequestPage();
+	[[nodiscard]] D3D12LinearAllocatorPage* RequestPage();
 
-	D3D12LinearAllocatorPage* CreateNewPage(UINT64 PageSize);
+	[[nodiscard]] D3D12LinearAllocatorPage* CreateNewPage(UINT64 PageSize) const;
 
 	void DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages);
 
