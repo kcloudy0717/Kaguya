@@ -9,7 +9,7 @@
  */
 
 // Samples per pixel
-#define SPP 8
+#define SPP 4
 
 // HitGroup Local Root Signature
 // ====================
@@ -79,7 +79,7 @@ Sampler InitSampler(uint2 pixelCoords, uint2 resolution, uint frameNumber)
 	return object;
 }
 
-#define INVALID_ID -1
+#define INVALID_ID (0xDEADBEEF)
 
 struct RayPayload
 {
@@ -238,12 +238,6 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 		{
 			L += beta * UniformSampleOneLight(si, Sampler);
 		}
-
-		// Terminate loop early on last bounce (we don't need to sample BRDF)
-        //if (bounce == g_GlobalConstants.MaxDepth - 1)
-		//{
-		//	break;
-		//}
 
 		// Sample BSDF to get new path direction
 		BSDFSample bsdfSample = (BSDFSample)0;

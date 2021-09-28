@@ -147,6 +147,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			&PathIntegratorState::MaximumDepth);
 
 		ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
+		ImGui::Text("Samples Per Pixel: %u", 4u);
 	}
 	ImGui::End();
 
