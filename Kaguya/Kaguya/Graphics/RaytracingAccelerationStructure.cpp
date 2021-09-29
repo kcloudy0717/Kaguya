@@ -6,6 +6,8 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 	, NumInstances(NumInstances)
 {
 	MeshRenderers.reserve(NumInstances);
+
+	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
 }
 
 void RaytracingAccelerationStructure::Initialize()
@@ -46,8 +48,43 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 
 void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 {
-	PIXScopedEvent(Context.CommandListHandle.GetGraphicsCommandList(), 0, L"TLAS");
+	bool AnyBuild = false;
 
+	for (auto Geometry : ReferencedGeometries)
+	{
+		if (Geometry->BlasValid)
+		{
+			continue;
+		}
+
+		Geometry->BlasValid = true;
+		AnyBuild |= Geometry->BlasValid;
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
+		Geometry->BlasIndex = Manager.Build(Context.CommandListHandle.GetGraphicsCommandList4(), Inputs);
+	}
+
+	if (AnyBuild)
+	{
+		Context.UAVBarrier(nullptr);
+		Context.FlushResourceBarriers();
+		Manager.Copy(Context.CommandListHandle.GetGraphicsCommandList4());
+	}
+
+	{
+		D3D12ScopedEvent(Context, "BLAS Compact");
+		for (auto Geometry : ReferencedGeometries)
+		{
+			Manager.Compact(Context.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+		}
+	}
+
+	for (auto Geometry : ReferencedGeometries)
+	{
+		Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
+	}
+
+	D3D12ScopedEvent(Context, "TLAS");
 	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
 	{
 		Instance.AccelerationStructure = MeshRenderers[i]->pMeshFilter->Mesh->AccelerationStructure;
@@ -88,4 +125,15 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		TlasScratch,
 		TlasResult,
 		InstanceDescs.GetGpuVirtualAddress());
+}
+
+void RaytracingAccelerationStructure::PostBuild(D3D12CommandSyncPoint SyncPoint)
+{
+	for (const auto& Geometry : ReferencedGeometries)
+	{
+		if (Geometry->BlasIndex != UINT64_MAX)
+		{
+			Manager.SetSyncPoint(Geometry->BlasIndex, SyncPoint);
+		}
+	}
 }

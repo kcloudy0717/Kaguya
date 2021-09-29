@@ -38,6 +38,18 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(RenderDevice);
 	// RaytracingPipelineStates::Compile(RenderDevice);
 
+	CommandSignatureBuilder Builder;
+	Builder.AddDrawIndexed();
+
+	CommandSignature = D3D12CommandSignature(RenderCore::Device, Builder, nullptr);
+
+	IndirectCommandBuffer = D3D12Buffer(
+		RenderCore::Device->GetDevice(),
+		CommandBufferCounterOffset + sizeof(UINT64),
+		sizeof(IndirectCommand),
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
 	{
 		RenderPassDesc Desc		= {};
 		FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -133,6 +145,17 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	{
 		World->WorldState = EWorldState_Render;
 	}
+
+	D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
+	Copy.OpenCommandList();
+
+	Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
+
+	Copy.CloseCommandList();
+
+	D3D12CommandSyncPoint CopySyncPoint = Copy.Execute(false);
+
+	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 

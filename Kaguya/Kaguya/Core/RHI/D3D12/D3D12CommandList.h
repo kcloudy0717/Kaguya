@@ -7,8 +7,7 @@ class D3D12CommandQueue;
 class D3D12CommandAllocator
 {
 public:
-	D3D12CommandAllocator() noexcept = default;
-	D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND_LIST_TYPE Type);
+	explicit D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND_LIST_TYPE Type);
 
 	operator ID3D12CommandAllocator*() const noexcept { return CommandAllocator.Get(); }
 
@@ -39,14 +38,14 @@ class D3D12CommandListHandle : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12CommandListHandle() noexcept = default;
-	D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type);
+	explicit D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type);
 	~D3D12CommandListHandle();
 
-	D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
-	D3D12CommandListHandle& operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
-
+	// Non-copyable but movable
 	D3D12CommandListHandle(const D3D12CommandListHandle&) = delete;
 	D3D12CommandListHandle& operator=(const D3D12CommandListHandle&) = delete;
+	D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
+	D3D12CommandListHandle& operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
 
 	[[nodiscard]] ID3D12CommandList*		  GetCommandList() const { return GraphicsCommandList.Get(); }
 	[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const { return GraphicsCommandList.Get(); }

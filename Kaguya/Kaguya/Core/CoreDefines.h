@@ -16,14 +16,14 @@
 	TypeName(TypeName&&) noexcept = delete;                                                                            \
 	TypeName& operator=(TypeName&&) noexcept = delete
 
-template<typename T>
-constexpr T AlignUp(T Size, T Alignment)
+template<typename T, typename U>
+constexpr T AlignUp(T Size, U Alignment)
 {
 	return (T)(((size_t)Size + (size_t)Alignment - 1) & ~((size_t)Alignment - 1));
 }
 
-template<typename T>
-constexpr T AlignDown(T Size, T Alignment)
+template<typename T, typename U>
+constexpr T AlignDown(T Size, U Alignment)
 {
 	return (T)((size_t)Size & ~((size_t)Alignment - 1));
 }

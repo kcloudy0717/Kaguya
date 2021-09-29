@@ -135,6 +135,8 @@ public:
 		memcpy(&CpuVirtualAddress[Index * Stride], &Data, sizeof(T));
 	}
 
+	void CreateUnorderedAccessView(D3D12UnorderedAccessView& UnorderedAccessView, UINT64 CounterOffsetInBytes) const;
+
 private:
 	D3D12_HEAP_TYPE HeapType		  = {};
 	UINT			Stride			  = 0;

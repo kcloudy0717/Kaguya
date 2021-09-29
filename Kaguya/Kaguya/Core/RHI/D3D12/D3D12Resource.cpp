@@ -275,6 +275,22 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12Buffer::GetGpuVirtualAddress(UINT Index) const
 	return Resource->GetGPUVirtualAddress() + Index * Stride;
 }
 
+void D3D12Buffer::CreateUnorderedAccessView(D3D12UnorderedAccessView& UnorderedAccessView, UINT64 CounterOffsetInBytes)
+	const
+{
+	D3D12_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
+	UnorderedAccessViewDesc.Format							 = DXGI_FORMAT_UNKNOWN;
+	UnorderedAccessViewDesc.ViewDimension					 = D3D12_UAV_DIMENSION_BUFFER;
+	UnorderedAccessViewDesc.Buffer.FirstElement				 = 0;
+	UnorderedAccessViewDesc.Buffer.NumElements				 = static_cast<UINT>(Desc.Width / Stride);
+	UnorderedAccessViewDesc.Buffer.StructureByteStride		 = Stride;
+	UnorderedAccessViewDesc.Buffer.CounterOffsetInBytes		 = CounterOffsetInBytes;
+	UnorderedAccessViewDesc.Buffer.Flags					 = D3D12_BUFFER_UAV_FLAG_NONE;
+
+	UnorderedAccessView.Desc = UnorderedAccessViewDesc;
+	UnorderedAccessView.Descriptor.CreateView(UnorderedAccessViewDesc, Resource.Get(), Resource.Get());
+}
+
 D3D12Texture::D3D12Texture(
 	D3D12LinkedDevice*				 Parent,
 	const D3D12_RESOURCE_DESC&		 Desc,
@@ -318,8 +334,6 @@ void D3D12Texture::CreateShaderResourceView(
 	std::optional<UINT>		 OptMostDetailedMip /*= std::nullopt*/,
 	std::optional<UINT>		 OptMipLevels /*= std::nullopt*/) const
 {
-	assert(!(Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE));
-
 	UINT MostDetailedMip = OptMostDetailedMip.value_or(0);
 	UINT MipLevels		 = OptMipLevels.value_or(Desc.MipLevels);
 
@@ -362,8 +376,6 @@ void D3D12Texture::CreateUnorderedAccessView(
 	std::optional<UINT>		  OptArraySlice /*= std::nullopt*/,
 	std::optional<UINT>		  OptMipSlice /*= std::nullopt*/) const
 {
-	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
 	UINT ArraySlice = OptArraySlice.value_or(0);
 	UINT MipSlice	= OptMipSlice.value_or(0);
 
@@ -404,8 +416,6 @@ void D3D12Texture::CreateRenderTargetView(
 	std::optional<UINT>			OptArraySize /*= std::nullopt*/,
 	bool						sRGB /*= false*/) const
 {
-	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-
 	UINT ArraySlice = OptArraySlice.value_or(0);
 	UINT MipSlice	= OptMipSlice.value_or(0);
 	UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
@@ -448,8 +458,6 @@ void D3D12Texture::CreateDepthStencilView(
 	std::optional<UINT>			OptMipSlice /*= std::nullopt*/,
 	std::optional<UINT>			OptArraySize /*= std::nullopt*/) const
 {
-	assert(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-
 	UINT ArraySlice = OptArraySlice.value_or(0);
 	UINT MipSlice	= OptMipSlice.value_or(0);
 	UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);

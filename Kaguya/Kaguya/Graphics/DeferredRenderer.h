@@ -12,7 +12,19 @@ private:
 	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
-	D3D12RenderPass GBufferRenderPass;
+	struct IndirectCommand
+	{
+		D3D12_DRAW_ARGUMENTS DrawArguments;
+	};
+
+	static constexpr UINT64 TotalCommandBufferSizeInBytes = World::InstanceLimit * sizeof(IndirectCommand);
+	static constexpr UINT64 CommandBufferCounterOffset =
+		AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+
+	D3D12CommandSignature CommandSignature;
+	D3D12RenderPass		  GBufferRenderPass;
+
+	D3D12Buffer IndirectCommandBuffer;
 
 	std::vector<MeshRenderer*> MeshRenderers;
 	std::vector<Hlsl::Mesh>	   HlslMeshes;

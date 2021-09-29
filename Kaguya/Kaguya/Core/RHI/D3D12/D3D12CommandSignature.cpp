@@ -54,11 +54,13 @@ D3D12_COMMAND_SIGNATURE_DESC CommandSignatureBuilder::Build() noexcept
 }
 
 D3D12CommandSignature::D3D12CommandSignature(
-	ID3D12Device*			 Device,
+	D3D12Device*			 Parent,
 	CommandSignatureBuilder& Builder,
 	ID3D12RootSignature*	 RootSignature)
+	: D3D12DeviceChild(Parent)
 {
 	D3D12_COMMAND_SIGNATURE_DESC Desc = Builder.Build();
 
-	VERIFY_D3D12_API(Device->CreateCommandSignature(&Desc, RootSignature, IID_PPV_ARGS(&CommandSignature)));
+	VERIFY_D3D12_API(
+		Parent->GetD3D12Device()->CreateCommandSignature(&Desc, RootSignature, IID_PPV_ARGS(&CommandSignature)));
 }

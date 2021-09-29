@@ -94,8 +94,6 @@ void PathIntegrator::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(1, World::InstanceLimit);
 	AccelerationStructure.Initialize();
 
-	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
-
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
 		sizeof(Hlsl::Material) * World::MaterialLimit,
@@ -232,42 +230,6 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 		{
-			bool AnyBuild = false;
-
-			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-			{
-				if (Geometry->BlasValid)
-				{
-					continue;
-				}
-
-				Geometry->BlasValid = true;
-				AnyBuild |= Geometry->BlasValid;
-
-				D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
-				Geometry->BlasIndex = Manager.Build(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Inputs);
-			}
-
-			if (AnyBuild)
-			{
-				AsyncCompute.UAVBarrier(nullptr);
-				AsyncCompute.FlushResourceBarriers();
-				Manager.Copy(AsyncCompute.CommandListHandle.GetGraphicsCommandList4());
-			}
-
-			{
-				D3D12ScopedEvent(AsyncCompute, "BLAS Compact");
-				for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-				{
-					Manager.Compact(AsyncCompute.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
-				}
-			}
-
-			for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-			{
-				Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
-			}
-
 			D3D12ScopedEvent(AsyncCompute, "TLAS");
 			AccelerationStructure.Build(AsyncCompute);
 		}
@@ -275,13 +237,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 		ASBuildSyncPoint = AsyncCompute.Execute(false);
 
-		for (auto Geometry : AccelerationStructure.ReferencedGeometries)
-		{
-			if (Geometry->BlasIndex != UINT64_MAX)
-			{
-				Manager.SetSyncPoint(Geometry->BlasIndex, ASBuildSyncPoint);
-			}
-		}
+		AccelerationStructure.PostBuild(ASBuildSyncPoint);
 	}
 
 	if (World->WorldState & EWorldState::EWorldState_Update)

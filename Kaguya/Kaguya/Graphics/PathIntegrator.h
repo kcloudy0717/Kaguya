@@ -48,8 +48,6 @@ private:
 
 	RaytracingAccelerationStructure AccelerationStructure;
 
-	D3D12RaytracingAccelerationStructureManager Manager;
-
 	// Temporal accumulation
 	UINT NumTemporalSamples = 0;
 	UINT FrameCounter		= 0;

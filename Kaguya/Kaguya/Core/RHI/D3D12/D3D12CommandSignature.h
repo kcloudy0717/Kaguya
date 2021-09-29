@@ -83,15 +83,14 @@ private:
 	std::vector<D3D12_INDIRECT_ARGUMENT_DESC> Parameters;
 };
 
-class D3D12CommandSignature
+class D3D12CommandSignature final : public D3D12DeviceChild
 {
 public:
 	// The root signature must be specified if and only if the command signature changes one of the root arguments.
 	D3D12CommandSignature() noexcept = default;
+	D3D12CommandSignature(D3D12Device* Parent, CommandSignatureBuilder& Builder, ID3D12RootSignature* RootSignature);
 
-	D3D12CommandSignature(ID3D12Device* Device, CommandSignatureBuilder& Builder, ID3D12RootSignature* RootSignature);
-
-	operator ID3D12CommandSignature*() const { return CommandSignature.Get(); }
+	operator ID3D12CommandSignature*() const noexcept { return CommandSignature.Get(); }
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12CommandSignature> CommandSignature;

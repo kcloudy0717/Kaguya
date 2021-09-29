@@ -107,6 +107,15 @@ private:
 class RootSignatureBuilder
 {
 public:
+	RootSignatureBuilder()
+	{
+		// Worst case number of root parameters is 64
+		// Preallocate all possible parameters to avoid cost for push back
+		Parameters.reserve(D3D12_MAX_ROOT_COST);
+		DescriptorTableIndices.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		DescriptorTables.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+	}
+
 	D3D12_ROOT_SIGNATURE_DESC1 Build() noexcept;
 
 	void AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable)
