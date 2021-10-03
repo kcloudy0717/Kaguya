@@ -8,7 +8,26 @@
 
 struct RenderGraphResolution
 {
-	bool RenderResolutionResized = false;
+	void RefreshRenderResolution(UINT Width, UINT Height)
+	{
+		if (RenderWidth != Width || RenderHeight != Height)
+		{
+			RenderWidth				= Width;
+			RenderHeight			= Height;
+			RenderResolutionResized = true;
+		}
+	}
+	void RefreshViewportResolution(UINT Width, UINT Height)
+	{
+		if (ViewportWidth != Width || ViewportHeight != Height)
+		{
+			ViewportWidth			  = Width;
+			ViewportHeight			  = Height;
+			ViewportResolutionResized = true;
+		}
+	}
+
+	bool RenderResolutionResized   = false;
 	bool ViewportResolutionResized = false;
 	UINT RenderWidth, RenderHeight;
 	UINT ViewportWidth, ViewportHeight;
@@ -64,17 +83,14 @@ public:
 	{
 		static_assert(std::is_trivial_v<T>, "typename T is not Pod");
 
-		if (auto iter = DataTable.find(typeid(T)); iter != DataTable.end())
+		auto& Data = DataTable[typeid(T)];
+		if (!Data)
 		{
-			return *reinterpret_cast<T*>(iter->second.get());
+			Data = std::make_unique<BYTE[]>(sizeof(T));
+			new (Data.get()) T();
 		}
-		else
-		{
-			DataTable[typeid(T)] = std::make_unique<BYTE[]>(sizeof(T));
-			T& Data = *reinterpret_cast<T*>(DataTable[typeid(T)].get());
-			Data = T(); // Explicit initialization
-			return Data;
-		}
+
+		return *reinterpret_cast<T*>(Data.get());
 	}
 
 private:

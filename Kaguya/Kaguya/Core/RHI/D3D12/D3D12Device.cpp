@@ -238,7 +238,7 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
 }
 
-D3D12RootSignature D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
+std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
 {
 	RootSignatureBuilder Builder = {};
 	Configurator(Builder);
@@ -249,7 +249,7 @@ D3D12RootSignature D3D12Device::CreateRootSignature(Delegate<void(RootSignatureB
 		AddDescriptorTableRootParameterToBuilder(Builder);
 	}
 
-	return D3D12RootSignature(this, Builder);
+	return std::make_unique<D3D12RootSignature>(this, Builder);
 }
 
 D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(

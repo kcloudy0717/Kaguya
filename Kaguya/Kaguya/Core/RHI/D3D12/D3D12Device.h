@@ -58,7 +58,8 @@ public:
 
 	D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
 
-	[[nodiscard]] D3D12RootSignature CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator);
+	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(
+		Delegate<void(RootSignatureBuilder&)> Configurator);
 
 	template<typename PipelineStateStream>
 	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(PipelineStateStream& Stream)

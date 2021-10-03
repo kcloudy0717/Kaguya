@@ -13,21 +13,9 @@ void* DeferredRenderer::GetViewportDescriptor()
 
 void DeferredRenderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	if (Resolution.ViewportWidth != Width || Resolution.ViewportHeight != Height)
-	{
-		Resolution.ViewportWidth			 = Width;
-		Resolution.ViewportHeight			 = Height;
-		Resolution.ViewportResolutionResized = true;
-	}
-
+	Resolution.RefreshViewportResolution(Width, Height);
+	Resolution.RefreshRenderResolution(Width, Height);
 	ValidViewport = false;
-
-	if (Resolution.RenderWidth != Width || Resolution.RenderHeight != Height)
-	{
-		Resolution.RenderWidth			   = Width;
-		Resolution.RenderHeight			   = Height;
-		Resolution.RenderResolutionResized = true;
-	}
 }
 
 void DeferredRenderer::Initialize()
@@ -125,16 +113,32 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		World->WorldState = EWorldState_Render;
 	}
 
+	_declspec(align(256)) struct GlobalConstants
+	{
+		Hlsl::Camera Camera;
+
+		unsigned int NumLights;
+	} g_GlobalConstants			= {};
+	g_GlobalConstants.Camera	= GetHLSLCameraDesc(*World->ActiveCamera);
+	g_GlobalConstants.NumLights = NumLights;
+
 	D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
 	Copy.OpenCommandList();
-
-	Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
-
+	{
+		Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
+	}
 	Copy.CloseCommandList();
-
 	D3D12CommandSyncPoint CopySyncPoint = Copy.Execute(false);
 
+	// D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
+	// AsyncCompute.OpenCommandList();
+	//{
+	//}
+	// AsyncCompute.CloseCommandList();
+	// D3D12CommandSyncPoint ComputeSyncPoint = AsyncCompute.Execute(false);
+
 	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
+	// Context.GetCommandQueue()->WaitForSyncPoint(ComputeSyncPoint);
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 
@@ -201,16 +205,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			return [=, &Params, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "GBuffer");
-
-				_declspec(align(256)) struct GlobalConstants
-				{
-					Hlsl::Camera Camera;
-
-					unsigned int NumLights;
-				} g_GlobalConstants		 = {};
-				g_GlobalConstants.Camera = GetHLSLCameraDesc(*World->ActiveCamera);
-
-				g_GlobalConstants.NumLights = NumLights;
 
 				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::GBuffer));
 				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::GBuffer));

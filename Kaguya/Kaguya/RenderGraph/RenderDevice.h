@@ -50,7 +50,7 @@ public:
 	}
 };
 
-class RootSignatureRegistry : public RenderRegistry<RootSignatureRegistry, D3D12RootSignature>
+class RootSignatureRegistry : public RenderRegistry<RootSignatureRegistry, std::unique_ptr<D3D12RootSignature>>
 {
 public:
 	RootSignatureRegistry()
@@ -82,7 +82,7 @@ class RenderDevice
 {
 public:
 	[[nodiscard]] auto CreateRenderPass(D3D12RenderPass&& RenderPass) -> RenderResourceHandle;
-	[[nodiscard]] auto CreateRootSignature(D3D12RootSignature&& RootSignature) -> RenderResourceHandle;
+	[[nodiscard]] auto CreateRootSignature(std::unique_ptr<D3D12RootSignature>&& RootSignature) -> RenderResourceHandle;
 	[[nodiscard]] auto CreatePipelineState(std::unique_ptr<D3D12PipelineState>&& PipelineState) -> RenderResourceHandle;
 	[[nodiscard]] auto CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
 		-> RenderResourceHandle;

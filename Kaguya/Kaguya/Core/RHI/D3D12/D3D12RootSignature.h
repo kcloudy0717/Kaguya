@@ -233,7 +233,6 @@ private:
 class D3D12RootSignature final : public D3D12DeviceChild
 {
 public:
-	D3D12RootSignature() noexcept = default;
 	D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder);
 
 	operator ID3D12RootSignature*() const { return RootSignature.Get(); }

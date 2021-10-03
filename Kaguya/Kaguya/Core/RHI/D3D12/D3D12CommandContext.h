@@ -45,14 +45,14 @@ public:
 	void SetGraphicsRootSignature(D3D12RootSignature* RootSignature);
 	void SetComputeRootSignature(D3D12RootSignature* RootSignature);
 
-	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, void* Data)
+	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
 	{
 		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
 		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
 		CommandListHandle->SetGraphicsRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
 	}
 
-	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, void* Data)
+	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
 	{
 		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
 		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
