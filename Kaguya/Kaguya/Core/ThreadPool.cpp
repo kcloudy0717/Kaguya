@@ -29,7 +29,7 @@ ThreadPool::~ThreadPool()
 	DestroyThreadpoolEnvironment(&Environment);
 }
 
-void ThreadPool::QueueThreadpoolWork(ThreadPoolWork* Work, std::function<void()> WorkFunction)
+void ThreadPool::QueueThreadpoolWork(ThreadPoolWork* Work, Delegate<void()> WorkFunction)
 {
 	assert(!Work->Work);
 

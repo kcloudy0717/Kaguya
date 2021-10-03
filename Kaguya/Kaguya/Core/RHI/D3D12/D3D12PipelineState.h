@@ -112,7 +112,7 @@ class D3D12PipelineState : public D3D12DeviceChild
 public:
 	D3D12PipelineState(D3D12Device* Parent, const PipelineStateStreamDesc& Desc);
 
-	[[nodiscard]] ID3D12PipelineState* GetApiHandle() const noexcept;
+	[[nodiscard]] ID3D12PipelineState*	  GetApiHandle() const noexcept;
 	[[nodiscard]] ED3D12PipelineStateType GetType() const noexcept { return Type; }
 
 private:
@@ -125,5 +125,5 @@ private:
 private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	ED3D12PipelineStateType						Type;
-	std::unique_ptr<ThreadPoolWork>				CompilationWork;
+	mutable std::unique_ptr<ThreadPoolWork>		CompilationWork;
 };

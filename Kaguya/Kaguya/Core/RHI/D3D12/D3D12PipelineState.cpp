@@ -21,6 +21,7 @@ ID3D12PipelineState* D3D12PipelineState::GetApiHandle() const noexcept
 	if (CompilationWork)
 	{
 		CompilationWork->Wait(false);
+		CompilationWork.reset();
 	}
 	return PipelineState.Get();
 }
@@ -34,7 +35,7 @@ void D3D12PipelineState::Create(D3D12PipelineParserCallbacks Parser)
 		CompilationWork = std::make_unique<ThreadPoolWork>();
 		Parent->PsoCompilationThreadPool->QueueThreadpoolWork(
 			CompilationWork.get(),
-			[this, Parser]()
+			[=, this]()
 			{
 				try
 				{

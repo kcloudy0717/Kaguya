@@ -27,6 +27,7 @@ public:
 		{
 			memcpy(Buffer, InlineAllocator.Buffer, SizeInBytes);
 		}
+		Destructor = std::exchange(InlineAllocator.Destructor, {});
 	}
 
 	InlineAllocator& operator=(InlineAllocator&& InlineAllocator) noexcept
@@ -46,6 +47,7 @@ public:
 		{
 			memcpy(Buffer, InlineAllocator.Buffer, SizeInBytes);
 		}
+		Destructor = std::exchange(InlineAllocator.Destructor, {});
 		return *this;
 	}
 
@@ -88,13 +90,34 @@ public:
 		return Buffer;
 	}
 
+	template<typename T>
+	T* Allocate()
+	{
+		BYTE* Address = Allocate(sizeof(T));
+		Destructor	  = &DestructorCallback<T>;
+		return reinterpret_cast<T*>(Address);
+	}
+
 	void Free()
 	{
+		if (HasAllocation() && Destructor)
+		{
+			Destructor(GetAllocation());
+			Destructor = nullptr;
+		}
 		if (HasHeapAllocation())
 		{
 			delete[] Ptr;
+			Ptr = nullptr;
 		}
 		SizeInBytes = 0;
+	}
+
+private:
+	template<typename T>
+	static void DestructorCallback(void* Object)
+	{
+		static_cast<T*>(Object)->~T();
 	}
 
 private:
@@ -104,6 +127,7 @@ private:
 		BYTE* Ptr;
 	};
 	size_t SizeInBytes;
+	void (*Destructor)(void*) = nullptr;
 };
 
 struct DelegateHandle
@@ -165,12 +189,10 @@ public:
 
 		if (Allocator.HasAllocation())
 		{
-			BYTE* Allocation = Allocator.GetAllocation();
-			reinterpret_cast<DecayedType*>(Allocation)->~DecayedType();
 			Allocator.Free();
 		}
 
-		Object = Allocator.Allocate(sizeof(DecayedType));
+		Object = Allocator.Allocate<DecayedType>();
 		Proxy  = FunctionProxy<DecayedType>;
 
 		new (Object) DecayedType(std::forward<DecayedType>(Lambda));
@@ -183,12 +205,10 @@ public:
 
 		if (Allocator.HasAllocation())
 		{
-			BYTE* Allocation = Allocator.GetAllocation();
-			reinterpret_cast<DecayedType*>(Allocation)->~DecayedType();
 			Allocator.Free();
 		}
 
-		Object = Allocator.Allocate(sizeof(DecayedType));
+		Object = Allocator.Allocate<DecayedType>();
 		Proxy  = FunctionProxy<DecayedType>;
 
 		new (Object) DecayedType(std::forward<DecayedType>(Lambda));

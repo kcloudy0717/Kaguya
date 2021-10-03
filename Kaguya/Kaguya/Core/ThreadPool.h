@@ -36,7 +36,7 @@ private:
 
 private:
 	PTP_WORK		 Work = nullptr;
-	std::function<void()> WorkDelegate;
+	Delegate<void()> WorkDelegate;
 };
 
 class ThreadPool
@@ -53,7 +53,7 @@ public:
 
 	void SetCancelPendingWorkOnCleanup(bool bCancel) { bCancelPendingWorkOnCleanup = bCancel; }
 
-	void QueueThreadpoolWork(ThreadPoolWork* Work, std::function<void()> WorkFunction);
+	void QueueThreadpoolWork(ThreadPoolWork* Work, Delegate<void()> WorkFunction);
 
 private:
 	TP_CALLBACK_ENVIRON Environment;

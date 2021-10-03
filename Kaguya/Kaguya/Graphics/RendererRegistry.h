@@ -261,7 +261,7 @@ struct PipelineStates
 			DepthStencilState DepthStencilState;
 			DepthStencilState.DepthEnable = true;
 
-			struct PipelineStateStream
+			struct PsoStream
 			{
 				PipelineStateStreamRootSignature	 RootSignature;
 				PipelineStateStreamInputLayout		 InputLayout;
