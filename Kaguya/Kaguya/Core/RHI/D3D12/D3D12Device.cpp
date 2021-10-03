@@ -45,6 +45,7 @@ D3D12Device::D3D12Device()
 	: LinkedDevice(this)
 	, Profiler(1)
 {
+	PsoCompilationThreadPool = std::make_unique<ThreadPool>();
 }
 
 D3D12Device::~D3D12Device()

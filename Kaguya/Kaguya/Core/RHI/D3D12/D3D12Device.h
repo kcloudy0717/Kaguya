@@ -36,6 +36,8 @@ struct RootParameters
 class D3D12Device
 {
 public:
+	friend class D3D12PipelineState;
+
 	static void ReportLiveObjects();
 
 	D3D12Device();
@@ -58,20 +60,13 @@ public:
 
 	[[nodiscard]] D3D12RootSignature CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator);
 
-	[[nodiscard]] D3D12PipelineState CreateGraphicsPipelineState(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& Desc)
-	{
-		return D3D12PipelineState(this, &Desc);
-	}
-
-	[[nodiscard]] D3D12PipelineState CreateComputePipelineState(const D3D12_COMPUTE_PIPELINE_STATE_DESC& Desc)
-	{
-		return D3D12PipelineState(this, &Desc);
-	}
-
 	template<typename PipelineStateStream>
-	[[nodiscard]] D3D12PipelineState CreatePipelineState(PipelineStateStream& Stream)
+	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(PipelineStateStream& Stream)
 	{
-		return D3D12PipelineState(this, Stream);
+		PipelineStateStreamDesc Desc;
+		Desc.SizeInBytes				   = sizeof(Stream);
+		Desc.pPipelineStateSubobjectStream = &Stream;
+		return std::make_unique<D3D12PipelineState>(this, Desc);
 	}
 
 	[[nodiscard]] D3D12RaytracingPipelineState CreateRaytracingPipelineState(
@@ -111,4 +106,6 @@ private:
 	D3D12Profiler Profiler;
 
 	AftermathCrashTracker AftermathCrashTracker;
+
+	std::unique_ptr<ThreadPool> PsoCompilationThreadPool;
 };

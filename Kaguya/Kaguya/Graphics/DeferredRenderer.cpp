@@ -34,6 +34,7 @@ void DeferredRenderer::Initialize()
 {
 	Shaders::Compile();
 	// Libraries::Compile();
+	RenderPasses::Compile();
 	RootSignatures::Compile(RenderDevice);
 	PipelineStates::Compile(RenderDevice);
 	// RaytracingPipelineStates::Compile(RenderDevice);
@@ -49,28 +50,6 @@ void DeferredRenderer::Initialize()
 		sizeof(IndirectCommand),
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-	{
-		RenderPassDesc Desc		= {};
-		FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		Desc.AddRenderTarget({ .Format	   = ERHIFormat::RGBA32_FLOAT,
-							   .LoadOp	   = ELoadOp::Clear,
-							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(ERHIFormat::RGBA32_FLOAT, Color) });
-		Desc.AddRenderTarget({ .Format	   = ERHIFormat::RGBA32_FLOAT,
-							   .LoadOp	   = ELoadOp::Clear,
-							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(ERHIFormat::RGBA32_FLOAT, Color) });
-		Desc.AddRenderTarget({ .Format	   = ERHIFormat::RG16_FLOAT,
-							   .LoadOp	   = ELoadOp::Clear,
-							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(ERHIFormat::RG16_FLOAT, Color) });
-		Desc.SetDepthStencil({ .Format	   = ERHIFormat::D32,
-							   .LoadOp	   = ELoadOp::Clear,
-							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(ERHIFormat::D32, 1.0f, 0xFF) });
-		GBufferRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
-	}
 
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
@@ -245,7 +224,9 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					RHIViewport(0.0f, 0.0f, ViewData.GetRenderWidth<FLOAT>(), ViewData.GetRenderHeight<FLOAT>()));
 				Context.SetScissorRect(RHIRect(0, 0, ViewData.RenderWidth, ViewData.RenderHeight));
 
-				Context.BeginRenderPass(&GBufferRenderPass, &Registry.GetRenderTarget(Params.RenderTarget));
+				Context.BeginRenderPass(
+					&RenderPasses::GBufferRenderPass,
+					&Registry.GetRenderTarget(Params.RenderTarget));
 				{
 					for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
 					{
@@ -273,11 +254,12 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			};
 		});
 
+	auto&				 Params	 = GBuffer->Scope.Get<GBufferParams>();
 	RenderResourceHandle Views[] = {
-		GBuffer->Scope.Get<GBufferParams>().Albedo,
-		GBuffer->Scope.Get<GBufferParams>().Normal,
-		GBuffer->Scope.Get<GBufferParams>().Motion,
-		GBuffer->Scope.Get<GBufferParams>().Depth,
+		Params.Albedo,
+		Params.Normal,
+		Params.Motion,
+		Params.Depth,
 	};
 
 	Viewport	  = Views[ViewMode];

@@ -68,22 +68,12 @@
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
-// Vulkan
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_win32.h>
-
-// Online
 #include <entt.hpp>
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
 #include <backends/imgui_impl_dx12.h>
-#include <backends/imgui_impl_vulkan.h>
 #include <ImGuizmo.h>
 #include <wil/resource.h>
-
-// Offline
 #include <city.h>
 #include <DirectXTex.h>
 

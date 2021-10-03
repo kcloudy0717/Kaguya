@@ -68,8 +68,6 @@ public:
 	[[nodiscard]] auto GetBufferPointer() const -> LPVOID { return Blob->GetBufferPointer(); }
 	[[nodiscard]] auto GetBufferSize() const -> SIZE_T { return Blob->GetBufferSize(); }
 
-	VkShaderModule ShaderModule = VK_NULL_HANDLE;
-
 private:
 	EShaderType						 ShaderType;
 	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
@@ -129,12 +127,12 @@ public:
 
 	[[nodiscard]] Library CompileLibrary(const std::filesystem::path& Path) const;
 
-	[[nodiscard]] Shader SpirVCodeGen(
-		VkDevice					  Device,
-		EShaderType					  ShaderType,
-		const std::filesystem::path&  Path,
-		std::wstring_view			  EntryPoint,
-		const std::vector<DxcDefine>& ShaderDefines) const;
+	//[[nodiscard]] Shader SpirVCodeGen(
+	//	VkDevice					  Device,
+	//	EShaderType					  ShaderType,
+	//	const std::filesystem::path& Path,
+	//	std::wstring_view			  EntryPoint,
+	//	const std::vector<DxcDefine>& ShaderDefines) const;
 
 private:
 	[[nodiscard]] std::wstring GetShaderModelString() const;

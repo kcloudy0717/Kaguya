@@ -13,6 +13,7 @@
 #include "Math.h"
 
 // Threading
+#include "ThreadPool.h"
 #include "CriticalSection.h"
 #include "RWLock.h"
 
@@ -41,12 +42,3 @@
 #include "RHI/D3D12/D3D12SwapChain.h"
 #include "RHI/D3D12/D3D12Raytracing.h"
 #include "RHI/D3D12/D3D12RaytracingShaderTable.h"
-
-// Vulkan
-#include "RHI/Vulkan/VulkanCommon.h"
-#include "RHI/Vulkan/VulkanDevice.h"
-#include "RHI/Vulkan/VulkanCommandQueue.h"
-#include "RHI/Vulkan/VulkanRootSignature.h"
-#include "RHI/Vulkan/VulkanPipelineState.h"
-#include "RHI/Vulkan/VulkanResource.h"
-#include "RHI/Vulkan/VulkanSwapChain.h"

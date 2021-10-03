@@ -12,6 +12,6 @@ public:
 
 	RenderPassDesc Desc = {};
 
-	D3D12_RT_FORMAT_ARRAY RenderTargetFormats;
-	DXGI_FORMAT			  DepthStencilFormat;
+	D3D12_RT_FORMAT_ARRAY RenderTargetFormats = {};
+	DXGI_FORMAT			  DepthStencilFormat  = DXGI_FORMAT_UNKNOWN;
 };

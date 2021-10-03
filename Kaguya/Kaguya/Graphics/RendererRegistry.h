@@ -107,6 +107,47 @@ struct Libraries
 	}
 };
 
+struct RenderPasses
+{
+	inline static D3D12RenderPass TonemapRenderPass;
+
+	inline static D3D12RenderPass GBufferRenderPass;
+
+	static void Compile()
+	{
+		{
+			RenderPassDesc Desc		= {};
+			FLOAT		   Color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			Desc.AddRenderTarget({ .Format	   = D3D12SwapChain::Format_sRGB,
+								   .LoadOp	   = ELoadOp::Clear,
+								   .StoreOp	   = EStoreOp::Store,
+								   .ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format, Color) });
+			TonemapRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
+		}
+		{
+			RenderPassDesc Desc		= {};
+			FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R32G32B32A32_FLOAT,
+								   .LoadOp	   = ELoadOp::Clear,
+								   .StoreOp	   = EStoreOp::Store,
+								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color) });
+			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R32G32B32A32_FLOAT,
+								   .LoadOp	   = ELoadOp::Clear,
+								   .StoreOp	   = EStoreOp::Store,
+								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color) });
+			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R16G16_FLOAT,
+								   .LoadOp	   = ELoadOp::Clear,
+								   .StoreOp	   = EStoreOp::Store,
+								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color) });
+			Desc.SetDepthStencil({ .Format	   = RenderCore::DepthFormat,
+								   .LoadOp	   = ELoadOp::Clear,
+								   .StoreOp	   = EStoreOp::Store,
+								   .ClearValue = CD3DX12_CLEAR_VALUE(RenderCore::DepthFormat, 1.0f, 0xFF) });
+			GBufferRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
+		}
+	}
+};
+
 struct RootSignatures
 {
 	inline static RenderResourceHandle Tonemap;
@@ -168,78 +209,75 @@ struct PipelineStates
 	static void Compile(RenderDevice& Device)
 	{
 		{
-			auto DepthStencilState									  = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-			DepthStencilState.DepthEnable							  = FALSE;
-			D3D12_RT_FORMAT_ARRAY RTFormatArray						  = {};
-			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = D3D12SwapChain::Format_sRGB;
+			DepthStencilState DepthStencilState;
+			DepthStencilState.DepthEnable = false;
 
-			struct PipelineStateStream
+			struct PsoStream
 			{
-				CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE		pRootSignature;
-				CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY	PrimitiveTopologyType;
-				CD3DX12_PIPELINE_STATE_STREAM_VS					VS;
-				CD3DX12_PIPELINE_STATE_STREAM_PS					PS;
-				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL			DepthStencilState;
-				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
+				PipelineStateStreamRootSignature	 RootSignature;
+				PipelineStateStreamPrimitiveTopology PrimitiveTopologyType;
+				PipelineStateStreamVS				 VS;
+				PipelineStateStreamPS				 PS;
+				PipelineStateStreamDepthStencilState DepthStencilState;
+				PipelineStateStreamRenderPass		 RenderPass;
 			} Stream;
-
-			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap)->GetApiHandle();
-			Stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			Stream.VS					 = Shaders::VS::FullScreenTriangle;
-			Stream.PS					 = Shaders::PS::ToneMap;
+			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap);
+			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.VS					 = &Shaders::VS::FullScreenTriangle;
+			Stream.PS					 = &Shaders::PS::ToneMap;
 			Stream.DepthStencilState	 = DepthStencilState;
-			Stream.RTVFormats			 = RTFormatArray;
+			Stream.RenderPass			 = &RenderPasses::TonemapRenderPass;
 
 			Tonemap = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 		{
-			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
-			PSODesc.CS								  = Shaders::CS::EASU;
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::FSR);
+			Stream.CS			 = &Shaders::CS::EASU;
 
-			FSREASU = Device.CreatePipelineState(RenderCore::Device->CreateComputePipelineState(PSODesc));
+			FSREASU = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 		{
-			D3D12_COMPUTE_PIPELINE_STATE_DESC PSODesc = {};
-			PSODesc.pRootSignature					  = Device.GetRootSignature(RootSignatures::FSR)->GetApiHandle();
-			PSODesc.CS								  = Shaders::CS::RCAS;
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::FSR);
+			Stream.CS			 = &Shaders::CS::RCAS;
 
-			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreateComputePipelineState(PSODesc));
+			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 		{
-			D3D12InputLayout InputLayout;
+			D3D12InputLayout InputLayout(3);
 			InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 
-			auto DepthStencilState									  = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-			DepthStencilState.DepthEnable							  = TRUE;
-			D3D12_RT_FORMAT_ARRAY RTFormatArray						  = {};
-			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			RTFormatArray.RTFormats[RTFormatArray.NumRenderTargets++] = DXGI_FORMAT_R16G16_FLOAT;
-			DXGI_FORMAT DepthStencilFormat							  = RenderCore::DepthFormat;
+			DepthStencilState DepthStencilState;
+			DepthStencilState.DepthEnable = true;
 
 			struct PipelineStateStream
 			{
-				CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE		pRootSignature;
-				CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT			InputLayout;
-				CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY	PrimitiveTopologyType;
-				CD3DX12_PIPELINE_STATE_STREAM_VS					VS;
-				CD3DX12_PIPELINE_STATE_STREAM_PS					PS;
-				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL			DepthStencilState;
-				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS RTVFormats;
-				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT	DepthStencilFormat;
+				PipelineStateStreamRootSignature	 RootSignature;
+				PipelineStateStreamInputLayout		 InputLayout;
+				PipelineStateStreamPrimitiveTopology PrimitiveTopologyType;
+				PipelineStateStreamVS				 VS;
+				PipelineStateStreamPS				 PS;
+				PipelineStateStreamDepthStencilState DepthStencilState;
+				PipelineStateStreamRenderPass		 RenderPass;
 			} Stream;
-
-			Stream.pRootSignature		 = Device.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle();
+			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::GBuffer);
 			Stream.InputLayout			 = InputLayout;
-			Stream.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-			Stream.VS					 = Shaders::VS::GBuffer;
-			Stream.PS					 = Shaders::PS::GBuffer;
+			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.VS					 = &Shaders::VS::GBuffer;
+			Stream.PS					 = &Shaders::PS::GBuffer;
 			Stream.DepthStencilState	 = DepthStencilState;
-			Stream.RTVFormats			 = RTFormatArray;
-			Stream.DepthStencilFormat	 = DepthStencilFormat;
+			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
 
 			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}

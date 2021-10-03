@@ -59,7 +59,7 @@ public:
 	}
 };
 
-class PipelineStateRegistry : public RenderRegistry<PipelineStateRegistry, D3D12PipelineState>
+class PipelineStateRegistry : public RenderRegistry<PipelineStateRegistry, std::unique_ptr<D3D12PipelineState>>
 {
 public:
 	PipelineStateRegistry()
@@ -83,7 +83,7 @@ class RenderDevice
 public:
 	[[nodiscard]] auto CreateRenderPass(D3D12RenderPass&& RenderPass) -> RenderResourceHandle;
 	[[nodiscard]] auto CreateRootSignature(D3D12RootSignature&& RootSignature) -> RenderResourceHandle;
-	[[nodiscard]] auto CreatePipelineState(D3D12PipelineState&& PipelineState) -> RenderResourceHandle;
+	[[nodiscard]] auto CreatePipelineState(std::unique_ptr<D3D12PipelineState>&& PipelineState) -> RenderResourceHandle;
 	[[nodiscard]] auto CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
 		-> RenderResourceHandle;
 

@@ -79,25 +79,25 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	return Library(Blob, PdbBlob, std::move(PdbName));
 }
 
-Shader ShaderCompiler::SpirVCodeGen(
-	VkDevice					  Device,
-	EShaderType					  ShaderType,
-	const std::filesystem::path&  Path,
-	std::wstring_view			  EntryPoint,
-	const std::vector<DxcDefine>& ShaderDefines) const
-{
-	std::wstring ProfileString = ShaderProfileString(ShaderType);
-
-	IDxcBlob* Blob = nullptr;
-	SpirV(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob);
-
-	Shader Shader(ShaderType, Blob, nullptr, std::wstring());
-	auto   ShaderModuleCreateInfo	= VkStruct<VkShaderModuleCreateInfo>();
-	ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
-	ShaderModuleCreateInfo.pCode	= static_cast<uint32_t*>(Shader.GetBufferPointer());
-	VERIFY_VULKAN_API(vkCreateShaderModule(Device, &ShaderModuleCreateInfo, nullptr, &Shader.ShaderModule));
-	return Shader;
-}
+// Shader ShaderCompiler::SpirVCodeGen(
+//	VkDevice					  Device,
+//	EShaderType					  ShaderType,
+//	const std::filesystem::path&  Path,
+//	std::wstring_view			  EntryPoint,
+//	const std::vector<DxcDefine>& ShaderDefines) const
+//{
+//	std::wstring ProfileString = ShaderProfileString(ShaderType);
+//
+//	IDxcBlob* Blob = nullptr;
+//	SpirV(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob);
+//
+//	Shader Shader(ShaderType, Blob, nullptr, std::wstring());
+//	auto   ShaderModuleCreateInfo	= VkStruct<VkShaderModuleCreateInfo>();
+//	ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
+//	ShaderModuleCreateInfo.pCode	= static_cast<uint32_t*>(Shader.GetBufferPointer());
+//	VERIFY_VULKAN_API(vkCreateShaderModule(Device, &ShaderModuleCreateInfo, nullptr, &Shader.ShaderModule));
+//	return Shader;
+//}
 
 std::wstring ShaderCompiler::GetShaderModelString() const
 {

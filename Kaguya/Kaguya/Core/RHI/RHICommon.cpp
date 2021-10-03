@@ -1,193 +1,34 @@
 #include "RHICommon.h"
 
-BlendState::BlendState()
+D3D12InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
 {
-	SetAlphaToCoverageEnable(false);
-	SetIndependentBlendEnable(false);
-}
-
-void BlendState::SetAlphaToCoverageEnable(bool AlphaToCoverageEnable)
-{
-	this->AlphaToCoverageEnable = AlphaToCoverageEnable;
-}
-
-void BlendState::SetIndependentBlendEnable(bool IndependentBlendEnable)
-{
-	this->IndependentBlendEnable = IndependentBlendEnable;
-}
-
-void BlendState::SetRenderTargetBlendDesc(
-	UINT	Index,
-	Factor	SrcBlendRgb,
-	Factor	DstBlendRgb,
-	BlendOp BlendOpRgb,
-	Factor	SrcBlendAlpha,
-	Factor	DstBlendAlpha,
-	BlendOp BlendOpAlpha)
-{
-	RenderTarget RenderTarget  = {};
-	RenderTarget.BlendEnable   = true;
-	RenderTarget.SrcBlendRGB   = SrcBlendRgb;
-	RenderTarget.DstBlendRGB   = DstBlendRgb;
-	RenderTarget.BlendOpRGB	   = BlendOpRgb;
-	RenderTarget.SrcBlendAlpha = SrcBlendAlpha;
-	RenderTarget.DstBlendAlpha = DstBlendAlpha;
-	RenderTarget.BlendOpAlpha  = BlendOpAlpha;
-	RenderTargets[Index]	   = RenderTarget;
-}
-
-RasterizerState::RasterizerState()
-{
-	SetFillMode(EFillMode::Solid);
-	SetCullMode(ECullMode::Back);
-	SetFrontCounterClockwise(false);
-	SetDepthBias(0);
-	SetDepthBiasClamp(0.0f);
-	SetSlopeScaledDepthBias(0.0f);
-	SetDepthClipEnable(true);
-	SetMultisampleEnable(false);
-	SetAntialiasedLineEnable(false);
-	SetForcedSampleCount(0);
-	SetConservativeRaster(false);
-}
-
-void RasterizerState::SetFillMode(EFillMode FillMode)
-{
-	this->FillMode = FillMode;
-}
-
-void RasterizerState::SetCullMode(ECullMode CullMode)
-{
-	this->CullMode = CullMode;
-}
-
-void RasterizerState::SetFrontCounterClockwise(bool FrontCounterClockwise)
-{
-	this->FrontCounterClockwise = FrontCounterClockwise;
-}
-
-void RasterizerState::SetDepthBias(int DepthBias)
-{
-	this->DepthBias = DepthBias;
-}
-
-void RasterizerState::SetDepthBiasClamp(float DepthBiasClamp)
-{
-	this->DepthBiasClamp = DepthBiasClamp;
-}
-
-void RasterizerState::SetSlopeScaledDepthBias(float SlopeScaledDepthBias)
-{
-	this->SlopeScaledDepthBias = SlopeScaledDepthBias;
-}
-
-void RasterizerState::SetDepthClipEnable(bool DepthClipEnable)
-{
-	this->DepthClipEnable = DepthClipEnable;
-}
-
-void RasterizerState::SetMultisampleEnable(bool MultisampleEnable)
-{
-	this->MultisampleEnable = MultisampleEnable;
-}
-
-void RasterizerState::SetAntialiasedLineEnable(bool AntialiasedLineEnable)
-{
-	this->AntialiasedLineEnable = AntialiasedLineEnable;
-}
-
-void RasterizerState::SetForcedSampleCount(unsigned int ForcedSampleCount)
-{
-	this->ForcedSampleCount = ForcedSampleCount;
-}
-
-void RasterizerState::SetConservativeRaster(bool ConservativeRaster)
-{
-	this->ConservativeRaster = ConservativeRaster;
-}
-
-DepthStencilState::DepthStencilState()
-{
-	// Default states https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc#remarks
-	SetDepthEnable(true);
-	SetDepthWrite(true);
-	SetDepthFunc(ComparisonFunc::Less);
-	SetStencilEnable(false);
-	SetStencilReadMask(0xff);
-	SetStencilWriteMask(0xff);
-}
-
-void DepthStencilState::SetDepthEnable(bool DepthEnable)
-{
-	this->DepthEnable = DepthEnable;
-}
-
-void DepthStencilState::SetDepthWrite(bool DepthWrite)
-{
-	this->DepthWrite = DepthWrite;
-}
-
-void DepthStencilState::SetDepthFunc(ComparisonFunc DepthFunc)
-{
-	this->DepthFunc = DepthFunc;
-}
-
-void DepthStencilState::SetStencilEnable(bool StencilEnable)
-{
-	this->StencilEnable = StencilEnable;
-}
-
-void DepthStencilState::SetStencilReadMask(UINT8 StencilReadMask)
-{
-	this->StencilReadMask = StencilReadMask;
-}
-
-void DepthStencilState::SetStencilWriteMask(UINT8 StencilWriteMask)
-{
-	this->StencilWriteMask = StencilWriteMask;
-}
-
-void DepthStencilState::SetStencilOp(
-	Face			 Face,
-	StencilOperation StencilFailOp,
-	StencilOperation StencilDepthFailOp,
-	StencilOperation StencilPassOp)
-{
-	if (Face == Face::FrontAndBack)
+	for (size_t i = 0; i < InputElements.size(); ++i)
 	{
-		SetStencilOp(Face::Front, StencilFailOp, StencilDepthFailOp, StencilPassOp);
-		SetStencilOp(Face::Back, StencilFailOp, StencilDepthFailOp, StencilPassOp);
+		InputElements[i].SemanticName = SemanticNames[i].data();
 	}
-	Stencil& Stencil		   = Face == Face::Front ? FrontFace : BackFace;
-	Stencil.StencilFailOp	   = StencilFailOp;
-	Stencil.StencilDepthFailOp = StencilDepthFailOp;
-	Stencil.StencilPassOp	   = StencilPassOp;
+
+	D3D12_INPUT_LAYOUT_DESC Desc = {};
+	Desc.pInputElementDescs		 = InputElements.data();
+	Desc.NumElements			 = static_cast<UINT>(InputElements.size());
+	return Desc;
 }
 
-void DepthStencilState::SetStencilFunc(Face Face, ComparisonFunc StencilFunc)
-{
-	if (Face == Face::FrontAndBack)
-	{
-		SetStencilFunc(Face::Front, StencilFunc);
-		SetStencilFunc(Face::Back, StencilFunc);
-	}
-	Stencil& Stencil	= Face == Face::Front ? FrontFace : BackFace;
-	Stencil.StencilFunc = StencilFunc;
-}
-
-void InputLayout::AddVertexLayoutElement(
+void D3D12InputLayout::AddVertexLayoutElement(
 	std::string_view SemanticName,
 	UINT			 SemanticIndex,
-	UINT			 Location,
-	ERHIFormat		 Format,
-	UINT			 Stride)
+	DXGI_FORMAT		 Format,
+	UINT			 InputSlot)
 {
-	auto& Element		  = Elements.emplace_back();
-	Element.SemanticName  = SemanticName.data();
-	Element.SemanticIndex = SemanticIndex;
-	Element.Location	  = Location;
-	Element.Format		  = Format;
-	Element.Stride		  = Stride;
+	SemanticNames.emplace_back(SemanticName);
+
+	D3D12_INPUT_ELEMENT_DESC& Desc = InputElements.emplace_back();
+	Desc.SemanticName			   = nullptr; // Will be resolved later
+	Desc.SemanticIndex			   = SemanticIndex;
+	Desc.Format					   = Format;
+	Desc.InputSlot				   = InputSlot;
+	Desc.AlignedByteOffset		   = D3D12_APPEND_ALIGNED_ELEMENT;
+	Desc.InputSlotClass			   = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	Desc.InstanceDataStepRate	   = 0;
 }
 
 void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* Callbacks)

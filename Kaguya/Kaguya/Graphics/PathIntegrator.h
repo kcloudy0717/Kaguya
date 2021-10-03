@@ -44,8 +44,6 @@ private:
 	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
-	D3D12RenderPass TonemapRenderPass;
-
 	RaytracingAccelerationStructure AccelerationStructure;
 
 	// Temporal accumulation

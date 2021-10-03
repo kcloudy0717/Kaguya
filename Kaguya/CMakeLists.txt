@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Vulkan REQUIRED)
-
 set(DEPDIR "${CMAKE_SOURCE_DIR}/Dependencies")
 
 set(PROJECTNAME Kaguya)
@@ -14,7 +12,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.h)
 file(GLOB_RECURSE src
 ${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.cpp)
 
-# Online
 set(imgui
 	${DEPDIR}/imgui/imconfig.h
 	${DEPDIR}/imgui/imgui.cpp
@@ -28,8 +25,6 @@ set(imgui
 	${DEPDIR}/imgui/imstb_textedit.h
 	${DEPDIR}/imgui/imstb_truetype.h
 	# Backend
-	${DEPDIR}/imgui/backends/imgui_impl_vulkan.cpp
-	${DEPDIR}/imgui/backends/imgui_impl_vulkan.h
 	${DEPDIR}/imgui/backends/imgui_impl_dx12.cpp
 	${DEPDIR}/imgui/backends/imgui_impl_dx12.h
 	${DEPDIR}/imgui/backends/imgui_impl_win32.cpp
@@ -48,8 +43,6 @@ set(json
 	${DEPDIR}/json/single_include/nlohmann/json.hpp)
 set(spdlog
 	${DEPDIR}/spdlog/include/spdlog/spdlog.h)
-
-# Offline
 set(dxc
 	${DEPDIR}/dxc/d3d12shader.h
 	${DEPDIR}/dxc/dxcapi.h)
@@ -60,12 +53,10 @@ set(cityhash
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
-# Online
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${imgui})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${ImGuizmo})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${json})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${spdlog})
-# Offline
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${dxc})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
@@ -78,13 +69,10 @@ add_executable(
 	${inc}
 	${src}
 
-	# Online
 	${imgui}
 	${ImGuizmo}
 	${json}
 	${spdlog}
-	
-	# Offline
 	${dxc}
 	${cityhash})
 
@@ -113,29 +101,21 @@ target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
 target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})
 
-# Online
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/entt/single_include/entt")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/imgui")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/ImGuizmo")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/json/single_include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/spdlog/include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/wil/include")
-
-# Offline
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/assimp/include")
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXTex/include")
 target_link_libraries(${PROJECTNAME} debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
 target_link_libraries(${PROJECTNAME} optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/dxc/dxcompiler.lib)
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/google/cityhash")
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 
@@ -176,10 +156,8 @@ target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/winpixeventruntime.1
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
 # Linking
-target_include_directories(${PROJECTNAME} PUBLIC Vulkan::Headers)
-target_link_libraries(${PROJECTNAME} Vulkan::Vulkan)
 
-# Offline DLL
+# DLL
 add_custom_command(
 TARGET ${PROJECTNAME} POST_BUILD
 COMMAND ${CMAKE_COMMAND} -E copy 

@@ -77,19 +77,10 @@ void PathIntegrator::Initialize()
 {
 	Shaders::Compile();
 	Libraries::Compile();
+	RenderPasses::Compile();
 	RootSignatures::Compile(RenderDevice);
 	PipelineStates::Compile(RenderDevice);
 	RaytracingPipelineStates::Compile(RenderDevice);
-
-	{
-		RenderPassDesc Desc		= {};
-		FLOAT		   Color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		Desc.AddRenderTarget({ .Format	   = D3D12SwapChain::RHIFormat,
-							   .LoadOp	   = ELoadOp::Clear,
-							   .StoreOp	   = EStoreOp::Store,
-							   .ClearValue = ClearValue(D3D12SwapChain::RHIFormat, Color) });
-		TonemapRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
-	}
 
 	AccelerationStructure = RaytracingAccelerationStructure(1, World::InstanceLimit);
 	AccelerationStructure.Initialize();
@@ -379,7 +370,9 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 					RHIViewport(0.0f, 0.0f, ViewData.GetRenderWidth<FLOAT>(), ViewData.GetRenderHeight<FLOAT>()));
 				Context.SetScissorRect(RHIRect(0, 0, ViewData.RenderWidth, ViewData.RenderHeight));
 
-				Context.BeginRenderPass(&TonemapRenderPass, &Registry.GetRenderTarget(Parameter.RenderTarget));
+				Context.BeginRenderPass(
+					&RenderPasses::TonemapRenderPass,
+					&Registry.GetRenderTarget(Parameter.RenderTarget));
 				{
 					Context.DrawInstanced(3, 1, 0, 0);
 				}

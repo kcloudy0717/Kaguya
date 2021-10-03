@@ -1,12 +1,14 @@
 #pragma once
-#include "RefPtr.h"
 #include "ShaderCompiler.h"
 #include "D3D12/d3dx12.h"
 
-class IRHITexture;
-class IRHIRenderPass;
-class IRHIRootSignature;
-class IRHIResource;
+#include "RHICore.h"
+#include "BlendState.h"
+#include "RasterizerState.h"
+#include "DepthStencilState.h"
+
+class D3D12RootSignature;
+class D3D12RenderPass;
 
 struct DeviceOptions
 {
@@ -67,119 +69,6 @@ struct RHIRect
 	LONG Bottom;
 };
 
-enum class PrimitiveTopology
-{
-	Undefined,
-	Point,
-	Line,
-	Triangle,
-	Patch
-};
-
-enum class ComparisonFunc
-{
-	Never,		  // Comparison always fails
-	Less,		  // Passes if source is less than the destination
-	Equal,		  // Passes if source is equal to the destination
-	LessEqual,	  // Passes if source is less than or equal to the destination
-	Greater,	  // Passes if source is greater than to the destination
-	NotEqual,	  // Passes if source is not equal to the destination
-	GreaterEqual, // Passes if source is greater than or equal to the destination
-	Always		  // Comparison always succeeds
-};
-
-enum class ERHIFormat
-{
-	UNKNOWN,
-
-	R8_UINT,
-	R8_SINT,
-	R8_UNORM,
-	R8_SNORM,
-	RG8_UINT,
-	RG8_SINT,
-	RG8_UNORM,
-	RG8_SNORM,
-	R16_UINT,
-	R16_SINT,
-	R16_UNORM,
-	R16_SNORM,
-	R16_FLOAT,
-	BGRA4_UNORM,
-	B5G6R5_UNORM,
-	B5G5R5A1_UNORM,
-	RGBA8_UINT,
-	RGBA8_SINT,
-	RGBA8_UNORM,
-	RGBA8_SNORM,
-	BGRA8_UNORM,
-	SRGBA8_UNORM,
-	SBGRA8_UNORM,
-	R10G10B10A2_UNORM,
-	R11G11B10_FLOAT,
-	RG16_UINT,
-	RG16_SINT,
-	RG16_UNORM,
-	RG16_SNORM,
-	RG16_FLOAT,
-	R32_UINT,
-	R32_SINT,
-	R32_FLOAT,
-	RGBA16_UINT,
-	RGBA16_SINT,
-	RGBA16_FLOAT,
-	RGBA16_UNORM,
-	RGBA16_SNORM,
-	RG32_UINT,
-	RG32_SINT,
-	RG32_FLOAT,
-	RGB32_UINT,
-	RGB32_SINT,
-	RGB32_FLOAT,
-	RGBA32_UINT,
-	RGBA32_SINT,
-	RGBA32_FLOAT,
-
-	D16,
-	D24S8,
-	X24G8_UINT,
-	D32,
-	D32S8,
-	X32G8_UINT,
-
-	BC1_UNORM,
-	BC1_UNORM_SRGB,
-	BC2_UNORM,
-	BC2_UNORM_SRGB,
-	BC3_UNORM,
-	BC3_UNORM_SRGB,
-	BC4_UNORM,
-	BC4_SNORM,
-	BC5_UNORM,
-	BC5_SNORM,
-	BC6H_UFLOAT,
-	BC6H_SFLOAT,
-	BC7_UNORM,
-	BC7_UNORM_SRGB,
-
-	COUNT,
-};
-
-enum class ESamplerFilter
-{
-	Point,
-	Linear,
-	Anisotropic
-};
-
-enum class ESamplerAddressMode
-{
-	Wrap,
-	Mirror,
-	Clamp,
-	Border,
-};
-
 struct SamplerDesc
 {
 	SamplerDesc() noexcept = default;
@@ -219,61 +108,6 @@ struct SamplerDesc
 	FLOAT				MaxLOD		= FLT_MAX;
 };
 
-struct PushConstant
-{
-	UINT Size;
-};
-
-struct RootSignatureDesc
-{
-	template<typename T>
-	void AddPushConstant()
-	{
-		PushConstant& PushConstant = PushConstants.emplace_back();
-		PushConstant.Size		   = sizeof(T);
-	}
-
-	void AddConstantBufferView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER); }
-	void AddShaderResourceView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); }
-	void AddUnorderedAccessView(UINT Binding) { AddDescriptor(Binding, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER); }
-
-	void AddDescriptor(UINT Binding, VkDescriptorType Type)
-	{
-		VkDescriptorSetLayoutBinding& DescriptorSetLayoutBinding = DescriptorSetLayoutBindings.emplace_back();
-		DescriptorSetLayoutBinding.binding						 = Binding;
-		DescriptorSetLayoutBinding.descriptorType				 = Type;
-		DescriptorSetLayoutBinding.descriptorCount				 = 1;
-		DescriptorSetLayoutBinding.stageFlags					 = VK_SHADER_STAGE_ALL;
-	}
-
-	std::vector<PushConstant>				  PushConstants;
-	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings;
-};
-
-enum class EResourceStates
-{
-	Common,
-	VertexBuffer,
-	ConstantBuffer,
-	IndexBuffer,
-	RenderTarget,
-	UnorderedAccess,
-	DepthWrite,
-	DepthRead,
-	NonPixelShaderResource,
-	PixelShaderResource,
-	StreamOut,
-	IndirectArgument,
-	CopyDest,
-	CopySource,
-	ResolveDest,
-	ResolveSource,
-	RaytracingAccelerationStructure,
-	GenericRead,
-	Present,
-	Predication,
-};
-
 enum class ELoadOp
 {
 	Load,
@@ -287,42 +121,14 @@ enum class EStoreOp
 	Noop
 };
 
-struct DepthStencilValue
-{
-	FLOAT Depth;
-	UINT8 Stencil;
-};
-
-struct ClearValue
-{
-	ClearValue() noexcept = default;
-	ClearValue(ERHIFormat Format, FLOAT Color[4])
-		: Format(Format)
-	{
-		std::memcpy(this->Color, Color, sizeof(FLOAT) * 4);
-	}
-	ClearValue(ERHIFormat Format, FLOAT Depth, UINT8 Stencil)
-		: Format(Format)
-		, DepthStencil{ Depth, Stencil }
-	{
-	}
-
-	ERHIFormat Format = ERHIFormat::UNKNOWN;
-	union
-	{
-		FLOAT			  Color[4];
-		DepthStencilValue DepthStencil;
-	};
-};
-
 struct RenderPassAttachment
 {
-	[[nodiscard]] bool IsValid() const noexcept { return Format != ERHIFormat::UNKNOWN; }
+	[[nodiscard]] bool IsValid() const noexcept { return Format != DXGI_FORMAT_UNKNOWN; }
 
-	ERHIFormat Format = ERHIFormat::UNKNOWN;
-	ELoadOp	   LoadOp;
-	EStoreOp   StoreOp;
-	ClearValue ClearValue;
+	DXGI_FORMAT		  Format = DXGI_FORMAT_UNKNOWN;
+	ELoadOp			  LoadOp;
+	EStoreOp		  StoreOp;
+	D3D12_CLEAR_VALUE ClearValue;
 };
 
 struct RenderPassDesc
@@ -333,20 +139,6 @@ struct RenderPassDesc
 	UINT				 NumRenderTargets = 0;
 	RenderPassAttachment RenderTargets[8];
 	RenderPassAttachment DepthStencil;
-};
-
-struct RenderTargetDesc
-{
-	void AddRenderTarget(IRHITexture* RenderTarget) { RenderTargets[NumRenderTargets++] = RenderTarget; }
-	void SetDepthStencil(IRHITexture* DepthStencil) { this->DepthStencil = DepthStencil; }
-
-	IRHIRenderPass* RenderPass = nullptr;
-	UINT			Width;
-	UINT			Height;
-
-	UINT		 NumRenderTargets = 0;
-	IRHITexture* RenderTargets[8] = {};
-	IRHITexture* DepthStencil	  = nullptr;
 };
 
 enum class ERHIHeapType
@@ -420,7 +212,7 @@ DEFINE_ENUM_FLAG_OPERATORS(ERHITextureFlags);
 struct RHITextureDesc
 {
 	[[nodiscard]] static auto RWTexture2D(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 MipLevels = 1,
@@ -438,7 +230,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto RWTexture2DArray(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 ArraySize,
@@ -457,7 +249,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto RWTexture3D(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 Depth,
@@ -476,7 +268,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture2D(
-		ERHIFormat						 Format,
+		DXGI_FORMAT						 Format,
 		UINT							 Width,
 		UINT							 Height,
 		UINT16							 MipLevels			 = 1,
@@ -494,7 +286,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture2DArray(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 ArraySize,
@@ -513,7 +305,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto Texture3D(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Width,
 		UINT			 Height,
 		UINT16			 Depth,
@@ -532,7 +324,7 @@ struct RHITextureDesc
 	}
 
 	[[nodiscard]] static auto TextureCube(
-		ERHIFormat		 Format,
+		DXGI_FORMAT		 Format,
 		UINT			 Dimension,
 		UINT16			 MipLevels = 1,
 		ERHITextureFlags Flags	   = RHITextureFlag_None) -> RHITextureDesc
@@ -561,7 +353,7 @@ struct RHITextureDesc
 		return Flags & ERHITextureFlags::RHITextureFlag_AllowUnorderedAccess;
 	}
 
-	ERHIFormat						 Format				 = ERHIFormat::UNKNOWN;
+	DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
 	ERHITextureType					 Type				 = ERHITextureType::Unknown;
 	UINT							 Width				 = 1;
 	UINT							 Height				 = 1;
@@ -571,227 +363,19 @@ struct RHITextureDesc
 	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
 };
 
-class BlendState
+class D3D12InputLayout
 {
 public:
-	/// <summary>
-	/// Defines how to combine the blend inputs
-	/// </summary>
-	enum class BlendOp
-	{
-		Add,			 // Add src1 and src2
-		Subtract,		 // Subtract src1 from src2
-		ReverseSubtract, // Subtract src2 from src1
-		Min,			 // Find the minimum between the sources (per-channel)
-		Max				 // Find the maximum between the sources (per-channel)
-	};
+	[[nodiscard]] explicit operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
 
-	/// <summary>
-	/// Defines how to modulate the pixel-shader and render-target pixel values
-	/// </summary>
-	enum class Factor
-	{
-		Zero,				 // (0, 0, 0, 0)
-		One,				 // (1, 1, 1, 1)
-		SrcColor,			 // The pixel-shader output color
-		OneMinusSrcColor,	 // One minus the pixel-shader output color
-		DstColor,			 // The render-target color
-		OneMinusDstColor,	 // One minus the render-target color
-		SrcAlpha,			 // The pixel-shader output alpha value
-		OneMinusSrcAlpha,	 // One minus the pixel-shader output alpha value
-		DstAlpha,			 // The render-target alpha value
-		OneMinusDstAlpha,	 // One minus the render-target alpha value
-		BlendFactor,		 // Constant color, set using Desc#SetBlendFactor()
-		OneMinusBlendFactor, // One minus constant color, set using Desc#SetBlendFactor()
-		SrcAlphaSaturate,	 // (f, f, f, 1), where f = min(pixel shader output alpha, 1 - render-target pixel alpha)
-		Src1Color,			 // Fragment-shader output color 1
-		OneMinusSrc1Color,	 // One minus pixel-shader output color 1
-		Src1Alpha,			 // Fragment-shader output alpha 1
-		OneMinusSrc1Alpha	 // One minus pixel-shader output alpha 1
-	};
+	D3D12InputLayout() noexcept = default;
+	D3D12InputLayout(size_t NumElements) { InputElements.reserve(NumElements); }
 
-	struct RenderTarget
-	{
-		bool	BlendEnable	  = false;
-		Factor	SrcBlendRGB	  = Factor::One;
-		Factor	DstBlendRGB	  = Factor::Zero;
-		BlendOp BlendOpRGB	  = BlendOp::Add;
-		Factor	SrcBlendAlpha = Factor::One;
-		Factor	DstBlendAlpha = Factor::Zero;
-		BlendOp BlendOpAlpha  = BlendOp::Add;
+	void AddVertexLayoutElement(std::string_view SemanticName, UINT SemanticIndex, DXGI_FORMAT Format, UINT InputSlot);
 
-		struct WriteMask
-		{
-			bool R = true;
-			bool G = true;
-			bool B = true;
-			bool A = true;
-		} WriteMask;
-	};
-
-	BlendState();
-
-	void SetAlphaToCoverageEnable(bool AlphaToCoverageEnable);
-	void SetIndependentBlendEnable(bool IndependentBlendEnable);
-
-	void SetRenderTargetBlendDesc(
-		UINT	Index,
-		Factor	SrcBlendRgb,
-		Factor	DstBlendRgb,
-		BlendOp BlendOpRgb,
-		Factor	SrcBlendAlpha,
-		Factor	DstBlendAlpha,
-		BlendOp BlendOpAlpha);
-
-	bool		 AlphaToCoverageEnable;
-	bool		 IndependentBlendEnable;
-	RenderTarget RenderTargets[8];
-};
-
-class RasterizerState
-{
-public:
-	/// <summary>
-	/// Defines triangle filling mode.
-	/// </summary>
-	enum class EFillMode
-	{
-		Wireframe, // Draw lines connecting the vertices.
-		Solid	   // Fill the triangles formed by the vertices
-	};
-
-	/// <summary>
-	/// Defines which face would be culled
-	/// </summary>
-	enum class ECullMode
-	{
-		None,  // Always draw all triangles
-		Front, // Do not draw triangles that are front-facing
-		Back   // Do not draw triangles that are back-facing
-	};
-
-	RasterizerState();
-
-	void SetFillMode(EFillMode FillMode);
-
-	void SetCullMode(ECullMode CullMode);
-
-	// Determines how to interpret triangle direction
-	void SetFrontCounterClockwise(bool FrontCounterClockwise);
-
-	void SetDepthBias(int DepthBias);
-
-	void SetDepthBiasClamp(float DepthBiasClamp);
-
-	void SetSlopeScaledDepthBias(float SlopeScaledDepthBias);
-
-	void SetDepthClipEnable(bool DepthClipEnable);
-
-	void SetMultisampleEnable(bool MultisampleEnable);
-
-	void SetAntialiasedLineEnable(bool AntialiasedLineEnable);
-
-	void SetForcedSampleCount(unsigned int ForcedSampleCount);
-
-	void SetConservativeRaster(bool ConservativeRaster);
-
-	EFillMode	 FillMode;
-	ECullMode	 CullMode;
-	bool		 FrontCounterClockwise;
-	int			 DepthBias;
-	float		 DepthBiasClamp;
-	float		 SlopeScaledDepthBias;
-	bool		 DepthClipEnable;
-	bool		 MultisampleEnable;
-	bool		 AntialiasedLineEnable;
-	unsigned int ForcedSampleCount;
-	bool		 ConservativeRaster;
-};
-
-class DepthStencilState
-{
-public:
-	enum class Face
-	{
-		Front,
-		Back,
-		FrontAndBack
-	};
-
-	enum class StencilOperation
-	{
-		Keep,			  // Keep the stencil value
-		Zero,			  // Set the stencil value to zero
-		Replace,		  // Replace the stencil value with the reference value
-		IncreaseSaturate, // Increase the stencil value by one, clamp if necessary
-		DecreaseSaturate, // Decrease the stencil value by one, clamp if necessary
-		Invert,			  // Invert the stencil data (bitwise not)
-		Increase,		  // Increase the stencil value by one, wrap if necessary
-		Decrease		  // Decrease the stencil value by one, wrap if necessary
-	};
-
-	struct Stencil
-	{
-		StencilOperation StencilFailOp = StencilOperation::Keep; // Stencil operation in case stencil test fails
-		StencilOperation StencilDepthFailOp =
-			StencilOperation::Keep; // Stencil operation in case stencil test passes but depth test fails
-		StencilOperation StencilPassOp =
-			StencilOperation::Keep;							 // Stencil operation in case stencil and depth tests pass
-		ComparisonFunc StencilFunc = ComparisonFunc::Always; // Stencil comparison function
-	};
-
-	DepthStencilState();
-
-	void SetDepthEnable(bool DepthEnable);
-
-	void SetDepthWrite(bool DepthWrite);
-
-	void SetDepthFunc(ComparisonFunc DepthFunc);
-
-	void SetStencilEnable(bool StencilEnable);
-
-	void SetStencilReadMask(UINT8 StencilReadMask);
-
-	void SetStencilWriteMask(UINT8 StencilWriteMask);
-
-	void SetStencilOp(
-		Face			 Face,
-		StencilOperation StencilFailOp,
-		StencilOperation StencilDepthFailOp,
-		StencilOperation StencilPassOp);
-
-	void SetStencilFunc(Face Face, ComparisonFunc StencilFunc);
-
-	bool		   DepthEnable;
-	bool		   DepthWrite;
-	ComparisonFunc DepthFunc;
-	bool		   StencilEnable;
-	UINT8		   StencilReadMask;
-	UINT8		   StencilWriteMask;
-	Stencil		   FrontFace;
-	Stencil		   BackFace;
-};
-
-class InputLayout
-{
-public:
-	void AddVertexLayoutElement(
-		std::string_view SemanticName,
-		UINT			 SemanticIndex,
-		UINT			 Location,
-		ERHIFormat		 Format,
-		UINT			 Stride);
-
-	struct Element
-	{
-		std::string SemanticName;
-		UINT		SemanticIndex;
-		UINT		Location;
-		ERHIFormat	Format;
-		UINT		Stride;
-	};
-
-	std::vector<Element> Elements;
+private:
+	std::vector<std::string>					  SemanticNames;
+	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 };
 
 enum class PipelineStateSubobjectType
@@ -848,7 +432,7 @@ private:
 };
 
 // clang-format off
-using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<IRHIRootSignature*, PipelineStateSubobjectType::RootSignature>;
+using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<D3D12RootSignature*, PipelineStateSubobjectType::RootSignature>;
 using PipelineStateStreamVS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::VS>;
 using PipelineStateStreamPS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::PS>;
 using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::DS>;
@@ -858,9 +442,9 @@ using PipelineStateStreamCS					= PipelineStateStreamSubobject<Shader*, Pipeline
 using PipelineStateStreamBlendState			= PipelineStateStreamSubobject<BlendState, PipelineStateSubobjectType::BlendState>;
 using PipelineStateStreamRasterizerState	= PipelineStateStreamSubobject<RasterizerState, PipelineStateSubobjectType::RasterizerState>;
 using PipelineStateStreamDepthStencilState	= PipelineStateStreamSubobject<DepthStencilState, PipelineStateSubobjectType::DepthStencilState>;
-using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<InputLayout, PipelineStateSubobjectType::InputLayout>;
+using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<D3D12InputLayout, PipelineStateSubobjectType::InputLayout>;
 using PipelineStateStreamPrimitiveTopology	= PipelineStateStreamSubobject<PrimitiveTopology, PipelineStateSubobjectType::PrimitiveTopology>;
-using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<IRHIRenderPass*, PipelineStateSubobjectType::RenderPass>;
+using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<D3D12RenderPass*, PipelineStateSubobjectType::RenderPass>;
 // clang-format on
 
 class IPipelineParserCallbacks
@@ -869,7 +453,7 @@ public:
 	virtual ~IPipelineParserCallbacks() = default;
 
 	// Subobject Callbacks
-	virtual void RootSignatureCb(IRHIRootSignature*) {}
+	virtual void RootSignatureCb(D3D12RootSignature*) {}
 	virtual void VSCb(Shader*) {}
 	virtual void PSCb(Shader*) {}
 	virtual void DSCb(Shader*) {}
@@ -879,9 +463,9 @@ public:
 	virtual void BlendStateCb(const BlendState&) {}
 	virtual void RasterizerStateCb(const RasterizerState&) {}
 	virtual void DepthStencilStateCb(const DepthStencilState&) {}
-	virtual void InputLayoutCb(const InputLayout&) {}
+	virtual void InputLayoutCb(const D3D12InputLayout&) {}
 	virtual void PrimitiveTopologyTypeCb(PrimitiveTopology) {}
-	virtual void RenderPassCb(IRHIRenderPass*) {}
+	virtual void RenderPassCb(D3D12RenderPass*) {}
 
 	// Error Callbacks
 	virtual void ErrorBadInputParameter(UINT /*ParameterIndex*/) {}
@@ -912,8 +496,8 @@ struct Texture2DSRV
 
 struct ShaderResourceViewDesc
 {
-	ERHIFormat Format;
-	ESRVType   Type;
+	DXGI_FORMAT Format;
+	ESRVType	Type;
 	union
 	{
 		Texture2DSRV Texture2D;
@@ -964,3 +548,28 @@ struct DescriptorIndexPool
 	size_t				FreeStart		  = 0;
 	size_t				NumActiveElements = 0;
 };
+
+constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12BeginAccessType(ELoadOp Op)
+{
+	// clang-format off
+	switch (Op)
+	{
+	case ELoadOp::Load:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+	case ELoadOp::Clear:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+	case ELoadOp::Noop:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+	default:				return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+	}
+	// clang-format on
+}
+
+constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12EndAccessType(EStoreOp Op)
+{
+	// clang-format off
+	switch (Op)
+	{
+	case EStoreOp::Store:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+	case EStoreOp::Noop:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+	default:				return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+	}
+	// clang-format on
+}

@@ -1,5 +1,4 @@
 #pragma once
-#include "RHID3D12.h"
 #include "D3D12Config.h"
 
 #include "d3dx12.h"

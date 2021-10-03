@@ -22,7 +22,6 @@ private:
 		AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 
 	D3D12CommandSignature CommandSignature;
-	D3D12RenderPass		  GBufferRenderPass;
 
 	D3D12Buffer IndirectCommandBuffer;
 

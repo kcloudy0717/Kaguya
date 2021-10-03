@@ -10,9 +10,9 @@ auto RenderDevice::CreateRootSignature(D3D12RootSignature&& RootSignature) -> Re
 	return RootSignatureRegistry.Construct(std::forward<D3D12RootSignature>(RootSignature));
 }
 
-auto RenderDevice::CreatePipelineState(D3D12PipelineState&& PipelineState) -> RenderResourceHandle
+auto RenderDevice::CreatePipelineState(std::unique_ptr<D3D12PipelineState>&& PipelineState) -> RenderResourceHandle
 {
-	return PipelineStateRegistry.Construct(std::forward<D3D12PipelineState>(PipelineState));
+	return PipelineStateRegistry.Construct(std::forward<std::unique_ptr<D3D12PipelineState>>(PipelineState));
 }
 
 auto RenderDevice::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState)
@@ -34,7 +34,7 @@ D3D12RootSignature* RenderDevice::GetRootSignature(RenderResourceHandle Handle)
 
 D3D12PipelineState* RenderDevice::GetPipelineState(RenderResourceHandle Handle)
 {
-	return PipelineStateRegistry.GetResource(Handle);
+	return PipelineStateRegistry.GetResource(Handle)->get();
 }
 
 D3D12RaytracingPipelineState* RenderDevice::GetRaytracingPipelineState(RenderResourceHandle Handle)

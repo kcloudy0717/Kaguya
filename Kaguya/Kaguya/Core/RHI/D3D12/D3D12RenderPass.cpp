@@ -12,13 +12,13 @@ D3D12RenderPass::D3D12RenderPass(D3D12Device* Parent, const RenderPassDesc& Desc
 	{
 		const auto& Attachment = Desc.RenderTargets[i];
 
-		RenderTargetFormats.RTFormats[i] = ToDxgiFormat(Attachment.Format);
+		RenderTargetFormats.RTFormats[i] = Attachment.Format;
 	}
 	RenderTargetFormats.NumRenderTargets = NumRenderTargets;
 
 	if (ValidDepthStencilAttachment)
 	{
-		DepthStencilFormat = ToDxgiFormat(Desc.DepthStencil.Format);
+		DepthStencilFormat = Desc.DepthStencil.Format;
 	}
 }
 
