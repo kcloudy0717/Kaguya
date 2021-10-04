@@ -4,6 +4,12 @@
 class CommandSignatureBuilder
 {
 public:
+	explicit CommandSignatureBuilder(size_t NumParameters, UINT Stride)
+		: Stride(Stride)
+	{
+		Parameters.reserve(NumParameters);
+	}
+
 	D3D12_COMMAND_SIGNATURE_DESC Build() noexcept;
 
 	void AddDraw()
@@ -81,6 +87,7 @@ public:
 
 private:
 	std::vector<D3D12_INDIRECT_ARGUMENT_DESC> Parameters;
+	UINT									  Stride = 0;
 };
 
 class D3D12CommandSignature final : public D3D12DeviceChild

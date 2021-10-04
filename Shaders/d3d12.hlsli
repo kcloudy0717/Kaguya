@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-// typedef uint2 D3D12_GPU_VIRTUAL_ADDRESS;
-typedef uint64_t D3D12_GPU_VIRTUAL_ADDRESS;
+typedef uint2 D3D12_GPU_VIRTUAL_ADDRESS;
+// typedef uint64_t D3D12_GPU_VIRTUAL_ADDRESS;
 
 struct D3D12_DRAW_ARGUMENTS
 {
@@ -25,6 +25,20 @@ struct D3D12_DISPATCH_ARGUMENTS
 	uint ThreadGroupCountX;
 	uint ThreadGroupCountY;
 	uint ThreadGroupCountZ;
+};
+
+struct D3D12_VERTEX_BUFFER_VIEW
+{
+	D3D12_GPU_VIRTUAL_ADDRESS BufferLocation;
+	uint					  SizeInBytes;
+	uint					  StrideInBytes;
+};
+
+struct D3D12_INDEX_BUFFER_VIEW
+{
+	D3D12_GPU_VIRTUAL_ADDRESS BufferLocation;
+	uint					  SizeInBytes;
+	uint					  Format;
 };
 
 // Raytracing

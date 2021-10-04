@@ -210,7 +210,7 @@ struct RootSignatures
 			{
 				Builder.AddConstantBufferView<0, 0>();
 				Builder.AddShaderResourceView<0, 0>();
-				Builder.AddUnorderedAccessView<0, 0>();
+				Builder.AddUnorderedAccessViewWithCounter<0, 0>();
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();

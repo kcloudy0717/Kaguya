@@ -1,5 +1,6 @@
 #pragma once
 #include "Math.hlsli"
+#include "d3d12.hlsli"
 
 // ==================== Material ====================
 struct Material
@@ -49,6 +50,10 @@ struct Mesh
 	matrix PreviousTransform;
 
 	BoundingBox BoundingBox;
+
+	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
+	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
+	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 
 	unsigned int MaterialIndex;
 };

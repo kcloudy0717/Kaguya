@@ -1,4 +1,6 @@
-﻿#include "HLSLCommon.hlsli"
+﻿#include "d3d12.hlsli"
+#include "Math.hlsli"
+#include "SharedTypes.hlsli"
 
 struct CSParams
 {
@@ -18,7 +20,7 @@ struct CSParams
 	uint GroupIndex : SV_GroupIndex;
 };
 
-struct GlobalConstants
+struct ConstantBufferParams
 {
 	Camera Camera;
 
@@ -26,31 +28,39 @@ struct GlobalConstants
 	uint NumLights;
 };
 
-ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);
-StructuredBuffer<Mesh>			g_Meshes : register(t0, space0);
-RWStructuredBuffer<uint>		g_VisibilityBuffer : register(u0, space0);
+struct CommandSignatureParams
+{
+	uint						 MeshIndex;
+	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
+	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
+	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
+};
+
+ConstantBuffer<ConstantBufferParams>		   g_ConstantBufferParams : register(b0, space0);
+StructuredBuffer<Mesh>						   g_Meshes : register(t0, space0);
+AppendStructuredBuffer<CommandSignatureParams> g_CommandBuffer : register(u0, space0);
 
 [numthreads(128, 1, 1)] void CSMain(CSParams Params)
 {
-	// Each thread of the CS operates on one of the indirect commands.
+	// Each thread processes one mesh instance
+	// Compute index and ensure is within bounds
 	uint index = (Params.GroupID.x * 128) + Params.GroupIndex;
-
-	// Don't attempt to access commands that don't exist if more threads are allocated
-	// than commands.
-	if (index < g_GlobalConstants.NumMeshes)
+	if (index < g_ConstantBufferParams.NumMeshes)
 	{
 		Mesh mesh = g_Meshes[index];
 
 		BoundingBox aabb;
 		mesh.BoundingBox.Transform(mesh.Transform, aabb);
 
-		if (FrustumContainsBoundingBox(g_GlobalConstants.Camera.Frustum, aabb))
+		if (FrustumContainsBoundingBox(g_ConstantBufferParams.Camera.Frustum, aabb))
 		{
-			g_VisibilityBuffer[index] = 1;
-		}
-		else
-		{
-			g_VisibilityBuffer[index] = 0;
+			CommandSignatureParams Params;
+			Params.MeshIndex			= index;
+			Params.VertexBuffer			= mesh.VertexBuffer;
+			Params.IndexBuffer			= mesh.IndexBuffer;
+			Params.DrawIndexedArguments = mesh.DrawIndexedArguments;
+
+			g_CommandBuffer.Append(Params);
 		}
 	}
 }

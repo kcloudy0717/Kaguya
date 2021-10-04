@@ -275,14 +275,16 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12Buffer::GetGpuVirtualAddress(UINT Index) const
 	return Resource->GetGPUVirtualAddress() + Index * Stride;
 }
 
-void D3D12Buffer::CreateUnorderedAccessView(D3D12UnorderedAccessView& UnorderedAccessView, UINT64 CounterOffsetInBytes)
-	const
+void D3D12Buffer::CreateUnorderedAccessView(
+	D3D12UnorderedAccessView& UnorderedAccessView,
+	UINT					  NumElements,
+	UINT64					  CounterOffsetInBytes) const
 {
 	D3D12_UNORDERED_ACCESS_VIEW_DESC UnorderedAccessViewDesc = {};
 	UnorderedAccessViewDesc.Format							 = DXGI_FORMAT_UNKNOWN;
 	UnorderedAccessViewDesc.ViewDimension					 = D3D12_UAV_DIMENSION_BUFFER;
 	UnorderedAccessViewDesc.Buffer.FirstElement				 = 0;
-	UnorderedAccessViewDesc.Buffer.NumElements				 = static_cast<UINT>(Desc.Width / Stride);
+	UnorderedAccessViewDesc.Buffer.NumElements				 = NumElements;
 	UnorderedAccessViewDesc.Buffer.StructureByteStride		 = Stride;
 	UnorderedAccessViewDesc.Buffer.CounterOffsetInBytes		 = CounterOffsetInBytes;
 	UnorderedAccessViewDesc.Buffer.Flags					 = D3D12_BUFFER_UAV_FLAG_NONE;

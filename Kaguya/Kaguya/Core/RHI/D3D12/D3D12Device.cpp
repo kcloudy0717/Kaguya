@@ -281,7 +281,7 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					INT32 LastCompletedOp = *Node->pLastBreadcrumbValue;
 
 					LOG_WARN(
-						LR"({} Commandlist "{1}" on CommandQueue "{2}", {0:d}; completed of {4})",
+						LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})",
 						L"[DRED]",
 						Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>",
 						Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>",
@@ -289,13 +289,13 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 						Node->BreadcrumbCount);
 
 					INT32 FirstOp = std::max(LastCompletedOp - 5, 0);
-					INT32 LastOp  = std::min(LastCompletedOp + 5, INT32(Node->BreadcrumbCount) - 1);
+					INT32 LastOp  = std::min(LastCompletedOp + 5, std::max(INT32(Node->BreadcrumbCount) - 1, 0));
 
 					for (INT32 Op = FirstOp; Op <= LastOp; ++Op)
 					{
 						D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
 						LOG_WARN(
-							LR"(    Op: {0:d};, {1} {2})",
+							LR"(    Op: {0:d}, {1} {2})",
 							Op,
 							GetAutoBreadcrumbOpString(BreadcrumbOp),
 							Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));

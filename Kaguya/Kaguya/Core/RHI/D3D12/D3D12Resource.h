@@ -128,6 +128,24 @@ public:
 		return reinterpret_cast<T*>(CpuVirtualAddress);
 	}
 
+	[[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const noexcept
+	{
+		D3D12_VERTEX_BUFFER_VIEW VertexBufferView = {};
+		VertexBufferView.BufferLocation			  = Resource->GetGPUVirtualAddress();
+		VertexBufferView.SizeInBytes			  = static_cast<UINT>(Desc.Width);
+		VertexBufferView.StrideInBytes			  = Stride;
+		return VertexBufferView;
+	}
+
+	[[nodiscard]] D3D12_INDEX_BUFFER_VIEW GetIndexBufferView(DXGI_FORMAT Format = DXGI_FORMAT_R32_UINT) const noexcept
+	{
+		D3D12_INDEX_BUFFER_VIEW IndexBufferView = {};
+		IndexBufferView.BufferLocation			= Resource->GetGPUVirtualAddress();
+		IndexBufferView.SizeInBytes				= static_cast<UINT>(Desc.Width);
+		IndexBufferView.Format					= Format;
+		return IndexBufferView;
+	}
+
 	template<typename T>
 	void CopyData(UINT Index, const T& Data)
 	{
@@ -135,7 +153,10 @@ public:
 		memcpy(&CpuVirtualAddress[Index * Stride], &Data, sizeof(T));
 	}
 
-	void CreateUnorderedAccessView(D3D12UnorderedAccessView& UnorderedAccessView, UINT64 CounterOffsetInBytes) const;
+	void CreateUnorderedAccessView(
+		D3D12UnorderedAccessView& UnorderedAccessView,
+		UINT					  NumElements,
+		UINT64					  CounterOffsetInBytes) const;
 
 private:
 	D3D12_HEAP_TYPE HeapType		  = {};

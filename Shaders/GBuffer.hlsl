@@ -9,7 +9,8 @@ struct GlobalConstants
 {
 	Camera Camera;
 
-	uint NumLights;
+    uint NumMeshes;
+    uint NumLights;
 };
 
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b1, space0);

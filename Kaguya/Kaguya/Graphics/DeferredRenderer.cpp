@@ -27,17 +27,29 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(RenderDevice);
 	// RaytracingPipelineStates::Compile(RenderDevice);
 
-	CommandSignatureBuilder Builder;
+	constexpr UINT A = offsetof(CommandSignatureParams, MeshIndex);
+	constexpr UINT B = offsetof(CommandSignatureParams, VertexBuffer);
+	constexpr UINT C = offsetof(CommandSignatureParams, IndexBuffer);
+
+	CommandSignatureBuilder Builder(4, sizeof(CommandSignatureParams));
+	Builder.AddConstant(0, 0, 1);
+	Builder.AddVertexBufferView(0);
+	Builder.AddIndexBufferView();
 	Builder.AddDrawIndexed();
 
-	CommandSignature = D3D12CommandSignature(RenderCore::Device, Builder, nullptr);
+	CommandSignature = D3D12CommandSignature(
+		RenderCore::Device,
+		Builder,
+		RenderDevice.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle());
 
 	IndirectCommandBuffer = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
 		CommandBufferCounterOffset + sizeof(UINT64),
-		sizeof(IndirectCommand),
+		sizeof(CommandSignatureParams),
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	UAV = D3D12UnorderedAccessView(RenderCore::Device->GetDevice());
+	IndirectCommandBuffer.CreateUnorderedAccessView(UAV, World::InstanceLimit, CommandBufferCounterOffset);
 
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
@@ -66,13 +78,6 @@ void DeferredRenderer::Initialize()
 	Meshes.Initialize();
 	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
-	VisibilityBuffer = D3D12Buffer(
-		RenderCore::Device->GetDevice(),
-		sizeof(unsigned int) * World::InstanceLimit,
-		sizeof(unsigned int),
-		D3D12_HEAP_TYPE_DEFAULT,
-		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
 	MeshRenderers.reserve(World::InstanceLimit);
 	HlslMeshes.resize(World::InstanceLimit);
 }
@@ -97,11 +102,31 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		{
 			if (MeshFilter.Mesh)
 			{
-				pMaterial[NumMaterials]					= GetHLSLMaterialDesc(MeshRenderer.Material);
-				Hlsl::Mesh Mesh							= GetHLSLMeshDesc(Transform, MeshFilter.Mesh->BoundingBox);
-				HlslMeshes[NumMeshes].PreviousTransform = HlslMeshes[NumMeshes].Transform;
-				HlslMeshes[NumMeshes].Transform			= Mesh.Transform;
-				HlslMeshes[NumMeshes].MaterialIndex		= NumMaterials;
+				D3D12Buffer& VertexBuffer = MeshFilter.Mesh->VertexResource;
+				D3D12Buffer& IndexBuffer  = MeshFilter.Mesh->IndexResource;
+
+				D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
+				DrawIndexedArguments.IndexCountPerInstance		  = static_cast<UINT>(MeshFilter.Mesh->Indices.size());
+				DrawIndexedArguments.InstanceCount				  = 1;
+				DrawIndexedArguments.StartIndexLocation			  = 0;
+				DrawIndexedArguments.BaseVertexLocation			  = 0;
+				DrawIndexedArguments.StartInstanceLocation		  = 0;
+
+				pMaterial[NumMaterials] = GetHLSLMaterialDesc(MeshRenderer.Material);
+
+				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Transform);
+				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
+
+				Mesh.BoundingBox = MeshFilter.Mesh->BoundingBox;
+
+				Mesh.VertexBuffer		  = VertexBuffer.GetVertexBufferView();
+				Mesh.IndexBuffer		  = IndexBuffer.GetIndexBufferView();
+				Mesh.DrawIndexedArguments = DrawIndexedArguments;
+
+				Mesh.MaterialIndex = NumMaterials;
+
+				HlslMeshes[NumMeshes] = Mesh;
+
 				MeshRenderers.push_back(&MeshRenderer);
 
 				++NumMaterials;
@@ -143,6 +168,8 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	if (NumMeshes > 0)
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
+		AsyncCompute.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
+
 		AsyncCompute.OpenCommandList();
 		{
 			AsyncCompute.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::IndirectCull));
@@ -150,7 +177,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 			AsyncCompute.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
 			AsyncCompute->SetComputeRootShaderResourceView(1, Meshes.GetGpuVirtualAddress());
-			AsyncCompute->SetComputeRootUnorderedAccessView(2, VisibilityBuffer.GetGpuVirtualAddress());
+			AsyncCompute->SetComputeRootDescriptorTable(2, UAV.GetGpuHandle());
 
 			AsyncCompute.Dispatch1D<128>(NumMeshes);
 		}
@@ -243,7 +270,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					&RenderPasses::GBufferRenderPass,
 					&Registry.GetRenderTarget(Params.RenderTarget));
 				{
-					for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
+					/*for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
 					{
 						Context->SetGraphicsRoot32BitConstant(0, i, 0);
 
@@ -263,7 +290,14 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						Context->IASetIndexBuffer(&IndexBufferView);
 
 						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Indices.size(), 1, 0, 0, 0);
-					}
+					}*/
+					Context->ExecuteIndirect(
+						CommandSignature,
+						1024,
+						IndirectCommandBuffer,
+						0,
+						IndirectCommandBuffer,
+						CommandBufferCounterOffset);
 				}
 				Context.EndRenderPass();
 			};

@@ -93,6 +93,10 @@ struct Mesh
 
 	BoundingBox BoundingBox;
 
+	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
+	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
+	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
+
 	unsigned int MaterialIndex;
 };
 
@@ -180,11 +184,10 @@ inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 			 .I = Light.I };
 }
 
-inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform, const BoundingBox& BoundingBox)
+inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform)
 {
 	Hlsl::Mesh Mesh = {};
 	XMStoreFloat4x4(&Mesh.Transform, XMMatrixTranspose(Transform.Matrix()));
-	Mesh.BoundingBox = BoundingBox;
 	return Mesh;
 }
 
