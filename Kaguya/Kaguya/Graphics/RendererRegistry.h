@@ -32,6 +32,8 @@ struct Shaders
 	{
 		inline static Shader EASU;
 		inline static Shader RCAS;
+
+		inline static Shader IndirectCull;
 	};
 
 	static void Compile()
@@ -91,6 +93,12 @@ struct Shaders
 					{ L"SAMPLE_EASU", L"0" },
 					{ L"SAMPLE_RCAS", L"1" },
 				});
+
+			CS::IndirectCull = RenderCore::Compiler->CompileShader(
+				EShaderType::Compute,
+				ExecutableDirectory / L"Shaders/IndirectCull.hlsl",
+				g_CSEntryPoint,
+				{});
 		}
 	}
 };
@@ -154,6 +162,7 @@ struct RootSignatures
 	inline static RenderResourceHandle FSR;
 
 	inline static RenderResourceHandle GBuffer;
+	inline static RenderResourceHandle IndirectCull;
 
 	static void Compile(RenderDevice& Device)
 	{
@@ -195,6 +204,17 @@ struct RootSignatures
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
 			}));
+
+		IndirectCull = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.AddConstantBufferView<0, 0>();
+				Builder.AddShaderResourceView<0, 0>();
+				Builder.AddUnorderedAccessView<0, 0>();
+
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			}));
 	}
 };
 
@@ -205,6 +225,7 @@ struct PipelineStates
 	inline static RenderResourceHandle FSRRCAS;
 
 	inline static RenderResourceHandle GBuffer;
+	inline static RenderResourceHandle IndirectCull;
 
 	static void Compile(RenderDevice& Device)
 	{
@@ -280,6 +301,17 @@ struct PipelineStates
 			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
 
 			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+		}
+		{
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::IndirectCull);
+			Stream.CS			 = &Shaders::CS::IndirectCull;
+
+			IndirectCull = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 	}
 };

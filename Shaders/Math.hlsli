@@ -175,3 +175,155 @@ float3 OffsetRay(float3 p, float3 ng)
 		abs(p.y) < origin ? p.y + float_scale * ng.y : p_i.y,
 		abs(p.z) < origin ? p.z + float_scale * ng.z : p_i.z);
 }
+
+#define PLANE_INTERSECTION_POSITIVE_HALFSPACE 0
+#define PLANE_INTERSECTION_NEGATIVE_HALFSPACE 1
+#define PLANE_INTERSECTION_INTERSECTING		  2
+
+// ax + by + cz = d where d = dot(n, P)
+struct Plane
+{
+	float3 Normal; // Plane normal. Points x on the plane satisfy dot(n, x) = d
+	float  Offset; // d = dot(n, p) for a given point p on the plane
+};
+
+struct BoundingSphere
+{
+	float3 Center;
+	float  Radius;
+
+	bool Intersects(BoundingSphere Other)
+	{
+		// The distance between the sphere centers is computed and compared
+		// against the sum of the sphere radii. To avoid an square root operation, the
+		// squared distances are compared with squared sum radii instead.
+		float3 d		 = Center - Other.Center;
+		float  dist2	 = dot(d, d);
+		float  radiusSum = Radius + Other.Radius;
+		float  r2		 = radiusSum * radiusSum;
+		return dist2 <= r2;
+	}
+};
+
+struct BoundingBox
+{
+	float3 Center;
+	float3 Extents;
+
+	bool Intersects(BoundingBox Other)
+	{
+		float3 minA = Center - Extents;
+		float3 maxA = Center + Extents;
+
+		float3 minB = Other.Center - Other.Extents;
+		float3 maxB = Other.Center + Other.Extents;
+
+		// All axis needs to overlap for a intersection
+		return maxA.x >= minB.x && minA.x <= maxB.x && // Overlap on x-axis?
+			   maxA.y >= minB.y && minA.y <= maxB.y && // Overlap on y-axis?
+			   maxA.z >= minB.z && minA.z <= maxB.z;   // Overlap on z-axis?
+	}
+
+	void Transform(float4x4 m, inout BoundingBox b)
+	{
+		float3 t = m[3].xyz;
+
+		b.Center  = t;
+		b.Extents = float3(0.0f, 0.0f, 0.0f);
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				b.Center[i] += m[i][j] * Center[j];
+				b.Extents[i] += abs(m[i][j]) * Extents[j];
+			}
+		}
+	}
+};
+
+Plane ComputePlane(float3 a, float3 b, float3 c)
+{
+	Plane plane;
+	plane.Normal = normalize(cross(b - a, c - a));
+	plane.Offset = dot(plane.Normal, a);
+	return plane;
+}
+
+#define FRUSTUM_PLANE_LEFT	 0
+#define FRUSTUM_PLANE_RIGHT	 1
+#define FRUSTUM_PLANE_BOTTOM 2
+#define FRUSTUM_PLANE_TOP	 3
+#define FRUSTUM_PLANE_NEAR	 4
+#define FRUSTUM_PLANE_FAR	 5
+
+struct Frustum
+{
+	Plane Planes[6];
+};
+
+int BoundingSphereToPlane(BoundingSphere s, Plane p)
+{
+	// Compute signed distance from plane to sphere center
+	float sd = dot(s.Center, p.Normal) - p.Offset;
+	if (sd > s.Radius)
+	{
+		return PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	}
+	if (sd < -s.Radius)
+	{
+		return PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	}
+	return PLANE_INTERSECTION_INTERSECTING;
+}
+
+int BoundingBoxToPlane(BoundingBox b, Plane p)
+{
+	// Compute signed distance from plane to box center
+	float sd = dot(b.Center, p.Normal) - p.Offset;
+
+	// Compute the projection interval radius of b onto L(t) = b.Center + t * p.Normal
+	// Projection radii r_i of the 8 bounding box vertices
+	// r_i = dot((V_i - C), n)
+	// r_i = dot((C +- e0*u0 +- e1*u1 +- e2*u2 - C), n)
+	// Cancel C and distribute dot product
+	// r_i = +-(dot(e0*u0, n)) +-(dot(e1*u1, n)) +-(dot(e2*u2, n))
+	// We take the maximum position radius by taking the absolute value of the terms, we assume Extents to be positive
+	// r = e0*|dot(u0, n)| + e1*|dot(u1, n)| + e2*|dot(u2, n)|
+	// When the separating axis vector Normal is not a unit vector, we need to divide the radii by the length(Normal)
+	// u0,u1,u2 are the local axes of the box, which is = [(1,0,0), (0,1,0), (0,0,1)] respectively for axis aligned bb
+	float r = dot(b.Extents, abs(p.Normal));
+
+	if (sd > r)
+	{
+		return PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	}
+	if (sd < -r)
+	{
+		return PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	}
+	return PLANE_INTERSECTION_INTERSECTING;
+}
+
+bool FrustumContainsBoundingSphere(Frustum f, BoundingSphere s)
+{
+	for (int i = 0; i < 6; ++i)
+	{
+		if (BoundingSphereToPlane(s, f.Planes[i]) == PLANE_INTERSECTION_NEGATIVE_HALFSPACE)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool FrustumContainsBoundingBox(Frustum f, BoundingBox b)
+{
+	for (int i = 0; i < 6; ++i)
+	{
+		if (BoundingBoxToPlane(b, f.Planes[i]) == PLANE_INTERSECTION_NEGATIVE_HALFSPACE)
+		{
+			return false;
+		}
+	}
+	return true;
+}

@@ -91,6 +91,8 @@ struct Mesh
 	DirectX::XMFLOAT4X4 Transform;
 	DirectX::XMFLOAT4X4 PreviousTransform;
 
+	BoundingBox BoundingBox;
+
 	unsigned int MaterialIndex;
 };
 
@@ -117,6 +119,8 @@ struct Camera
 	DirectX::XMFLOAT4X4 InvViewProjection;
 
 	DirectX::XMFLOAT4X4 PrevViewProjection;
+
+	Frustum Frustum;
 };
 } // namespace Hlsl
 
@@ -176,10 +180,11 @@ inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const Light& Lig
 			 .I = Light.I };
 }
 
-inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform)
+inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform, const BoundingBox& BoundingBox)
 {
 	Hlsl::Mesh Mesh = {};
 	XMStoreFloat4x4(&Mesh.Transform, XMMatrixTranspose(Transform.Matrix()));
+	Mesh.BoundingBox = BoundingBox;
 	return Mesh;
 }
 
@@ -204,14 +209,17 @@ inline Hlsl::Camera GetHLSLCameraDesc(const Camera& Camera)
 							Camera.pTransform->Position.z,
 							1.0f };
 
-	HlslCamera.View			  = Camera.View;
-	HlslCamera.Projection	  = Camera.Projection;
-	HlslCamera.ViewProjection = Camera.ViewProjection;
+	XMStoreFloat4x4(&HlslCamera.View, XMMatrixTranspose(XMLoadFloat4x4(&Camera.View)));
+	XMStoreFloat4x4(&HlslCamera.Projection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.Projection)));
+	XMStoreFloat4x4(&HlslCamera.ViewProjection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.ViewProjection)));
 
-	HlslCamera.InvView			 = Camera.InverseView;
-	HlslCamera.InvProjection	 = Camera.InverseProjection;
-	HlslCamera.InvViewProjection = Camera.InverseViewProjection;
+	XMStoreFloat4x4(&HlslCamera.InvView, XMMatrixTranspose(XMLoadFloat4x4(&Camera.InverseView)));
+	XMStoreFloat4x4(&HlslCamera.InvProjection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.InverseProjection)));
+	XMStoreFloat4x4(&HlslCamera.InvViewProjection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.InverseViewProjection)));
 
-	HlslCamera.PrevViewProjection = Camera.PrevViewProjection;
+	XMStoreFloat4x4(&HlslCamera.PrevViewProjection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.PrevViewProjection)));
+
+	HlslCamera.Frustum = Frustum(Camera.ViewProjection);
+
 	return HlslCamera;
 }

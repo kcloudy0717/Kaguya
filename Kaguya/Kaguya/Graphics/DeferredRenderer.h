@@ -35,6 +35,9 @@ private:
 	D3D12Buffer		Meshes;
 	Hlsl::Mesh*		pMeshes = nullptr;
 
+	// Temp
+	D3D12Buffer VisibilityBuffer;
+
 	UINT NumMaterials = 0, NumLights = 0, NumMeshes = 0;
 
 	RenderResourceHandle Viewport;

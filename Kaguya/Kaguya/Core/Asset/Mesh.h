@@ -30,6 +30,8 @@ struct Mesh
 
 	std::vector<Submesh> Submeshes;
 
+	BoundingBox BoundingBox;
+
 	D3D12Buffer				  VertexResource;
 	D3D12Buffer				  IndexResource;
 	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;

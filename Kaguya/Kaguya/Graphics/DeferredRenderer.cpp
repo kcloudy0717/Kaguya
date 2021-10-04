@@ -66,6 +66,13 @@ void DeferredRenderer::Initialize()
 	Meshes.Initialize();
 	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
+	VisibilityBuffer = D3D12Buffer(
+		RenderCore::Device->GetDevice(),
+		sizeof(unsigned int) * World::InstanceLimit,
+		sizeof(unsigned int),
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
 	MeshRenderers.reserve(World::InstanceLimit);
 	HlslMeshes.resize(World::InstanceLimit);
 }
@@ -91,7 +98,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			if (MeshFilter.Mesh)
 			{
 				pMaterial[NumMaterials]					= GetHLSLMaterialDesc(MeshRenderer.Material);
-				Hlsl::Mesh Mesh							= GetHLSLMeshDesc(Transform);
+				Hlsl::Mesh Mesh							= GetHLSLMeshDesc(Transform, MeshFilter.Mesh->BoundingBox);
 				HlslMeshes[NumMeshes].PreviousTransform = HlslMeshes[NumMeshes].Transform;
 				HlslMeshes[NumMeshes].Transform			= Mesh.Transform;
 				HlslMeshes[NumMeshes].MaterialIndex		= NumMaterials;
@@ -117,9 +124,11 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	{
 		Hlsl::Camera Camera;
 
+		unsigned int NumMeshes;
 		unsigned int NumLights;
 	} g_GlobalConstants			= {};
 	g_GlobalConstants.Camera	= GetHLSLCameraDesc(*World->ActiveCamera);
+	g_GlobalConstants.NumMeshes = NumMeshes;
 	g_GlobalConstants.NumLights = NumLights;
 
 	D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
@@ -130,15 +139,27 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	Copy.CloseCommandList();
 	D3D12CommandSyncPoint CopySyncPoint = Copy.Execute(false);
 
-	// D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
-	// AsyncCompute.OpenCommandList();
-	//{
-	//}
-	// AsyncCompute.CloseCommandList();
-	// D3D12CommandSyncPoint ComputeSyncPoint = AsyncCompute.Execute(false);
+	D3D12CommandSyncPoint ComputeSyncPoint;
+	if (NumMeshes > 0)
+	{
+		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
+		AsyncCompute.OpenCommandList();
+		{
+			AsyncCompute.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::IndirectCull));
+			AsyncCompute.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::IndirectCull));
+
+			AsyncCompute.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
+			AsyncCompute->SetComputeRootShaderResourceView(1, Meshes.GetGpuVirtualAddress());
+			AsyncCompute->SetComputeRootUnorderedAccessView(2, VisibilityBuffer.GetGpuVirtualAddress());
+
+			AsyncCompute.Dispatch1D<128>(NumMeshes);
+		}
+		AsyncCompute.CloseCommandList();
+		ComputeSyncPoint = AsyncCompute.Execute(false);
+	}
 
 	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
-	// Context.GetCommandQueue()->WaitForSyncPoint(ComputeSyncPoint);
+	Context.GetCommandQueue()->WaitForSyncPoint(ComputeSyncPoint);
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 

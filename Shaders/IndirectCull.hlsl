@@ -1,4 +1,5 @@
-﻿
+﻿#include "HLSLCommon.hlsli"
+
 struct CSParams
 {
 	// Indices for which thread group a CS is executing in.
@@ -17,29 +18,39 @@ struct CSParams
 	uint GroupIndex : SV_GroupIndex;
 };
 
-[numthreads(128, 1, 1)]
-void CSMain(CSParams Params)
+struct GlobalConstants
+{
+	Camera Camera;
+
+	uint NumMeshes;
+	uint NumLights;
+};
+
+ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);
+StructuredBuffer<Mesh>			g_Meshes : register(t0, space0);
+RWStructuredBuffer<uint>		g_VisibilityBuffer : register(u0, space0);
+
+[numthreads(128, 1, 1)] void CSMain(CSParams Params)
 {
 	// Each thread of the CS operates on one of the indirect commands.
-	uint index = (groupId.x * threadBlockSize) + groupIndex;
+	uint index = (Params.GroupID.x * 128) + Params.GroupIndex;
 
 	// Don't attempt to access commands that don't exist if more threads are allocated
 	// than commands.
-	if (index < commandCount)
+	if (index < g_GlobalConstants.NumMeshes)
 	{
-		// Project the left and right bounds of the triangle into homogenous space.
-		float4 left = float4(-xOffset, 0.0f, zOffset, 1.0f) + cbv[index].offset;
-		left		= mul(left, cbv[index].projection);
-		left /= left.w;
+		Mesh mesh = g_Meshes[index];
 
-		float4 right = float4(xOffset, 0.0f, zOffset, 1.0f) + cbv[index].offset;
-		right		 = mul(right, cbv[index].projection);
-		right /= right.w;
+		BoundingBox aabb;
+		mesh.BoundingBox.Transform(mesh.Transform, aabb);
 
-		// Only draw triangles that are within the culling space.
-		if (-cullOffset < right.x && left.x < cullOffset)
+		if (FrustumContainsBoundingBox(g_GlobalConstants.Camera.Frustum, aabb))
 		{
-			outputCommands.Append(inputCommands[index]);
+			g_VisibilityBuffer[index] = 1;
+		}
+		else
+		{
+			g_VisibilityBuffer[index] = 0;
 		}
 	}
 }

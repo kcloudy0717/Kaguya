@@ -14,6 +14,9 @@ struct Camera : Component
 
 	void Rotate(float AngleX, float AngleY, float AngleZ);
 
+	// This only exist to verify the more efficient way of constructing frustum, refer to Frustum constructor
+	[[nodiscard]] Frustum CreateFrustum() const;
+
 	Transform* pTransform;
 
 	float FoVY		  = 65.0f; // Degrees

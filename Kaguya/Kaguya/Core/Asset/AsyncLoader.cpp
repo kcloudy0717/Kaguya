@@ -160,6 +160,11 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 		NumVertices += static_cast<uint32_t>(vertices.size());
 	}
 
+	DirectX::BoundingBox Box;
+	DirectX::BoundingBox::CreateFromPoints(Box, Mesh->Vertices.size(), &Mesh->Vertices[0].Position, sizeof(Vertex));
+	Mesh->BoundingBox.Center  = Vector3f(Box.Center.x, Box.Center.y, Box.Center.z);
+	Mesh->BoundingBox.Extents = Vector3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
+
 	const auto stop		= std::chrono::high_resolution_clock::now();
 	const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 	LOG_INFO("{} loaded in {}(ms)", Metadata.Path.string(), duration.count());

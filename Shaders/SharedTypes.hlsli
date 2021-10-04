@@ -1,4 +1,5 @@
 #pragma once
+#include "Math.hlsli"
 
 // ==================== Material ====================
 struct Material
@@ -47,6 +48,8 @@ struct Mesh
 	matrix Transform;
 	matrix PreviousTransform;
 
+	BoundingBox BoundingBox;
+
 	unsigned int MaterialIndex;
 };
 
@@ -74,6 +77,8 @@ struct Camera
 	matrix InvViewProjection;
 
 	matrix PrevViewProjection;
+
+	Frustum Frustum;
 
 	RayDesc GenerateCameraRay(float2 ndc)
 	{

@@ -3,15 +3,17 @@
 #include <DirectXCollision.h>
 #include <cmath>
 #include <limits>
+#include <compare>
+#include <algorithm>
 
 // Returns radians
-constexpr inline float operator"" _Deg(long double Degrees)
+constexpr float operator"" _Deg(long double Degrees)
 {
 	return DirectX::XMConvertToRadians(static_cast<float>(Degrees));
 }
 
 // Returns degrees
-constexpr inline float operator"" _Rad(long double Radians)
+constexpr float operator"" _Rad(long double Radians)
 {
 	return DirectX::XMConvertToDegrees(static_cast<float>(Radians));
 }
@@ -35,9 +37,9 @@ struct Vector2
 
 	auto operator<=>(const Vector2&) const = default;
 
-	T operator[](int i) const { return e[i]; }
+	T operator[](int i) const { return *reinterpret_cast<float*>(this)[i]; }
 
-	T& operator[](int i) { return e[i]; }
+	T& operator[](int i) { return *reinterpret_cast<float*>(this)[i]; }
 
 	Vector2 operator-() const noexcept { return Vector2(-x, -y); }
 
@@ -82,54 +84,47 @@ struct Vector2
 		return *this;
 	}
 
-	union
-	{
-		T e[2];
-		struct
-		{
-			T x, y;
-		};
-	};
+	T x, y;
 };
 
 template<typename T>
-[[nodiscard]] inline Vector2<T> operator*(T s, const Vector2<T>& v) noexcept
+[[nodiscard]] Vector2<T> operator*(T s, const Vector2<T>& v) noexcept
 {
 	return v * s;
 }
 
 template<typename T>
-[[nodiscard]] inline T length(const Vector2<T>& v) noexcept
+[[nodiscard]] T length(const Vector2<T>& v) noexcept
 {
-	return std::sqrt(v.x * v.x + v.y * v.y);
+	return std::hypot(v.x, v.y);
 }
 
 template<typename T>
-[[nodiscard]] inline Vector2<T> abs(const Vector2<T>& v) noexcept
+[[nodiscard]] Vector2<T> abs(const Vector2<T>& v) noexcept
 {
 	return Vector2<T>(std::abs(v.x), std::abs(v.y));
 }
 
 template<typename T>
-[[nodiscard]] inline T dot(const Vector2<T>& v1, const Vector2<T>& v2) noexcept
+[[nodiscard]] T dot(const Vector2<T>& v1, const Vector2<T>& v2) noexcept
 {
 	return v1.x * v2.x + v1.y * v2.y;
 }
 
 template<typename T>
-[[nodiscard]] inline Vector2<T> normalize(const Vector2<T>& v) noexcept
+[[nodiscard]] Vector2<T> normalize(const Vector2<T>& v) noexcept
 {
 	return v / length(v);
 }
 
 template<typename T>
-[[nodiscard]] inline bool isnan(const Vector2<T>& v) noexcept
+[[nodiscard]] bool isnan(const Vector2<T>& v) noexcept
 {
 	return std::isnan(v.x) || std::isnan(v.y);
 }
 
 template<typename T>
-[[nodiscard]] inline Vector2<T> clamp(const Vector2<T>& v, T min, T max) noexcept
+[[nodiscard]] Vector2<T> clamp(const Vector2<T>& v, T min, T max) noexcept
 {
 	return Vector2(std::clamp(v.x, min, max), std::clamp(v.y, min, max));
 }
@@ -159,9 +154,9 @@ struct Vector3
 
 	auto operator<=>(const Vector3&) const = default;
 
-	T operator[](int i) const { return e[i]; }
+	T operator[](int i) const { return *reinterpret_cast<float*>(this)[i]; }
 
-	T& operator[](int i) { return e[i]; }
+	T& operator[](int i) { return *reinterpret_cast<float*>(this)[i]; }
 
 	Vector3 operator-() const noexcept { return Vector3(-x, -y, -z); }
 
@@ -210,54 +205,47 @@ struct Vector3
 		return *this;
 	}
 
-	union
-	{
-		T e[3];
-		struct
-		{
-			T x, y, z;
-		};
-	};
+	T x, y, z;
 };
 
 template<typename T>
-[[nodiscard]] inline Vector3<T> operator*(T s, const Vector3<T>& v) noexcept
+[[nodiscard]] Vector3<T> operator*(T s, const Vector3<T>& v) noexcept
 {
 	return v * s;
 }
 
 template<typename T>
-[[nodiscard]] inline T length(const Vector3<T>& v) noexcept
+[[nodiscard]] T length(const Vector3<T>& v) noexcept
 {
-	return std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+	return std::hypot(v.x, v.y, v.z);
 }
 
 template<typename T>
-[[nodiscard]] inline Vector3<T> abs(const Vector3<T>& v) noexcept
+[[nodiscard]] Vector3<T> abs(const Vector3<T>& v) noexcept
 {
 	return Vector3<T>(std::abs(v.x), std::abs(v.y), std::abs(v.z));
 }
 
 template<typename T>
-[[nodiscard]] inline T dot(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
+[[nodiscard]] T dot(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
 template<typename T>
-[[nodiscard]] inline Vector3<T> normalize(const Vector3<T>& v) noexcept
+[[nodiscard]] Vector3<T> normalize(const Vector3<T>& v) noexcept
 {
 	return v / length(v);
 }
 
 template<typename T>
-[[nodiscard]] inline bool isnan(const Vector3<T>& v) noexcept
+[[nodiscard]] bool isnan(const Vector3<T>& v) noexcept
 {
 	return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z);
 }
 
 template<typename T>
-[[nodiscard]] inline Vector3<T> cross(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
+[[nodiscard]] Vector3<T> cross(const Vector3<T>& v1, const Vector3<T>& v2) noexcept
 {
 	float v1x = v1.x, v1y = v1.y, v1z = v1.z;
 	float v2x = v2.x, v2y = v2.y, v2z = v2.z;
@@ -265,7 +253,7 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] inline Vector3<T> faceforward(const Vector3<T>& n, const Vector3<T>& v) noexcept
+[[nodiscard]] Vector3<T> faceforward(const Vector3<T>& n, const Vector3<T>& v) noexcept
 {
 	return (dot(n, v) < 0.0f) ? -n : n;
 }
@@ -274,7 +262,7 @@ using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;
 
-[[nodiscard]] inline constexpr float lerp(float x, float y, float s)
+[[nodiscard]] constexpr float lerp(float x, float y, float s)
 {
 	return x + s * (y - x);
 }
@@ -349,16 +337,96 @@ struct Ray
 	float	 TMax = 8.0f;
 };
 
-inline static constexpr size_t	 NumCorners				  = 8;
-inline static constexpr Vector3f g_BoxOffsets[NumCorners] = {
-	Vector3f(-1.0f, -1.0f, +1.0f), // Far bottom left
-	Vector3f(+1.0f, -1.0f, +1.0f), // Far bottom right
-	Vector3f(+1.0f, +1.0f, +1.0f), // Far top right
-	Vector3f(-1.0f, +1.0f, +1.0f), // Far top left
-	Vector3f(-1.0f, -1.0f, -1.0f), // Near bottom left
-	Vector3f(+1.0f, -1.0f, -1.0f), // Near bottom right
-	Vector3f(+1.0f, +1.0f, -1.0f), // Near top right
-	Vector3f(-1.0f, +1.0f, -1.0f)  // Near top left
+// ax + by + cz = d where d = dot(n, P)
+struct Plane
+{
+	Plane() noexcept = default;
+	Plane(Vector3f a, Vector3f b, Vector3f c)
+	{
+		Normal = normalize(cross(b - a, c - a));
+		Offset = dot(Normal, a);
+	}
+
+	void Normalize()
+	{
+		float reciprocalMag = 1.0f / length(Normal);
+		Normal *= reciprocalMag;
+		Offset *= reciprocalMag;
+	}
+
+	Vector3f Normal; // (a,b,c)
+	float	 Offset; // d
+};
+
+#define FRUSTUM_PLANE_LEFT	 0
+#define FRUSTUM_PLANE_RIGHT	 1
+#define FRUSTUM_PLANE_BOTTOM 2
+#define FRUSTUM_PLANE_TOP	 3
+#define FRUSTUM_PLANE_NEAR	 4
+#define FRUSTUM_PLANE_FAR	 5
+
+// All frustum planes are facing inwards of the frustum, so if any object
+// is in the negative halfspace, then is not visible
+struct Frustum
+{
+	Frustum() noexcept = default;
+	explicit Frustum(const DirectX::XMFLOAT4X4& Matrix)
+	{
+		// 1. If Matrix is equal to the projection matrix P, the algorithm gives the
+		// clipping planes in view space.
+
+		// 2. If Matrix is equal to the view projection matrix V*P, then the algorithm gives
+		// clipping plane in world space.
+
+		// I negate Offset of every plane because I use
+		// ax + by + cz = d where d = dot(n, P) as the representation of a plane
+		// where as the paper uses ax + by + cz + D = 0 where D = -dot(n, P)
+
+		// Left clipping plane
+		Left.Normal.x = Matrix._14 + Matrix._11;
+		Left.Normal.y = Matrix._24 + Matrix._21;
+		Left.Normal.z = Matrix._34 + Matrix._31;
+		Left.Offset	  = -(Matrix._44 + Matrix._41);
+		// Right clipping plane
+		Right.Normal.x = Matrix._14 - Matrix._11;
+		Right.Normal.y = Matrix._24 - Matrix._21;
+		Right.Normal.z = Matrix._34 - Matrix._31;
+		Right.Offset   = -(Matrix._44 - Matrix._41);
+		// Bottom clipping plane
+		Bottom.Normal.x = Matrix._14 + Matrix._12;
+		Bottom.Normal.y = Matrix._24 + Matrix._22;
+		Bottom.Normal.z = Matrix._34 + Matrix._32;
+		Bottom.Offset	= -(Matrix._44 + Matrix._42);
+		// Top clipping plane
+		Top.Normal.x = Matrix._14 - Matrix._12;
+		Top.Normal.y = Matrix._24 - Matrix._22;
+		Top.Normal.z = Matrix._34 - Matrix._32;
+		Top.Offset	 = -(Matrix._44 - Matrix._42);
+		// Near clipping plane
+		Near.Normal.x = Matrix._13;
+		Near.Normal.y = Matrix._23;
+		Near.Normal.z = Matrix._33;
+		Near.Offset	  = -(Matrix._43);
+		// Far clipping plane
+		Far.Normal.x = Matrix._14 - Matrix._13;
+		Far.Normal.y = Matrix._24 - Matrix._23;
+		Far.Normal.z = Matrix._34 - Matrix._33;
+		Far.Offset	 = -(Matrix._44 - Matrix._43);
+
+		Left.Normalize();
+		Right.Normalize();
+		Bottom.Normalize();
+		Top.Normalize();
+		Near.Normalize();
+		Far.Normalize();
+	}
+
+	Plane Left;	  // -x
+	Plane Right;  // +x
+	Plane Bottom; // -y
+	Plane Top;	  // +y
+	Plane Near;	  // -z
+	Plane Far;	  // +z
 };
 
 struct BoundingBox
@@ -369,7 +437,7 @@ struct BoundingBox
 	{
 	}
 
-	BoundingBox(Vector3f Center, Vector3f Extents)
+	explicit BoundingBox(Vector3f Center, Vector3f Extents)
 		: Center(Center)
 		, Extents(Extents)
 	{
@@ -377,17 +445,27 @@ struct BoundingBox
 
 	std::array<Vector3f, 8> GetCorners() const
 	{
-		std::array<Vector3f, 8> corners = {};
+		static constexpr size_t	  NumCorners			 = 8;
+		static constexpr Vector3f BoxOffsets[NumCorners] = {
+			Vector3f(-1.0f, -1.0f, +1.0f), // Far bottom left
+			Vector3f(+1.0f, -1.0f, +1.0f), // Far bottom right
+			Vector3f(+1.0f, +1.0f, +1.0f), // Far top right
+			Vector3f(-1.0f, +1.0f, +1.0f), // Far top left
+			Vector3f(-1.0f, -1.0f, -1.0f), // Near bottom left
+			Vector3f(+1.0f, -1.0f, -1.0f), // Near bottom right
+			Vector3f(+1.0f, +1.0f, -1.0f), // Near top right
+			Vector3f(-1.0f, +1.0f, -1.0f)  // Near top left
+		};
 
+		std::array<Vector3f, 8> Corners = {};
 		for (size_t i = 0; i < NumCorners; ++i)
 		{
-			corners[i] = Extents * g_BoxOffsets[i] + Center;
+			Corners[i] = Extents * BoxOffsets[i] + Center;
 		}
-
-		return corners;
+		return Corners;
 	}
 
-	bool Intersects(const BoundingBox& box) const
+	bool Intersects(const BoundingBox& Other) const
 	{
 		// does the range A_min -> A_max and B_min -> B_max for each axis overlap?
 		// if it does then a intersection occurs
@@ -418,15 +496,15 @@ struct BoundingBox
 		//
 		// Test this for each axis and you'll get intersection
 
-		Vector3f minA = Center - Extents;
-		Vector3f maxA = Center + Extents;
+		Vector3f MinA = Center - Extents;
+		Vector3f MaxA = Center + Extents;
 
-		Vector3f minB = box.Center - box.Extents;
-		Vector3f maxB = box.Center + box.Extents;
+		Vector3f MinB = Other.Center - Other.Extents;
+		Vector3f MaxB = Other.Center + Other.Extents;
 
-		bool x = maxA.x >= minB.x && minA.x <= maxB.x; // Overlap on x-axis?
-		bool y = maxA.y >= minB.y && minA.y <= maxB.y; // Overlap on y-axis?
-		bool z = maxA.z >= minB.z && minA.z <= maxB.z; // Overlap on z-axis?
+		bool x = MaxA.x >= MinB.x && MinA.x <= MaxB.x; // Overlap on x-axis?
+		bool y = MaxA.y >= MinB.y && MinA.y <= MaxB.y; // Overlap on y-axis?
+		bool z = MaxA.z >= MinB.z && MinA.z <= MaxB.z; // Overlap on z-axis?
 
 		// All axis needs to overlap for a collision
 		return x && y && z;
