@@ -27,10 +27,6 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(RenderDevice);
 	// RaytracingPipelineStates::Compile(RenderDevice);
 
-	constexpr UINT A = offsetof(CommandSignatureParams, MeshIndex);
-	constexpr UINT B = offsetof(CommandSignatureParams, VertexBuffer);
-	constexpr UINT C = offsetof(CommandSignatureParams, IndexBuffer);
-
 	CommandSignatureBuilder Builder(4, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddVertexBufferView(0);
@@ -156,6 +152,10 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	g_GlobalConstants.NumMeshes = NumMeshes;
 	g_GlobalConstants.NumLights = NumLights;
 
+	// Work flow is as following:
+	// Copy Queue -> Compute Queue -> Graphics Queue
+	// Workloads are executed asynchronously
+
 	D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
 	Copy.OpenCommandList();
 	{
@@ -185,7 +185,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		ComputeSyncPoint = AsyncCompute.Execute(false);
 	}
 
-	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
 	Context.GetCommandQueue()->WaitForSyncPoint(ComputeSyncPoint);
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
