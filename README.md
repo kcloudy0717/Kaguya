@@ -57,7 +57,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 # Work in progress
 
 - RenderGraph rendering approach
-- Learning Vulkan
+- GPU driven architecture
 
 # Build
 
