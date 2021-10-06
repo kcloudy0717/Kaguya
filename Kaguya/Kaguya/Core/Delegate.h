@@ -137,7 +137,7 @@ struct DelegateHandle
 	void Reset()
 	{
 		Context = nullptr;
-		Id		= 0;
+		Id		= 0xDEADBEEF;
 	}
 
 	[[nodiscard]] bool IsValid() const noexcept { return Context != nullptr && Id != 0xDEADBEEF; }

@@ -54,13 +54,12 @@ AppendStructuredBuffer<CommandSignatureParams> g_CommandBuffer : register(u0, sp
 
 		if (FrustumContainsBoundingBox(g_ConstantBufferParams.Camera.Frustum, aabb))
 		{
-			CommandSignatureParams Params;
-			Params.MeshIndex			= index;
-			Params.VertexBuffer			= mesh.VertexBuffer;
-			Params.IndexBuffer			= mesh.IndexBuffer;
-			Params.DrawIndexedArguments = mesh.DrawIndexedArguments;
-
-			g_CommandBuffer.Append(Params);
+			CommandSignatureParams command;
+			command.MeshIndex			 = index;
+			command.VertexBuffer		 = mesh.VertexBuffer;
+			command.IndexBuffer			 = mesh.IndexBuffer;
+			command.DrawIndexedArguments = mesh.DrawIndexedArguments;
+			g_CommandBuffer.Append(command);
 		}
 	}
 }

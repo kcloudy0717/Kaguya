@@ -43,10 +43,14 @@ struct D3D12_INDEX_BUFFER_VIEW
 	uint					  Format;
 };
 
-// Raytracing
 struct D3D12_RAYTRACING_INSTANCE_DESC
 {
-	float3x4				  Transform;
+	float3x4 Transform;
+	// Waiting for dxc bitfield support :D
+	// uint InstanceID : 24;
+	// uint InstanceMask : 8;
+	// uint InstanceContributionToHitGroupIndex : 24;
+	// uint Flags : 8;
 	uint					  Instance_ID_Mask;
 	uint					  Instance_ContributionToHitGroupIndex_Flags;
 	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
