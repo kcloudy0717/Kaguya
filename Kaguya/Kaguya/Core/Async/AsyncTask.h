@@ -1,5 +1,6 @@
 #pragma once
 #include <coroutine>
+#include "Async.h"
 
 template<typename T>
 class AsyncTask

@@ -1,5 +1,29 @@
 #include "D3D12PipelineState.h"
 
+static VOID NTAPI CompileFromCoroutineHandle(
+	_Inout_ PTP_CALLBACK_INSTANCE Instance,
+	_Inout_opt_ PVOID			  Context,
+	_Inout_ PTP_WORK			  Work) noexcept
+{
+	UNREFERENCED_PARAMETER(Instance);
+	std::coroutine_handle<>::from_address(Context)();
+	CloseThreadpoolWork(Work);
+}
+
+struct awaitable_CompilePsoThread
+{
+	[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
+
+	void await_resume() const noexcept {}
+
+	void await_suspend(std::coroutine_handle<> handle) const
+	{
+		Device->GetPsoCompilationThreadPool()->QueueThreadpoolWork(CompileFromCoroutineHandle, handle.address());
+	}
+
+	D3D12Device* Device;
+};
+
 D3D12PipelineState::D3D12PipelineState(D3D12Device* Parent, const PipelineStateStreamDesc& Desc)
 	: D3D12DeviceChild(Parent)
 {
@@ -8,11 +32,11 @@ D3D12PipelineState::D3D12PipelineState(D3D12Device* Parent, const PipelineStateS
 
 	if (Parser.Type == ED3D12PipelineStateType::Graphics)
 	{
-		Create<ED3D12PipelineStateType::Graphics>(Parser);
+		CompilationWork = Create<ED3D12PipelineStateType::Graphics>(Parser);
 	}
 	else if (Parser.Type == ED3D12PipelineStateType::Compute)
 	{
-		Create<ED3D12PipelineStateType::Compute>(Parser);
+		CompilationWork = Create<ED3D12PipelineStateType::Compute>(Parser);
 	}
 }
 
@@ -20,41 +44,25 @@ ID3D12PipelineState* D3D12PipelineState::GetApiHandle() const noexcept
 {
 	if (CompilationWork)
 	{
-		CompilationWork->Wait(false);
-		CompilationWork.reset();
+		CompilationWork.Wait();
+		CompilationWork = nullptr;
 	}
 	return PipelineState.Get();
 }
 
 template<ED3D12PipelineStateType Type>
-void D3D12PipelineState::Create(D3D12PipelineParserCallbacks Parser)
+AsyncAction D3D12PipelineState::Create(D3D12PipelineParserCallbacks Parser)
 {
 	D3D12Device* Parent = GetParentDevice();
-	if (Parent->PsoCompilationThreadPool)
+	if (Parent->GetPsoCompilationThreadPool())
 	{
-		CompilationWork = std::make_unique<ThreadPoolWork>();
-		Parent->PsoCompilationThreadPool->QueueThreadpoolWork(
-			CompilationWork.get(),
-			[=, this]()
-			{
-				try
-				{
-					InternalCreate<Type>(Parser);
-				}
-				catch (...)
-				{
-				}
-			});
+		co_await awaitable_CompilePsoThread{ Parent };
 	}
 	else
 	{
-		InternalCreate<Type>(Parser);
+		co_await std::suspend_never{};
 	}
-}
 
-template<ED3D12PipelineStateType Type>
-void D3D12PipelineState::InternalCreate(const D3D12PipelineParserCallbacks& Parser)
-{
 	if constexpr (Type == ED3D12PipelineStateType::Graphics)
 	{
 		if (!Parser.MS)

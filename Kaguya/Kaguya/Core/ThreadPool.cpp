@@ -29,16 +29,14 @@ ThreadPool::~ThreadPool()
 	DestroyThreadpoolEnvironment(&Environment);
 }
 
-void ThreadPool::QueueThreadpoolWork(ThreadPoolWork* Work, Delegate<void()> WorkFunction)
+void ThreadPool::QueueThreadpoolWork(PTP_WORK_CALLBACK Callback, PVOID Context)
 {
-	assert(!Work->Work);
+	assert(Callback);
 
-	Work->WorkDelegate = std::move(WorkFunction);
-	Work->Work		   = CreateThreadpoolWork(&ThreadPoolWork::WorkCallback, Work, &Environment);
-	if (!Work->Work)
+	PTP_WORK Work = CreateThreadpoolWork(Callback, Context, &Environment);
+	if (!Work)
 	{
 		throw std::exception("CreateThreadpoolWork failed");
 	}
-
-	SubmitThreadpoolWork(Work->Work);
+	SubmitThreadpoolWork(Work);
 }

@@ -37,8 +37,6 @@ struct RootParameters
 class D3D12Device
 {
 public:
-	friend class D3D12PipelineState;
-
 	static void ReportLiveObjects();
 
 	D3D12Device();
@@ -50,14 +48,19 @@ public:
 	void OnBeginFrame() { Profiler.OnBeginFrame(); }
 	void OnEndFrame() { Profiler.OnEndFrame(); }
 
-	auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
-	auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
-	auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
-	auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
+	[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
+	[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
+	[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
+	[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
 
-	UINT GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept { return DescriptorSizeCache[Type]; }
+	[[nodiscard]] UINT GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
+	{
+		return DescriptorSizeCache[Type];
+	}
 
-	D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
+	[[nodiscard]] D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
+
+	[[nodiscard]] ThreadPool* GetPsoCompilationThreadPool() { return PsoCompilationThreadPool.get(); }
 
 	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(
 		Delegate<void(RootSignatureBuilder&)> Configurator);

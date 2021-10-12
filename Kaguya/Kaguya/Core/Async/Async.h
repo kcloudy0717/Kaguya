@@ -121,6 +121,8 @@ public:
 template<typename TDerived, typename TResult = void>
 struct promise_base
 {
+	promise_base() { Event.create(); }
+
 	auto get_return_object() noexcept
 	{
 		return std::coroutine_handle<TDerived>::from_promise(*static_cast<TDerived*>(this));
@@ -144,6 +146,8 @@ struct promise_base
 					status = AsyncStatus::Completed;
 					Promise->Status.store(status);
 				}
+
+				Promise->Event.SetEvent();
 				return Promise->GetStatus() == AsyncStatus::Completed;
 			}
 
@@ -223,9 +227,6 @@ struct promise_base
 	}
 
 	std::atomic<AsyncStatus> Status = AsyncStatus::Started;
+	wil::unique_event		 Event;
 	std::exception_ptr		 Exception;
 };
-
-#include "AsyncAction.h"
-#include "AsyncTask.h"
-#include "Generator.h"

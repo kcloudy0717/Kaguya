@@ -1,6 +1,7 @@
 #pragma once
 #include <coroutine>
 #include <iterator>
+#include "Async.h"
 
 // A generator should ever only generate objects using co_yield
 // user cannot modify the underlying generated object unless they're assigned to another variable

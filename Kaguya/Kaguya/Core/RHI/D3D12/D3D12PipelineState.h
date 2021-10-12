@@ -1,5 +1,6 @@
 #pragma once
 #include "D3D12Common.h"
+#include "Core/Async/AsyncAction.h"
 
 enum class ED3D12PipelineStateType
 {
@@ -123,13 +124,10 @@ public:
 
 private:
 	template<ED3D12PipelineStateType Type>
-	void Create(D3D12PipelineParserCallbacks Parser);
-
-	template<ED3D12PipelineStateType Type>
-	void InternalCreate(const D3D12PipelineParserCallbacks& Parser);
+	AsyncAction Create(D3D12PipelineParserCallbacks Parser);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	ED3D12PipelineStateType						Type;
-	mutable std::unique_ptr<ThreadPoolWork>		CompilationWork;
+	mutable AsyncAction							CompilationWork;
 };

@@ -25,6 +25,9 @@
 
 // Async
 #include "Async/Async.h"
+#include "Async/AsyncAction.h"
+#include "Async/AsyncTask.h"
+#include "Async/Generator.h"
 
 // System
 #include "System/AsyncFileStream.h"

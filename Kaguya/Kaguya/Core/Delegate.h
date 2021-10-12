@@ -350,8 +350,15 @@ class MulticastDelegate
 public:
 	using DelegateType = Delegate<void(TArgs...)>;
 
+	MulticastDelegate(bool ThreadSafe = false)
+		: OptMutex(ThreadSafe ? std::make_unique<std::mutex>() : nullptr)
+	{
+	}
+
 	DelegateHandle Add(DelegateType&& Delegate)
 	{
+		auto Lock = OptMutex ? std::unique_lock(*OptMutex) : std::unique_lock<std::mutex>();
+
 		DelegateHandlePair& Pair = Delegates.emplace_back();
 		Pair.Handle				 = { this, DelegateId++ };
 		Pair.Delegate			 = std::move(Delegate);
@@ -360,6 +367,8 @@ public:
 
 	void Remove(DelegateHandle& Handle)
 	{
+		auto Lock = OptMutex ? std::unique_lock(*OptMutex) : std::unique_lock<std::mutex>();
+
 		assert(Handle.IsValid());
 		for (size_t i = 0; i < Delegates.size(); ++i)
 		{
@@ -383,6 +392,7 @@ public:
 
 	void operator()(TArgs&&... Args) const
 	{
+		auto Lock = OptMutex ? std::unique_lock(*OptMutex) : std::unique_lock<std::mutex>();
 		for (const auto& Delegate : Delegates)
 		{
 			Delegate.Delegate(std::forward<TArgs>(Args)...);
@@ -398,4 +408,5 @@ private:
 
 	UINT							DelegateId = 0;
 	std::vector<DelegateHandlePair> Delegates;
+	std::unique_ptr<std::mutex>		OptMutex;
 };

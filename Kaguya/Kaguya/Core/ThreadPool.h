@@ -1,43 +1,5 @@
 ﻿#pragma once
 #include <threadpoolapiset.h>
-#include "Delegate.h"
-
-class ThreadPoolWork
-{
-public:
-	friend class ThreadPool;
-
-	ThreadPoolWork() noexcept = default;
-
-	ThreadPoolWork(const ThreadPoolWork&)	  = delete;
-	ThreadPoolWork(ThreadPoolWork&&) noexcept = delete;
-	ThreadPoolWork& operator=(const ThreadPoolWork&) = delete;
-	ThreadPoolWork& operator=(ThreadPoolWork&&) noexcept = delete;
-
-	void Wait(bool Cancel = true)
-	{
-		if (Work)
-		{
-			WaitForThreadpoolWorkCallbacks(Work, Cancel);
-			CloseThreadpoolWork(Work);
-			Work = nullptr;
-		}
-	}
-	operator bool() const { return Work != nullptr; }
-
-	~ThreadPoolWork() { Wait(true); }
-
-private:
-	static void CALLBACK WorkCallback(PTP_CALLBACK_INSTANCE, PVOID Context, PTP_WORK)
-	{
-		auto Work = static_cast<ThreadPoolWork*>(Context);
-		Work->WorkDelegate();
-	}
-
-private:
-	PTP_WORK		 Work = nullptr;
-	Delegate<void()> WorkDelegate;
-};
 
 class ThreadPool
 {
@@ -53,7 +15,7 @@ public:
 
 	void SetCancelPendingWorkOnCleanup(bool bCancel) { bCancelPendingWorkOnCleanup = bCancel; }
 
-	void QueueThreadpoolWork(ThreadPoolWork* Work, Delegate<void()> WorkFunction);
+	void QueueThreadpoolWork(PTP_WORK_CALLBACK Callback, PVOID Context);
 
 private:
 	TP_CALLBACK_ENVIRON Environment;

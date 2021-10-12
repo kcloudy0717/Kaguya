@@ -1,5 +1,6 @@
 #pragma once
 #include <coroutine>
+#include "Async.h"
 
 class AsyncAction
 {
@@ -45,10 +46,7 @@ public:
 	AsyncAction(const AsyncAction&) = delete;
 	AsyncAction& operator=(const AsyncAction&) = delete;
 
-	[[nodiscard]] operator bool() const noexcept
-	{
-		return static_cast<bool>(Handle);
-	}
+	[[nodiscard]] operator bool() const noexcept { return static_cast<bool>(Handle); }
 
 	[[nodiscard]] AsyncStatus GetStatus() const noexcept { return Handle.promise().GetStatus(); }
 
@@ -57,6 +55,12 @@ public:
 	void Resume() const { Handle.resume(); }
 
 	[[nodiscard]] bool Done() const noexcept { return Handle.done(); }
+
+	void Wait() const noexcept
+	{
+		bool Succeeded = Handle.promise().Event.wait();
+		assert(Succeeded);
+	}
 
 private:
 	void InternalDestroy()
