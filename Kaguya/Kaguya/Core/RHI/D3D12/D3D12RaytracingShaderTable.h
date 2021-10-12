@@ -78,7 +78,10 @@ public:
 	static constexpr UINT64 StrideInBytes =
 		AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 
-	D3D12RaytracingShaderTable(size_t NumShaderRecords) { ShaderRecords.resize(NumShaderRecords); }
+	D3D12RaytracingShaderTable(size_t NumShaderRecords)
+		: ShaderRecords(NumShaderRecords)
+	{
+	}
 
 	// Accounts for all shader records
 	UINT64 GetTotalSizeInBytes() const override

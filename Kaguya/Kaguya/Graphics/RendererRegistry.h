@@ -18,6 +18,7 @@ struct Shaders
 	// Mesh Shaders
 	struct MS
 	{
+		inline static Shader Meshlet;
 	};
 
 	// Pixel Shaders
@@ -25,6 +26,8 @@ struct Shaders
 	{
 		inline static Shader ToneMap;
 		inline static Shader GBuffer;
+
+		inline static Shader Meshlet;
 	};
 
 	// Compute Shaders
@@ -51,7 +54,16 @@ struct Shaders
 			VS::GBuffer = RenderCore::Compiler->CompileShader(
 				EShaderType::Vertex,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
-				L"VSMain",
+				g_VSEntryPoint,
+				{});
+		}
+
+		// MS
+		{
+			MS::Meshlet = RenderCore::Compiler->CompileShader(
+				EShaderType::Mesh,
+				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
+				g_MSEntryPoint,
 				{});
 		}
 
@@ -66,7 +78,13 @@ struct Shaders
 			PS::GBuffer = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
-				L"PSMain",
+				g_PSEntryPoint,
+				{});
+
+			PS::Meshlet = RenderCore::Compiler->CompileShader(
+				EShaderType::Pixel,
+				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
+				g_PSEntryPoint,
 				{});
 		}
 
@@ -164,6 +182,8 @@ struct RootSignatures
 	inline static RenderResourceHandle GBuffer;
 	inline static RenderResourceHandle IndirectCull;
 
+	inline static RenderResourceHandle Meshlet;
+
 	static void Compile(RenderDevice& Device)
 	{
 		Tonemap = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
@@ -215,6 +235,23 @@ struct RootSignatures
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
 			}));
+
+		Meshlet = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.Add32BitConstants<0, 0>(1);
+				Builder.AddShaderResourceView<0, 0>();
+				Builder.AddShaderResourceView<1, 0>();
+				Builder.AddShaderResourceView<2, 0>();
+				Builder.AddShaderResourceView<3, 0>();
+
+				Builder.AddConstantBufferView<0, 1>();
+				Builder.AddShaderResourceView<0, 1>();
+				Builder.AddShaderResourceView<1, 1>();
+
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			}));
 	}
 };
 
@@ -226,6 +263,8 @@ struct PipelineStates
 
 	inline static RenderResourceHandle GBuffer;
 	inline static RenderResourceHandle IndirectCull;
+
+	inline static RenderResourceHandle Meshlet;
 
 	static void Compile(RenderDevice& Device)
 	{
@@ -312,6 +351,28 @@ struct PipelineStates
 			Stream.CS			 = &Shaders::CS::IndirectCull;
 
 			IndirectCull = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+		}
+		{
+			DepthStencilState DepthStencilState;
+			DepthStencilState.DepthEnable = true;
+
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature	 RootSignature;
+				PipelineStateStreamPrimitiveTopology PrimitiveTopologyType;
+				PipelineStateStreamMS				 MS;
+				PipelineStateStreamPS				 PS;
+				PipelineStateStreamDepthStencilState DepthStencilState;
+				PipelineStateStreamRenderPass		 RenderPass;
+			} Stream;
+			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::Meshlet);
+			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.MS					 = &Shaders::MS::Meshlet;
+			Stream.PS					 = &Shaders::PS::Meshlet;
+			Stream.DepthStencilState	 = DepthStencilState;
+			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
+
+			Meshlet = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 	}
 };

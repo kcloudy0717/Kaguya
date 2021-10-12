@@ -38,7 +38,7 @@ D3D12CommandAllocator* D3D12CommandAllocatorPool::RequestCommandAllocator()
 void D3D12CommandAllocatorPool::DiscardCommandAllocator(D3D12CommandAllocator* CommandAllocator)
 {
 	std::scoped_lock _(CriticalSection);
-	assert(CommandAllocator->HasValidSyncPoint());
+	assert(CommandAllocator->HasValidSyncHandle());
 	CommandAllocatorQueue.push(CommandAllocator);
 }
 
@@ -109,14 +109,14 @@ void D3D12CommandQueue::HostWaitForValue(UINT64 FenceValue)
 
 void D3D12CommandQueue::Wait(D3D12CommandQueue* CommandQueue)
 {
-	WaitForSyncPoint(CommandQueue->SyncPoint);
+	WaitForSyncHandle(CommandQueue->SyncHandle);
 }
 
-void D3D12CommandQueue::WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
+void D3D12CommandQueue::WaitForSyncHandle(const D3D12SyncHandle& SyncHandle)
 {
-	if (SyncPoint.IsValid())
+	if (SyncHandle.IsValid())
 	{
-		VERIFY_D3D12_API(CommandQueue->Wait(SyncPoint.Fence, SyncPoint.Value));
+		VERIFY_D3D12_API(CommandQueue->Wait(SyncHandle.Fence, SyncHandle.Value));
 	}
 }
 
@@ -165,7 +165,7 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(
 
 D3D12CommandListHandle D3D12CommandQueue::CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator) const
 {
-	D3D12CommandListHandle Handle = D3D12CommandListHandle(GetParentLinkedDevice(), CommandListType);
+	D3D12CommandListHandle Handle(GetParentLinkedDevice(), CommandListType);
 	Handle.Reset(CommandAllocator);
 	return Handle;
 }
@@ -198,32 +198,32 @@ void D3D12CommandQueue::ExecuteCommandLists(
 
 	CommandQueue->ExecuteCommandLists(NumCommandLists, CommandLists);
 	UINT64 FenceValue = AdvanceGpu();
-	SyncPoint		  = D3D12CommandSyncPoint(Fence.Get(), FenceValue);
+	SyncHandle		  = D3D12SyncHandle(Fence.Get(), FenceValue);
 
 	// Discard command lists
 	for (UINT i = 0; i < NumCommandListHandles; ++i)
 	{
 		D3D12CommandListHandle& CommandListHandle = CommandListHandles[i];
-		CommandListHandle.SetSyncPoint(SyncPoint);
+		CommandListHandle.SetSyncPoint(SyncHandle);
 		DiscardCommandList(std::move(CommandListHandle));
 	}
 	for (UINT i = 0; i < NumBarrierCommandList; ++i)
 	{
 		D3D12CommandListHandle& CommandListHandle = BarrierCommandLists[i];
-		CommandListHandle.SetSyncPoint(SyncPoint);
+		CommandListHandle.SetSyncPoint(SyncHandle);
 		DiscardCommandList(std::move(CommandListHandle));
 	}
 
 	// Discard command allocator used exclusively to resolve resource barriers
 	if (NumBarrierCommandList > 0)
 	{
-		ResourceBarrierCommandAllocator->SetSyncPoint(SyncPoint);
+		ResourceBarrierCommandAllocator->SetSyncPoint(SyncHandle);
 		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(std::exchange(ResourceBarrierCommandAllocator, {}));
 	}
 
 	if (WaitForCompletion)
 	{
 		HostWaitForValue(FenceValue);
-		assert(SyncPoint.IsComplete());
+		assert(SyncHandle.IsComplete());
 	}
 }

@@ -26,7 +26,7 @@ public:
 
 	// Call this after the command context for build has been executed, this will
 	// update internal BLAS address
-	void PostBuild(D3D12CommandSyncPoint SyncPoint);
+	void PostBuild(D3D12SyncHandle SyncHandle);
 
 	UINT   NumHitGroups = 0;
 	size_t NumInstances = 0;

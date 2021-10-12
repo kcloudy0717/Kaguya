@@ -233,6 +233,14 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 		}
 	}
 
+	if (Features.MeshShaders)
+	{
+		if (FeatureSupport.MeshShaderTier() < D3D12_MESH_SHADER_TIER_1)
+		{
+			throw std::runtime_error("Mesh shaders not supported on device");
+		}
+	}
+
 	LinkedDevice.Initialize();
 
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());

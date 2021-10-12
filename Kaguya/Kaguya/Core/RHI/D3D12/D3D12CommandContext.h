@@ -23,8 +23,8 @@ public:
 	void OpenCommandList();
 	void CloseCommandList();
 
-	// Returns CommandSyncPoint, may be ignored if WaitForCompletion is true
-	D3D12CommandSyncPoint Execute(bool WaitForCompletion);
+	// Returns D3D12SyncHandle, may be ignored if WaitForCompletion is true
+	D3D12SyncHandle Execute(bool WaitForCompletion);
 
 	void TransitionBarrier(
 		D3D12Resource*		  Resource,
@@ -45,19 +45,8 @@ public:
 	void SetGraphicsRootSignature(D3D12RootSignature* RootSignature);
 	void SetComputeRootSignature(D3D12RootSignature* RootSignature);
 
-	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
-	{
-		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
-		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
-		CommandListHandle->SetGraphicsRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
-	}
-
-	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
-	{
-		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
-		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
-		CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
-	}
+	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data);
+	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data);
 
 	void BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget);
 
@@ -106,18 +95,7 @@ public:
 
 	void DispatchMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
 
-	void ResetCounter(D3D12Resource* CounterResource, UINT64 CounterOffset, UINT Value = 0)
-	{
-		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(sizeof(UINT));
-		std::memcpy(Allocation.CpuVirtualAddress, &Value, sizeof(UINT));
-
-		CommandListHandle->CopyBufferRegion(
-			CounterResource->GetResource(),
-			CounterOffset,
-			Allocation.Resource,
-			Allocation.Offset,
-			sizeof(UINT));
-	}
+	void ResetCounter(D3D12Resource* CounterResource, UINT64 CounterOffset, UINT Value = 0);
 
 	ED3D12CommandQueueType Type;
 

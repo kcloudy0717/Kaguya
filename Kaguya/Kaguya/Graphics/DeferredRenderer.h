@@ -1,6 +1,8 @@
 #pragma once
 #include "Renderer.h"
 
+#define USE_MESH_SHADERS 1
+
 class DeferredRenderer final : public Renderer
 {
 public:

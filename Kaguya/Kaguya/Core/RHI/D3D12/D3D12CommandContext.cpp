@@ -7,7 +7,6 @@ D3D12CommandContext::D3D12CommandContext(
 	D3D12_COMMAND_LIST_TYPE CommandListType)
 	: D3D12LinkedDeviceChild(Parent)
 	, Type(Type)
-	, CommandListHandle()
 	, CommandAllocator(nullptr)
 	, CommandAllocatorPool(Parent, CommandListType)
 	, CpuConstantAllocator(Parent)
@@ -47,20 +46,20 @@ void D3D12CommandContext::CloseCommandList()
 	CommandListHandle.Close();
 }
 
-D3D12CommandSyncPoint D3D12CommandContext::Execute(bool WaitForCompletion)
+D3D12SyncHandle D3D12CommandContext::Execute(bool WaitForCompletion)
 {
 	D3D12CommandQueue* CommandQueue = GetCommandQueue();
 	CommandQueue->ExecuteCommandLists(1, &CommandListHandle, WaitForCompletion);
 
 	assert(CommandAllocator && "Invalid CommandAllocator");
 
-	D3D12CommandSyncPoint SyncPoint = CommandAllocator->GetSyncPoint();
+	D3D12SyncHandle SyncHandle = CommandAllocator->GetSyncHandle();
 	// Release the command allocator so it can be reused.
 	CommandAllocatorPool.DiscardCommandAllocator(CommandAllocator);
 	CommandAllocator = nullptr;
 
-	CpuConstantAllocator.Version(SyncPoint);
-	return SyncPoint;
+	CpuConstantAllocator.Version(SyncHandle);
+	return SyncHandle;
 }
 
 void D3D12CommandContext::TransitionBarrier(
@@ -198,6 +197,20 @@ void D3D12CommandContext::SetComputeRootSignature(D3D12RootSignature* RootSignat
 		SamplerDescriptor);
 }
 
+void D3D12CommandContext::SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
+{
+	D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+	std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
+	CommandListHandle->SetGraphicsRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
+}
+
+void D3D12CommandContext::SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data)
+{
+	D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+	std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
+	CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
+}
+
 void D3D12CommandContext::BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget)
 {
 	Cache.Graphics.RenderPass	= RenderPass;
@@ -289,4 +302,17 @@ void D3D12CommandContext::DispatchMesh(UINT ThreadGroupCountX, UINT ThreadGroupC
 {
 	CommandListHandle.FlushResourceBarriers();
 	CommandListHandle.GetGraphicsCommandList6()->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+}
+
+void D3D12CommandContext::ResetCounter(D3D12Resource* CounterResource, UINT64 CounterOffset, UINT Value /*= 0*/)
+{
+	D3D12Allocation Allocation = CpuConstantAllocator.Allocate(sizeof(UINT));
+	std::memcpy(Allocation.CpuVirtualAddress, &Value, sizeof(UINT));
+
+	CommandListHandle->CopyBufferRegion(
+		CounterResource->GetResource(),
+		CounterOffset,
+		Allocation.Resource,
+		Allocation.Offset,
+		sizeof(UINT));
 }

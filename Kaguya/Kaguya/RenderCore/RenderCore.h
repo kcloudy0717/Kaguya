@@ -2,7 +2,7 @@
 
 namespace RenderCore
 {
-void Initialize();
+void Initialize(const DeviceOptions& Options, const DeviceFeatures& Features);
 
 void Shutdown();
 

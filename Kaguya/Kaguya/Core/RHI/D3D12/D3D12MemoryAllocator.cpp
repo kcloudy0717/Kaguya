@@ -25,23 +25,25 @@ void D3D12LinearAllocatorPage::Reset()
 	Offset = 0;
 }
 
-void D3D12LinearAllocator::Version(D3D12CommandSyncPoint SyncPoint)
+void D3D12LinearAllocator::Version(D3D12SyncHandle SyncHandle)
 {
 	if (!CurrentPage)
 	{
 		return;
 	}
 
-	this->SyncPoint = SyncPoint;
+	this->SyncHandle = SyncHandle;
 
 	RetiredPageList.push_back(CurrentPage);
 	CurrentPage = nullptr;
 
-	DiscardPages(SyncPoint.GetValue(), RetiredPageList);
+	DiscardPages(SyncHandle.GetValue(), RetiredPageList);
 	RetiredPageList.clear();
 }
 
-D3D12Allocation D3D12LinearAllocator::Allocate(UINT64 Size, UINT Alignment /*= DefaultAlignment*/)
+D3D12Allocation D3D12LinearAllocator::Allocate(
+	UINT64 Size,
+	UINT   Alignment /*= D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT*/)
 {
 	if (!CurrentPage)
 	{
@@ -66,7 +68,7 @@ D3D12LinearAllocatorPage* D3D12LinearAllocator::RequestPage()
 {
 	std::scoped_lock _(CriticalSection);
 
-	while (SyncPoint.IsValid() && !RetiredPages.empty() && RetiredPages.front().first <= SyncPoint.GetValue())
+	while (SyncHandle.IsValid() && !RetiredPages.empty() && RetiredPages.front().first <= SyncHandle.GetValue())
 	{
 		AvailablePages.push(RetiredPages.front().second);
 		RetiredPages.pop();

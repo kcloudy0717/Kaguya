@@ -88,6 +88,10 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 			Callbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamCS);
 			break;
+		case PipelineStateSubobjectType::MS:
+			Callbacks->MSCb(*reinterpret_cast<PipelineStateStreamMS*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamMS);
+			break;
 		case PipelineStateSubobjectType::BlendState:
 			Callbacks->BlendStateCb(*reinterpret_cast<PipelineStateStreamBlendState*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamBlendState);

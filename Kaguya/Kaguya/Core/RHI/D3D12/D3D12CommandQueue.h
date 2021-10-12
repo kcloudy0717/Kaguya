@@ -38,7 +38,7 @@ public:
 	void HostWaitForValue(UINT64 FenceValue);
 
 	void Wait(D3D12CommandQueue* CommandQueue);
-	void WaitForSyncPoint(const D3D12CommandSyncPoint& SyncPoint);
+	void WaitForSyncHandle(const D3D12SyncHandle& SyncHandle);
 
 	void WaitIdle() { HostWaitForValue(AdvanceGpu()); }
 
@@ -66,7 +66,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Fence>		   Fence;
 	CriticalSection							   FenceMutex;
 	UINT64									   FenceValue = 1;
-	D3D12CommandSyncPoint					   SyncPoint;
+	D3D12SyncHandle							   SyncHandle;
 
 	// Command allocators used exclusively for resolving resource barriers
 	D3D12CommandAllocatorPool ResourceBarrierCommandAllocatorPool;

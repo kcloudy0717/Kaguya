@@ -83,6 +83,7 @@ void RenderGraphDependencyLevel::PostInitialize()
 
 void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
 {
+	// Handle resource transitions for all registered resources
 	for (auto Read : Reads)
 	{
 		D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -306,4 +307,51 @@ void RenderGraph::Execute(D3D12CommandContext& Context)
 	{
 		DependencyLevel.Execute(Context);
 	}
+}
+
+void RenderGraph::RenderGui()
+{
+	if (ImGui::Begin("Render Graph"))
+	{
+		for (const auto& RenderPass : RenderPasses)
+		{
+			char Label[MAX_PATH] = {};
+			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
+			if (ImGui::TreeNode(Label))
+			{
+				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
+													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
+													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+
+				ImGui::Text("Inputs");
+				if (ImGui::BeginTable("Inputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Reads)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", Scheduler.GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::Text("Outputs");
+				if (ImGui::BeginTable("Outputs", 1, TableFlags))
+				{
+					for (auto Handle : RenderPass->Writes)
+					{
+						ImGui::TableNextRow();
+						ImGui::TableSetColumnIndex(0);
+
+						ImGui::Text("%s", Scheduler.GetTextureName(Handle).data());
+					}
+					ImGui::EndTable();
+				}
+
+				ImGui::TreePop();
+			}
+		}
+	}
+	ImGui::End();
 }

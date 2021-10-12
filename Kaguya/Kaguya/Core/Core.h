@@ -23,6 +23,15 @@
 #include "Asset/Image.h"
 #include "Asset/Mesh.h"
 
+// Async
+#include "Async/Async.h"
+
+// System
+#include "System/AsyncFileStream.h"
+#include "System/FileStream.h"
+#include "System/BinaryReader.h"
+#include "System/BinaryWriter.h"
+
 // RHI
 #include "RHI/ShaderCompiler.h"
 

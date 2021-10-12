@@ -108,15 +108,15 @@ protected:
 
 // Represents a Fence and Value pair, similar to that of a coroutine handle
 // you can query the status of a command execution point and wait for it
-class D3D12CommandSyncPoint
+class D3D12SyncHandle
 {
 public:
-	D3D12CommandSyncPoint() noexcept
+	D3D12SyncHandle() noexcept
 		: Fence(nullptr)
 		, Value(0)
 	{
 	}
-	D3D12CommandSyncPoint(ID3D12Fence* Fence, UINT64 Value) noexcept
+	D3D12SyncHandle(ID3D12Fence* Fence, UINT64 Value) noexcept
 		: Fence(Fence)
 		, Value(Value)
 	{

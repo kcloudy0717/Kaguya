@@ -13,9 +13,9 @@ void* DeferredRenderer::GetViewportDescriptor()
 
 void DeferredRenderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
+	ValidViewport = false;
 	Resolution.RefreshViewportResolution(Width, Height);
 	Resolution.RefreshRenderResolution(Width, Height);
-	ValidViewport = false;
 }
 
 void DeferredRenderer::Initialize()
@@ -162,13 +162,13 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
 	}
 	Copy.CloseCommandList();
-	D3D12CommandSyncPoint CopySyncPoint = Copy.Execute(false);
+	D3D12SyncHandle CopySyncHandle = Copy.Execute(false);
 
-	D3D12CommandSyncPoint ComputeSyncPoint;
+	D3D12SyncHandle ComputeSyncHandle;
 	if (NumMeshes > 0)
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
-		AsyncCompute.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
+		AsyncCompute.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
 
 		AsyncCompute.OpenCommandList();
 		{
@@ -182,10 +182,10 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			AsyncCompute.Dispatch1D<128>(NumMeshes);
 		}
 		AsyncCompute.CloseCommandList();
-		ComputeSyncPoint = AsyncCompute.Execute(false);
+		ComputeSyncHandle = AsyncCompute.Execute(false);
 	}
 
-	Context.GetCommandQueue()->WaitForSyncPoint(ComputeSyncPoint);
+	Context.GetCommandQueue()->WaitForSyncHandle(ComputeSyncHandle);
 
 	RenderGraph RenderGraph(Allocator, Scheduler, Registry, Resolution);
 
@@ -197,6 +197,100 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		RenderResourceHandle Depth;
 		RenderResourceHandle RenderTarget;
 	};
+
+#if USE_MESH_SHADERS
+	RenderPass* GBuffer = RenderGraph.AddRenderPass(
+		"GBuffer (Mesh Shaders)",
+		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+		{
+			FLOAT Color[] = { 0, 0, 0, 0 };
+
+			auto&		Params	 = Scope.Get<GBufferParams>();
+			const auto& ViewData = Scope.Get<RenderGraphViewData>();
+
+			Params.Albedo = Scheduler.CreateTexture(
+				"Albedo",
+				TextureDesc::Texture2D(
+					ETextureResolution::Render,
+					DXGI_FORMAT_R32G32B32A32_FLOAT,
+					1,
+					TextureFlag_AllowRenderTarget,
+					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
+			Params.Normal = Scheduler.CreateTexture(
+				"Normal",
+				TextureDesc::Texture2D(
+					ETextureResolution::Render,
+					DXGI_FORMAT_R32G32B32A32_FLOAT,
+					1,
+					TextureFlag_AllowRenderTarget,
+					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
+			Params.Motion = Scheduler.CreateTexture(
+				"Motion",
+				TextureDesc::Texture2D(
+					ETextureResolution::Render,
+					DXGI_FORMAT_R16G16_FLOAT,
+					1,
+					TextureFlag_AllowRenderTarget,
+					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
+			Params.Depth = Scheduler.CreateTexture(
+				"Depth",
+				TextureDesc::Texture2D(
+					ETextureResolution::Render,
+					DXGI_FORMAT_D32_FLOAT,
+					1,
+					TextureFlag_AllowDepthStencil,
+					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
+
+			{
+				RGRenderTargetDesc Desc = {};
+				Desc.AddRenderTarget(Params.Albedo, false);
+				Desc.AddRenderTarget(Params.Normal, false);
+				Desc.AddRenderTarget(Params.Motion, false);
+				Desc.SetDepthStencil(Params.Depth);
+
+				Params.RenderTarget = Scheduler.CreateRenderTarget(Desc);
+			}
+
+			return [=, &Params, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+			{
+				D3D12ScopedEvent(Context, "GBuffer (Mesh Shaders)");
+
+				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::Meshlet));
+				Context.SetGraphicsRootSignature(RenderDevice.GetRootSignature(RootSignatures::Meshlet));
+				Context.SetGraphicsConstantBuffer(5, sizeof(GlobalConstants), &g_GlobalConstants);
+				Context->SetGraphicsRootShaderResourceView(6, Materials.GetGpuVirtualAddress());
+				Context->SetGraphicsRootShaderResourceView(7, Meshes.GetGpuVirtualAddress());
+
+				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				Context.SetViewport(
+					RHIViewport(0.0f, 0.0f, ViewData.GetRenderWidth<FLOAT>(), ViewData.GetRenderHeight<FLOAT>()));
+				Context.SetScissorRect(RHIRect(0, 0, ViewData.RenderWidth, ViewData.RenderHeight));
+
+				Context.BeginRenderPass(
+					&RenderPasses::GBufferRenderPass,
+					&Registry.GetRenderTarget(Params.RenderTarget));
+				{
+					for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
+					{
+						auto& Mesh = MeshRenderer->pMeshFilter->Mesh;
+
+						Context->SetGraphicsRoot32BitConstant(0, i, 0);
+						Context->SetGraphicsRootShaderResourceView(1, Mesh->VertexResource.GetGpuVirtualAddress());
+						Context->SetGraphicsRootShaderResourceView(2, Mesh->MeshletResource.GetGpuVirtualAddress());
+						Context->SetGraphicsRootShaderResourceView(
+							3,
+							Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress());
+						Context->SetGraphicsRootShaderResourceView(
+							4,
+							Mesh->PrimitiveIndexResource.GetGpuVirtualAddress());
+
+						Context.DispatchMesh(Mesh->Meshlets.size(), 1, 1);
+					}
+				}
+				Context.EndRenderPass();
+			};
+		});
+#else
 	RenderPass* GBuffer = RenderGraph.AddRenderPass(
 		"GBuffer",
 		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
@@ -302,6 +396,8 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 			};
 		});
 
+#endif //
+
 	auto&				 Params	 = GBuffer->Scope.Get<GBufferParams>();
 	RenderResourceHandle Views[] = {
 		Params.Albedo,
@@ -316,48 +412,5 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.Setup();
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
-
-	if (ImGui::Begin("Render Graph"))
-	{
-		for (const auto& RenderPass : RenderGraph)
-		{
-			char Label[MAX_PATH] = {};
-			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
-			if (ImGui::TreeNode(Label))
-			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
-													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
-
-				ImGui::Text("Inputs");
-				if (ImGui::BeginTable("Inputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Reads)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::Text("Outputs");
-				if (ImGui::BeginTable("Outputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Writes)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::TreePop();
-			}
-		}
-	}
-	ImGui::End();
+	RenderGraph.RenderGui();
 }

@@ -203,24 +203,24 @@ std::string D3D12Exception::GetError() const
 #undef STRINGIFY
 }
 
-auto D3D12CommandSyncPoint::IsValid() const noexcept -> bool
+auto D3D12SyncHandle::IsValid() const noexcept -> bool
 {
 	return Fence != nullptr;
 }
 
-auto D3D12CommandSyncPoint::GetValue() const noexcept -> UINT64
+auto D3D12SyncHandle::GetValue() const noexcept -> UINT64
 {
 	assert(IsValid());
 	return Value;
 }
 
-auto D3D12CommandSyncPoint::IsComplete() const -> bool
+auto D3D12SyncHandle::IsComplete() const -> bool
 {
 	assert(IsValid());
 	return Fence->GetCompletedValue() >= Value;
 }
 
-auto D3D12CommandSyncPoint::WaitForCompletion() const -> void
+auto D3D12SyncHandle::WaitForCompletion() const -> void
 {
 	assert(IsValid());
 	VERIFY_D3D12_API(Fence->SetEventOnCompletion(Value, nullptr));

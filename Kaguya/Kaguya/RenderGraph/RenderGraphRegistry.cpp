@@ -17,7 +17,7 @@ void RenderGraphRegistry::RealizeResources(RenderGraph& RenderGraph)
 		auto& RHITexture = Scheduler.Textures[i];
 
 		RenderResourceHandle& Handle = RHITexture.Handle;
-		RGTextureDesc&		  Desc	 = RHITexture.Desc;
+		TextureDesc&		  Desc	 = RHITexture.Desc;
 
 		if (Handle.State == ERGHandleState::Ready)
 		{

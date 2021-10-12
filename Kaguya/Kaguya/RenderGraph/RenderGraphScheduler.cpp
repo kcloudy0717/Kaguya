@@ -1,7 +1,7 @@
 #include "RenderGraphScheduler.h"
 #include "RenderGraph.h"
 
-auto RenderGraphScheduler::CreateTexture(std::string_view Name, const RGTextureDesc& Desc) -> RenderResourceHandle
+auto RenderGraphScheduler::CreateTexture(std::string_view Name, const TextureDesc& Desc) -> RenderResourceHandle
 {
 	if (Desc.Resolution == ETextureResolution::Render || Desc.Resolution == ETextureResolution::Viewport)
 	{

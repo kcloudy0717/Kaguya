@@ -223,13 +223,13 @@ void D3D12RaytracingAccelerationStructureManager::Compact(
 {
 	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
 
-	if (!AccelerationStructure->SyncPoint.IsValid())
+	if (!AccelerationStructure->SyncHandle.IsValid())
 	{
 		return;
 	}
 
 	// Readback data not available yet
-	if (!AccelerationStructure->SyncPoint.IsComplete())
+	if (!AccelerationStructure->SyncHandle.IsComplete())
 	{
 		return;
 	}

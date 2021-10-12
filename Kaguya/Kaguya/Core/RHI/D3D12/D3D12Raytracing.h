@@ -327,7 +327,7 @@ struct D3D12AccelerationStructure
 	RaytracingMemorySection CompactedSizeCpuMemory;
 	RaytracingMemorySection CompactedSizeGpuMemory;
 
-	D3D12CommandSyncPoint SyncPoint;
+	D3D12SyncHandle SyncHandle;
 };
 
 class D3D12RaytracingAccelerationStructureManager : public D3D12LinkedDeviceChild
@@ -345,9 +345,9 @@ public:
 	// Returns true if compacted
 	void Compact(ID3D12GraphicsCommandList4* CommandList, UINT64 AccelerationStructureIndex);
 
-	void SetSyncPoint(UINT64 AccelerationStructureIndex, D3D12CommandSyncPoint SyncPoint)
+	void SetSyncHandle(UINT64 AccelerationStructureIndex, D3D12SyncHandle SyncHandle)
 	{
-		AccelerationStructures[AccelerationStructureIndex]->SyncPoint = SyncPoint;
+		AccelerationStructures[AccelerationStructureIndex]->SyncHandle = SyncHandle;
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetAccelerationStructureAddress(UINT64 AccelerationStructureIndex)

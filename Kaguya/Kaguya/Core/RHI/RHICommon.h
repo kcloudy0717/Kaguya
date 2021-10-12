@@ -387,6 +387,7 @@ enum class PipelineStateSubobjectType
 	HS,
 	GS,
 	CS,
+	MS,
 	BlendState,
 	RasterizerState,
 	DepthStencilState,
@@ -439,6 +440,7 @@ using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, Pipeline
 using PipelineStateStreamHS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::HS>;
 using PipelineStateStreamGS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::GS>;
 using PipelineStateStreamCS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::CS>;
+using PipelineStateStreamMS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::MS>;
 using PipelineStateStreamBlendState			= PipelineStateStreamSubobject<BlendState, PipelineStateSubobjectType::BlendState>;
 using PipelineStateStreamRasterizerState	= PipelineStateStreamSubobject<RasterizerState, PipelineStateSubobjectType::RasterizerState>;
 using PipelineStateStreamDepthStencilState	= PipelineStateStreamSubobject<DepthStencilState, PipelineStateSubobjectType::DepthStencilState>;
@@ -460,6 +462,7 @@ public:
 	virtual void HSCb(Shader*) {}
 	virtual void GSCb(Shader*) {}
 	virtual void CSCb(Shader*) {}
+	virtual void MSCb(Shader*) {}
 	virtual void BlendStateCb(const BlendState&) {}
 	virtual void RasterizerStateCb(const RasterizerState&) {}
 	virtual void DepthStencilStateCb(const DepthStencilState&) {}

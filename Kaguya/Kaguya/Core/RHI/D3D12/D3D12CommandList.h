@@ -11,19 +11,19 @@ public:
 
 	operator ID3D12CommandAllocator*() const noexcept { return CommandAllocator.Get(); }
 
-	[[nodiscard]] bool IsReady() const { return CommandSyncPoint.IsComplete(); }
+	[[nodiscard]] bool IsReady() const { return SyncHandle.IsComplete(); }
 
-	[[nodiscard]] D3D12CommandSyncPoint GetSyncPoint() const { return CommandSyncPoint; }
+	[[nodiscard]] D3D12SyncHandle GetSyncHandle() const { return SyncHandle; }
 
-	[[nodiscard]] bool HasValidSyncPoint() const { return CommandSyncPoint.IsValid(); }
+	[[nodiscard]] bool HasValidSyncHandle() const { return SyncHandle.IsValid(); }
 
-	void SetSyncPoint(const D3D12CommandSyncPoint& SyncPoint)
+	void SetSyncPoint(const D3D12SyncHandle& SyncHandle) noexcept
 	{
-		assert(SyncPoint.IsValid());
-		CommandSyncPoint = SyncPoint;
+		assert(SyncHandle.IsValid());
+		this->SyncHandle = SyncHandle;
 	}
 
-	void Reset()
+	void Reset() const
 	{
 		assert(IsReady());
 		VERIFY_D3D12_API(CommandAllocator->Reset());
@@ -31,7 +31,7 @@ public:
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	D3D12CommandSyncPoint						   CommandSyncPoint;
+	D3D12SyncHandle								   SyncHandle;
 };
 
 class D3D12CommandListHandle : public D3D12LinkedDeviceChild
@@ -57,30 +57,16 @@ public:
 
 	ID3D12GraphicsCommandList* operator->() const { return GetGraphicsCommandList(); }
 
-	void Close()
-	{
-		FlushResourceBarriers();
-		VERIFY_D3D12_API(GraphicsCommandList->Close());
-	}
+	void Close();
 
-	void Reset(D3D12CommandAllocator* CommandAllocator)
-	{
-		this->CommandAllocator = CommandAllocator;
+	void Reset(D3D12CommandAllocator* CommandAllocator);
 
-		VERIFY_D3D12_API(GraphicsCommandList->Reset(*CommandAllocator, nullptr));
+	void SetSyncPoint(const D3D12SyncHandle& SyncHandle) const noexcept { CommandAllocator->SetSyncPoint(SyncHandle); }
 
-		// Reset resource state tracking and resource barriers
-		ResourceStateTracker.Reset();
-		ResourceBarrierBatch.Reset();
-	}
+	// Get the command list resource state associate with this resource
+	CResourceState& GetResourceState(D3D12Resource* Resource);
 
-	void SetSyncPoint(const D3D12CommandSyncPoint& SyncPoint) { CommandAllocator->SetSyncPoint(SyncPoint); }
-
-	CResourceState& GetResourceState(D3D12Resource* Resource)
-	{
-		return ResourceStateTracker.GetResourceState(Resource);
-	}
-
+	// Resolve resource barriers that are needed before this command list is executed
 	std::vector<D3D12_RESOURCE_BARRIER> ResolveResourceBarriers();
 
 	void TransitionBarrier(

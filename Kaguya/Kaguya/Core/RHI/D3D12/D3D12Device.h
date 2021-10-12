@@ -17,6 +17,7 @@ struct DeviceFeatures
 	bool			  WaveOperation;
 	bool			  Raytracing;
 	bool			  DynamicResources;
+	bool			  MeshShaders;
 };
 
 struct RootParameters

@@ -42,6 +42,11 @@ public:
 		Type	 = ED3D12PipelineStateType::Compute;
 		this->CS = CS;
 	}
+	void MSCb(Shader* MS) override
+	{
+		Type	 = ED3D12PipelineStateType::Graphics;
+		this->MS = MS;
+	}
 
 	void BlendStateCb(const BlendState& BlendState) override
 	{
@@ -99,6 +104,7 @@ public:
 	Shader*					HS			  = nullptr;
 	Shader*					GS			  = nullptr;
 	Shader*					CS			  = nullptr;
+	Shader*					MS			  = nullptr;
 	BlendState				BlendState;
 	RasterizerState			RasterizerState;
 	DepthStencilState		DepthStencilState;

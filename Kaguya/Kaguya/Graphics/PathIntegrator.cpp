@@ -27,13 +27,6 @@ void* PathIntegrator::GetViewportDescriptor()
 
 void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	if (Resolution.ViewportWidth != Width || Resolution.ViewportHeight != Height)
-	{
-		Resolution.ViewportWidth			 = Width;
-		Resolution.ViewportHeight			 = Height;
-		Resolution.ViewportResolutionResized = true;
-	}
-
 	ValidViewport = false;
 
 	float r = 1.5f;
@@ -56,21 +49,17 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 	UINT RenderWidth, RenderHeight;
 	if (FSRState.Enable)
 	{
-		RenderWidth	 = static_cast<UINT>(Resolution.ViewportWidth / r);
-		RenderHeight = static_cast<UINT>(Resolution.ViewportHeight / r);
+		RenderWidth	 = static_cast<UINT>(static_cast<float>(Width) / r);
+		RenderHeight = static_cast<UINT>(static_cast<float>(Height) / r);
 	}
 	else
 	{
-		RenderWidth	 = Resolution.ViewportWidth;
-		RenderHeight = Resolution.ViewportHeight;
+		RenderWidth	 = Width;
+		RenderHeight = Height;
 	}
 
-	if (Resolution.RenderWidth != RenderWidth || Resolution.RenderHeight != RenderHeight)
-	{
-		Resolution.RenderWidth			   = RenderWidth;
-		Resolution.RenderHeight			   = RenderHeight;
-		Resolution.RenderResolutionResized = true;
-	}
+	Resolution.RefreshViewportResolution(Width, Height);
+	Resolution.RefreshRenderResolution(RenderWidth, RenderHeight);
 }
 
 void PathIntegrator::Initialize()
@@ -184,7 +173,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
 		});
 
-	D3D12CommandSyncPoint CopySyncPoint;
+	D3D12SyncHandle CopySyncHandle;
 	if (AccelerationStructure.IsValid())
 	{
 		D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
@@ -212,10 +201,10 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 		Copy.CloseCommandList();
 
-		CopySyncPoint = Copy.Execute(false);
+		CopySyncHandle = Copy.Execute(false);
 	}
 
-	D3D12CommandSyncPoint ASBuildSyncPoint;
+	D3D12SyncHandle ASBuildSyncHandle;
 	if (AccelerationStructure.IsValid())
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
@@ -226,9 +215,9 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 		}
 		AsyncCompute.CloseCommandList();
 
-		ASBuildSyncPoint = AsyncCompute.Execute(false);
+		ASBuildSyncHandle = AsyncCompute.Execute(false);
 
-		AccelerationStructure.PostBuild(ASBuildSyncPoint);
+		AccelerationStructure.PostBuild(ASBuildSyncHandle);
 	}
 
 	if (World->WorldState & EWorldState::EWorldState_Update)
@@ -237,8 +226,8 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 		ResetPathIntegrator = true;
 	}
 
-	Context.GetCommandQueue()->WaitForSyncPoint(CopySyncPoint);
-	Context.GetCommandQueue()->WaitForSyncPoint(ASBuildSyncPoint);
+	Context.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
+	Context.GetCommandQueue()->WaitForSyncHandle(ASBuildSyncHandle);
 
 	if (ResetPathIntegrator)
 	{
@@ -260,7 +249,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 			Parameter.Output = Scheduler.CreateTexture(
 				"Path Trace Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 1));
+				TextureDesc::RWTexture2D(ETextureResolution::Render, DXGI_FORMAT_R32G32B32A32_FLOAT, 1));
 
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 			{
@@ -335,7 +324,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 			Parameter.Output = Scheduler.CreateTexture(
 				"Tonemap Output",
-				RGTextureDesc::Texture2D(
+				TextureDesc::Texture2D(
 					ETextureResolution::Render,
 					D3D12SwapChain::Format,
 					1,
@@ -394,10 +383,10 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 			Parameter.EASUOutput = Scheduler.CreateTexture(
 				"EASU Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
+				TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
 			Parameter.RCASOutput = Scheduler.CreateTexture(
 				"RCAS Output",
-				RGTextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
+				TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
 
 			auto TonemapInput = Scheduler.Read(Tonemap->Scope.Get<TonemapParameter>().Output);
 			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
@@ -487,48 +476,5 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.Setup();
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
-
-	if (ImGui::Begin("Render Graph"))
-	{
-		for (const auto& RenderPass : RenderGraph)
-		{
-			char Label[MAX_PATH] = {};
-			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
-			if (ImGui::TreeNode(Label))
-			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
-													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
-
-				ImGui::Text("Inputs");
-				if (ImGui::BeginTable("Inputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Reads)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::Text("Outputs");
-				if (ImGui::BeginTable("Outputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Writes)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", RenderGraph.GetScheduler().GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::TreePop();
-			}
-		}
-	}
-	ImGui::End();
+	RenderGraph.RenderGui();
 }

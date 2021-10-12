@@ -11,15 +11,15 @@ D3D12ResourceUploader::D3D12ResourceUploader(D3D12LinkedDevice* Parent)
 
 D3D12ResourceUploader::~D3D12ResourceUploader()
 {
-	if (SyncPoint.IsValid())
+	if (SyncHandle.IsValid())
 	{
-		SyncPoint.WaitForCompletion();
+		SyncHandle.WaitForCompletion();
 	}
 }
 
 void D3D12ResourceUploader::Begin()
 {
-	if (SyncPoint.IsValid() && SyncPoint.IsComplete())
+	if (SyncHandle.IsValid() && SyncHandle.IsComplete())
 	{
 		TrackedResources.clear();
 	}
@@ -27,11 +27,11 @@ void D3D12ResourceUploader::Begin()
 	CopyContext2.OpenCommandList();
 }
 
-D3D12CommandSyncPoint D3D12ResourceUploader::End(bool WaitForCompletion)
+D3D12SyncHandle D3D12ResourceUploader::End(bool WaitForCompletion)
 {
 	CopyContext2.CloseCommandList();
-	SyncPoint = CopyContext2.Execute(WaitForCompletion);
-	return SyncPoint;
+	SyncHandle = CopyContext2.Execute(WaitForCompletion);
+	return SyncHandle;
 }
 
 void D3D12ResourceUploader::Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subresources, ID3D12Resource* Resource)

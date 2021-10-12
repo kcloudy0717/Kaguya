@@ -120,16 +120,16 @@ enum EBufferFlags
 	BufferFlag_AllowUnorderedAccess = 1 << 0
 };
 
-struct RGBufferDesc
+struct BufferDesc
 {
 	template<typename T>
-	static RGBufferDesc StructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
+	static BufferDesc StructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
 	{
 		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T), .Flags = Flags };
 	}
 
 	template<typename T>
-	static RGBufferDesc RWStructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
+	static BufferDesc RWStructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
 	{
 		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T),
 				 .Flags		  = Flags | EBufferFlags::BufferFlag_AllowUnorderedAccess };
@@ -163,19 +163,19 @@ enum ETextureFlags
 };
 DEFINE_ENUM_FLAG_OPERATORS(ETextureFlags);
 
-struct RGTextureDesc
+struct TextureDesc
 {
 	[[nodiscard]] static auto RWTexture2D(
 		DXGI_FORMAT	  Format,
 		UINT		  Width,
 		UINT		  Height,
 		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None) -> RGTextureDesc;
+		ETextureFlags Flags		= TextureFlag_None) -> TextureDesc;
 	[[nodiscard]] static auto RWTexture2D(
 		ETextureResolution Resolution,
 		DXGI_FORMAT		   Format,
 		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> RGTextureDesc;
+		ETextureFlags	   Flags	 = TextureFlag_None) -> TextureDesc;
 
 	[[nodiscard]] static auto Texture2D(
 		DXGI_FORMAT						 Format,
@@ -183,13 +183,13 @@ struct RGTextureDesc
 		UINT							 Height,
 		UINT16							 MipLevels			 = 1,
 		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc;
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> TextureDesc;
 	[[nodiscard]] static auto Texture2D(
 		ETextureResolution				 Resolution,
 		DXGI_FORMAT						 Format,
 		UINT16							 MipLevels			 = 1,
 		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> RGTextureDesc;
+		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> TextureDesc;
 
 	[[nodiscard]] bool AllowRenderTarget() const noexcept
 	{

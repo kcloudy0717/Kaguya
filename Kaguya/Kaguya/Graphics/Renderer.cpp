@@ -119,13 +119,13 @@ void Renderer::OnRender(World* World)
 	Context.CloseCommandList();
 	// TODO: Present submits work, and if you don't Signal() after that, you can't safely know when to destroy/resize
 	// the swapchain, move signaling after present
-	D3D12CommandSyncPoint MainSyncPoint = Context.Execute(false);
+	D3D12SyncHandle MainSyncHandle = Context.Execute(false);
 
 	RenderCore::SwapChain->Present(false);
 
 	RenderCore::Device->OnEndFrame();
 
-	MainSyncPoint.WaitForCompletion();
+	MainSyncHandle.WaitForCompletion();
 
 	++FrameIndex;
 }

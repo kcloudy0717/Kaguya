@@ -14,6 +14,8 @@
 #include <optional>
 #include <compare>
 #include <mutex>
+#include <thread>
+#include <condition_variable>
 #include <span>
 #include <ranges>
 
@@ -27,23 +29,20 @@
 #include <queue>
 
 // win32
-#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
 
-// DirectX apps don't need GDI
-#define NODRAWTEXT
-//#define NOGDI
-#define NOBITMAP
-
-// Include <mcx.h> if you need this
-#define NOMCX
-
-// Include <winsvc.h> if you need this
-#define NOSERVICE
-
-// WinHelp is deprecated
-#define NOHELP
-
-#define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers.
+#define NOGDICAPMASKS	 // CC_*, LC_*, PC_*, CP_*, TC_*, RC_
+#define NORASTEROPS		 // Binary and Tertiary raster ops
+#define NODRAWTEXT		 // DrawText() and DT_*
+//#define NOGDI			 // All GDI defines and routines
+//#define NONLS			 // All NLS defines and routines
+#define NOMINMAX		 // Macros min(a,b) and max(a,b)
+#define NOSERVICE		 // All Service Controller routines, SERVICE_ equates, etc.
+#define NOSOUND			 // Sound driver routines
+#define NOHELP			 // Help engine interface. (Deprecated)
+#define NOPROFILER		 // Profiler interface.
+#define NODEFERWINDOWPOS // DeferWindowPos routines
+#define NOMCX			 // Modem Configuration Extensions
 
 #include <Windows.h>
 #include <synchapi.h>
@@ -55,7 +54,7 @@
 // DXGI
 #include <dxgi1_6.h>
 #if defined(_DEBUG)
-	#include <dxgidebug.h>
+#include <dxgidebug.h>
 #endif
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -64,7 +63,6 @@
 #include "d3d12.h"
 #include "d3d12sdklayers.h"
 #include "d3d12shader.h"
-#include <DXProgrammableCapture.h>
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
@@ -75,6 +73,7 @@
 #include <ImGuizmo.h>
 #include <wil/resource.h>
 #include <city.h>
+#include <DirectXMesh.h>
 #include <DirectXTex.h>
 
 #include <Core/Core.h>

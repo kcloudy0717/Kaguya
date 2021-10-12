@@ -37,7 +37,7 @@ private:
 	CriticalSection				Mutex;
 };
 
-// Many of these came from the DirectX-Graphics samples (MiniEngine)
+// Many of these came from the DirectX-Graphics samples (MiniEngine) and 3dgep
 class D3D12DescriptorPage;
 
 // Represents a contiguous CPU descriptor handle

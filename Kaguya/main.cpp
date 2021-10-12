@@ -40,8 +40,17 @@ public:
 
 	bool Initialize() override
 	{
+		DeviceOptions  DeviceOptions	= { .EnableDebugLayer		  = true,
+										.EnableGpuBasedValidation = false,
+										.EnableAutoDebugName	  = true };
+		DeviceFeatures DeviceFeatures	= {};
+		DeviceFeatures.FeatureLevel		= D3D_FEATURE_LEVEL_12_0;
+		DeviceFeatures.Raytracing		= true;
+		DeviceFeatures.DynamicResources = true;
+		DeviceFeatures.MeshShaders		= true;
+
 		PhysicsManager::Initialize();
-		RenderCore::Initialize();
+		RenderCore::Initialize(DeviceOptions, DeviceFeatures);
 		AssetManager::Initialize();
 
 		std::string IniFile = (ExecutableDirectory / "imgui.ini").string();

@@ -44,6 +44,16 @@ D3D12CommandListHandle::D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_
 #endif
 }
 
+D3D12CommandListHandle::~D3D12CommandListHandle()
+{
+#ifdef NVIDIA_NSIGHT_AFTERMATH
+	if (AftermathContextHandle)
+	{
+		GFSDK_Aftermath_ReleaseContextHandle(std::exchange(AftermathContextHandle, {}));
+	}
+#endif
+}
+
 D3D12CommandListHandle::D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept
 	: D3D12LinkedDeviceChild(std::exchange(D3D12CommandListHandle.Parent, {}))
 	, Type(D3D12CommandListHandle.Type)
@@ -87,14 +97,26 @@ D3D12CommandListHandle& D3D12CommandListHandle::operator=(D3D12CommandListHandle
 	return *this;
 }
 
-D3D12CommandListHandle::~D3D12CommandListHandle()
+void D3D12CommandListHandle::Close()
 {
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	if (AftermathContextHandle)
-	{
-		GFSDK_Aftermath_ReleaseContextHandle(std::exchange(AftermathContextHandle, {}));
-	}
-#endif
+	FlushResourceBarriers();
+	VERIFY_D3D12_API(GraphicsCommandList->Close());
+}
+
+void D3D12CommandListHandle::Reset(D3D12CommandAllocator* CommandAllocator)
+{
+	this->CommandAllocator = CommandAllocator;
+
+	VERIFY_D3D12_API(GraphicsCommandList->Reset(*CommandAllocator, nullptr));
+
+	// Reset resource state tracking and resource barriers
+	ResourceStateTracker.Reset();
+	ResourceBarrierBatch.Reset();
+}
+
+CResourceState& D3D12CommandListHandle::GetResourceState(D3D12Resource* Resource)
+{
+	return ResourceStateTracker.GetResourceState(Resource);
 }
 
 std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()

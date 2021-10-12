@@ -8,18 +8,11 @@ ShaderCompiler*				Compiler		   = nullptr;
 D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor = {};
 D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor = {};
 
-void Initialize()
+void Initialize(const DeviceOptions& Options, const DeviceFeatures& Features)
 {
-	DeviceOptions  DeviceOptions	= { .EnableDebugLayer		  = true,
-									.EnableGpuBasedValidation = false,
-									.EnableAutoDebugName	  = true };
-	DeviceFeatures DeviceFeatures	= {};
-	DeviceFeatures.FeatureLevel		= D3D_FEATURE_LEVEL_12_0;
-	DeviceFeatures.DynamicResources = true;
-
 	Device = new D3D12Device();
-	Device->Initialize(DeviceOptions);
-	Device->InitializeDevice(DeviceFeatures);
+	Device->Initialize(Options);
+	Device->InitializeDevice(Features);
 
 	SwapChain = new D3D12SwapChain(
 		Application::GetWindowHandle(),

@@ -178,17 +178,14 @@ public:
 		Lut.clear();
 	}
 
-	auto begin() const noexcept { return RenderPasses.begin(); }
-	auto end() const noexcept { return RenderPasses.end(); }
-
 	RenderPass* AddRenderPass(const std::string& Name, RenderPassCallback Callback);
 
 	[[nodiscard]] RenderPass* GetRenderPass(const std::string& Name) const;
 
 	[[nodiscard]] RenderScope& GetScope(const std::string& Name) const;
 
-	RenderGraphScheduler& GetScheduler() { return Scheduler; }
-	RenderGraphRegistry&  GetRegistry() { return Registry; }
+	[[nodiscard]] RenderGraphScheduler& GetScheduler() { return Scheduler; }
+	[[nodiscard]] RenderGraphRegistry&	GetRegistry() { return Registry; }
 
 	[[nodiscard]] std::pair<UINT, UINT> GetRenderResolution() const
 	{
@@ -202,6 +199,7 @@ public:
 	void Setup();
 	void Compile();
 	void Execute(D3D12CommandContext& Context);
+	void RenderGui();
 
 private:
 	void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack)

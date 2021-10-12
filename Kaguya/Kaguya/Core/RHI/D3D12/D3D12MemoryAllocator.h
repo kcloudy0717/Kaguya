@@ -48,8 +48,8 @@ public:
 	{
 	}
 
-	// Versions all the current constant data with SyncPoint to ensure memory is not overriden when it GPU uses it
-	void Version(D3D12CommandSyncPoint SyncPoint);
+	// Versions all the current constant data with SyncHandle to ensure memory is not overriden when it GPU uses it
+	void Version(D3D12SyncHandle SyncHandle);
 
 	[[nodiscard]] D3D12Allocation Allocate(
 		UINT64 Size,
@@ -78,7 +78,7 @@ private:
 	std::queue<D3D12LinearAllocatorPage*>					 AvailablePages;
 	CriticalSection											 CriticalSection;
 
-	D3D12CommandSyncPoint				   SyncPoint;
+	D3D12SyncHandle						   SyncHandle;
 	D3D12LinearAllocatorPage*			   CurrentPage = nullptr;
 	std::vector<D3D12LinearAllocatorPage*> RetiredPageList;
 };

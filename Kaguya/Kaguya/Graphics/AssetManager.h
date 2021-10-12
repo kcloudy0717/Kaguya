@@ -1,5 +1,6 @@
 #pragma once
 #include <Core/Asset/AsyncLoader.h>
+#include <Core/Asset/AssetCache.h>
 #include <RenderCore/RenderCore.h>
 
 class AssetManager
@@ -18,6 +19,9 @@ public:
 	static void AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeometryInRAM);
 
 private:
+	static void UploadImage(const std::shared_ptr<Asset::Image>& AssetImage, D3D12ResourceUploader& Uploader);
+	static void UploadMesh(const std::shared_ptr<Asset::Mesh>& AssetMesh, D3D12ResourceUploader& Uploader);
+
 	inline static AsyncImageLoader AsyncImageLoader;
 	inline static AsyncMeshLoader  AsyncMeshLoader;
 
@@ -30,8 +34,8 @@ private:
 	inline static std::queue<std::shared_ptr<Asset::Image>> ImageUploadQueue;
 	inline static std::queue<std::shared_ptr<Asset::Mesh>>	MeshUploadQueue;
 
-	inline static wil::unique_handle Thread;
-	inline static std::atomic<bool>	 Quit = false;
+	inline static std::jthread		Thread;
+	inline static std::atomic<bool> Quit = false;
 
 	friend class AssetWindow;
 };

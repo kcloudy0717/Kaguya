@@ -10,13 +10,13 @@ public:
 
 	void Begin();
 
-	D3D12CommandSyncPoint End(bool WaitForCompletion);
+	D3D12SyncHandle End(bool WaitForCompletion);
 
 	void Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subresources, ID3D12Resource* Resource);
 	void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* Resource);
 
 private:
 	D3D12CommandContext&								CopyContext2;
-	D3D12CommandSyncPoint								SyncPoint;
+	D3D12SyncHandle										SyncHandle;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> TrackedResources;
 };

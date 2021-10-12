@@ -32,14 +32,14 @@ struct VertexAttributes
 VertexAttributes GetVertexAttributes(BuiltInTriangleIntersectionAttributes Attributes)
 {
 	// Fetch indices
-	uint Idx0 = IndexBuffer[PrimitiveIndex() * 3 + 0];
-	uint Idx1 = IndexBuffer[PrimitiveIndex() * 3 + 1];
-	uint Idx2 = IndexBuffer[PrimitiveIndex() * 3 + 2];
+	uint idx0 = IndexBuffer[PrimitiveIndex() * 3 + 0];
+	uint idx1 = IndexBuffer[PrimitiveIndex() * 3 + 1];
+	uint idx2 = IndexBuffer[PrimitiveIndex() * 3 + 2];
 
 	// Fetch vertices
-	Vertex vtx0 = VertexBuffer[Idx0];
-	Vertex vtx1 = VertexBuffer[Idx1];
-	Vertex vtx2 = VertexBuffer[Idx2];
+	Vertex vtx0 = VertexBuffer[idx0];
+	Vertex vtx1 = VertexBuffer[idx1];
+	Vertex vtx2 = VertexBuffer[idx2];
 
 	float3 p0 = vtx0.Position, p1 = vtx1.Position, p2 = vtx2.Position;
 	// Compute 2 edges of the triangle

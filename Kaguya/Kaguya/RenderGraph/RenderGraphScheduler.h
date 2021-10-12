@@ -7,7 +7,7 @@ struct RGTexture
 {
 	std::string			 Name;
 	RenderResourceHandle Handle;
-	RGTextureDesc		 Desc;
+	TextureDesc		 Desc;
 };
 
 struct RGRenderTargetDesc
@@ -53,8 +53,8 @@ public:
 		RenderTargets.clear();
 	}
 
-	[[nodiscard]] auto CreateBuffer(std::string_view Name, const RGBufferDesc& Desc) -> RenderResourceHandle;
-	[[nodiscard]] auto CreateTexture(std::string_view Name, const RGTextureDesc& Desc) -> RenderResourceHandle;
+	[[nodiscard]] auto CreateBuffer(std::string_view Name, const BufferDesc& Desc) -> RenderResourceHandle;
+	[[nodiscard]] auto CreateTexture(std::string_view Name, const TextureDesc& Desc) -> RenderResourceHandle;
 	[[nodiscard]] auto CreateRenderTarget(const RGRenderTargetDesc& Desc) -> RenderResourceHandle;
 
 	[[nodiscard]] auto Read(RenderResourceHandle Resource) -> RenderResourceHandle;

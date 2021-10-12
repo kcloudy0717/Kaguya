@@ -37,27 +37,21 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Bindless resource
 - Utilization of graphics and asynchronous compute queues
 - Acceleration structure compaction
+- Custom and efficient binary format for streaming meshes and meshlets
 
 # Goals
 
-- Implement spectral path tracing
-- Implement bi-directional path tracing
 - Implement wavefront path tracer
 - Implement volumetric scattering and sub-surface scattering
-- Implement anti-aliasing techniques
-- Implement more materials
-- Implement more light types (spot, directional, spherical)
+- Implement temporal anti-aliasing
 - Implement denoising
-- Implement custom memory allocator for D3D12 based on resource usage
-- Implement D3D12 resource residency management
-- SM6.6 Dynamic resource binding
-- Add environment lights ([Portal-masked environment map sampling](https://cs.dartmouth.edu/wjarosz/publications/bitterli15portal.html)) and geometry area lights ([Spherical triangle sampling](https://www.graphics.cornell.edu/pubs/1995/Arv95c.pdf))
-- Upgrade from DXR 1.0 to DXR 1.1 (inline raytracing)
+- Implement DXR 1.1 (inline raytracing) and compare against 1.0
 
 # Work in progress
 
-- RenderGraph rendering approach
+- Render graph
 - GPU driven architecture
+- Mesh shading using meshlets
 
 # Build
 

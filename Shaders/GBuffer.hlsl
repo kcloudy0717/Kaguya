@@ -1,4 +1,5 @@
 ﻿#include "HLSLCommon.hlsli"
+#include "DescriptorTable.hlsli"
 
 cbuffer RootConstants : register(b0, space0)
 {
@@ -18,8 +19,6 @@ ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b1, space0);
 StructuredBuffer<Material> g_Materials : register(t0, space0);
 StructuredBuffer<Light>	   g_Lights : register(t1, space0);
 StructuredBuffer<Mesh>	   g_Meshes : register(t2, space0);
-
-#include "DescriptorTable.hlsli"
 
 struct MRT
 {

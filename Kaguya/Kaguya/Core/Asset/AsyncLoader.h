@@ -1,10 +1,6 @@
 #pragma once
-#include <wil/resource.h>
-
 #include "Image.h"
 #include "Mesh.h"
-
-#include "AssetCache.h"
 
 /*
  * All inherited loader must implement a method called AsyncLoad,
@@ -21,51 +17,38 @@ public:
 
 	AsyncLoader()
 	{
-		struct threadwrapper
-		{
-			static unsigned int WINAPI thunk(LPVOID lpParameter)
+		Thread = std::jthread(
+			[&]()
 			{
-				auto pAsyncLoader = static_cast<AsyncLoader<T, TMetadata, TDerived>*>(lpParameter);
-
 				while (true)
 				{
-					// Sleep until the condition variable becomes notified
-					std::unique_lock _(pAsyncLoader->CriticalSection);
-					pAsyncLoader->ConditionVariable.wait(_);
-
-					if (pAsyncLoader->Quit)
+					std::unique_lock UniqueLock(Mutex);
+					ConditionVariable.wait(UniqueLock);
+					if (Quit)
 					{
 						break;
 					}
 
 					// Start loading stuff async :D
-					while (!pAsyncLoader->MetadataQueue.empty())
+					while (!MetadataQueue.empty())
 					{
-						auto Metadata = pAsyncLoader->MetadataQueue.front();
-						pAsyncLoader->MetadataQueue.pop();
+						auto Metadata = MetadataQueue.front();
+						MetadataQueue.pop();
 
-						auto pResource = static_cast<TDerived*>(pAsyncLoader)->AsyncLoad(Metadata);
-						if (pResource)
+						auto Resource = static_cast<TDerived*>(this)->AsyncLoad(Metadata);
+						if (Resource)
 						{
-							pAsyncLoader->Delegate(pResource);
+							Delegate(Resource);
 						}
 					}
 				}
-
-				return EXIT_SUCCESS;
-			}
-		};
-
-		Thread.reset(reinterpret_cast<HANDLE>(
-			_beginthreadex(nullptr, 0, threadwrapper::thunk, reinterpret_cast<LPVOID>(this), 0, nullptr)));
+			});
 	}
 
 	~AsyncLoader()
 	{
 		Quit = true;
-		ConditionVariable.notify_all();
-
-		::WaitForSingleObject(Thread.get(), INFINITE);
+		ConditionVariable.notify_one();
 	}
 
 	void SetDelegate(TDelegate Delegate) { this->Delegate = Delegate; }
@@ -73,7 +56,7 @@ public:
 	void RequestAsyncLoad(UINT NumMetadata, TMetadata* pMetadata)
 	{
 		assert(Delegate != nullptr);
-		std::scoped_lock _(CriticalSection);
+		std::scoped_lock _(Mutex);
 		for (UINT i = 0; i < NumMetadata; i++)
 		{
 			MetadataQueue.push(pMetadata[i]);
@@ -82,13 +65,13 @@ public:
 	}
 
 private:
-	std::mutex				CriticalSection;
+	std::mutex				Mutex;
 	std::condition_variable ConditionVariable;
 	std::queue<TMetadata>	MetadataQueue;
 	TDelegate				Delegate = nullptr;
 
-	wil::unique_handle Thread;
-	std::atomic<bool>  Quit = false;
+	std::jthread	  Thread;
+	std::atomic<bool> Quit = false;
 };
 
 class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>
@@ -101,4 +84,17 @@ class AsyncMeshLoader : public AsyncLoader<Asset::Mesh, Asset::MeshMetadata, Asy
 {
 public:
 	TResourcePtr AsyncLoad(const Asset::MeshMetadata& Metadata);
+
+	void		 ExportMesh(const std::filesystem::path& BinaryPath, TResourcePtr Mesh);
+	TResourcePtr ImportMesh(const std::filesystem::path& BinaryPath, const Asset::MeshMetadata& Metadata);
+
+	struct MeshHeader
+	{
+		size_t NumVertices;
+		size_t NumIndices;
+		size_t NumMeshlets;
+		size_t NumUniqueVertexIndices;
+		size_t NumPrimitiveIndices;
+		size_t NumSubmeshes;
+	};
 };

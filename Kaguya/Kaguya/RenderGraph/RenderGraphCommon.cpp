@@ -1,11 +1,11 @@
 #include "RenderGraphCommon.h"
 
-auto RGTextureDesc::RWTexture2D(
+auto TextureDesc::RWTexture2D(
 	DXGI_FORMAT	  Format,
 	UINT		  Width,
 	UINT		  Height,
 	UINT16		  MipLevels /*= 1*/,
-	ETextureFlags Flags /*= TextureFlag_None*/) -> RGTextureDesc
+	ETextureFlags Flags /*= TextureFlag_None*/) -> TextureDesc
 {
 	return {
 		.Resolution		  = ETextureResolution::Static,
@@ -19,11 +19,11 @@ auto RGTextureDesc::RWTexture2D(
 	};
 }
 
-auto RGTextureDesc::RWTexture2D(
+auto TextureDesc::RWTexture2D(
 	ETextureResolution Resolution,
 	DXGI_FORMAT		   Format,
 	UINT16			   MipLevels /*= 1*/,
-	ETextureFlags	   Flags /*= TextureFlag_None*/) -> RGTextureDesc
+	ETextureFlags	   Flags /*= TextureFlag_None*/) -> TextureDesc
 {
 	return {
 		.Resolution		  = Resolution,
@@ -37,13 +37,13 @@ auto RGTextureDesc::RWTexture2D(
 	};
 }
 
-auto RGTextureDesc::Texture2D(
+auto TextureDesc::Texture2D(
 	DXGI_FORMAT						 Format,
 	UINT							 Width,
 	UINT							 Height,
 	UINT16							 MipLevels /*= 1*/,
 	ETextureFlags					 Flags /*= TextureFlag_None*/,
-	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue /*= std::nullopt*/) -> RGTextureDesc
+	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue /*= std::nullopt*/) -> TextureDesc
 {
 	return { .Resolution		  = ETextureResolution::Static,
 			 .Format			  = Format,
@@ -56,12 +56,12 @@ auto RGTextureDesc::Texture2D(
 			 .OptimizedClearValue = OptimizedClearValue };
 }
 
-auto RGTextureDesc::Texture2D(
+auto TextureDesc::Texture2D(
 	ETextureResolution				 Resolution,
 	DXGI_FORMAT						 Format,
 	UINT16							 MipLevels /*= 1*/,
 	ETextureFlags					 Flags /*= TextureFlag_None*/,
-	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue /*= std::nullopt*/) -> RGTextureDesc
+	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue /*= std::nullopt*/) -> TextureDesc
 {
 	return { .Resolution		  = Resolution,
 			 .Format			  = Format,

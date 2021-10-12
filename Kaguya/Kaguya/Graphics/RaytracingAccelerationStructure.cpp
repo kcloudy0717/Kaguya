@@ -127,13 +127,13 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		InstanceDescs.GetGpuVirtualAddress());
 }
 
-void RaytracingAccelerationStructure::PostBuild(D3D12CommandSyncPoint SyncPoint)
+void RaytracingAccelerationStructure::PostBuild(D3D12SyncHandle SyncHandle)
 {
 	for (const auto& Geometry : ReferencedGeometries)
 	{
 		if (Geometry->BlasIndex != UINT64_MAX)
 		{
-			Manager.SetSyncPoint(Geometry->BlasIndex, SyncPoint);
+			Manager.SetSyncHandle(Geometry->BlasIndex, SyncHandle);
 		}
 	}
 }

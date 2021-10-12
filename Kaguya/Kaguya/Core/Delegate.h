@@ -4,6 +4,12 @@
 #include <type_traits>
 #include <utility>
 
+// Delegate class can be used as an alternative to std::function, delegates are flexible
+// It can be binded to any types of subroutines
+//
+// https://skypjack.github.io/2019-01-25-delegate-revised/
+// https://simoncoenen.com/blog/programming/CPP_Delegates
+
 template<size_t MaxStackSizeInBytes>
 class InlineAllocator
 {
