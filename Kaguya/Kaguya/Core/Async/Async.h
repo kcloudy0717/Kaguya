@@ -136,7 +136,7 @@ struct promise_base
 
 			constexpr void await_resume() const noexcept {}
 
-			constexpr bool await_suspend(std::coroutine_handle<>) const noexcept
+			[[nodiscard]] constexpr bool await_suspend(std::coroutine_handle<>) const noexcept
 			{
 				AsyncStatus status = Promise->Status.load();
 				if (status == AsyncStatus::Started)

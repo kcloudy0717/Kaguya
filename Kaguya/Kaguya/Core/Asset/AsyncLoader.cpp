@@ -275,6 +275,7 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::ImportMesh(
 	Mesh->Meshlets			  = std::move(Meshlets);
 	Mesh->UniqueVertexIndices = std::move(UniqueVertexIndices);
 	Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);
+	Mesh->Submeshes			  = std::move(Submeshes);
 
 	return Mesh;
 }
