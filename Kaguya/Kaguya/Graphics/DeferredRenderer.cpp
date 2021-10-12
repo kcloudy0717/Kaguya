@@ -302,7 +302,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 			Params.Albedo = Scheduler.CreateTexture(
 				"Albedo",
-				RGTextureDesc::Texture2D(
+				TextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R32G32B32A32_FLOAT,
 					1,
@@ -310,7 +310,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
 			Params.Normal = Scheduler.CreateTexture(
 				"Normal",
-				RGTextureDesc::Texture2D(
+				TextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R32G32B32A32_FLOAT,
 					1,
@@ -318,7 +318,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
 			Params.Motion = Scheduler.CreateTexture(
 				"Motion",
-				RGTextureDesc::Texture2D(
+				TextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_R16G16_FLOAT,
 					1,
@@ -326,7 +326,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
 			Params.Depth = Scheduler.CreateTexture(
 				"Depth",
-				RGTextureDesc::Texture2D(
+				TextureDesc::Texture2D(
 					ETextureResolution::Render,
 					DXGI_FORMAT_D32_FLOAT,
 					1,

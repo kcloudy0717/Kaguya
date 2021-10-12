@@ -154,11 +154,8 @@ public:
 	// Call this after shader tables are added
 	void Generate(D3D12LinkedDevice* Device);
 
-	// Call this after shader records for the tables have been filled out
-	void Write();
-
-	// Call this to upload the records to GPU table
-	void CopyToGpu(D3D12CommandContext& Context) const;
+	// Call this after shader records for the tables have been filled out to upload the records to GPU table
+	void WriteToGpu(D3D12CommandContext& Context) const;
 
 	[[nodiscard]] D3D12_DISPATCH_RAYS_DESC GetDesc(UINT RayGenerationShaderIndex, UINT BaseMissShaderIndex) const;
 

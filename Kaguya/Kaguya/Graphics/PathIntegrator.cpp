@@ -196,8 +196,7 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			HitGroupShaderTable->AddShaderRecord(Record);
 		}
 
-		ShaderBindingTable.Write();
-		ShaderBindingTable.CopyToGpu(Copy);
+		ShaderBindingTable.WriteToGpu(Copy);
 
 		Copy.CloseCommandList();
 

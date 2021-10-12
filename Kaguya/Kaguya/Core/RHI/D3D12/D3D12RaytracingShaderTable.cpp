@@ -20,17 +20,16 @@ void D3D12RaytracingShaderBindingTable::Generate(D3D12LinkedDevice* Device)
 	CpuData = std::make_unique<BYTE[]>(SizeInBytes);
 }
 
-void D3D12RaytracingShaderBindingTable::Write()
+void D3D12RaytracingShaderBindingTable::WriteToGpu(D3D12CommandContext& Context) const
 {
-	BYTE* BaseAddress = CpuData.get();
+	{
+		BYTE* BaseAddress = CpuData.get();
 
-	RayGenerationShaderTable->Write(BaseAddress + RayGenerationShaderTableOffset);
-	MissShaderTable->Write(BaseAddress + MissShaderTableOffset);
-	HitGroupShaderTable->Write(BaseAddress + HitGroupShaderTableOffset);
-}
+		RayGenerationShaderTable->Write(BaseAddress + RayGenerationShaderTableOffset);
+		MissShaderTable->Write(BaseAddress + MissShaderTableOffset);
+		HitGroupShaderTable->Write(BaseAddress + HitGroupShaderTableOffset);
+	}
 
-void D3D12RaytracingShaderBindingTable::CopyToGpu(D3D12CommandContext& Context) const
-{
 	BYTE* Address = SBTUploadBuffer.GetCpuVirtualAddress<BYTE>();
 	std::memcpy(Address, CpuData.get(), SizeInBytes);
 

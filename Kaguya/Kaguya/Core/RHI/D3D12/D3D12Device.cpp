@@ -271,6 +271,8 @@ D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(
 
 void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 {
+	// TODO: Fix formatting for any loggings
+
 	auto	D3D12Device	  = static_cast<ID3D12Device*>(Context);
 	HRESULT RemovedReason = D3D12Device->GetDeviceRemovedReason();
 	if (FAILED(RemovedReason))
