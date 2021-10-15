@@ -46,16 +46,33 @@ struct Light
 // ==================== Mesh ====================
 struct Mesh
 {
-	matrix Transform;
-	matrix PreviousTransform;
+	// 64
+	float4x4 Transform;
+	// 64
+	float4x4 PreviousTransform;
 
+	// 16
+	D3D12_VERTEX_BUFFER_VIEW VertexBuffer;
+	// 16
+	D3D12_INDEX_BUFFER_VIEW IndexBuffer;
+	// 16
+	D3D12_GPU_VIRTUAL_ADDRESS Meshlets;
+	D3D12_GPU_VIRTUAL_ADDRESS UniqueVertexIndices;
+	// 16
+	D3D12_GPU_VIRTUAL_ADDRESS PrimitiveIndices;
+	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
+
+	// 24
 	BoundingBox BoundingBox;
-
-	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
-	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
+	// 20
 	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 
+	// 20
 	unsigned int MaterialIndex;
+	unsigned int NumMeshlets;
+	unsigned int DEADBEEF0;
+	unsigned int DEADBEEF1;
+	unsigned int DEADBEEF2;
 };
 
 // ==================== Camera ====================

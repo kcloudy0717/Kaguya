@@ -1,7 +1,7 @@
 #include "WorldParser.h"
 #include "World.h"
 #include "Entity.h"
-#include <Graphics/AssetManager.h>
+#include <Core/Asset/AssetManager.h>
 
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -51,12 +51,28 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 
 void to_json(json& Json, const MaterialTexture& InMaterialTexture)
 {
-	Json = InMaterialTexture.Path;
+	ForEachAttribute<MaterialTexture>(
+		[&](auto&& Attribute)
+		{
+			const char* Name = Attribute.GetName();
+			Json[Name]		 = Attribute.Get(InMaterialTexture);
+		});
 }
-
 void from_json(const json& Json, MaterialTexture& OutMaterialTexture)
 {
-	OutMaterialTexture.Path = Json.get<std::string>();
+	ForEachAttribute<MaterialTexture>(
+		[&](auto&& Attribute)
+		{
+			const char* Name = Attribute.GetName();
+			if (Json.contains(Name))
+			{
+				Attribute.Set(OutMaterialTexture, Json[Name].get<decltype(Attribute.GetType())>());
+			}
+		});
+
+	OutMaterialTexture.Handle.Type	= AssetType::Texture;
+	OutMaterialTexture.Handle.State = AssetState::Dirty;
+	OutMaterialTexture.Handle.Id	= OutMaterialTexture.HandleId;
 }
 
 void to_json(json& Json, const Material& InMaterial)
@@ -64,55 +80,21 @@ void to_json(json& Json, const Material& InMaterial)
 	ForEachAttribute<Material>(
 		[&](auto&& Attribute)
 		{
-			Json[Attribute.GetName()] = Attribute.Get(InMaterial);
+			const char* Name = Attribute.GetName();
+			Json[Name]		 = Attribute.Get(InMaterial);
 		});
 }
-
-void from_json(const json& json, Material& OutMaterial)
+void from_json(const json& Json, Material& OutMaterial)
 {
 	ForEachAttribute<Material>(
 		[&](auto&& Attribute)
 		{
-			Attribute.Set(OutMaterial, json[Attribute.GetName()].template get<decltype(Attribute.GetType())>());
+			const char* Name = Attribute.GetName();
+			if (Json.contains(Name))
+			{
+				Attribute.Set(OutMaterial, Json[Name].get<decltype(Attribute.GetType())>());
+			}
 		});
-}
-
-static void SerializeImages(json& Json)
-{
-	auto& JsonImages = Json["Images"];
-
-	std::map<std::string, AssetHandle<Asset::Image>> SortedImages;
-	AssetManager::GetImageCache().Each(
-		[&](UINT64 Key, AssetHandle<Asset::Image> Resource)
-		{
-			SortedImages.insert({ Resource->Metadata.Path.string(), Resource });
-		});
-
-	for (auto& Handle : SortedImages | std::views::values)
-	{
-		auto& Image =
-			JsonImages[std::filesystem::relative(Handle->Metadata.Path, Application::ExecutableDirectory).string()];
-		Image["Metadata"]["SRGB"] = Handle->Metadata.sRGB;
-	}
-}
-
-static void SerializeMeshes(json& Json)
-{
-	auto& JsonMeshes = Json["Meshes"];
-
-	std::map<std::string, AssetHandle<Asset::Mesh>> SortedMeshes;
-	AssetManager::GetMeshCache().Each(
-		[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
-		{
-			SortedMeshes.insert({ Resource->Metadata.Path.string(), Resource });
-		});
-
-	for (auto& Handle : SortedMeshes | std::views::values)
-	{
-		auto& Mesh =
-			JsonMeshes[std::filesystem::relative(Handle->Metadata.Path, Application::ExecutableDirectory).string()];
-		Mesh["Metadata"]["KeepGeometryInRAM"] = Handle->Metadata.KeepGeometryInRAM;
-	}
 }
 
 template<is_component T>
@@ -128,7 +110,8 @@ struct ComponentSerializer
 			ForEachAttribute<T>(
 				[&](auto&& Attribute)
 				{
-					JsonAttributes[Attribute.GetName()] = Attribute.Get(Component);
+					const char* Name	 = Attribute.GetName();
+					JsonAttributes[Name] = Attribute.Get(Component);
 				});
 		}
 	}
@@ -140,8 +123,22 @@ void WorldParser::Save(const std::filesystem::path& Path, World* World)
 	{
 		Json["Version"] = Version::String;
 
-		SerializeImages(Json);
-		SerializeMeshes(Json);
+		auto& JsonImages = Json["Images"];
+		AssetManager::GetTextureCache().Each(
+			[&](AssetHandle Handle, Texture* Resource)
+			{
+				auto& Image = JsonImages[relative(Resource->Metadata.Path, Application::ExecutableDirectory).string()];
+				Image["Metadata"]["SRGB"] = Resource->Metadata.sRGB;
+			});
+
+		auto& JsonMeshes = Json["Meshes"];
+
+		AssetManager::GetMeshCache().Each(
+			[&](AssetHandle Handle, Mesh* Resource)
+			{
+				auto& Mesh = JsonMeshes[relative(Resource->Metadata.Path, Application::ExecutableDirectory).string()];
+				Mesh["Metadata"]["KeepGeometryInRAM"] = Resource->Metadata.KeepGeometryInRAM;
+			});
 
 		auto& JsonWorld = Json["World"];
 		UINT  EntityUID = 0;
@@ -187,9 +184,13 @@ struct ComponentDeserializer
 			ForEachAttribute<T>(
 				[&](auto&& Attribute)
 				{
-					Attribute.Set(
-						Component,
-						iter.value()[Attribute.GetName()].template get<decltype(Attribute.GetType())>());
+					const auto& Value = iter.value();
+
+					const char* Name = Attribute.GetName();
+					if (Value.contains(Name))
+					{
+						Attribute.Set(Component, Value[Name].template get<decltype(Attribute.GetType())>());
+					}
 				});
 		}
 	}
@@ -199,7 +200,7 @@ void WorldParser::Load(const std::filesystem::path& Path, World* World)
 {
 	World->Clear(false);
 
-	AssetManager::GetImageCache().DestroyAll();
+	AssetManager::GetTextureCache().DestroyAll();
 	AssetManager::GetMeshCache().DestroyAll();
 
 	std::ifstream ifs(Path);
@@ -247,26 +248,10 @@ void WorldParser::Load(const std::filesystem::path& Path, World* World)
 
 		if (Entity.HasComponent<MeshFilter>())
 		{
-			auto& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
-
-			if (MeshFilterComponent.Path != "NULL")
-			{
-				MeshFilterComponent.Path = (Application::ExecutableDirectory / MeshFilterComponent.Path).string();
-
-				MeshFilterComponent.Key = CityHash64(MeshFilterComponent.Path.data(), MeshFilterComponent.Path.size());
-			}
-		}
-
-		if (Entity.HasComponent<MeshRenderer>())
-		{
-			auto&			 MeshRendererComponent = Entity.GetComponent<MeshRenderer>();
-			MaterialTexture& Albedo				   = MeshRendererComponent.Material.Albedo;
-			if (Albedo.Path != "NULL")
-			{
-				Albedo.Path = (Application::ExecutableDirectory / Albedo.Path).string();
-
-				Albedo.Key = CityHash64(Albedo.Path.data(), Albedo.Path.size());
-			}
+			auto& MeshFilterComponent		 = Entity.GetComponent<MeshFilter>();
+			MeshFilterComponent.Handle.Type	 = AssetType::Mesh;
+			MeshFilterComponent.Handle.State = AssetState::Dirty;
+			MeshFilterComponent.Handle.Id	 = MeshFilterComponent.HandleId;
 		}
 	}
 }

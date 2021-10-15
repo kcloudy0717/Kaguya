@@ -188,8 +188,8 @@ public:
 
 	Delegate(std::nullptr_t) noexcept { Reset(); }
 
-	template<typename T, typename = std::enable_if_t<!std::is_same_v<Delegate, std::decay_t<T>>>>
-	Delegate(T&& Lambda)
+	template<typename T>
+	requires std::invocable<T, TArgs...> Delegate(T&& Lambda)
 	{
 		using DecayedType = std::decay_t<T>;
 
@@ -204,8 +204,8 @@ public:
 		new (Object) DecayedType(std::forward<DecayedType>(Lambda));
 	}
 
-	template<typename T, typename = std::enable_if_t<!std::is_same_v<Delegate, std::decay_t<T>>>>
-	Delegate& operator=(T&& Lambda)
+	template<typename T>
+	requires std::invocable<T, TArgs...> Delegate& operator=(T&& Lambda)
 	{
 		using DecayedType = std::decay_t<T>;
 

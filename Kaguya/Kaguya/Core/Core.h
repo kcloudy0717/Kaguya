@@ -20,7 +20,7 @@
 // Asset
 #include "Asset/AssetCache.h"
 #include "Asset/AsyncLoader.h"
-#include "Asset/Image.h"
+#include "Asset/Texture.h"
 #include "Asset/Mesh.h"
 
 // Async

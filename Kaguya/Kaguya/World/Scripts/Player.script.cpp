@@ -3,24 +3,21 @@
 // https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/CameraController.cpp
 void ApplyMomentum(float& OldValue, float& NewValue, float DeltaTime)
 {
-	float blendedValue;
+	float BlendedValue;
 	if (abs(NewValue) > abs(OldValue))
-		blendedValue = lerp(NewValue, OldValue, pow(0.6f, DeltaTime * 60.0f));
+	{
+		BlendedValue = lerp(NewValue, OldValue, pow(0.6f, DeltaTime * 60.0f));
+	}
 	else
-		blendedValue = lerp(NewValue, OldValue, pow(0.8f, DeltaTime * 60.0f));
-	OldValue = blendedValue;
-	NewValue = blendedValue;
+	{
+		BlendedValue = lerp(NewValue, OldValue, pow(0.8f, DeltaTime * 60.0f));
+	}
+	OldValue = BlendedValue;
+	NewValue = BlendedValue;
 }
 
 void PlayerScript::OnCreate()
 {
-	MoveSpeed		  = 10.0f;
-	StrafeSpeed		  = 10.0f;
-	MouseSensitivityX = 15.0f;
-	MouseSensitivityY = 15.0f;
-
-	Momentum = true;
-
 	LastForward = 0.0f;
 	LastStrafe	= 0.0f;
 	LastAscent	= 0.0f;
@@ -39,8 +36,8 @@ void PlayerScript::OnUpdate(float DeltaTime)
 	Mouse&		  Mouse		   = Application::GetMouse();
 	Keyboard&	  Keyboard	   = Application::GetKeyboard();
 
-	auto& transform = GetComponent<Transform>();
-	auto& camera	= GetComponent<Camera>();
+	auto& TransformComp = GetComponent<Transform>();
+	auto& CameraComp	= GetComponent<Camera>();
 	// auto& controller = GetComponent<CharacterController>();
 
 	bool Fwd = false, Bwd = false, Right = false, Left = false, Up = false, Down = false;
@@ -62,7 +59,7 @@ void PlayerScript::OnUpdate(float DeltaTime)
 		//}
 	}
 
-	auto	 v = camera.pTransform->Forward();
+	auto	 v = CameraComp.pTransform->Forward();
 	XMFLOAT3 viewDir;
 	XMStoreFloat3(&viewDir, v);
 
@@ -86,18 +83,18 @@ void PlayerScript::OnUpdate(float DeltaTime)
 	{
 		if (InputHandler.RawInputEnabled)
 		{
-			float z = MoveSpeed * ((Fwd * DeltaTime) + (Bwd * -DeltaTime));
-			float x = StrafeSpeed * ((Right * DeltaTime) + (Left * -DeltaTime));
-			float y = StrafeSpeed * ((Up * DeltaTime) + (Down * -DeltaTime));
+			float z = CameraComp.MovementSpeed * ((Fwd * DeltaTime) + (Bwd * -DeltaTime));
+			float x = CameraComp.StrafeSpeed * ((Right * DeltaTime) + (Left * -DeltaTime));
+			float y = CameraComp.StrafeSpeed * ((Up * DeltaTime) + (Down * -DeltaTime));
 
-			if (Momentum)
+			if (CameraComp.Momentum)
 			{
 				ApplyMomentum(LastForward, z, DeltaTime);
 				ApplyMomentum(LastStrafe, x, DeltaTime);
 				ApplyMomentum(LastAscent, y, DeltaTime);
 			}
 
-			camera.Translate(x, y, z);
+			CameraComp.Translate(x, y, z);
 
 			targetKeyDisplacement += z * forward;
 			targetKeyDisplacement += x * right;
@@ -110,7 +107,10 @@ void PlayerScript::OnUpdate(float DeltaTime)
 
 			while (const auto e = Mouse.ReadRawInput())
 			{
-				camera.Rotate(e->y * DeltaTime * MouseSensitivityY, e->x * DeltaTime * MouseSensitivityX, 0.0f);
+				CameraComp.Rotate(
+					e->y * DeltaTime * CameraComp.MouseSensitivityY,
+					e->x * DeltaTime * CameraComp.MouseSensitivityX,
+					0.0f);
 			}
 		}
 
@@ -154,5 +154,5 @@ void PlayerScript::OnUpdate(float DeltaTime)
 	//
 	//}
 
-	camera.Update();
+	CameraComp.Update();
 }

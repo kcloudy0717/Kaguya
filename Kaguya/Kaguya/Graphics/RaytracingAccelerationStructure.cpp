@@ -4,6 +4,7 @@
 RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGroups, size_t NumInstances)
 	: NumHitGroups(NumHitGroups)
 	, NumInstances(NumInstances)
+	, TopLevelAccelerationStructure(NumInstances)
 {
 	MeshRenderers.reserve(NumInstances);
 
@@ -26,16 +27,19 @@ void RaytracingAccelerationStructure::Reset()
 	TopLevelAccelerationStructure.Reset();
 	MeshRenderers.clear();
 	ReferencedGeometries.clear();
-	InstanceContributionToHitGroupIndex = 0;
+	CurrentInstanceID						   = 0;
+	CurrentInstanceContributionToHitGroupIndex = 0;
 }
 
 void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, MeshRenderer* MeshRenderer)
 {
+	assert(TopLevelAccelerationStructure.size() < NumInstances);
+
 	D3D12_RAYTRACING_INSTANCE_DESC RaytracingInstanceDesc = {};
 	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(RaytracingInstanceDesc.Transform), Transform.Matrix());
-	RaytracingInstanceDesc.InstanceID						   = TopLevelAccelerationStructure.Size();
+	RaytracingInstanceDesc.InstanceID						   = CurrentInstanceID++;
 	RaytracingInstanceDesc.InstanceMask						   = RAYTRACING_INSTANCEMASK_ALL;
-	RaytracingInstanceDesc.InstanceContributionToHitGroupIndex = InstanceContributionToHitGroupIndex;
+	RaytracingInstanceDesc.InstanceContributionToHitGroupIndex = CurrentInstanceContributionToHitGroupIndex;
 	RaytracingInstanceDesc.Flags							   = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 	RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved later
 
@@ -43,7 +47,7 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 	MeshRenderers.push_back(MeshRenderer);
 	ReferencedGeometries.insert(MeshRenderer->pMeshFilter->Mesh);
 
-	InstanceContributionToHitGroupIndex += MeshRenderer->pMeshFilter->Mesh->Blas.Size() * NumHitGroups;
+	CurrentInstanceContributionToHitGroupIndex += MeshRenderer->pMeshFilter->Mesh->Blas.Size() * NumHitGroups;
 }
 
 void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)

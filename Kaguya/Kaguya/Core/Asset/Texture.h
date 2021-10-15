@@ -2,27 +2,29 @@
 #include <DirectXTex.h>
 #include <Core/RHI/D3D12/D3D12Device.h>
 
-namespace Asset
-{
-struct Image;
-
-struct ImageMetadata
+struct TextureMetadata
 {
 	std::filesystem::path Path;
 	bool				  sRGB;
 	bool				  GenerateMips = true;
 };
 
-struct Image
+class Texture : public Asset
 {
-	ImageMetadata Metadata;
+public:
+	TextureMetadata Metadata;
 
 	Vector2i Resolution;
 
 	std::string			  Name;
-	DirectX::ScratchImage Image;
+	DirectX::ScratchImage TexImage;
 
-	D3D12Texture			Texture;
+	D3D12Texture			DxTexture;
 	D3D12ShaderResourceView SRV;
 };
-} // namespace Asset
+
+template<>
+struct AssetTypeTraits<AssetType::Texture>
+{
+	using Type = Texture;
+};

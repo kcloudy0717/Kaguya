@@ -55,13 +55,6 @@ public:
 
 	static constexpr float Gravity = -9.81f;
 
-	float MoveSpeed;
-	float StrafeSpeed;
-	float MouseSensitivityX;
-	float MouseSensitivityY;
-
-	bool Momentum;
-
 	float LastForward;
 	float LastStrafe;
 	float LastAscent;

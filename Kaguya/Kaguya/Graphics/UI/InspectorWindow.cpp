@@ -2,7 +2,7 @@
 
 #include <imgui_internal.h>
 
-#include <Graphics/AssetManager.h>
+#include <Core/Asset/AssetManager.h>
 
 template<is_component T, bool IsCoreComponent, typename UIFunction>
 static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
@@ -364,8 +364,8 @@ void InspectorWindow::OnRender()
 				IsEdited |= RenderFloat3Control("Scale", Scale, 1.0f);
 				ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
 
-				XMStoreFloat4x4(&View, XMMatrixTranspose(XMLoadFloat4x4(&pWorld->ActiveCamera->View)));
-				XMStoreFloat4x4(&Projection, XMMatrixTranspose(XMLoadFloat4x4(&pWorld->ActiveCamera->Projection)));
+				XMStoreFloat4x4(&View, XMLoadFloat4x4(&pWorld->ActiveCamera->View));
+				XMStoreFloat4x4(&Projection, XMLoadFloat4x4(&pWorld->ActiveCamera->Projection));
 
 				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
 				IsEdited |= EditTransform(
@@ -388,9 +388,18 @@ void InspectorWindow::OnRender()
 			{
 				bool IsEdited = false;
 
-				IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, 45.0f, 45.0f, 85.0f);
-				IsEdited |= RenderFloatControl("Near", &Component.NearZ, 0.1f, 0.1f, 1.0f);
-				IsEdited |= RenderFloatControl("Far", &Component.FarZ, 10.0f, 10.0f, 1000.0f);
+				IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, Camera().FoVY, 45.0f, 85.0f);
+				IsEdited |= RenderFloatControl("Near", &Component.NearZ, Camera().NearZ, 0.1f, 1.0f);
+				IsEdited |= RenderFloatControl("Far", &Component.FarZ, Camera().FarZ, 10.0f, 10000.0f);
+
+				IsEdited |= RenderFloatControl(
+					"Movement Speed",
+					&Component.MovementSpeed,
+					Camera().MovementSpeed,
+					1.0f,
+					1000.0f);
+				IsEdited |=
+					RenderFloatControl("Strafe Speed", &Component.StrafeSpeed, Camera().StrafeSpeed, 1.0f, 1000.0f);
 
 				return IsEdited;
 			});
@@ -429,26 +438,25 @@ void InspectorWindow::OnRender()
 			{
 				bool IsEdited = false;
 
-				auto handle = AssetManager::GetMeshCache().Load(Component.Key);
+				Component.Mesh = AssetManager::GetMeshCache().GetValidAsset(Component.Handle);
 
 				ImGui::Text("Mesh: ");
 				ImGui::SameLine();
-				if (handle)
+				if (Component.Mesh)
 				{
-					ImGui::Button(handle->Name.data());
+					ImGui::Button(Component.Mesh->Name.data());
 				}
 				else
 				{
-					ImGui::Button("NULL");
+					ImGui::Button("<unknown>");
 				}
 
 				if (ImGui::BeginDragDropTarget())
 				{
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_MESH"); payload)
+					if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_MESH"); Payload)
 					{
-						IM_ASSERT(payload->DataSize == sizeof(UINT64));
-						Component.Key  = *(UINT64*)payload->Data;
-						Component.Mesh = AssetManager::GetMeshCache().Load(Component.Key);
+						IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
+						Component.Handle = *static_cast<AssetHandle*>(Payload->Data);
 
 						IsEdited = true;
 					}
@@ -471,22 +479,21 @@ void InspectorWindow::OnRender()
 
 					ImGui::Text("Attributes");
 
-					const char* BSDFTypes[(int)EBSDFTypes::NumBSDFTypes] = { "Lambertian",
+					const char* BsdfTypes[(int)EBSDFTypes::NumBSDFTypes] = { "Lambertian",
 																			 "Mirror",
 																			 "Glass",
 																			 "Disney" };
 					IsEdited |= ImGui::Combo(
 						"Type",
-						(int*)&Material.BSDFType,
-						BSDFTypes,
-						ARRAYSIZE(BSDFTypes),
-						ARRAYSIZE(BSDFTypes));
+						reinterpret_cast<int*>(&Material.BSDFType),
+						BsdfTypes,
+						ARRAYSIZE(BsdfTypes),
+						ARRAYSIZE(BsdfTypes));
 
 					switch (Material.BSDFType)
 					{
 					case EBSDFTypes::Lambertian:
-						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
-						break;
+						[[fallthrough]];
 					case EBSDFTypes::Mirror:
 						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
 						break;
@@ -513,29 +520,29 @@ void InspectorWindow::OnRender()
 						break;
 					}
 
-					auto ImageBox = [&](ETextureTypes Type, UINT64& Key, std::string_view Name)
+					auto ImageBox = [&](ETextureTypes Type, MaterialTexture& MaterialTexture, std::string_view Name)
 					{
-						auto handle = AssetManager::GetImageCache().Load(Key);
+						MaterialTexture.Texture = AssetManager::GetTextureCache().GetValidAsset(MaterialTexture.Handle);
 
 						ImGui::Text(Name.data());
 						ImGui::SameLine();
-						if (handle)
+						if (MaterialTexture.Texture)
 						{
-							ImGui::Button(handle->Name.data());
-							Material.TextureIndices[Type] = handle->SRV.GetIndex();
+							ImGui::Button(MaterialTexture.Texture->Name.data());
+							Material.TextureIndices[Type] = MaterialTexture.Texture->SRV.GetIndex();
 						}
 						else
 						{
-							ImGui::Button("NULL");
+							ImGui::Button("<unknown>");
 							Material.TextureIndices[Type] = -1;
 						}
 
 						if (ImGui::BeginDragDropTarget())
 						{
-							if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); payload)
+							if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); Payload)
 							{
-								IM_ASSERT(payload->DataSize == sizeof(UINT64));
-								Key = *(UINT64*)payload->Data;
+								IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
+								MaterialTexture.Handle = *static_cast<AssetHandle*>(Payload->Data);
 
 								IsEdited = true;
 							}
@@ -543,7 +550,7 @@ void InspectorWindow::OnRender()
 						}
 					};
 
-					ImageBox(ETextureTypes::AlbedoIdx, Material.Albedo.Key, "Albedo: ");
+					ImageBox(ETextureTypes::AlbedoIdx, Material.Albedo, "Albedo: ");
 
 					ImGui::TreePop();
 				}

@@ -1,25 +1,17 @@
 #pragma once
-#include "Image.h"
+#include "Texture.h"
 #include "Mesh.h"
 
-/*
- * All inherited loader must implement a method called AsyncLoad,
- * it takes in the TMetadata and returns a TResourcePtr
- */
 template<typename T, typename TMetadata, typename TDerived>
 class AsyncLoader
 {
 public:
-	using TResourcePtr = std::shared_ptr<T>;
-
-	// The delegate is called when AsyncLoad succeeds
-	using TDelegate = std::function<void(TResourcePtr)>;
-
-	AsyncLoader()
+	AsyncLoader(const std::wstring& ThreadName)
 	{
 		Thread = std::jthread(
-			[&]()
+			[&, ThreadName]()
 			{
+				SetThreadDescription(GetCurrentThread(), ThreadName.data());
 				while (true)
 				{
 					std::unique_lock UniqueLock(Mutex);
@@ -35,11 +27,7 @@ public:
 						auto Metadata = MetadataQueue.front();
 						MetadataQueue.pop();
 
-						auto Resource = static_cast<TDerived*>(this)->AsyncLoad(Metadata);
-						if (Resource)
-						{
-							Delegate(Resource);
-						}
+						static_cast<TDerived*>(this)->AsyncLoad(Metadata);
 					}
 				}
 			});
@@ -51,11 +39,8 @@ public:
 		ConditionVariable.notify_one();
 	}
 
-	void SetDelegate(TDelegate Delegate) { this->Delegate = Delegate; }
-
 	void RequestAsyncLoad(UINT NumMetadata, TMetadata* pMetadata)
 	{
-		assert(Delegate != nullptr);
 		std::scoped_lock _(Mutex);
 		for (UINT i = 0; i < NumMetadata; i++)
 		{
@@ -68,25 +53,39 @@ private:
 	std::mutex				Mutex;
 	std::condition_variable ConditionVariable;
 	std::queue<TMetadata>	MetadataQueue;
-	TDelegate				Delegate = nullptr;
 
 	std::jthread	  Thread;
 	std::atomic<bool> Quit = false;
 };
 
-class AsyncImageLoader : public AsyncLoader<Asset::Image, Asset::ImageMetadata, AsyncImageLoader>
+class AsyncImageLoader : public AsyncLoader<Texture, TextureMetadata, AsyncImageLoader>
 {
 public:
-	TResourcePtr AsyncLoad(const Asset::ImageMetadata& Metadata);
+	AsyncImageLoader()
+		: AsyncLoader(L"Async Image Loading Thread")
+	{
+	}
+
+	void AsyncLoad(const TextureMetadata& Metadata);
 };
 
-class AsyncMeshLoader : public AsyncLoader<Asset::Mesh, Asset::MeshMetadata, AsyncMeshLoader>
+class AsyncMeshLoader : public AsyncLoader<Mesh, MeshMetadata, AsyncMeshLoader>
 {
 public:
-	TResourcePtr AsyncLoad(const Asset::MeshMetadata& Metadata);
+	AsyncMeshLoader()
+		: AsyncLoader(L"Async Mesh Loading Thread")
+	{
+	}
 
-	void		 ExportMesh(const std::filesystem::path& BinaryPath, TResourcePtr Mesh);
-	TResourcePtr ImportMesh(const std::filesystem::path& BinaryPath, const Asset::MeshMetadata& Metadata);
+	void AsyncLoad(const MeshMetadata& Metadata);
+
+	void			   Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes);
+	std::vector<Mesh*> Import(const std::filesystem::path& BinaryPath, const MeshMetadata& Metadata);
+
+	struct ExportHeader
+	{
+		size_t NumMeshes;
+	};
 
 	struct MeshHeader
 	{
@@ -95,6 +94,5 @@ public:
 		size_t NumMeshlets;
 		size_t NumUniqueVertexIndices;
 		size_t NumPrimitiveIndices;
-		size_t NumSubmeshes;
 	};
 };

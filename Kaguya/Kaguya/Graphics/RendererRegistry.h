@@ -37,6 +37,7 @@ struct Shaders
 		inline static Shader RCAS;
 
 		inline static Shader IndirectCull;
+		inline static Shader IndirectCullMeshShaders;
 	};
 
 	static void Compile()
@@ -115,6 +116,12 @@ struct Shaders
 			CS::IndirectCull = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/IndirectCull.hlsl",
+				g_CSEntryPoint,
+				{});
+
+			CS::IndirectCullMeshShaders = RenderCore::Compiler->CompileShader(
+				EShaderType::Compute,
+				ExecutableDirectory / L"Shaders/IndirectCullMeshShader.hlsl",
 				g_CSEntryPoint,
 				{});
 		}
@@ -263,6 +270,7 @@ struct PipelineStates
 
 	inline static RenderResourceHandle GBuffer;
 	inline static RenderResourceHandle IndirectCull;
+	inline static RenderResourceHandle IndirectCullMeshShader;
 
 	inline static RenderResourceHandle Meshlet;
 
@@ -351,6 +359,17 @@ struct PipelineStates
 			Stream.CS			 = &Shaders::CS::IndirectCull;
 
 			IndirectCull = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+		}
+		{
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::IndirectCull);
+			Stream.CS			 = &Shaders::CS::IndirectCullMeshShaders;
+
+			IndirectCullMeshShader = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
 		}
 		{
 			DepthStencilState DepthStencilState;

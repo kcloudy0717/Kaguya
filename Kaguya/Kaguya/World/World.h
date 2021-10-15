@@ -14,9 +14,9 @@ DEFINE_ENUM_FLAG_OPERATORS(EWorldState);
 class World
 {
 public:
-	static constexpr size_t MaterialLimit = 1024;
-	static constexpr size_t LightLimit	  = 100;
-	static constexpr size_t InstanceLimit = 1024;
+	static constexpr size_t MaterialLimit = 65536;
+	static constexpr size_t LightLimit	  = 32;
+	static constexpr size_t MeshLimit	  = 65536;
 
 	World() { AddDefaultEntities(); }
 
@@ -88,17 +88,32 @@ struct Light
 
 struct Mesh
 {
+	// 64
 	DirectX::XMFLOAT4X4 Transform;
+	// 64
 	DirectX::XMFLOAT4X4 PreviousTransform;
 
-	BoundingBox BoundingBox;
+	// 64
+	D3D12_VERTEX_BUFFER_VIEW  VertexBuffer;
+	D3D12_INDEX_BUFFER_VIEW	  IndexBuffer;
+	D3D12_GPU_VIRTUAL_ADDRESS Meshlets;
+	D3D12_GPU_VIRTUAL_ADDRESS UniqueVertexIndices;
+	D3D12_GPU_VIRTUAL_ADDRESS PrimitiveIndices;
+	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
 
-	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
-	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
+	// 24
+	BoundingBox BoundingBox;
+	// 20
 	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 
+	// 20
 	unsigned int MaterialIndex;
+	unsigned int NumMeshlets;
+	unsigned int DEADBEEF0 = 0xDEADBEEF;
+	unsigned int DEADBEEF1 = 0xDEADBEEF;
+	unsigned int DEADBEEF2 = 0xDEADBEEF;
 };
+static_assert(sizeof(Mesh) == 256);
 
 struct Camera
 {
@@ -107,10 +122,10 @@ struct Camera
 	float NearZ;
 	float FarZ;
 
-	float FocalLength;
-	float RelativeAperture;
-	float DEADBEEF0;
-	float DEADBEEF1;
+	float		 FocalLength;
+	float		 RelativeAperture;
+	unsigned int DEADBEEF0 = 0xDEADBEEF;
+	unsigned int DEADBEEF1 = 0xDEADBEEF;
 
 	DirectX::XMFLOAT4 Position;
 
@@ -204,8 +219,6 @@ inline Hlsl::Camera GetHLSLCameraDesc(const Camera& Camera)
 
 	HlslCamera.FocalLength		= Camera.FocalLength;
 	HlslCamera.RelativeAperture = Camera.RelativeAperture;
-	HlslCamera.DEADBEEF0		= (float)0xDEADBEEF;
-	HlslCamera.DEADBEEF1		= (float)0xDEADBEEF;
 
 	HlslCamera.Position = { Camera.pTransform->Position.x,
 							Camera.pTransform->Position.y,

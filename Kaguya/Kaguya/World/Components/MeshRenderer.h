@@ -17,9 +17,9 @@ enum class EBSDFTypes
 
 struct MaterialTexture
 {
-	std::string				  Path;
-	UINT64					  Key;
-	AssetHandle<Asset::Image> Image;
+	AssetHandle Handle	 = {};
+	uint32_t	HandleId = UINT32_MAX;
+	Texture*	Texture	 = nullptr;
 };
 
 struct Material
@@ -61,7 +61,7 @@ struct MeshRenderer : Component
 	Material	Material;
 };
 
-REGISTER_CLASS_ATTRIBUTES(MaterialTexture, CLASS_ATTRIBUTE(MaterialTexture, Path))
+REGISTER_CLASS_ATTRIBUTES(MaterialTexture, CLASS_ATTRIBUTE(MaterialTexture, HandleId))
 
 REGISTER_CLASS_ATTRIBUTES(
 	Material,
@@ -82,6 +82,4 @@ REGISTER_CLASS_ATTRIBUTES(
 	CLASS_ATTRIBUTE(Material, etaB),
 	CLASS_ATTRIBUTE(Material, Albedo))
 
-REGISTER_CLASS_ATTRIBUTES(
-		MeshRenderer,
-		CLASS_ATTRIBUTE(MeshRenderer, Material))
+REGISTER_CLASS_ATTRIBUTES(MeshRenderer, CLASS_ATTRIBUTE(MeshRenderer, Material))

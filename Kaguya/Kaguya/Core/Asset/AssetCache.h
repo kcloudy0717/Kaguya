@@ -1,144 +1,128 @@
 #pragma once
-#include <basetsd.h>
-#include <memory>
-#include <type_traits>
-#include <unordered_map>
+#include <Core/ObjectPool.h>
+#include "Asset.h"
 
-#include <Core/RWLock.h>
-
-template<typename T>
-class AssetCache;
-
-template<typename T>
-class AssetHandle
-{
-	friend class AssetCache<T>;
-
-	AssetHandle(std::shared_ptr<T> Resource)
-		: Resource(std::move(Resource))
-	{
-	}
-
-public:
-	AssetHandle() noexcept = default;
-
-	auto operator<=>(const AssetHandle&) const = default;
-
-	explicit operator bool() const { return static_cast<bool>(Resource); }
-
-	[[nodiscard]] const T& Get() const { return *Resource; }
-
-	[[nodiscard]] T& Get() { return *Resource; }
-
-	[[nodiscard]] const T& operator*() const { return Get(); }
-
-	[[nodiscard]] T& operator*() { return Get(); }
-
-	T* operator->() const { return Resource.get(); }
-
-	T* operator->() { return Resource.get(); }
-
-private:
-	std::shared_ptr<T> Resource;
-};
-
-template<typename T>
+template<AssetType Type, typename T>
 class AssetCache
 {
 public:
-	using Handle = AssetHandle<T>;
+	static_assert(std::is_base_of_v<Asset, T>, "Asset is not based of T");
 
-	auto size() const { return Cache.size(); }
+	// static constexpr size_t NumAssets = 4096;
+	static constexpr size_t NumAssets = 8192;
+
+	AssetCache()
+		: Cache(NumAssets)
+		, CachedHandles(NumAssets)
+		, Assets(NumAssets)
+	{
+	}
 
 	void DestroyAll()
 	{
-		ScopedWriteLock _(RWLock);
-
-		Cache.clear();
+		ScopedWriteLock Swl(RWLock);
+		CachedHandles.clear();
+		CachedHandles.resize(NumAssets);
+		Assets.clear();
+		Assets.resize(NumAssets);
 	}
+
+	auto begin() noexcept { return CachedHandles.begin(); }
+	auto end() noexcept { return CachedHandles.end(); }
+
+	size_t size() const noexcept { return CachedHandles.size(); }
+
+	static bool ValidateHandle(AssetHandle Handle) noexcept { return Handle.Type == Type && Handle.Id < NumAssets; }
 
 	template<typename... TArgs>
-	Handle Create(UINT64 Key, TArgs&&... Args)
+	AssetHandle Create(TArgs&&... Args)
 	{
-		ScopedWriteLock _(RWLock);
+		ScopedWriteLock Swl(RWLock);
 
-		Handle Handle = std::make_shared<T>(std::forward<TArgs>(Args)...);
+		std::size_t Index = Cache.Allocate();
 
-		if (Cache.find(Key) == Cache.end())
-		{
-			Cache[Key] = Handle;
-		}
+		AssetHandle Handle;
+		Handle.Type	   = Type;
+		Handle.State   = AssetState::Dirty;
+		Handle.Version = 0;
+		Handle.Id	   = Index;
 
+		T* Asset	  = Cache.Construct(Index, std::forward<TArgs>(Args)...);
+		Asset->Handle = Handle;
+
+		CachedHandles[Index] = Handle;
+		Assets[Index]		 = Asset;
 		return Handle;
 	}
 
-	void Emplace(UINT64 Key, std::shared_ptr<T> Resource)
-	{
-		ScopedWriteLock _(RWLock);
+	T* GetAsset(AssetHandle Handle) { return Assets[Handle.Id].get(); }
 
-		if (Cache.find(Key) == Cache.end())
+	T* GetValidAsset(AssetHandle& Handle)
+	{
+		if (Handle.IsValid() && ValidateHandle(Handle))
 		{
-			Cache[Key] = Resource;
+			ScopedReadLock Srl(RWLock);
+
+			AssetState State = CachedHandles[Handle.Id].State;
+			if (State == AssetState::Ready)
+			{
+				Handle.State = State;
+				return Assets[Handle.Id].get();
+			}
+		}
+
+		return nullptr;
+	}
+
+	void Destroy(AssetHandle Handle)
+	{
+		if (Handle.IsValid() && ValidateHandle(Handle))
+		{
+			ScopedWriteLock Swl(RWLock);
+
+			Cache.Deallocate(Handle.Id);
+			CachedHandles[Handle.Id].Invalidate();
+			Assets[Handle.Id].reset();
 		}
 	}
 
-	void Discard(UINT64 Key)
+	void UpdateHandleState(AssetHandle Handle)
 	{
-		ScopedWriteLock _(RWLock);
-
-		if (auto iter = Cache.find(Key); iter != Cache.end())
+		if (Handle.IsValid() && ValidateHandle(Handle))
 		{
-			Cache.erase(iter);
+			ScopedWriteLock Swl(RWLock);
+
+			CachedHandles[Handle.Id].State = Handle.State;
 		}
-	}
-
-	Handle Load(UINT64 Key) const
-	{
-		ScopedReadLock _(RWLock);
-
-		Handle Handle = {};
-		if (auto iter = Cache.find(Key); iter != Cache.end())
-		{
-			Handle = iter->second;
-		}
-
-		return Handle;
-	}
-
-	bool Exist(UINT64 Key) const
-	{
-		ScopedReadLock _(RWLock);
-
-		return Cache.find(Key) != Cache.end();
 	}
 
 	template<typename Functor>
-	void Each(Functor F) const
+	void Each(Functor F)
 	{
-		auto begin = Cache.begin();
-		auto end   = Cache.end();
+		ScopedReadLock Srl(RWLock);
+
+		auto begin = CachedHandles.begin();
+		auto end   = CachedHandles.end();
 		while (begin != end)
 		{
 			auto current = begin++;
 
-			if constexpr (std::is_invocable_v<Functor, UINT64>)
+			if constexpr (std::is_invocable_v<Functor, AssetHandle, T*>)
 			{
-				F(current->first);
-			}
-			else if constexpr (std::is_invocable_v<Functor, Handle>)
-			{
-				F(Handle(current->second));
-			}
-			else
-			{
-				F(current->first, Handle(current->second));
+				if (current->IsValid())
+				{
+					F(*current, Cache[current->Id]);
+				}
 			}
 		}
 	}
 
 private:
-	std::unordered_map<UINT64, std::shared_ptr<T>> Cache;
-	mutable RWLock								   RWLock;
+	ObjectPool<T> Cache;
+	// CachedHandles are use to update any external handle's states
+	std::vector<AssetHandle> CachedHandles;
+	std::vector<AssetPtr<T>> Assets;
+	mutable RWLock			 RWLock;
 
 	friend class AssetWindow;
 	friend class SceneParser;

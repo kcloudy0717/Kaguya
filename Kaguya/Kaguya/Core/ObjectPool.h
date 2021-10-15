@@ -2,6 +2,7 @@
 #include <memory>
 #include <type_traits>
 
+// If the type is not trivial, destructor must be invoked explicitly
 template<typename T>
 class ObjectPool
 {
@@ -14,12 +15,11 @@ public:
 		, ActiveElements(0)
 	{
 		Pool = std::make_unique<Element[]>(Size);
-
-		for (std::size_t i = 1; i < Size; ++i)
+		for (std::size_t i = 0; i < Size; ++i)
 		{
-			Pool[i - 1].Next = &Pool[i];
+			Pool[i].Next = i + 1;
 		}
-		FreeStart = &Pool[0];
+		FreeStart = 0;
 	}
 	~ObjectPool() = default;
 
@@ -48,40 +48,27 @@ public:
 	ObjectPool& operator=(const ObjectPool&) = delete;
 
 	template<typename... TArgs>
-	[[nodiscard]] Pointer Construct(TArgs&&... Args)
+	[[nodiscard]] Pointer Construct(std::size_t Index, TArgs&&... Args)
 	{
-		return new (Allocate()) ValueType(std::forward<TArgs>(Args)...);
+		auto Storage = reinterpret_cast<Pointer>(&Pool[Index].Storage);
+		new (Storage) ValueType(std::forward<TArgs>(Args)...);
+		return Storage;
 	}
 
-	void Destruct(Pointer Pointer) noexcept
+	Pointer operator[](std::size_t Index) { return reinterpret_cast<Pointer>(&Pool[Index].Storage); }
+
+	[[nodiscard]] std::size_t Allocate()
 	{
-		if (Pointer)
-		{
-			Pointer->~T();
-			Deallocate(Pointer);
-		}
-	}
-
-private:
-	[[nodiscard]] Pointer Allocate()
-	{
-		if (!FreeStart)
-		{
-			throw std::bad_alloc();
-		}
-
-		const auto AvailableElement = FreeStart;
-		FreeStart					= AvailableElement->Next;
-
 		ActiveElements++;
-		return reinterpret_cast<Pointer>(&AvailableElement->Storage);
+		std::size_t Index = FreeStart;
+		FreeStart		  = Pool[Index].Next;
+		return Index;
 	}
 
-	void Deallocate(Pointer Pointer) noexcept
+	void Deallocate(std::size_t Index) noexcept
 	{
-		const auto pElement = reinterpret_cast<Element*>(Pointer);
-		pElement->Next		= FreeStart;
-		FreeStart			= pElement;
+		Pool[Index].Next = FreeStart;
+		FreeStart		 = Index;
 		--ActiveElements;
 	}
 
@@ -89,11 +76,11 @@ private:
 	union Element
 	{
 		std::aligned_storage_t<sizeof(ValueType), alignof(ValueType)> Storage;
-		Element*													  Next;
+		std::size_t													  Next;
 	};
 
 	std::unique_ptr<Element[]> Pool;
-	Element*				   FreeStart;
+	std::size_t				   FreeStart;
 	std::size_t				   Size;
 	std::size_t				   ActiveElements;
 };

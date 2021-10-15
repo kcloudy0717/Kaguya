@@ -1,7 +1,7 @@
 #pragma once
 #include "Renderer.h"
 
-#define USE_MESH_SHADERS 1
+#define USE_MESH_SHADERS 0
 
 class DeferredRenderer final : public Renderer
 {
@@ -11,10 +11,22 @@ public:
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
+	void Destroy() override;
 	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
 #pragma pack(push, 4)
+#if USE_MESH_SHADERS
+	struct CommandSignatureParams
+	{
+		UINT						  MeshIndex;
+		D3D12_GPU_VIRTUAL_ADDRESS	  Vertices;
+		D3D12_GPU_VIRTUAL_ADDRESS	  Meshlets;
+		D3D12_GPU_VIRTUAL_ADDRESS	  UniqueVertexIndices;
+		D3D12_GPU_VIRTUAL_ADDRESS	  PrimitiveIndices;
+		D3D12_DISPATCH_MESH_ARGUMENTS DispatchMeshArguments;
+	};
+#else
 	struct CommandSignatureParams
 	{
 		UINT						 MeshIndex;
@@ -22,9 +34,10 @@ private:
 		D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
 		D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 	};
+#endif
 #pragma pack(pop)
 
-	static constexpr UINT64 TotalCommandBufferSizeInBytes = World::InstanceLimit * sizeof(CommandSignatureParams);
+	static constexpr UINT64 TotalCommandBufferSizeInBytes = World::MeshLimit * sizeof(CommandSignatureParams);
 	static constexpr UINT64 CommandBufferCounterOffset =
 		AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 

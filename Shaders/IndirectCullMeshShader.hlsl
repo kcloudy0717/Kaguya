@@ -1,4 +1,4 @@
-﻿#include "d3d12.hlsli"
+#include "d3d12.hlsli"
 #include "Shader.hlsli"
 #include "Math.hlsli"
 #include "SharedTypes.hlsli"
@@ -13,10 +13,12 @@ struct ConstantBufferParams
 
 struct CommandSignatureParams
 {
-	uint						 MeshIndex;
-	D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
-	D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
-	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
+	uint						  MeshIndex;
+	D3D12_GPU_VIRTUAL_ADDRESS	  Vertices;
+	D3D12_GPU_VIRTUAL_ADDRESS	  Meshlets;
+	D3D12_GPU_VIRTUAL_ADDRESS	  UniqueVertexIndices;
+	D3D12_GPU_VIRTUAL_ADDRESS	  PrimitiveIndices;
+	D3D12_DISPATCH_MESH_ARGUMENTS DispatchMeshArguments;
 };
 
 ConstantBuffer<ConstantBufferParams>		   g_ConstantBufferParams : register(b0, space0);
@@ -39,10 +41,14 @@ AppendStructuredBuffer<CommandSignatureParams> g_CommandBuffer : register(u0, sp
 		if (visible)
 		{
 			CommandSignatureParams command;
-			command.MeshIndex			 = index;
-			command.VertexBuffer		 = mesh.VertexBuffer;
-			command.IndexBuffer			 = mesh.IndexBuffer;
-			command.DrawIndexedArguments = mesh.DrawIndexedArguments;
+			command.MeshIndex								= index;
+			command.Vertices								= mesh.VertexBuffer.BufferLocation;
+			command.Meshlets								= mesh.Meshlets;
+			command.UniqueVertexIndices						= mesh.UniqueVertexIndices;
+			command.PrimitiveIndices						= mesh.PrimitiveIndices;
+			command.DispatchMeshArguments.ThreadGroupCountX = mesh.NumMeshlets;
+			command.DispatchMeshArguments.ThreadGroupCountY = 1;
+			command.DispatchMeshArguments.ThreadGroupCountZ = 1;
 			g_CommandBuffer.Append(command);
 		}
 	}

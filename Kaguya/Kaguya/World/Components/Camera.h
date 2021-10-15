@@ -22,10 +22,17 @@ struct Camera : Component
 	float FoVY		  = 65.0f; // Degrees
 	float AspectRatio = 16.0f / 9.0f;
 	float NearZ		  = 0.1f;
-	float FarZ		  = 100.0f;
+	float FarZ		  = 1000.0f;
 
 	float FocalLength	   = 10.0f; // controls the focus distance of the camera. Impacts the depth of field.
 	float RelativeAperture = 0.0f;	// controls how wide the aperture is opened. Impacts the depth of field.
+
+	float MovementSpeed		= 20.0f;
+	float StrafeSpeed		= 20.0f;
+	float MouseSensitivityX = 15.0f;
+	float MouseSensitivityY = 15.0f;
+
+	bool Momentum = true;
 
 	DirectX::XMFLOAT4X4 View;
 	DirectX::XMFLOAT4X4 Projection;

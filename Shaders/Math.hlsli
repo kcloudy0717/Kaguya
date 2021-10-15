@@ -180,6 +180,10 @@ float3 OffsetRay(float3 p, float3 ng)
 #define PLANE_INTERSECTION_NEGATIVE_HALFSPACE 1
 #define PLANE_INTERSECTION_INTERSECTING		  2
 
+#define CONTAINMENT_DISJOINT				  0
+#define CONTAINMENT_INTERSECTS				  1
+#define CONTAINMENT_CONTAINS				  2
+
 // ax + by + cz = d where d = dot(n, P)
 struct Plane
 {
@@ -258,7 +262,12 @@ Plane ComputePlane(float3 a, float3 b, float3 c)
 
 struct Frustum
 {
-	Plane Planes[6];
+	Plane Left;	  // -x
+	Plane Right;  // +x
+	Plane Bottom; // -y
+	Plane Top;	  // +y
+	Plane Near;	  // -z
+	Plane Far;	  // +z
 };
 
 int BoundingSphereToPlane(BoundingSphere s, Plane p)
@@ -304,26 +313,70 @@ int BoundingBoxToPlane(BoundingBox b, Plane p)
 	return PLANE_INTERSECTION_INTERSECTING;
 }
 
-bool FrustumContainsBoundingSphere(Frustum f, BoundingSphere s)
+int FrustumContainsBoundingSphere(Frustum f, BoundingSphere s)
 {
-	for (int i = 0; i < 6; ++i)
+	int	 P0			= BoundingSphereToPlane(s, f.Left);
+	int	 P1			= BoundingSphereToPlane(s, f.Right);
+	int	 P2			= BoundingSphereToPlane(s, f.Bottom);
+	int	 P3			= BoundingSphereToPlane(s, f.Top);
+	int	 P4			= BoundingSphereToPlane(s, f.Near);
+	int	 P5			= BoundingSphereToPlane(s, f.Far);
+	bool AnyOutside = P0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	bool AllInside = P0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+
+	if (AnyOutside)
 	{
-		if (BoundingSphereToPlane(s, f.Planes[i]) == PLANE_INTERSECTION_NEGATIVE_HALFSPACE)
-		{
-			return false;
-		}
+		return CONTAINMENT_DISJOINT;
 	}
-	return true;
+
+	if (AllInside)
+	{
+		return CONTAINMENT_CONTAINS;
+	}
+
+	return CONTAINMENT_INTERSECTS;
 }
 
-bool FrustumContainsBoundingBox(Frustum f, BoundingBox b)
+int FrustumContainsBoundingBox(Frustum f, BoundingBox b)
 {
-	for (int i = 0; i < 6; ++i)
+	int	 P0			= BoundingBoxToPlane(b, f.Left);
+	int	 P1			= BoundingBoxToPlane(b, f.Right);
+	int	 P2			= BoundingBoxToPlane(b, f.Bottom);
+	int	 P3			= BoundingBoxToPlane(b, f.Top);
+	int	 P4			= BoundingBoxToPlane(b, f.Near);
+	int	 P5			= BoundingBoxToPlane(b, f.Far);
+	bool AnyOutside = P0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	AnyOutside |= P5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	bool AllInside = P0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	AllInside &= P5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+
+	if (AnyOutside)
 	{
-		if (BoundingBoxToPlane(b, f.Planes[i]) == PLANE_INTERSECTION_NEGATIVE_HALFSPACE)
-		{
-			return false;
-		}
+		return CONTAINMENT_DISJOINT;
 	}
-	return true;
+
+	if (AllInside)
+	{
+		return CONTAINMENT_CONTAINS;
+	}
+
+	return CONTAINMENT_INTERSECTS;
 }

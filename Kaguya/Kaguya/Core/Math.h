@@ -37,9 +37,17 @@ struct Vector2
 
 	auto operator<=>(const Vector2&) const = default;
 
-	T operator[](int i) const { return *reinterpret_cast<float*>(this)[i]; }
+	T operator[](int i) const
+	{
+		assert(i < 2);
+		return reinterpret_cast<const T*>(this)[i];
+	}
 
-	T& operator[](int i) { return *reinterpret_cast<float*>(this)[i]; }
+	T& operator[](int i)
+	{
+		assert(i < 2);
+		return reinterpret_cast<T*>(this)[i];
+	}
 
 	Vector2 operator-() const noexcept { return Vector2(-x, -y); }
 
@@ -154,9 +162,17 @@ struct Vector3
 
 	auto operator<=>(const Vector3&) const = default;
 
-	T operator[](int i) const { return *reinterpret_cast<float*>(this)[i]; }
+	T operator[](int i) const
+	{
+		assert(i < 3);
+		return reinterpret_cast<const T*>(this)[i];
+	}
 
-	T& operator[](int i) { return *reinterpret_cast<float*>(this)[i]; }
+	T& operator[](int i)
+	{
+		assert(i < 3);
+		return reinterpret_cast<T*>(this)[i];
+	}
 
 	Vector3 operator-() const noexcept { return Vector3(-x, -y, -z); }
 
@@ -508,6 +524,20 @@ struct BoundingBox
 
 		// All axis needs to overlap for a collision
 		return x && y && z;
+	}
+
+	void Transform(DirectX::XMFLOAT4X4 Matrix, BoundingBox& BoundingBox) const
+	{
+		BoundingBox.Center	= Vector3f(Matrix(3, 0), Matrix(3, 1), Matrix(3, 2));
+		BoundingBox.Extents = Vector3f(0.0f, 0.0f, 0.0f);
+		for (int i = 0; i < 3; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				BoundingBox.Center[i] += Matrix(i, j) * Center[j];
+				BoundingBox.Extents[i] += abs(Matrix(i, j)) * Extents[j];
+			}
+		}
 	}
 
 	Vector3f Center;

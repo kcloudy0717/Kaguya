@@ -1,13 +1,13 @@
 #include "AssetWindow.h"
 
-#include <Graphics/AssetManager.h>
+#include "Core/Asset/AssetManager.h"
 
 enum AssetColumnID
 {
-	AssetColumnID_Key,
+	AssetColumnID_Id,
 	AssetColumnID_Name,
 	AssetColumnID_Payload,
-	AssetColumnID_ReferenceCount,
+	AssetColumnCount
 };
 
 void AssetWindow::OnRender()
@@ -35,10 +35,11 @@ void AssetWindow::OnRender()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					COMDLG_FILTERSPEC ComDlgFS[] = { { L"Image Files", L"*.dds;*.tga;*.hdr" },
-													 { L"All Files (*.*)", L"*.*" } };
+					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Image Files", L"*.dds;*.tga;*.hdr" },
+													 { L"All Files (*.*)", L"*.*" }
+					};
 
-					std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+					std::filesystem::path Path = Application::OpenDialog(std::size(ComDlgFS), ComDlgFS);
 					if (!Path.empty())
 					{
 						AssetManager::AsyncLoadImage(Path, sRGB);
@@ -74,10 +75,11 @@ void AssetWindow::OnRender()
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					COMDLG_FILTERSPEC ComDlgFS[] = { { L"Mesh Files", L"*.obj;*.stl;*.ply" },
-													 { L"All Files (*.*)", L"*.*" } };
+					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Mesh Files", L"*.obj;*.stl;*.ply" },
+													 { L"All Files (*.*)", L"*.*" }
+					};
 
-					std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+					std::filesystem::path Path = Application::OpenDialog(std::size(ComDlgFS), ComDlgFS);
 					if (!Path.empty())
 					{
 						AssetManager::AsyncLoadMesh(Path, KeepGeometryInRAM);
@@ -108,40 +110,45 @@ void AssetWindow::OnRender()
 										   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
 
 	ImGui::Text("Images");
-	if (ImGui::BeginTable("ImageCache", 4, TableFlags))
+	if (ImGui::BeginTable("ImageCache", AssetColumnCount, TableFlags))
 	{
-		auto& ImageCache = AssetManager::GetImageCache();
-
-		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
+		ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Id);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn(
-			"Reference Count",
-			ImGuiTableColumnFlags_WidthFixed,
-			5.0f,
-			AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
-		// Demonstrate using clipper for large vertical lists
-		ImGuiListClipper ListClipper;
-		ListClipper.Begin(static_cast<int>(ImageCache.size()));
+		auto& ImageCache = AssetManager::GetTextureCache();
+		ValidImageHandles.clear();
+		for (auto Handle : ImageCache)
+		{
+			if (Handle.IsValid())
+			{
+				ValidImageHandles.push_back(Handle);
+			}
+		}
 
-		auto iter = ImageCache.Cache.begin();
-		int ID = 0;
+		// Demonstrate using clipper for large vertical lists
+		int				 ID = 0;
+		ImGuiListClipper ListClipper;
+		ListClipper.Begin(static_cast<int>(ValidImageHandles.size()));
 		while (ListClipper.Step())
 		{
-			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
+			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; ++i)
 			{
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
-					ImGui::TableNextColumn();
-					ImGui::Text("%llu", iter->first);
+					AssetHandle Handle = ValidImageHandles[i];
 
 					ImGui::TableNextColumn();
-					ImGui::TextUnformatted(iter->second->Name.data());
+					UINT id = Handle.Id;
+					ImGui::Text("%u", id);
+
+					ImGui::TableNextColumn();
+					Texture* Texture = AssetManager::GetTextureCache().GetAsset(Handle);
+					ImGui::TextUnformatted(Texture->Name.data());
 
 					ImGui::TableNextColumn();
 					ImGui::SmallButton("Payload");
@@ -150,13 +157,10 @@ void AssetWindow::OnRender()
 					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 					{
 						// Set payload to carry the index of our item (could be anything)
-						ImGui::SetDragDropPayload("ASSET_IMAGE", &iter->first, sizeof(UINT64));
+						ImGui::SetDragDropPayload("ASSET_IMAGE", &Handle, sizeof(AssetHandle));
 
 						ImGui::EndDragDropSource();
 					}
-
-					ImGui::TableNextColumn();
-					ImGui::Text("%d", iter->second.use_count());
 				}
 				ImGui::PopID();
 			}
@@ -169,49 +173,53 @@ void AssetWindow::OnRender()
 	if (AddAllMeshToHierarchy)
 	{
 		MeshCache.Each(
-			[&](UINT64 Key, AssetHandle<Asset::Mesh> Resource)
+			[&](AssetHandle Handle, Mesh* Mesh)
 			{
-				auto  Entity			  = pWorld->CreateEntity(Resource->Name);
-				auto& MeshFilterComponent = Entity.AddComponent<MeshFilter>();
-				MeshFilterComponent.Key	  = Key;
-
-				auto& MeshRendererComponent = Entity.AddComponent<MeshRenderer>();
+				auto Entity = pWorld->CreateEntity(Mesh->Name);
+				Entity.AddComponent<MeshFilter>(Handle);
+				Entity.AddComponent<MeshRenderer>();
 			});
 	}
 
 	ImGui::Text("Meshes");
-	if (ImGui::BeginTable("MeshCache", 4, TableFlags))
+	if (ImGui::BeginTable("MeshCache", AssetColumnCount, TableFlags))
 	{
-		ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Key);
+		ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Id);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
-		ImGui::TableSetupColumn(
-			"Reference Count",
-			ImGuiTableColumnFlags_WidthFixed,
-			5.0f,
-			AssetColumnID_ReferenceCount);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
-		// Demonstrate using clipper for large vertical lists
-		ImGuiListClipper ListClipper;
-		ListClipper.Begin(static_cast<int>(MeshCache.size()));
+		ValidMeshHandles.clear();
+		for (auto Handle : MeshCache)
+		{
+			if (Handle.IsValid())
+			{
+				ValidMeshHandles.push_back(Handle);
+			}
+		}
 
-		auto iter = MeshCache.Cache.begin();
-		int ID = 0;
+		// ID is needed to resolve drag and drop
+		int				 ID = 0;
+		ImGuiListClipper ListClipper;
+		ListClipper.Begin(static_cast<int>(ValidMeshHandles.size()));
 		while (ListClipper.Step())
 		{
-			for (int row = ListClipper.DisplayStart; row < ListClipper.DisplayEnd; row++, iter++)
+			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; i++)
 			{
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
-					ImGui::TableNextColumn();
-					ImGui::Text("%llu", iter->first);
+					AssetHandle Handle = ValidMeshHandles[i];
 
 					ImGui::TableNextColumn();
-					ImGui::TextUnformatted(iter->second->Name.data());
+					UINT id = Handle.Id;
+					ImGui::Text("%u", id);
+
+					ImGui::TableNextColumn();
+					Mesh* Mesh = AssetManager::GetMeshCache().GetAsset(Handle);
+					ImGui::TextUnformatted(Mesh->Name.data());
 
 					ImGui::TableNextColumn();
 					ImGui::SmallButton("Payload");
@@ -220,13 +228,10 @@ void AssetWindow::OnRender()
 					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 					{
 						// Set payload to carry the index of our item (could be anything)
-						ImGui::SetDragDropPayload("ASSET_MESH", &iter->first, sizeof(UINT64));
+						ImGui::SetDragDropPayload("ASSET_MESH", &Handle, sizeof(AssetHandle));
 
 						ImGui::EndDragDropSource();
 					}
-
-					ImGui::TableNextColumn();
-					ImGui::Text("%d", iter->second.use_count());
 				}
 				ImGui::PopID();
 			}

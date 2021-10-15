@@ -29,6 +29,13 @@ struct D3D12_DISPATCH_ARGUMENTS
 	uint ThreadGroupCountZ;
 };
 
+struct D3D12_DISPATCH_MESH_ARGUMENTS
+{
+	uint ThreadGroupCountX;
+	uint ThreadGroupCountY;
+	uint ThreadGroupCountZ;
+};
+
 struct D3D12_VERTEX_BUFFER_VIEW
 {
 	D3D12_GPU_VIRTUAL_ADDRESS BufferLocation;

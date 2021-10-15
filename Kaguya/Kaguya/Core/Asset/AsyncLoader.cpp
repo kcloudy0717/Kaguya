@@ -1,8 +1,12 @@
 #include "AsyncLoader.h"
+#include "AssetManager.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
+// kh = my name initials
+static constexpr char MeshExportExtension[] = ".khscene";
 
 using namespace DirectX;
 
@@ -33,11 +37,12 @@ private:
 	Delegate<void(Resolution Elapsed)> Message;
 };
 
-AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMetadata& Metadata)
+void AsyncImageLoader::AsyncLoad(const TextureMetadata& Metadata)
 {
 	const auto& Path	  = Metadata.Path;
 	const auto	Extension = Path.extension().string();
 
+	LOG_INFO("Loading: {}", Path.string());
 	ExecutionTimer Timer(
 		[&](auto Elapsed)
 		{
@@ -90,38 +95,33 @@ AsyncImageLoader::TResourcePtr AsyncImageLoader::AsyncLoad(const Asset::ImageMet
 		}
 	}
 
-	auto Image		  = std::make_shared<Asset::Image>();
-	Image->Metadata	  = Metadata;
-	Image->Resolution = Vector2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
-	Image->Name		  = Path.filename().string();
-	Image->Image	  = std::move(OutImage);
-
-	return Image;
+	Texture* Texture	= AssetManager::CreateAsset<AssetType::Texture>();
+	Texture->Metadata	= Metadata;
+	Texture->Resolution = Vector2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
+	Texture->Name		= Path.filename().string();
+	Texture->TexImage	= std::move(OutImage);
+	AssetManager::RequestUpload(Texture);
 }
 
-AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetadata& Metadata)
+void AsyncMeshLoader::AsyncLoad(const MeshMetadata& Metadata)
 {
+	LOG_INFO("Loading: {}", Metadata.Path.string());
 	ExecutionTimer Timer(
 		[&](auto Elapsed)
 		{
 			LOG_INFO("{} loaded in {}(ms)", Metadata.Path.string(), Elapsed.count());
 		});
 
-	TResourcePtr Mesh;
-
 	std::filesystem::path BinaryPath = Metadata.Path;
-	BinaryPath.replace_extension("kaguya.mesh.bin");
+	BinaryPath.replace_extension(MeshExportExtension);
 
+	std::vector<Mesh*> Meshes;
 	if (std::filesystem::exists(BinaryPath))
 	{
-		Mesh = ImportMesh(BinaryPath, Metadata);
+		Meshes = Import(BinaryPath, Metadata);
 	}
 	else
 	{
-		Mesh		   = std::make_shared<Asset::Mesh>();
-		Mesh->Metadata = Metadata;
-		Mesh->Name	   = Metadata.Path.filename().string();
-
 		const auto Path = Metadata.Path.string();
 
 		const aiScene* paiScene = s_Importer.ReadFile(Path.data(), s_ImporterFlags);
@@ -130,25 +130,30 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 		{
 			LOG_ERROR("Assimp::Importer error when loading {}", Path.data());
 			LOG_ERROR("Error: {}", s_Importer.GetErrorString());
-			return {};
+			return;
 		}
 
-		Mesh->Submeshes.reserve(paiScene->mNumMeshes);
-
-		uint32_t NumVertices = 0;
-		uint32_t NumIndices	 = 0;
-		for (size_t m = 0; m < paiScene->mNumMeshes; ++m)
+		if (paiScene->mNumMeshes >= AssetManager::GetMeshCache().NumAssets)
 		{
+			LOG_ERROR(
+				"Scene contains {} meshes, but AssetManager can only handle {} meshes",
+				paiScene->mNumMeshes,
+				AssetManager::GetMeshCache().NumAssets);
+			return;
+		}
+
+		Meshes.reserve(paiScene->mNumMeshes);
+		for (unsigned m = 0; m < paiScene->mNumMeshes; ++m)
+		{
+			// Assimp object
 			const aiMesh* paiMesh = paiScene->mMeshes[m];
 
 			// Parse vertex data
-			std::vector<Vertex> vertices;
-			vertices.reserve(paiMesh->mNumVertices);
-
-			// Parse vertex data
+			std::vector<Vertex> Vertices;
+			Vertices.reserve(paiMesh->mNumVertices);
 			for (unsigned int v = 0; v < paiMesh->mNumVertices; ++v)
 			{
-				Vertex& vertex = vertices.emplace_back();
+				Vertex& vertex = Vertices.emplace_back();
 				// Position
 				vertex.Position = { paiMesh->mVertices[v].x, paiMesh->mVertices[v].y, paiMesh->mVertices[v].z };
 
@@ -177,105 +182,121 @@ AsyncMeshLoader::TResourcePtr AsyncMeshLoader::AsyncLoad(const Asset::MeshMetada
 				indices.push_back(aiFace.mIndices[2]);
 			}
 
-			// Parse submesh indices
-			Asset::Submesh& Submesh	   = Mesh->Submeshes.emplace_back();
-			Submesh.IndexCount		   = static_cast<uint32_t>(indices.size());
-			Submesh.StartIndexLocation = NumIndices;
-			Submesh.VertexCount		   = static_cast<uint32_t>(vertices.size());
-			Submesh.BaseVertexLocation = NumVertices;
+			Mesh* Mesh	   = Meshes.emplace_back(AssetManager::CreateAsset<AssetType::Mesh>());
+			Mesh->Metadata = Metadata;
+			if (paiMesh->mName.length == 0)
+			{
+				Mesh->Name = Metadata.Path.filename().string();
+			}
+			else
+			{
+				Mesh->Name = paiMesh->mName.C_Str();
+			}
 
-			Mesh->Vertices.insert(
-				Mesh->Vertices.end(),
-				std::make_move_iterator(vertices.begin()),
-				std::make_move_iterator(vertices.end()));
-			Mesh->Indices.insert(
-				Mesh->Indices.end(),
-				std::make_move_iterator(indices.begin()),
-				std::make_move_iterator(indices.end()));
+			Mesh->Vertices = std::move(Vertices);
+			Mesh->Indices  = std::move(indices);
 
-			NumIndices += static_cast<uint32_t>(indices.size());
-			NumVertices += static_cast<uint32_t>(vertices.size());
+			std::vector<XMFLOAT3> Positions;
+			Positions.reserve(Mesh->Vertices.size());
+			for (const auto& Vertex : Mesh->Vertices)
+			{
+				Positions.emplace_back(Vertex.Position);
+			}
+
+			ComputeMeshlets(
+				Mesh->Indices.data(),
+				Mesh->Indices.size() / 3,
+				Positions.data(),
+				Positions.size(),
+				nullptr,
+				Mesh->Meshlets,
+				Mesh->UniqueVertexIndices,
+				Mesh->PrimitiveIndices);
 		}
 
-		std::vector<XMFLOAT3> Positions;
-		Positions.reserve(Mesh->Vertices.size());
-		for (const auto& Vertex : Mesh->Vertices)
-		{
-			Positions.emplace_back(Vertex.Position);
-		}
-
-		ComputeMeshlets(
-			Mesh->Indices.data(),
-			Mesh->Indices.size() / 3,
-			Positions.data(),
-			Positions.size(),
-			nullptr,
-			Mesh->Meshlets,
-			Mesh->UniqueVertexIndices,
-			Mesh->PrimitiveIndices);
-
-		ExportMesh(BinaryPath, Mesh);
+		Export(BinaryPath, Meshes);
 	}
 
-	Mesh->ComputeBoundingBox();
-
-	return Mesh;
+	for (auto Mesh : Meshes)
+	{
+		Mesh->ComputeBoundingBox();
+		AssetManager::RequestUpload(Mesh);
+	}
 }
 
-void AsyncMeshLoader::ExportMesh(const std::filesystem::path& BinaryPath, TResourcePtr Mesh)
+void AsyncMeshLoader::Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes)
 {
-	MeshHeader Header			  = {};
-	Header.NumVertices			  = Mesh->Vertices.size();
-	Header.NumIndices			  = Mesh->Indices.size();
-	Header.NumMeshlets			  = Mesh->Meshlets.size();
-	Header.NumUniqueVertexIndices = Mesh->UniqueVertexIndices.size();
-	Header.NumPrimitiveIndices	  = Mesh->PrimitiveIndices.size();
-	Header.NumSubmeshes			  = Mesh->Submeshes.size();
-
 	FileStream	 Stream(BinaryPath, FileMode::Create, FileAccess::Write);
 	BinaryWriter Writer(Stream);
 
-	Writer.Write<MeshHeader>(Header);
-	Writer.Write(Mesh->Vertices.data(), Mesh->Vertices.size() * sizeof(Vertex));
-	Writer.Write(Mesh->Indices.data(), Mesh->Indices.size() * sizeof(std::uint32_t));
-	Writer.Write(Mesh->Meshlets.data(), Mesh->Meshlets.size() * sizeof(Meshlet));
-	Writer.Write(Mesh->UniqueVertexIndices.data(), Mesh->UniqueVertexIndices.size() * sizeof(uint8_t));
-	Writer.Write(Mesh->PrimitiveIndices.data(), Mesh->PrimitiveIndices.size() * sizeof(MeshletTriangle));
-	Writer.Write(Mesh->Submeshes.data(), Mesh->Submeshes.size() * sizeof(Asset::Submesh));
+	{
+		ExportHeader Header = {};
+		Header.NumMeshes	= Meshes.size();
+
+		Writer.Write<ExportHeader>(Header);
+	}
+	for (const auto& Mesh : Meshes)
+	{
+		Writer.Write<size_t>(Mesh->Name.size());
+		Writer.Write(Mesh->Name);
+
+		MeshHeader Header			  = {};
+		Header.NumVertices			  = Mesh->Vertices.size();
+		Header.NumIndices			  = Mesh->Indices.size();
+		Header.NumMeshlets			  = Mesh->Meshlets.size();
+		Header.NumUniqueVertexIndices = Mesh->UniqueVertexIndices.size();
+		Header.NumPrimitiveIndices	  = Mesh->PrimitiveIndices.size();
+
+		Writer.Write<MeshHeader>(Header);
+		Writer.Write(Mesh->Vertices.data(), Mesh->Vertices.size() * sizeof(Vertex));
+		Writer.Write(Mesh->Indices.data(), Mesh->Indices.size() * sizeof(std::uint32_t));
+		Writer.Write(Mesh->Meshlets.data(), Mesh->Meshlets.size() * sizeof(Meshlet));
+		Writer.Write(Mesh->UniqueVertexIndices.data(), Mesh->UniqueVertexIndices.size() * sizeof(uint8_t));
+		Writer.Write(Mesh->PrimitiveIndices.data(), Mesh->PrimitiveIndices.size() * sizeof(MeshletTriangle));
+	}
 }
 
-AsyncMeshLoader::TResourcePtr AsyncMeshLoader::ImportMesh(
-	const std::filesystem::path& BinaryPath,
-	const Asset::MeshMetadata&	 Metadata)
+std::vector<Mesh*> AsyncMeshLoader::Import(const std::filesystem::path& BinaryPath, const MeshMetadata& Metadata)
 {
+	std::vector<Mesh*> Meshes;
+
 	FileStream	 Stream(BinaryPath, FileMode::Open, FileAccess::Read);
 	BinaryReader Reader(Stream);
 
-	auto								  Header = Reader.Read<MeshHeader>();
-	std::vector<Vertex>					  Vertices(Header.NumVertices);
-	std::vector<uint32_t>				  Indices(Header.NumIndices);
-	std::vector<DirectX::Meshlet>		  Meshlets(Header.NumMeshlets);
-	std::vector<uint8_t>				  UniqueVertexIndices(Header.NumUniqueVertexIndices);
-	std::vector<DirectX::MeshletTriangle> PrimitiveIndices(Header.NumPrimitiveIndices);
-	std::vector<Asset::Submesh>			  Submeshes(Header.NumSubmeshes);
+	{
+		auto Header = Reader.Read<ExportHeader>();
+		Meshes.resize(Header.NumMeshes);
+	}
+	for (auto& Mesh : Meshes)
+	{
+		size_t		Length = Reader.Read<size_t>();
+		std::string string;
+		string.resize(Length);
+		Reader.Read(string.data(), string.size() * sizeof(char));
 
-	Reader.Read(Vertices.data(), Vertices.size() * sizeof(Vertex));
-	Reader.Read(Indices.data(), Indices.size() * sizeof(std::uint32_t));
-	Reader.Read(Meshlets.data(), Meshlets.size() * sizeof(Meshlet));
-	Reader.Read(UniqueVertexIndices.data(), UniqueVertexIndices.size() * sizeof(uint8_t));
-	Reader.Read(PrimitiveIndices.data(), PrimitiveIndices.size() * sizeof(MeshletTriangle));
-	Reader.Read(Submeshes.data(), Submeshes.size() * sizeof(Asset::Submesh));
+		auto								  Header = Reader.Read<MeshHeader>();
+		std::vector<Vertex>					  Vertices(Header.NumVertices);
+		std::vector<uint32_t>				  Indices(Header.NumIndices);
+		std::vector<DirectX::Meshlet>		  Meshlets(Header.NumMeshlets);
+		std::vector<uint8_t>				  UniqueVertexIndices(Header.NumUniqueVertexIndices);
+		std::vector<DirectX::MeshletTriangle> PrimitiveIndices(Header.NumPrimitiveIndices);
 
-	auto Mesh	   = std::make_shared<Asset::Mesh>();
-	Mesh->Metadata = Metadata;
-	Mesh->Name	   = Metadata.Path.filename().string();
+		Reader.Read(Vertices.data(), Vertices.size() * sizeof(Vertex));
+		Reader.Read(Indices.data(), Indices.size() * sizeof(std::uint32_t));
+		Reader.Read(Meshlets.data(), Meshlets.size() * sizeof(Meshlet));
+		Reader.Read(UniqueVertexIndices.data(), UniqueVertexIndices.size() * sizeof(uint8_t));
+		Reader.Read(PrimitiveIndices.data(), PrimitiveIndices.size() * sizeof(MeshletTriangle));
 
-	Mesh->Vertices			  = std::move(Vertices);
-	Mesh->Indices			  = std::move(Indices);
-	Mesh->Meshlets			  = std::move(Meshlets);
-	Mesh->UniqueVertexIndices = std::move(UniqueVertexIndices);
-	Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);
-	Mesh->Submeshes			  = std::move(Submeshes);
+		Mesh		   = AssetManager::CreateAsset<AssetType::Mesh>();
+		Mesh->Metadata = Metadata;
+		Mesh->Name	   = string;
 
-	return Mesh;
+		Mesh->Vertices			  = std::move(Vertices);
+		Mesh->Indices			  = std::move(Indices);
+		Mesh->Meshlets			  = std::move(Meshlets);
+		Mesh->UniqueVertexIndices = std::move(UniqueVertexIndices);
+		Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);
+	}
+
+	return Meshes;
 }

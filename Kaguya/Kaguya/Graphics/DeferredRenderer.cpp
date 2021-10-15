@@ -1,4 +1,6 @@
 #include "DeferredRenderer.h"
+
+#include "DebugRenderer.h"
 #include "RendererRegistry.h"
 
 void* DeferredRenderer::GetViewportDescriptor()
@@ -27,16 +29,35 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(RenderDevice);
 	// RaytracingPipelineStates::Compile(RenderDevice);
 
+	DEBUG_RENDERER_INITIALIZE(&RenderPasses::GBufferRenderPass);
+
+#if USE_MESH_SHADERS
+	CommandSignatureBuilder Builder(6, sizeof(CommandSignatureParams));
+	Builder.AddConstant(0, 0, 1);
+	Builder.AddShaderResourceView(1);
+	Builder.AddShaderResourceView(2);
+	Builder.AddShaderResourceView(3);
+	Builder.AddShaderResourceView(4);
+	Builder.AddDispatchMesh();
+#else
 	CommandSignatureBuilder Builder(4, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddVertexBufferView(0);
 	Builder.AddIndexBufferView();
 	Builder.AddDrawIndexed();
+#endif
 
+#if USE_MESH_SHADERS
+	CommandSignature = D3D12CommandSignature(
+		RenderCore::Device,
+		Builder,
+		RenderDevice.GetRootSignature(RootSignatures::Meshlet)->GetApiHandle());
+#else
 	CommandSignature = D3D12CommandSignature(
 		RenderCore::Device,
 		Builder,
 		RenderDevice.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle());
+#endif
 
 	IndirectCommandBuffer = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
@@ -45,7 +66,7 @@ void DeferredRenderer::Initialize()
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	UAV = D3D12UnorderedAccessView(RenderCore::Device->GetDevice());
-	IndirectCommandBuffer.CreateUnorderedAccessView(UAV, World::InstanceLimit, CommandBufferCounterOffset);
+	IndirectCommandBuffer.CreateUnorderedAccessView(UAV, World::MeshLimit, CommandBufferCounterOffset);
 
 	Materials = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
@@ -67,15 +88,20 @@ void DeferredRenderer::Initialize()
 
 	Meshes = D3D12Buffer(
 		RenderCore::Device->GetDevice(),
-		sizeof(Hlsl::Mesh) * World::InstanceLimit,
+		sizeof(Hlsl::Mesh) * World::MeshLimit,
 		sizeof(Hlsl::Mesh),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
 	Meshes.Initialize();
 	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
-	MeshRenderers.reserve(World::InstanceLimit);
-	HlslMeshes.resize(World::InstanceLimit);
+	MeshRenderers.reserve(World::MeshLimit);
+	HlslMeshes.resize(World::MeshLimit);
+}
+
+void DeferredRenderer::Destroy()
+{
+	DEBUG_RENDERER_SHUTDOWN();
 }
 
 void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
@@ -84,6 +110,8 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	{
 		constexpr const char* View[] = { "Albedo", "Normal", "Motion", "Depth" };
 		ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
+
+		ImGui::Checkbox("Debug Renderer", &DebugRenderer::Enable);
 
 		ImGui::Text("Render resolution: %dx%d", Resolution.RenderWidth, Resolution.RenderHeight);
 		ImGui::Text("Viewport resolution: %dx%d", Resolution.ViewportWidth, Resolution.ViewportHeight);
@@ -113,17 +141,24 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Transform);
 				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
 
-				Mesh.BoundingBox = MeshFilter.Mesh->BoundingBox;
-
-				Mesh.VertexBuffer		  = VertexBuffer.GetVertexBufferView();
-				Mesh.IndexBuffer		  = IndexBuffer.GetIndexBufferView();
-				Mesh.DrawIndexedArguments = DrawIndexedArguments;
+				Mesh.VertexBuffer		 = VertexBuffer.GetVertexBufferView();
+				Mesh.IndexBuffer		 = IndexBuffer.GetIndexBufferView();
+				Mesh.Meshlets			 = MeshFilter.Mesh->MeshletResource.GetGpuVirtualAddress();
+				Mesh.UniqueVertexIndices = MeshFilter.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
+				Mesh.PrimitiveIndices	 = MeshFilter.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
 
 				Mesh.MaterialIndex = NumMaterials;
+				Mesh.NumMeshlets   = static_cast<UINT>(MeshFilter.Mesh->Meshlets.size());
+
+				Mesh.BoundingBox = MeshFilter.Mesh->BoundingBox;
+
+				Mesh.DrawIndexedArguments = DrawIndexedArguments;
 
 				HlslMeshes[NumMeshes] = Mesh;
 
 				MeshRenderers.push_back(&MeshRenderer);
+
+				DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Mesh.BoundingBox);
 
 				++NumMaterials;
 				++NumMeshes;
@@ -134,7 +169,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		{
 			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
 		});
-	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::InstanceLimit);
+	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::MeshLimit);
 
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
@@ -172,7 +207,11 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 		AsyncCompute.OpenCommandList();
 		{
+#if USE_MESH_SHADERS
+			AsyncCompute.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::IndirectCullMeshShader));
+#else
 			AsyncCompute.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::IndirectCull));
+#endif
 			AsyncCompute.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::IndirectCull));
 
 			AsyncCompute.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
@@ -270,7 +309,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					&RenderPasses::GBufferRenderPass,
 					&Registry.GetRenderTarget(Params.RenderTarget));
 				{
-					for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
+					/*for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
 					{
 						auto& Mesh = MeshRenderer->pMeshFilter->Mesh;
 
@@ -285,7 +324,15 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 							Mesh->PrimitiveIndexResource.GetGpuVirtualAddress());
 
 						Context.DispatchMesh(Mesh->Meshlets.size(), 1, 1);
-					}
+					}*/
+
+					Context->ExecuteIndirect(
+						CommandSignature,
+						World::MeshLimit,
+						IndirectCommandBuffer,
+						0,
+						IndirectCommandBuffer,
+						CommandBufferCounterOffset);
 				}
 				Context.EndRenderPass();
 			};
@@ -370,27 +417,23 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						D3D12Buffer& VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource;
 						D3D12Buffer& IndexBuffer  = MeshRenderer->pMeshFilter->Mesh->IndexResource;
 
-						D3D12_VERTEX_BUFFER_VIEW VertexBufferView = {};
-						VertexBufferView.BufferLocation			  = VertexBuffer.GetGpuVirtualAddress();
-						VertexBufferView.SizeInBytes			  = VertexBuffer.GetDesc().Width;
-						VertexBufferView.StrideInBytes			  = VertexBuffer.GetStride();
-						Context->IASetVertexBuffers(0, 1, &VertexBufferView);
+						D3D12_VERTEX_BUFFER_VIEW VertexBufferView = VertexBuffer.GetVertexBufferView();
+						D3D12_INDEX_BUFFER_VIEW	 IndexBufferView  = IndexBuffer.GetIndexBufferView();
 
-						D3D12_INDEX_BUFFER_VIEW IndexBufferView = {};
-						IndexBufferView.BufferLocation			= IndexBuffer.GetGpuVirtualAddress();
-						IndexBufferView.SizeInBytes				= IndexBuffer.GetDesc().Width;
-						IndexBufferView.Format					= DXGI_FORMAT_R32_UINT;
+						Context->IASetVertexBuffers(0, 1, &VertexBufferView);
 						Context->IASetIndexBuffer(&IndexBufferView);
 
-						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Indices.size(), 1, 0, 0, 0);
+						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Vertices.size(), 1, 0, 0, 0);
 					}*/
 					Context->ExecuteIndirect(
 						CommandSignature,
-						1024,
+						World::MeshLimit,
 						IndirectCommandBuffer,
 						0,
 						IndirectCommandBuffer,
 						CommandBufferCounterOffset);
+
+					DEBUG_RENDERER_RENDER(g_GlobalConstants.Camera.ViewProjection, Context);
 				}
 				Context.EndRenderPass();
 			};

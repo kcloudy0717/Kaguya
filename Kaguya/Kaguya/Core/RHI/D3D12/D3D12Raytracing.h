@@ -4,6 +4,9 @@
 class D3D12RaytracingGeometry
 {
 public:
+	D3D12RaytracingGeometry() noexcept = default;
+	explicit D3D12RaytracingGeometry(size_t Size) { RaytracingGeometryDescs.reserve(Size); }
+
 	auto begin() noexcept { return RaytracingGeometryDescs.begin(); }
 	auto end() noexcept { return RaytracingGeometryDescs.end(); }
 
@@ -31,11 +34,14 @@ private:
 class D3D12RaytracingScene
 {
 public:
+	D3D12RaytracingScene() noexcept = default;
+	explicit D3D12RaytracingScene(size_t Size) { RaytracingInstanceDescs.reserve(Size); }
+
 	auto begin() noexcept { return RaytracingInstanceDescs.begin(); }
 	auto end() noexcept { return RaytracingInstanceDescs.end(); }
 
-	[[nodiscard]] UINT Size() const noexcept { return static_cast<UINT>(RaytracingInstanceDescs.size()); }
-	[[nodiscard]] bool IsValid() const noexcept { return !RaytracingInstanceDescs.empty(); }
+	[[nodiscard]] size_t size() const noexcept { return RaytracingInstanceDescs.size(); }
+	[[nodiscard]] bool	 empty() const noexcept { return RaytracingInstanceDescs.empty(); }
 
 	void Reset() noexcept;
 

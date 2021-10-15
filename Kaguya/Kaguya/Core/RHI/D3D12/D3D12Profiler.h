@@ -92,7 +92,7 @@ private:
 class D3D12Profiler
 {
 public:
-	static constexpr UINT MaxProfiles = 64;
+	static constexpr UINT MaxProfiles = 128;
 
 	explicit D3D12Profiler(UINT FrameLatency);
 

@@ -71,7 +71,7 @@ void PathIntegrator::Initialize()
 	PipelineStates::Compile(RenderDevice);
 	RaytracingPipelineStates::Compile(RenderDevice);
 
-	AccelerationStructure = RaytracingAccelerationStructure(1, World::InstanceLimit);
+	AccelerationStructure = RaytracingAccelerationStructure(1, World::MeshLimit);
 	AccelerationStructure.Initialize();
 
 	Materials = D3D12Buffer(
@@ -99,9 +99,13 @@ void PathIntegrator::Initialize()
 	MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_MissSID);
 	MissShaderTable->AddShaderRecord(RaytracingPipelineStates::g_ShadowMissSID);
 
-	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::InstanceLimit);
+	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::MeshLimit);
 
 	ShaderBindingTable.Generate(RenderCore::Device->GetDevice());
+}
+
+void PathIntegrator::Destroy()
+{
 }
 
 void PathIntegrator::Render(World* World, D3D12CommandContext& Context)

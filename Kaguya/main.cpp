@@ -12,10 +12,10 @@
 #endif
 
 #include <Core/Application.h>
+#include <Core/Asset/AssetManager.h>
 #include <Physics/PhysicsManager.h>
 #include <RenderCore/RenderCore.h>
 
-#include <Graphics/AssetManager.h>
 #include <Graphics/UI/HierarchyWindow.h>
 #include <Graphics/UI/ViewportWindow.h>
 #include <Graphics/UI/InspectorWindow.h>
@@ -93,15 +93,15 @@ public:
 		InspectorWindow.Render();
 
 #if RENDER_AT_1920x1080
-		const uint32_t viewportWidth = 1920, viewportHeight = 1080;
+		const uint32_t ViewportWidth = 1920, ViewportHeight = 1080;
 #else
-		const uint32_t viewportWidth = ViewportWindow.Resolution.x, viewportHeight = ViewportWindow.Resolution.y;
+		const uint32_t ViewportWidth = ViewportWindow.Resolution.x, ViewportHeight = ViewportWindow.Resolution.y;
 #endif
 
 		World.Update(DeltaTime);
 
 		// Render
-		Renderer->OnSetViewportResolution(viewportWidth, viewportHeight);
+		Renderer->OnSetViewportResolution(ViewportWidth, ViewportHeight);
 
 		Renderer->OnRender(&World);
 	}

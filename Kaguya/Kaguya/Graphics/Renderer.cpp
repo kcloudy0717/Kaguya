@@ -3,6 +3,9 @@
 
 void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 {
+	// Clamp at 4k
+	Width  = std::clamp<uint32_t>(Width, 0, 3840);
+	Height = std::clamp<uint32_t>(Height, 0, 2160);
 	if (Width == 0 || Height == 0)
 	{
 		return;
@@ -138,4 +141,5 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 
 void Renderer::OnDestroy()
 {
+	Destroy();
 }

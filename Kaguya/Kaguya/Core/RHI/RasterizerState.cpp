@@ -14,7 +14,7 @@ RasterizerState::operator D3D12_RASTERIZER_DESC() const noexcept
 	Desc.AntialiasedLineEnable = AntialiasedLineEnable ? TRUE : FALSE;
 	Desc.ForcedSampleCount	   = ForcedSampleCount;
 	Desc.ConservativeRaster =
-		ConservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF : D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON;
+		ConservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 	return Desc;
 }
 

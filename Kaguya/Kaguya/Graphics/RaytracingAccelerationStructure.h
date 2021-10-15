@@ -16,7 +16,7 @@ public:
 
 	operator auto() const { return TlasResult.GetGpuVirtualAddress(); }
 
-	[[nodiscard]] bool IsValid() const noexcept { return TopLevelAccelerationStructure.IsValid(); }
+	[[nodiscard]] bool IsValid() const noexcept { return !TopLevelAccelerationStructure.empty(); }
 
 	void Reset();
 
@@ -33,10 +33,11 @@ public:
 
 	D3D12RaytracingAccelerationStructureManager Manager;
 
-	D3D12RaytracingScene			   TopLevelAccelerationStructure;
-	std::vector<MeshRenderer*>		   MeshRenderers;
-	std::set<AssetHandle<Asset::Mesh>> ReferencedGeometries;
-	UINT							   InstanceContributionToHitGroupIndex = 0;
+	D3D12RaytracingScene	   TopLevelAccelerationStructure;
+	std::vector<MeshRenderer*> MeshRenderers;
+	std::set<Mesh*>			   ReferencedGeometries;
+	UINT					   CurrentInstanceID						  = 0;
+	UINT					   CurrentInstanceContributionToHitGroupIndex = 0;
 
 	D3D12Buffer	  TlasScratch;
 	D3D12ASBuffer TlasResult;

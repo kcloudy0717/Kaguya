@@ -1,8 +1,7 @@
 #include "World.h"
-
 #include "Entity.h"
 #include "Physics/PhysicsManager.h"
-#include "Graphics/AssetManager.h"
+#include "Core/Asset/AssetManager.h"
 
 #include "Scripts/Player.script.h"
 
@@ -81,40 +80,27 @@ void World::ResolveComponentDependencies()
 			}
 		});
 
-	// Update all mesh filters
+	// Refresh all mesh filters
 	Registry.view<MeshFilter>().each(
 		[](auto&& MeshFilter)
 		{
-			MeshFilter.Mesh = AssetManager::GetMeshCache().Load(MeshFilter.Key);
-			if (MeshFilter.Mesh)
-			{
-				MeshFilter.Path =
-					std::filesystem::relative(MeshFilter.Mesh->Metadata.Path, Application::ExecutableDirectory)
-						.string();
-			}
-			else
-			{
-				MeshFilter.Path = "<unknown>";
-			}
+			auto Handle			= MeshFilter.Handle;
+			MeshFilter.Mesh		= AssetManager::GetMeshCache().GetValidAsset(Handle);
+			MeshFilter.HandleId = Handle.Id;
 		});
 
-	// Update all mesh renderers
+	// Refresh all mesh renderers
 	Registry.view<MeshFilter, MeshRenderer>().each(
 		[](auto&& MeshFilter, auto&& MeshRenderer)
 		{
 			MeshRenderer.pMeshFilter = &MeshFilter;
 
-			auto Texture = AssetManager::GetImageCache().Load(MeshRenderer.Material.Albedo.Key);
-
+			auto Handle	 = MeshRenderer.Material.Albedo.Handle;
+			auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
 			if (Texture)
 			{
-				MeshRenderer.Material.Albedo.Path =
-					std::filesystem::relative(Texture->Metadata.Path, Application::ExecutableDirectory).string();
+				MeshRenderer.Material.Albedo.HandleId	= Handle.Id;
 				MeshRenderer.Material.TextureIndices[0] = Texture->SRV.GetIndex();
-			}
-			else
-			{
-				MeshRenderer.Material.Albedo.Path = "<unknown>";
 			}
 		});
 }

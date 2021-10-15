@@ -8,7 +8,7 @@ struct PathIntegratorState
 	static constexpr UINT MaximumDepth = 32;
 
 	float SkyIntensity = 1.0f;
-	UINT  MaxDepth	   = 16;
+	UINT  MaxDepth	   = 3;
 };
 
 enum class EFSRQualityMode
@@ -41,6 +41,7 @@ public:
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
+	void Destroy() override;
 	void Render(World* World, D3D12CommandContext& Context) override;
 
 private:
