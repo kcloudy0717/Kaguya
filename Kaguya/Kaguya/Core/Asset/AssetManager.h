@@ -53,7 +53,7 @@ private:
 	static void UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Uploader);
 	static void UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader);
 
-	inline static AsyncImageLoader AsyncImageLoader;
+	inline static AsyncTextureLoader AsyncImageLoader;
 	inline static AsyncMeshLoader  AsyncMeshLoader;
 
 	inline static AssetCache<AssetType::Mesh, Mesh>		  MeshCache;

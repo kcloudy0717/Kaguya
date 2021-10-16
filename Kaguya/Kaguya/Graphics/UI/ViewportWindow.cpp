@@ -11,10 +11,12 @@ std::pair<float, float> ViewportWindow::GetMousePosition() const
 
 void ViewportWindow::OnRender()
 {
-	float w = (float)ImGui::GetWindowWidth();
-	float h = (float)ImGui::GetWindowHeight();
 	ImGuizmo::SetDrawlist();
-	ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, w, h);
+	ImGuizmo::SetRect(
+		ImGui::GetWindowPos().x,
+		ImGui::GetWindowPos().y,
+		ImGui::GetWindowWidth(),
+		ImGui::GetWindowHeight());
 
 	auto viewportOffset = ImGui::GetCursorPos(); // includes tab bar
 	auto viewportPos	= ImGui::GetWindowPos();
@@ -30,10 +32,20 @@ void ViewportWindow::OnRender()
 
 	if (pImage)
 	{
-		ImGui::Image((ImTextureID)pImage, viewportSize);
+		ImGui::Image(pImage, viewportSize);
 	}
 
 	if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
+	{
+		Application::GetInputHandler().DisableCursor();
+	}
+	else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+	{
+		Application::GetInputHandler().EnableCursor();
+	}
+
+	// Camera operates in raw input mode
+	if (!Application::GetInputHandler().CursorEnabled)
 	{
 		Application::GetInputHandler().RawInputEnabled = true;
 	}

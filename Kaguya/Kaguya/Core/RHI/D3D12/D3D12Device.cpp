@@ -11,8 +11,13 @@ extern "C"
 
 static ConsoleVariable CVar_Dred(
 	"D3D12.DRED",
-	"Enable Device Removed Extended Data\n"
+	"Enable device removed extended data\n"
 	"DRED delivers automatic breadcrumbs as well as GPU page fault reporting\n",
+	true);
+
+static ConsoleVariable CVar_AsyncPsoCompilation(
+	"D3D12.AsyncPsoCompile",
+	"Enables asynchronous pipeline state object compilation",
 	true);
 
 const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
@@ -246,6 +251,11 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
 }
 
+bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
+{
+	return CVar_AsyncPsoCompilation;
+}
+
 std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
 {
 	RootSignatureBuilder Builder = {};
@@ -288,7 +298,7 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 				for (const D3D12_AUTO_BREADCRUMB_NODE* Node = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode; Node;
 					 Node									= Node->pNext)
 				{
-					INT32 LastCompletedOp = *Node->pLastBreadcrumbValue;
+					INT32 LastCompletedOp = static_cast<INT32>(*Node->pLastBreadcrumbValue);
 
 					LOG_WARN(
 						LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})",

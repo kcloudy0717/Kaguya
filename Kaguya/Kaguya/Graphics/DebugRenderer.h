@@ -45,5 +45,5 @@ private:
 #define DEBUG_RENDERER_SHUTDOWN()
 #define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)
 #define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box)
-#define DEBUG_RENDERER_RENDER(Context)
+#define DEBUG_RENDERER_RENDER(ViewProjection, Context)
 #endif

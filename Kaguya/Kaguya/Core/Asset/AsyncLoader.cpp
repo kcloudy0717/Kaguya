@@ -37,7 +37,7 @@ private:
 	Delegate<void(Resolution Elapsed)> Message;
 };
 
-void AsyncImageLoader::AsyncLoad(const TextureMetadata& Metadata)
+void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
 {
 	const auto& Path	  = Metadata.Path;
 	const auto	Extension = Path.extension().string();

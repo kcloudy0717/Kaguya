@@ -133,7 +133,10 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 	do
 	{
 		Stopwatch.Signal();
-		Application.Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+		if (!Minimized)
+		{
+			Application.Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+		}
 	} while (ProcessMessages());
 
 	Application.Shutdown();

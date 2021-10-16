@@ -123,8 +123,11 @@ public:
 	[[nodiscard]] ED3D12PipelineStateType GetType() const noexcept { return Type; }
 
 private:
-	template<ED3D12PipelineStateType Type>
-	AsyncAction Create(D3D12PipelineParserCallbacks Parser);
+	AsyncAction Create(ED3D12PipelineStateType Type, D3D12PipelineParserCallbacks Parser);
+
+	void CompileGraphicsPipeline(const D3D12PipelineParserCallbacks& Parser);
+	void CompileMeshShaderPipeline(const D3D12PipelineParserCallbacks& Parser);
+	void CompileComputePipline(const D3D12PipelineParserCallbacks& Parser);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;

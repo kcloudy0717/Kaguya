@@ -9,7 +9,7 @@ public:
 	{
 	}
 
-	void SetContext(void* pImage) { this->pImage = pImage; }
+	void SetContext(ImTextureID pImage) { this->pImage = pImage; }
 
 	std::pair<float, float> GetMousePosition() const;
 
@@ -21,5 +21,5 @@ public:
 	RECT	 Rect		= {};
 
 private:
-	void* pImage = nullptr;
+	ImTextureID pImage = nullptr;
 };

@@ -26,7 +26,6 @@ public:
 					{
 						auto Metadata = MetadataQueue.front();
 						MetadataQueue.pop();
-
 						static_cast<TDerived*>(this)->AsyncLoad(Metadata);
 					}
 				}
@@ -58,10 +57,10 @@ private:
 	std::atomic<bool> Quit = false;
 };
 
-class AsyncImageLoader : public AsyncLoader<Texture, TextureMetadata, AsyncImageLoader>
+class AsyncTextureLoader : public AsyncLoader<Texture, TextureMetadata, AsyncTextureLoader>
 {
 public:
-	AsyncImageLoader()
+	AsyncTextureLoader()
 		: AsyncLoader(L"Async Image Loading Thread")
 	{
 	}

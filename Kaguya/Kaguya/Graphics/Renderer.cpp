@@ -19,6 +19,11 @@ void Renderer::OnInitialize()
 	Initialize();
 }
 
+void Renderer::OnDestroy()
+{
+	Destroy();
+}
+
 void Renderer::OnRender(World* World)
 {
 	World->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
@@ -137,9 +142,4 @@ void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
 	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
 	RenderCore::SwapChain->Resize(Width, Height);
-}
-
-void Renderer::OnDestroy()
-{
-	Destroy();
 }

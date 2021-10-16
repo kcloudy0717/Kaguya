@@ -60,7 +60,8 @@ public:
 
 	[[nodiscard]] D3D12LinkedDevice* GetDevice() noexcept { return &LinkedDevice; }
 
-	[[nodiscard]] ThreadPool* GetPsoCompilationThreadPool() { return PsoCompilationThreadPool.get(); }
+	[[nodiscard]] bool		  AllowAsyncPsoCompilation() const noexcept;
+	[[nodiscard]] ThreadPool* GetPsoCompilationThreadPool() const noexcept { return PsoCompilationThreadPool.get(); }
 
 	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(
 		Delegate<void(RootSignatureBuilder&)> Configurator);
@@ -82,6 +83,7 @@ private:
 
 	void InitializeDxgiObjects(bool Debug);
 
+	// Pre SM6.6 bindless root parameter setup
 	void AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder);
 
 private:
