@@ -4,10 +4,29 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 # Features
 
+## Graphics
+
 - Progressive stochastic path tracing
 - Importance sampling of BSDFs and multiple importance sampling of lights
 - Lambertian, Mirror, Glass, and Disney BSDFs
 - Point and quad lights
+
+## D3D12
+
+- Bindless resource
+- Asynchronous PSO compilation using coroutines and threadpools
+- Utilization of graphics and asynchronous compute queues
+- Acceleration structure compaction
+
+## Misc
+
+- Custom scene serialization using json
+- Custom binary format for loading meshes and meshlets
+- Asynchronous asset importing using threads
+- Asset management using lightweight handles
+
+## World
+
 - ECS with the following implemented components:
   - Tag: used to identify a game object
   - Transform: controls position, scale, orientation of GameObject
@@ -32,12 +51,6 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
   - Rigid Body: Adds rigidbody physics to the entity and can be applied forces and velocities
     - Static Rigid Body
     - Dynamic Rigid Body
-- Custom scene serialization using json
-- Asynchronous resource loading
-- Bindless resource
-- Utilization of graphics and asynchronous compute queues
-- Acceleration structure compaction
-- Custom and efficient binary format for streaming meshes and meshlets
 
 # Goals
 
@@ -59,32 +72,33 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - GPU that supports DXR
 - Windows SDK Version 10.0.19041.0
 - Windows 10 Version: 20H2
-- CMake Version 3.15
+- CMake Version 3.16
 - C++ 20
 
-1. Initialize submodules after you have cloned, use CMake GUI to configure and generate visual studio solution. (I ran [bfg-repo cleaner](https://rtyley.github.io/bfg-repo-cleaner/) on this repo because I was committing all my assets, the repo is way smaller now with the downside of unable to see old commit file changes)
+1. Initialize submodules after you have cloned, use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
 
-2. Download assets from [ProjectAssets](https://github.com/KaiH0717/ProjectAssets/tree/Kaguya) repo and extract the contents into a directory named assets in the root directory of the repo. (There's a build event that'll copy contents from asset to the executable directory)
-
-3. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the Hierarchy window of the application's UI.
+2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the Hierarchy window of the application's UI.
 
 Let me know if you have any trouble setting up the project and getting it up and running!
 
 # Acknowledgements
 
-- [FidelityFX Super Resolution 1.0 (FSR)](https://github.com/GPUOpen-Effects/FidelityFX-FSR)
-- [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
+- [assimp](https://github.com/assimp/assimp)
+- [DirectX Mesh](https://github.com/microsoft/DirectXMesh)
+- [DirectX Tex](https://github.com/microsoft/DirectXTex)
 - [DirectX Shader Compiler](https://github.com/microsoft/DirectXShaderCompiler)
-- [DirectXTex](https://github.com/microsoft/DirectXTex)
-- [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
-- [EnTT](https://github.com/skypjack/entt)
+- [entt](https://github.com/skypjack/entt)
+- [cityhash](https://github.com/google/cityhash)
 - [imgui](https://github.com/ocornut/imgui)
 - [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
+- [json](https://github.com/nlohmann/json.git)
+- [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
+- [Nsight Aftermath](https://developer.nvidia.com/nsight-aftermath)
+- [PhysX](https://github.com/NVIDIAGameWorks/PhysX)
 - [spdlog](https://github.com/gabime/spdlog)
 - [wil](https://github.com/microsoft/wil)
-- [json](https://github.com/nlohmann/json.git)
-- [assimp](https://github.com/assimp/assimp)
-- [NVIDIA PhysX](https://github.com/NVIDIAGameWorks/PhysX)
+- [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
+- [FidelityFX-FSR](https://github.com/GPUOpen-Effects/FidelityFX-FSR)
 
 Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.me/resources/)!
 
@@ -105,7 +119,7 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
   - Disney
     - https://blog.selfshadow.com/publications/s2012-shading-course/burley/s2012_pbs_disney_brdf_notes_v3.pdf
     - http://simon-kallweit.me/rendercompo2015/report/#disneybrdf
-- Light Sampling
+- ## Light Sampling
   - Solid angle quadrilateral light sampling: https://www.arnoldrenderer.com/research/egsr2013_spherical_rectangle.pdf
 
 # Showcase
