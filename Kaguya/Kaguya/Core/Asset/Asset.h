@@ -47,8 +47,6 @@ class Asset
 {
 public:
 	AssetHandle Handle;
-
-	std::filesystem::path Path;
 };
 
 struct unique_asset_deleter

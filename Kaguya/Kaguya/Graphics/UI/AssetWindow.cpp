@@ -1,5 +1,5 @@
 #include "AssetWindow.h"
-
+#include <imgui_internal.h>
 #include "Core/Asset/AssetManager.h"
 
 enum AssetColumnID
@@ -16,33 +16,105 @@ void AssetWindow::OnRender()
 
 	if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
 	{
-		// TODO: Write a function for this
+		// if (ImGui::Button("Import new asset"))
+		//{
+		//	COMDLG_FILTERSPEC ComDlgFS[] = { { L"All Files (*.*)", L"*.*" } };
+
+		//	auto Path = Application::OpenDialog(ComDlgFS);
+		//	if (!Path.empty())
+		//	{
+		//		AssetType Type = AssetManager::GetAssetTypeFromExtension(Path);
+		//		if (Type != AssetType::Unknown)
+		//		{
+		//			ImGui::OpenPopup("Import Options");
+		//		}
+
+		//		// Always center this window when appearing
+		//		const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+		//		ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		//		if (ImGui::BeginPopupModal("Import Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		//		{
+		//			if (Type == AssetType::Mesh)
+		//			{
+		//				MeshImportOptions MeshOptions = {};
+		//				MeshOptions.Path			  = Path;
+		//				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
+		//				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
+		//				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
+		//				float Scale[3] = { MeshOptions.UniformScale,
+		//								   MeshOptions.UniformScale,
+		//								   MeshOptions.UniformScale };
+		//				ImGuizmo::RecomposeMatrixFromComponents(
+		//					MeshOptions.Translation.data(),
+		//					MeshOptions.Rotation.data(),
+		//					Scale,
+		//					reinterpret_cast<float*>(&MeshOptions.Matrix));
+
+		//				if (ImGui::Button("Ok", ImVec2(120, 0)))
+		//				{
+		//					AssetManager::AsyncLoadMesh(MeshOptions);
+
+		//					ImGui::CloseCurrentPopup();
+		//				}
+		//			}
+		//			else if (Type == AssetType::Texture)
+		//			{
+		//				TextureImportOptions TextureOptions = {};
+		//				TextureOptions.Path					= Path;
+		//				ImGui::Checkbox("sRGB", &TextureOptions.sRGB);
+		//				ImGui::Checkbox("Generate Mips", &TextureOptions.GenerateMips);
+		//				if (ImGui::Button("Ok", ImVec2(120, 0)))
+		//				{
+		//					AssetManager::AsyncLoadImage(TextureOptions);
+
+		//					ImGui::CloseCurrentPopup();
+		//				}
+		//			}
+
+		//			ImGui::SetItemDefaultFocus();
+		//			ImGui::SameLine();
+		//			if (ImGui::Button("Cancel", ImVec2(120, 0)))
+		//			{
+		//				ImGui::CloseCurrentPopup();
+		//			}
+		//			ImGui::EndPopup();
+		//		}
+		//	}
+		//}
+
 		{
-			if (ImGui::Button("Import Texture"))
+			if (ImGui::Button("Import Mesh"))
 			{
-				ImGui::OpenPopup("Texture Options");
+				ImGui::OpenPopup("Mesh Options");
 			}
 
 			// Always center this window when appearing
 			const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
 			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-			if (ImGui::BeginPopupModal("Texture Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("Mesh Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				static bool sRGB = true;
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-				ImGui::Checkbox("sRGB", &sRGB);
-				ImGui::PopStyleVar();
+				MeshImportOptions MeshOptions = {};
+
+				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
+				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
+				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
+				float Scale[3] = { MeshOptions.UniformScale, MeshOptions.UniformScale, MeshOptions.UniformScale };
+				ImGuizmo::RecomposeMatrixFromComponents(
+					MeshOptions.Translation.data(),
+					MeshOptions.Rotation.data(),
+					Scale,
+					reinterpret_cast<float*>(&MeshOptions.Matrix));
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Image Files", L"*.dds;*.tga;*.hdr" },
+					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Mesh Files", L"*.obj;*.stl;*.ply" },
 													 { L"All Files (*.*)", L"*.*" }
 					};
 
-					std::filesystem::path Path = Application::OpenDialog(std::size(ComDlgFS), ComDlgFS);
-					if (!Path.empty())
+					MeshOptions.Path = Application::OpenDialog(ComDlgFS);
+					if (!MeshOptions.Path.empty())
 					{
-						AssetManager::AsyncLoadImage(Path, sRGB);
+						AssetManager::AsyncLoadMesh(MeshOptions);
 					}
 
 					ImGui::CloseCurrentPopup();
@@ -56,33 +128,32 @@ void AssetWindow::OnRender()
 				ImGui::EndPopup();
 			}
 		}
-
 		{
-			if (ImGui::Button("Import Mesh"))
+			if (ImGui::Button("Import Texture"))
 			{
-				ImGui::OpenPopup("Mesh Options");
+				ImGui::OpenPopup("Texture Options");
 			}
 
 			// Always center this window when appearing
 			const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
 			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-			if (ImGui::BeginPopupModal("Mesh Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			if (ImGui::BeginPopupModal("Texture Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				static bool KeepGeometryInRAM = true;
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-				ImGui::Checkbox("Keep Geometry In RAM", &KeepGeometryInRAM);
-				ImGui::PopStyleVar();
+				TextureImportOptions TextureOptions = {};
+
+				ImGui::Checkbox("sRGB", &TextureOptions.sRGB);
+				ImGui::Checkbox("Generate Mips", &TextureOptions.GenerateMips);
 
 				if (ImGui::Button("Browse...", ImVec2(120, 0)))
 				{
-					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Mesh Files", L"*.obj;*.stl;*.ply" },
+					COMDLG_FILTERSPEC ComDlgFS[] = { // { L"Image Files", L"*.dds;*.tga;*.hdr" },
 													 { L"All Files (*.*)", L"*.*" }
 					};
 
-					std::filesystem::path Path = Application::OpenDialog(std::size(ComDlgFS), ComDlgFS);
-					if (!Path.empty())
+					TextureOptions.Path = Application::OpenDialog(ComDlgFS);
+					if (!TextureOptions.Path.empty())
 					{
-						AssetManager::AsyncLoadMesh(Path, KeepGeometryInRAM);
+						AssetManager::AsyncLoadImage(TextureOptions);
 					}
 
 					ImGui::CloseCurrentPopup();
@@ -109,8 +180,8 @@ void AssetWindow::OnRender()
 										   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
 										   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
 
-	ImGui::Text("Images");
-	if (ImGui::BeginTable("ImageCache", AssetColumnCount, TableFlags))
+	ImGui::Text("Textures");
+	if (ImGui::BeginTable("TextureCache", AssetColumnCount, TableFlags))
 	{
 		ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Id);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);

@@ -3,10 +3,16 @@
 #include <World/Vertex.h>
 #include "Core/RHI/D3D12/D3D12Raytracing.h"
 
-struct MeshMetadata
+struct MeshImportOptions
 {
+	MeshImportOptions() { XMStoreFloat4x4(&Matrix, DirectX::XMMatrixIdentity()); }
+
 	std::filesystem::path Path;
-	bool				  KeepGeometryInRAM;
+
+	Vector3f			Translation	 = { 0.0f, 0.0f, 0.0f };
+	Vector3f			Rotation	 = { 0.0f, 0.0f, 0.0f };
+	float				UniformScale = 1.0f;
+	DirectX::XMFLOAT4X4 Matrix;
 };
 
 class Mesh : public Asset
@@ -20,7 +26,7 @@ public:
 		BoundingBox.Extents = Vector3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
 	}
 
-	MeshMetadata Metadata;
+	MeshImportOptions Options;
 
 	std::string Name;
 
@@ -37,7 +43,7 @@ public:
 	D3D12Buffer				  MeshletResource;
 	D3D12Buffer				  UniqueVertexIndexResource;
 	D3D12Buffer				  PrimitiveIndexResource;
-	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
+	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure; // Managed by D3D12RaytracingAccelerationStructureManager
 	D3D12RaytracingGeometry	  Blas;
 	UINT64					  BlasIndex		= UINT64_MAX;
 	bool					  BlasValid		= false;

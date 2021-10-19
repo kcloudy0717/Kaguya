@@ -10,7 +10,7 @@
 #include "Application.h"
 
 // Math
-#include "Math.h"
+#include "Math/Math.h"
 
 // Threading
 #include "ThreadPool.h"
@@ -19,7 +19,7 @@
 
 // Asset
 #include "Asset/AssetCache.h"
-#include "Asset/AsyncLoader.h"
+#include "Asset/AsyncImporter.h"
 #include "Asset/Texture.h"
 #include "Asset/Mesh.h"
 

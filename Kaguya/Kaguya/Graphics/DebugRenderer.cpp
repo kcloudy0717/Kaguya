@@ -67,7 +67,10 @@ void DebugRenderer::AddLine(Vector3f V0, Vector3f V1, Vector3f Color /*= Vector3
 	Lines.emplace_back(V1, Color);
 }
 
-void DebugRenderer::AddBoundingBox(const Transform& Transform, const BoundingBox& Box)
+void DebugRenderer::AddBoundingBox(
+	const Transform&   Transform,
+	const BoundingBox& Box,
+	Vector3f		   Color /*= Vector3f(1.0f)*/)
 {
 	if (!Enable)
 	{
@@ -90,20 +93,20 @@ void DebugRenderer::AddBoundingBox(const Transform& Transform, const BoundingBox
 	Vector3f NearTopLeft	 = Corners[7];
 
 	// Far face
-	AddLine(FarTopLeft, FarTopRight);
-	AddLine(FarBottomLeft, FarBottomRight);
-	AddLine(FarTopLeft, FarBottomLeft);
-	AddLine(FarTopRight, FarBottomRight);
+	AddLine(FarTopLeft, FarTopRight, Color);
+	AddLine(FarBottomLeft, FarBottomRight, Color);
+	AddLine(FarTopLeft, FarBottomLeft, Color);
+	AddLine(FarTopRight, FarBottomRight, Color);
 	// Near face
-	AddLine(NearTopLeft, NearTopRight);
-	AddLine(NearBottomLeft, NearBottomRight);
-	AddLine(NearTopLeft, NearBottomLeft);
-	AddLine(NearTopRight, NearBottomRight);
+	AddLine(NearTopLeft, NearTopRight, Color);
+	AddLine(NearBottomLeft, NearBottomRight, Color);
+	AddLine(NearTopLeft, NearBottomLeft, Color);
+	AddLine(NearTopRight, NearBottomRight, Color);
 	// Connect near and far face
-	AddLine(NearTopLeft, FarTopLeft);
-	AddLine(NearTopRight, FarTopRight);
-	AddLine(NearBottomLeft, FarBottomLeft);
-	AddLine(NearBottomRight, FarBottomRight);
+	AddLine(NearTopLeft, FarTopLeft, Color);
+	AddLine(NearTopRight, FarTopRight, Color);
+	AddLine(NearBottomLeft, FarBottomLeft, Color);
+	AddLine(NearBottomRight, FarBottomRight, Color);
 }
 
 void DebugRenderer::Render(const DirectX::XMFLOAT4X4& ViewProjection, D3D12CommandContext& Context)

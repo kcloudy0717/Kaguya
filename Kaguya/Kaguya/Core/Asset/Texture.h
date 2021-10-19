@@ -1,18 +1,20 @@
 #pragma once
+#include "Asset.h"
 #include <DirectXTex.h>
 #include <Core/RHI/D3D12/D3D12Device.h>
 
-struct TextureMetadata
+struct TextureImportOptions
 {
 	std::filesystem::path Path;
-	bool				  sRGB;
-	bool				  GenerateMips = true;
+
+	bool sRGB		  = false;
+	bool GenerateMips = true;
 };
 
 class Texture : public Asset
 {
 public:
-	TextureMetadata Metadata;
+	TextureImportOptions Options;
 
 	Vector2i Resolution;
 

@@ -15,6 +15,7 @@ public:
 		: Cache(NumAssets)
 		, CachedHandles(NumAssets)
 		, Assets(NumAssets)
+		, RWLock(STATIC_RWLOCK{})
 	{
 	}
 

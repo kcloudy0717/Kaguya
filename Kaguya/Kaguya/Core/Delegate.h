@@ -297,7 +297,7 @@ public:
 
 	explicit operator bool() const noexcept { return Proxy; }
 
-	TRet operator()(TArgs&&... Args) const
+	TRet operator()(TArgs... Args) const
 	{
 		assert(static_cast<bool>(*this) && "Invalid proxy");
 		return Proxy(Object, std::forward<TArgs>(Args)...);
@@ -339,7 +339,7 @@ private:
 	}
 
 private:
-	InlineAllocator<32> Allocator;
+	InlineAllocator<64> Allocator;
 	void*				Object = nullptr;
 	ProxyType			Proxy  = nullptr;
 };

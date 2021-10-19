@@ -158,7 +158,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 				MeshRenderers.push_back(&MeshRenderer);
 
-				DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Mesh.BoundingBox);
+				DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Mesh.BoundingBox, Vector3f(1.0f));
 
 				++NumMaterials;
 				++NumMeshes;
@@ -333,6 +333,8 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						0,
 						IndirectCommandBuffer,
 						CommandBufferCounterOffset);
+
+					DEBUG_RENDERER_RENDER(g_GlobalConstants.Camera.ViewProjection, Context);
 				}
 				Context.EndRenderPass();
 			};

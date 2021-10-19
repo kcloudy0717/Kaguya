@@ -57,7 +57,7 @@ void HierarchyWindow::OnRender()
 
 		if (ImGui::MenuItem("Save"))
 		{
-			std::filesystem::path Path = Application::SaveDialog(2, ComDlgFS);
+			std::filesystem::path Path = Application::SaveDialog(ComDlgFS);
 			if (!Path.empty())
 			{
 				WorldParser::Save(Path.replace_extension(".json"), pWorld);
@@ -66,7 +66,7 @@ void HierarchyWindow::OnRender()
 
 		if (ImGui::MenuItem("Load"))
 		{
-			std::filesystem::path Path = Application::OpenDialog(2, ComDlgFS);
+			std::filesystem::path Path = Application::OpenDialog(ComDlgFS);
 			if (!Path.empty())
 			{
 				WorldParser::Load(Path, pWorld);

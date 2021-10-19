@@ -315,31 +315,31 @@ int BoundingBoxToPlane(BoundingBox b, Plane p)
 
 int FrustumContainsBoundingSphere(Frustum f, BoundingSphere s)
 {
-	int	 P0			= BoundingSphereToPlane(s, f.Left);
-	int	 P1			= BoundingSphereToPlane(s, f.Right);
-	int	 P2			= BoundingSphereToPlane(s, f.Bottom);
-	int	 P3			= BoundingSphereToPlane(s, f.Top);
-	int	 P4			= BoundingSphereToPlane(s, f.Near);
-	int	 P5			= BoundingSphereToPlane(s, f.Far);
-	bool AnyOutside = P0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	bool AllInside = P0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	int	 p0			= BoundingSphereToPlane(s, f.Left);
+	int	 p1			= BoundingSphereToPlane(s, f.Right);
+	int	 p2			= BoundingSphereToPlane(s, f.Bottom);
+	int	 p3			= BoundingSphereToPlane(s, f.Top);
+	int	 p4			= BoundingSphereToPlane(s, f.Near);
+	int	 p5			= BoundingSphereToPlane(s, f.Far);
+	bool anyOutside = p0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	bool allInside = p0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
 
-	if (AnyOutside)
+	if (anyOutside)
 	{
 		return CONTAINMENT_DISJOINT;
 	}
 
-	if (AllInside)
+	if (allInside)
 	{
 		return CONTAINMENT_CONTAINS;
 	}
@@ -349,31 +349,31 @@ int FrustumContainsBoundingSphere(Frustum f, BoundingSphere s)
 
 int FrustumContainsBoundingBox(Frustum f, BoundingBox b)
 {
-	int	 P0			= BoundingBoxToPlane(b, f.Left);
-	int	 P1			= BoundingBoxToPlane(b, f.Right);
-	int	 P2			= BoundingBoxToPlane(b, f.Bottom);
-	int	 P3			= BoundingBoxToPlane(b, f.Top);
-	int	 P4			= BoundingBoxToPlane(b, f.Near);
-	int	 P5			= BoundingBoxToPlane(b, f.Far);
-	bool AnyOutside = P0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	AnyOutside |= P5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
-	bool AllInside = P0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
-	AllInside &= P5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	int	 p0			= BoundingBoxToPlane(b, f.Left);
+	int	 p1			= BoundingBoxToPlane(b, f.Right);
+	int	 p2			= BoundingBoxToPlane(b, f.Bottom);
+	int	 p3			= BoundingBoxToPlane(b, f.Top);
+	int	 p4			= BoundingBoxToPlane(b, f.Near);
+	int	 p5			= BoundingBoxToPlane(b, f.Far);
+	bool anyOutside = p0 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p1 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p2 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p3 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p4 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	anyOutside |= p5 == PLANE_INTERSECTION_NEGATIVE_HALFSPACE;
+	bool allInside = p0 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p1 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p2 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p3 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p4 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
+	allInside &= p5 == PLANE_INTERSECTION_POSITIVE_HALFSPACE;
 
-	if (AnyOutside)
+	if (anyOutside)
 	{
 		return CONTAINMENT_DISJOINT;
 	}
 
-	if (AllInside)
+	if (allInside)
 	{
 		return CONTAINMENT_CONTAINS;
 	}

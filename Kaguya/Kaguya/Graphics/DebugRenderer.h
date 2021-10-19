@@ -17,7 +17,7 @@ public:
 	static void Shutdown();
 
 	static void AddLine(Vector3f V0, Vector3f V1, Vector3f Color = Vector3f(1.0f));
-	static void AddBoundingBox(const Transform& Transform, const BoundingBox& Box);
+	static void AddBoundingBox(const Transform& Transform, const BoundingBox& Box, Vector3f Color = Vector3f(1.0f));
 
 	static void Render(const DirectX::XMFLOAT4X4& ViewProjection, D3D12CommandContext& Context);
 
@@ -35,15 +35,15 @@ private:
 };
 
 #if _DEBUG || ENABLE_DEBUG_RENDERER
-#define DEBUG_RENDERER_INITIALIZE(RenderPass)		   DebugRenderer::Initialize(RenderPass)
-#define DEBUG_RENDERER_SHUTDOWN()					   DebugRenderer::Shutdown();
-#define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)		   DebugRenderer::AddLine(V0, V1, Color)
-#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box)	   DebugRenderer::AddBoundingBox(Matrix, Box)
-#define DEBUG_RENDERER_RENDER(ViewProjection, Context) DebugRenderer::Render(ViewProjection, Context)
+#define DEBUG_RENDERER_INITIALIZE(RenderPass)			   DebugRenderer::Initialize(RenderPass)
+#define DEBUG_RENDERER_SHUTDOWN()						   DebugRenderer::Shutdown();
+#define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)			   DebugRenderer::AddLine(V0, V1, Color)
+#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box, Color) DebugRenderer::AddBoundingBox(Matrix, Box, Color)
+#define DEBUG_RENDERER_RENDER(ViewProjection, Context)	   DebugRenderer::Render(ViewProjection, Context)
 #else
 #define DEBUG_RENDERER_INITIALIZE(RenderPass)
 #define DEBUG_RENDERER_SHUTDOWN()
 #define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)
-#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box)
+#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box, Color)
 #define DEBUG_RENDERER_RENDER(ViewProjection, Context)
 #endif

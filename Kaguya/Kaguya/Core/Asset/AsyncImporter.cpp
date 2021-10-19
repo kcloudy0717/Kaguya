@@ -1,4 +1,4 @@
-#include "AsyncLoader.h"
+#include "AsyncImporter.h"
 #include "AssetManager.h"
 
 #include <assimp/Importer.hpp>
@@ -37,9 +37,9 @@ private:
 	Delegate<void(Resolution Elapsed)> Message;
 };
 
-void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
+void AsyncTextureImporter::Import(const TextureImportOptions& Options)
 {
-	const auto& Path	  = Metadata.Path;
+	const auto& Path	  = Options.Path;
 	const auto	Extension = Path.extension().string();
 
 	LOG_INFO("Loading: {}", Path.string());
@@ -57,7 +57,7 @@ void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
 	}
 	else if (Extension == ".tga")
 	{
-		if (Metadata.GenerateMips)
+		if (Options.GenerateMips)
 		{
 			ScratchImage BaseImage;
 			LoadFromTGAFile(Path.c_str(), &TexMetadata, BaseImage);
@@ -70,7 +70,7 @@ void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
 	}
 	else if (Extension == ".hdr")
 	{
-		if (Metadata.GenerateMips)
+		if (Options.GenerateMips)
 		{
 			ScratchImage BaseImage;
 			LoadFromHDRFile(Path.c_str(), &TexMetadata, BaseImage);
@@ -83,7 +83,7 @@ void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
 	}
 	else
 	{
-		if (Metadata.GenerateMips)
+		if (Options.GenerateMips)
 		{
 			ScratchImage BaseImage;
 			LoadFromWICFile(Path.c_str(), WIC_FLAGS::WIC_FLAGS_FORCE_RGB, &TexMetadata, BaseImage);
@@ -96,33 +96,33 @@ void AsyncTextureLoader::AsyncLoad(const TextureMetadata& Metadata)
 	}
 
 	Texture* Texture	= AssetManager::CreateAsset<AssetType::Texture>();
-	Texture->Metadata	= Metadata;
+	Texture->Options	= Options;
 	Texture->Resolution = Vector2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
 	Texture->Name		= Path.filename().string();
 	Texture->TexImage	= std::move(OutImage);
 	AssetManager::RequestUpload(Texture);
 }
 
-void AsyncMeshLoader::AsyncLoad(const MeshMetadata& Metadata)
+void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 {
-	LOG_INFO("Loading: {}", Metadata.Path.string());
+	LOG_INFO("Loading: {}", Options.Path.string());
 	ExecutionTimer Timer(
 		[&](auto Elapsed)
 		{
-			LOG_INFO("{} loaded in {}(ms)", Metadata.Path.string(), Elapsed.count());
+			LOG_INFO("{} loaded in {}(ms)", Options.Path.string(), Elapsed.count());
 		});
 
-	std::filesystem::path BinaryPath = Metadata.Path;
+	std::filesystem::path BinaryPath = Options.Path;
 	BinaryPath.replace_extension(MeshExportExtension);
 
 	std::vector<Mesh*> Meshes;
 	if (std::filesystem::exists(BinaryPath))
 	{
-		Meshes = Import(BinaryPath, Metadata);
+		Meshes = ImportExisting(BinaryPath, Options);
 	}
 	else
 	{
-		const auto Path = Metadata.Path.string();
+		const auto Path = Options.Path.string();
 
 		const aiScene* paiScene = s_Importer.ReadFile(Path.data(), s_ImporterFlags);
 
@@ -170,6 +170,23 @@ void AsyncMeshLoader::AsyncLoad(const MeshMetadata& Metadata)
 				}
 			}
 
+			XMMATRIX Matrix = XMLoadFloat4x4(&Options.Matrix);
+			XMVector3TransformCoordStream(
+				&Vertices[0].Position,
+				sizeof(Vertex),
+				&Vertices[0].Position,
+				sizeof(Vertex),
+				Vertices.size(),
+				Matrix);
+
+			XMVector3TransformNormalStream(
+				&Vertices[0].Normal,
+				sizeof(Vertex),
+				&Vertices[0].Normal,
+				sizeof(Vertex),
+				Vertices.size(),
+				Matrix);
+
 			// Parse index data
 			std::vector<std::uint32_t> indices;
 			indices.reserve(static_cast<size_t>(paiMesh->mNumFaces) * 3);
@@ -182,11 +199,11 @@ void AsyncMeshLoader::AsyncLoad(const MeshMetadata& Metadata)
 				indices.push_back(aiFace.mIndices[2]);
 			}
 
-			Mesh* Mesh	   = Meshes.emplace_back(AssetManager::CreateAsset<AssetType::Mesh>());
-			Mesh->Metadata = Metadata;
+			Mesh* Mesh	  = Meshes.emplace_back(AssetManager::CreateAsset<AssetType::Mesh>());
+			Mesh->Options = Options;
 			if (paiMesh->mName.length == 0)
 			{
-				Mesh->Name = Metadata.Path.filename().string();
+				Mesh->Name = Options.Path.filename().string();
 			}
 			else
 			{
@@ -224,7 +241,7 @@ void AsyncMeshLoader::AsyncLoad(const MeshMetadata& Metadata)
 	}
 }
 
-void AsyncMeshLoader::Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes)
+void AsyncMeshImporter::Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes)
 {
 	FileStream	 Stream(BinaryPath, FileMode::Create, FileAccess::Write);
 	BinaryWriter Writer(Stream);
@@ -256,7 +273,9 @@ void AsyncMeshLoader::Export(const std::filesystem::path& BinaryPath, const std:
 	}
 }
 
-std::vector<Mesh*> AsyncMeshLoader::Import(const std::filesystem::path& BinaryPath, const MeshMetadata& Metadata)
+std::vector<Mesh*> AsyncMeshImporter::ImportExisting(
+	const std::filesystem::path& BinaryPath,
+	const MeshImportOptions&	 Metadata)
 {
 	std::vector<Mesh*> Meshes;
 
@@ -287,9 +306,9 @@ std::vector<Mesh*> AsyncMeshLoader::Import(const std::filesystem::path& BinaryPa
 		Reader.Read(UniqueVertexIndices.data(), UniqueVertexIndices.size() * sizeof(uint8_t));
 		Reader.Read(PrimitiveIndices.data(), PrimitiveIndices.size() * sizeof(MeshletTriangle));
 
-		Mesh		   = AssetManager::CreateAsset<AssetType::Mesh>();
-		Mesh->Metadata = Metadata;
-		Mesh->Name	   = string;
+		Mesh		  = AssetManager::CreateAsset<AssetType::Mesh>();
+		Mesh->Options = Metadata;
+		Mesh->Name	  = string;
 
 		Mesh->Vertices			  = std::move(Vertices);
 		Mesh->Indices			  = std::move(Indices);

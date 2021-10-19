@@ -1,10 +1,8 @@
 #include "InspectorWindow.h"
-
 #include <imgui_internal.h>
-
 #include <Core/Asset/AssetManager.h>
 
-template<is_component T, bool IsCoreComponent, typename UIFunction>
+template<typename T, bool IsCoreComponent, typename UIFunction>
 static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
 {
 	if (Entity.HasComponent<T>())
@@ -60,7 +58,7 @@ static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
 	}
 }
 
-template<is_component T>
+template<typename T>
 static void AddNewComponent(const char* pName, Entity Entity)
 {
 	if (ImGui::MenuItem(pName))
@@ -78,198 +76,6 @@ static void AddNewComponent(const char* pName, Entity Entity)
 			Entity.AddComponent<T>();
 		}
 	}
-}
-
-static bool RenderButtonDragFloatControl(
-	std::string_view ButtonLabel,
-	std::string_view DragFloatLabel,
-	float*			 Float,
-	float			 ResetValue,
-	float			 Min,
-	float			 Max,
-	ImVec4			 ButtonColor,
-	ImVec4			 ButtonHoveredColor,
-	ImVec4			 ButtonActiveColor)
-{
-	bool IsEdited = false;
-
-	ImFont* BoldFont   = ImGui::GetIO().Fonts->Fonts[0];
-	float	LineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
-	ImVec2	ButtonSize = { LineHeight + 3.0f, LineHeight };
-
-	ImGui::PushStyleColor(ImGuiCol_Button, ButtonColor);
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ButtonHoveredColor);
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ButtonActiveColor);
-	ImGui::PushFont(BoldFont);
-	if (ImGui::Button(ButtonLabel.data(), ButtonSize))
-	{
-		*Float = ResetValue;
-		IsEdited |= true;
-	}
-	ImGui::PopFont();
-	ImGui::PopStyleColor(3);
-
-	ImGui::SameLine();
-	IsEdited |= ImGui::DragFloat(DragFloatLabel.data(), Float, 0.1f, Min, Max);
-	ImGui::PopItemWidth();
-
-	return IsEdited;
-}
-
-static bool RenderFloatControl(
-	std::string_view Label,
-	float*			 Float,
-	float			 ResetValue = 0.0f,
-	float			 Min		= 0.0f,
-	float			 Max		= 0.0f)
-{
-	bool IsEdited = false;
-	if (ImGui::BeginTable("Float", 2, ImGuiTableFlags_BordersInnerV))
-	{
-		ImGui::TableNextRow();
-
-		//==============================
-		ImGui::TableSetColumnIndex(0);
-		ImGui::Text(Label.data());
-
-		ImGui::PushMultiItemsWidths(1, ImGui::CalcItemWidth());
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
-
-		//==============================
-		ImGui::TableSetColumnIndex(1);
-		IsEdited |= RenderButtonDragFloatControl(
-			"X",
-			"##X",
-			&Float[0],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
-
-		ImGui::PopStyleVar();
-
-		ImGui::EndTable();
-	}
-	return IsEdited;
-}
-
-static bool RenderFloat2Control(
-	std::string_view Label,
-	float*			 Float2,
-	float			 ResetValue = 0.0f,
-	float			 Min		= 0.0f,
-	float			 Max		= 0.0f)
-{
-	bool IsEdited = false;
-	if (ImGui::BeginTable("Float2", 3, ImGuiTableFlags_BordersInnerV))
-	{
-		ImGui::TableNextRow();
-
-		//==============================
-		ImGui::TableSetColumnIndex(0);
-		ImGui::Text(Label.data());
-
-		ImGui::PushMultiItemsWidths(2, ImGui::CalcItemWidth());
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
-
-		//==============================
-		ImGui::TableSetColumnIndex(1);
-		IsEdited |= RenderButtonDragFloatControl(
-			"X",
-			"##X",
-			&Float2[0],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
-
-		//==============================
-		ImGui::TableSetColumnIndex(2);
-		IsEdited |= RenderButtonDragFloatControl(
-			"Y",
-			"##Y",
-			&Float2[1],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.1f, 0.9f, 0.1f, 1.0f },
-			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f },
-			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f });
-
-		ImGui::PopStyleVar();
-
-		ImGui::EndTable();
-	}
-	return IsEdited;
-}
-
-static bool RenderFloat3Control(
-	std::string_view Label,
-	float*			 Float3,
-	float			 ResetValue = 0.0f,
-	float			 Min		= 0.0f,
-	float			 Max		= 0.0f)
-{
-	bool isEdited = false;
-	if (ImGui::BeginTable("Float3", 4, ImGuiTableFlags_BordersInnerV))
-	{
-		ImGui::TableNextRow();
-
-		//==============================
-		ImGui::TableSetColumnIndex(0);
-		ImGui::Text(Label.data());
-
-		ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 0 });
-
-		//==============================
-		ImGui::TableSetColumnIndex(1);
-		isEdited |= RenderButtonDragFloatControl(
-			"X",
-			"##X",
-			&Float3[0],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.9f, 0.1f, 0.1f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f },
-			ImVec4{ 1.0f, 0.2f, 0.2f, 1.0f });
-
-		//==============================
-		ImGui::TableSetColumnIndex(2);
-		isEdited |= RenderButtonDragFloatControl(
-			"Y",
-			"##Y",
-			&Float3[1],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.1f, 0.9f, 0.1f, 1.0f },
-			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f },
-			ImVec4{ 0.2f, 1.0f, 0.2f, 1.0f });
-
-		//==============================
-		ImGui::TableSetColumnIndex(3);
-		isEdited |= RenderButtonDragFloatControl(
-			"Z",
-			"##Z",
-			&Float3[2],
-			ResetValue,
-			Min,
-			Max,
-			ImVec4{ 0.1f, 0.1f, 0.9f, 1.0f },
-			ImVec4{ 0.2f, 0.2f, 1.0f, 1.0f },
-			ImVec4{ 0.2f, 0.2f, 1.0f, 1.0f });
-
-		ImGui::PopStyleVar();
-
-		ImGui::EndTable();
-	}
-	return isEdited;
 }
 
 static bool EditTransform(const float* ViewMatrix, float* ProjectMatrix, float* TransformMatrix)

@@ -97,7 +97,7 @@ void from_json(const json& Json, Material& OutMaterial)
 		});
 }
 
-template<is_component T>
+template<typename T>
 struct ComponentSerializer
 {
 	ComponentSerializer(json& Json, Entity Entity)
@@ -123,21 +123,22 @@ void WorldParser::Save(const std::filesystem::path& Path, World* World)
 	{
 		Json["Version"] = Version::String;
 
-		auto& JsonImages = Json["Images"];
+		auto& JsonTextures = Json["Textures"];
 		AssetManager::GetTextureCache().Each(
 			[&](AssetHandle Handle, Texture* Resource)
 			{
-				auto& Image = JsonImages[relative(Resource->Metadata.Path, Application::ExecutableDirectory).string()];
-				Image["Metadata"]["SRGB"] = Resource->Metadata.sRGB;
+				std::filesystem::path AssetPath	  = relative(Resource->Options.Path, Application::ExecutableDirectory);
+				auto&				  JsonTexture = JsonTextures[AssetPath.string()];
+				JsonTexture["Options"]["sRGB"]	  = Resource->Options.sRGB;
+				JsonTexture["Options"]["GenerateMips"] = Resource->Options.GenerateMips;
 			});
 
 		auto& JsonMeshes = Json["Meshes"];
-
 		AssetManager::GetMeshCache().Each(
 			[&](AssetHandle Handle, Mesh* Resource)
 			{
-				auto& Mesh = JsonMeshes[relative(Resource->Metadata.Path, Application::ExecutableDirectory).string()];
-				Mesh["Metadata"]["KeepGeometryInRAM"] = Resource->Metadata.KeepGeometryInRAM;
+				std::filesystem::path AssetPath = relative(Resource->Options.Path, Application::ExecutableDirectory);
+				auto&				  Mesh		= JsonMeshes[AssetPath.string()];
 			});
 
 		auto& JsonWorld = Json["World"];
@@ -172,7 +173,7 @@ void WorldParser::Save(const std::filesystem::path& Path, World* World)
 	ofs << std::setw(4) << Json << std::endl;
 }
 
-template<is_component T>
+template<typename T>
 struct ComponentDeserializer
 {
 	ComponentDeserializer(const json& Json, Entity* Entity)
@@ -196,62 +197,96 @@ struct ComponentDeserializer
 	}
 };
 
+template<typename T>
+void JsonGetIfExists(const json::value_type& Json, const char* Key, T& RefValue)
+{
+	if (Json.contains(Key))
+	{
+		RefValue = Json[Key].get<T>();
+	}
+}
+
 void WorldParser::Load(const std::filesystem::path& Path, World* World)
 {
-	World->Clear(false);
-
-	AssetManager::GetTextureCache().DestroyAll();
-	AssetManager::GetMeshCache().DestroyAll();
-
 	std::ifstream ifs(Path);
-	json		  json;
-	ifs >> json;
+	json		  Json;
+	ifs >> Json;
 
-	if (Version::String != json["Version"].get<std::string>())
+	if (Json.contains("Version"))
 	{
-		throw std::exception("Invalid version");
-	}
-
-	const auto& JsonImages = json["Images"];
-	for (auto it = JsonImages.begin(); it != JsonImages.end(); ++it)
-	{
-		std::string ImagePath	 = (Application::ExecutableDirectory / it.key()).string();
-		auto&		JsonMetadata = it.value()["Metadata"];
-		bool		sRGB		 = JsonMetadata["SRGB"].get<bool>();
-
-		AssetManager::AsyncLoadImage(ImagePath, sRGB);
-	}
-
-	const auto& JsonMeshes = json["Meshes"];
-	for (auto it = JsonMeshes.begin(); it != JsonMeshes.end(); ++it)
-	{
-		std::string MeshPath		  = (Application::ExecutableDirectory / it.key()).string();
-		auto&		JsonMetadata	  = it.value()["Metadata"];
-		bool		KeepGeometryInRAM = JsonMetadata["KeepGeometryInRAM"].get<bool>();
-
-		AssetManager::AsyncLoadMesh(MeshPath, KeepGeometryInRAM);
-	}
-
-	for (const auto& JsonEntity : json["World"])
-	{
-		Entity Entity = World->CreateEntity();
-
-		ComponentDeserializer<Tag>(JsonEntity, &Entity);
-		ComponentDeserializer<Transform>(JsonEntity, &Entity);
-		ComponentDeserializer<Camera>(JsonEntity, &Entity);
-		ComponentDeserializer<Light>(JsonEntity, &Entity);
-		ComponentDeserializer<MeshFilter>(JsonEntity, &Entity);
-		ComponentDeserializer<MeshRenderer>(JsonEntity, &Entity);
-
-		ComponentDeserializer<BoxCollider>(JsonEntity, &Entity);
-		ComponentDeserializer<CapsuleCollider>(JsonEntity, &Entity);
-
-		if (Entity.HasComponent<MeshFilter>())
+		if (Version::String != Json["Version"].get<std::string>())
 		{
-			auto& MeshFilterComponent		 = Entity.GetComponent<MeshFilter>();
-			MeshFilterComponent.Handle.Type	 = AssetType::Mesh;
-			MeshFilterComponent.Handle.State = AssetState::Dirty;
-			MeshFilterComponent.Handle.Id	 = MeshFilterComponent.HandleId;
+			throw std::exception("Invalid version");
+		}
+	}
+
+	if (Json.contains("Textures"))
+	{
+		AssetManager::GetTextureCache().DestroyAll();
+
+		const auto& JsonTextures = Json["Textures"];
+		for (auto iter = JsonTextures.begin(); iter != JsonTextures.end(); ++iter)
+		{
+			TextureImportOptions Options = {};
+			Options.Path				 = Application::ExecutableDirectory / iter.key();
+
+			if (auto& Value = iter.value(); Value.contains("Options"))
+			{
+				auto& JsonOptions = Value["Options"];
+				JsonGetIfExists<bool>(JsonOptions, "sRGB", Options.sRGB);
+				JsonGetIfExists<bool>(JsonOptions, "GenerateMips", Options.GenerateMips);
+			}
+
+			AssetManager::AsyncLoadImage(Options);
+		}
+	}
+
+	if (Json.contains("Meshes"))
+	{
+		AssetManager::GetMeshCache().DestroyAll();
+
+		const auto& JsonMeshes = Json["Meshes"];
+		for (auto iter = JsonMeshes.begin(); iter != JsonMeshes.end(); ++iter)
+		{
+			MeshImportOptions Options = {};
+			Options.Path			  = Application::ExecutableDirectory / iter.key();
+
+			auto& Value = iter.value();
+			if (Value.contains("Options"))
+			{
+				auto& JsonOptions = Value["Options"];
+			}
+
+			AssetManager::AsyncLoadMesh(Options);
+		}
+	}
+
+	if (Json.contains("World"))
+	{
+		World->Clear(false);
+
+		const auto& JsonWorld = Json["World"];
+		for (const auto& JsonEntity : JsonWorld)
+		{
+			Entity Entity = World->CreateEntity();
+
+			ComponentDeserializer<Tag>(JsonEntity, &Entity);
+			ComponentDeserializer<Transform>(JsonEntity, &Entity);
+			ComponentDeserializer<Camera>(JsonEntity, &Entity);
+			ComponentDeserializer<Light>(JsonEntity, &Entity);
+			ComponentDeserializer<MeshFilter>(JsonEntity, &Entity);
+			ComponentDeserializer<MeshRenderer>(JsonEntity, &Entity);
+
+			ComponentDeserializer<BoxCollider>(JsonEntity, &Entity);
+			ComponentDeserializer<CapsuleCollider>(JsonEntity, &Entity);
+
+			if (Entity.HasComponent<MeshFilter>())
+			{
+				auto& MeshFilterComponent		 = Entity.GetComponent<MeshFilter>();
+				MeshFilterComponent.Handle.Type	 = AssetType::Mesh;
+				MeshFilterComponent.Handle.State = AssetState::Dirty;
+				MeshFilterComponent.Handle.Id	 = MeshFilterComponent.HandleId;
+			}
 		}
 	}
 }

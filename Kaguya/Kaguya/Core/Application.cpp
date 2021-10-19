@@ -52,7 +52,7 @@ Application::Application(const std::string& LoggerName)
 	LOG_INFO("Log Initialized");
 }
 
-int Application::Run(Application& Application, const ApplicationOptions& Options)
+int Application::Run(const ApplicationOptions& Options)
 {
 	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
 
@@ -110,7 +110,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 		nullptr, // No parent window
 		nullptr, // No menus
 		hInstance,
-		&Application));
+		this));
 	if (!hWnd)
 	{
 		ErrorExit(TEXT("CreateWindowW"));
@@ -127,7 +127,7 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 
 	ShowWindow(hWnd.get(), SW_SHOW);
 
-	Initialized = Application.Initialize();
+	Initialized = Initialize();
 
 	Stopwatch.Restart();
 	do
@@ -135,17 +135,17 @@ int Application::Run(Application& Application, const ApplicationOptions& Options
 		Stopwatch.Signal();
 		if (!Minimized)
 		{
-			Application.Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+			Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 		}
 	} while (ProcessMessages());
 
-	Application.Shutdown();
+	Shutdown();
 
 	UnregisterClass(wcexw.lpszClassName, hInstance);
 	return ExitCode;
 }
 
-std::filesystem::path Application::OpenDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs)
+std::filesystem::path Application::OpenDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs)
 {
 	// COMDLG_FILTERSPEC ComDlgFS[3] = { { L"C++ code files", L"*.cpp;*.h;*.rc" },
 	//								  { L"Executable Files", L"*.exe;*.dll" },
@@ -158,7 +158,7 @@ std::filesystem::path Application::OpenDialog(UINT NumFilters, const COMDLG_FILT
 			CLSCTX_ALL,
 			IID_PPV_ARGS(FileOpen.ReleaseAndGetAddressOf()))))
 	{
-		FileOpen->SetFileTypes(NumFilters, FilterSpecs);
+		FileOpen->SetFileTypes(static_cast<UINT>(FilterSpecs.size()), FilterSpecs.data());
 
 		// Show the Open dialog box.
 		// Get the file name from the dialog box.
@@ -181,7 +181,7 @@ std::filesystem::path Application::OpenDialog(UINT NumFilters, const COMDLG_FILT
 	return Path;
 }
 
-std::filesystem::path Application::SaveDialog(UINT NumFilters, const COMDLG_FILTERSPEC* FilterSpecs)
+std::filesystem::path Application::SaveDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs)
 {
 	std::filesystem::path	Path;
 	ComPtr<IFileSaveDialog> FileSave;
@@ -191,7 +191,7 @@ std::filesystem::path Application::SaveDialog(UINT NumFilters, const COMDLG_FILT
 			CLSCTX_ALL,
 			IID_PPV_ARGS(FileSave.ReleaseAndGetAddressOf()))))
 	{
-		FileSave->SetFileTypes(NumFilters, FilterSpecs);
+		FileSave->SetFileTypes(static_cast<UINT>(FilterSpecs.size()), FilterSpecs.data());
 
 		// Show the Save dialog box.
 		// Get the file name from the dialog box.

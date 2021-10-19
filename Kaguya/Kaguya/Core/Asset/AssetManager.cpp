@@ -72,26 +72,36 @@ void AssetManager::Shutdown()
 	MeshCache.DestroyAll();
 }
 
-void AssetManager::AsyncLoadImage(const std::filesystem::path& Path, bool sRGB)
+AssetType AssetManager::GetAssetTypeFromExtension(const std::filesystem::path& Path)
 {
-	if (!std::filesystem::exists(Path))
+	if (MeshImporter.SupportsExtension(Path))
 	{
-		return;
+		return AssetType::Mesh;
+	}
+	if (TextureImporter.SupportsExtension(Path))
+	{
+		return AssetType::Texture;
 	}
 
-	TextureMetadata Metadata = { .Path = Path, .sRGB = sRGB };
-	AsyncImageLoader.RequestAsyncLoad(1, &Metadata);
+	return AssetType::Unknown;
 }
 
-void AssetManager::AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeometryInRAM)
+void AssetManager::AsyncLoadImage(const TextureImportOptions& Options)
 {
-	if (!std::filesystem::exists(Path))
+	if (!exists(Options.Path))
 	{
 		return;
 	}
+	TextureImporter.RequestAsyncLoad(Options);
+}
 
-	MeshMetadata Metadata = { .Path = Path, .KeepGeometryInRAM = KeepGeometryInRAM };
-	AsyncMeshLoader.RequestAsyncLoad(1, &Metadata);
+void AssetManager::AsyncLoadMesh(const MeshImportOptions& Options)
+{
+	if (!exists(Options.Path))
+	{
+		return;
+	}
+	MeshImporter.RequestAsyncLoad(Options);
 }
 
 void AssetManager::UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Uploader)
@@ -99,7 +109,7 @@ void AssetManager::UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Upl
 	const auto& Metadata = AssetTexture->TexImage.GetMetadata();
 
 	DXGI_FORMAT Format = Metadata.format;
-	if (AssetTexture->Metadata.sRGB)
+	if (AssetTexture->Options.sRGB)
 	{
 		Format = DirectX::MakeSRGB(Format);
 	}
@@ -240,8 +250,8 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader)
 	RaytracingGeometryDesc.Triangles.Transform3x4				= NULL;
 	RaytracingGeometryDesc.Triangles.IndexFormat				= DXGI_FORMAT_R32_UINT;
 	RaytracingGeometryDesc.Triangles.VertexFormat				= DXGI_FORMAT_R32G32B32_FLOAT;
-	RaytracingGeometryDesc.Triangles.IndexCount					= AssetMesh->Indices.size();
-	RaytracingGeometryDesc.Triangles.VertexCount				= AssetMesh->Vertices.size();
+	RaytracingGeometryDesc.Triangles.IndexCount					= static_cast<UINT>(AssetMesh->Indices.size());
+	RaytracingGeometryDesc.Triangles.VertexCount				= static_cast<UINT>(AssetMesh->Vertices.size());
 	RaytracingGeometryDesc.Triangles.IndexBuffer				= IndexAddress;
 	RaytracingGeometryDesc.Triangles.VertexBuffer.StartAddress	= VertexAddress;
 	RaytracingGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);

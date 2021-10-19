@@ -1,10 +1,18 @@
 #pragma once
 #include <synchapi.h>
 
+struct STATIC_RWLOCK
+{
+};
+
 class RWLock
 {
 public:
 	RWLock() { ::InitializeSRWLock(&Handle); }
+	RWLock(STATIC_RWLOCK)
+		: Handle(SRWLOCK_INIT)
+	{
+	}
 	~RWLock() {}
 
 	RWLock(const RWLock&) = delete;

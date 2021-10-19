@@ -1,5 +1,5 @@
 #pragma once
-#include "AsyncLoader.h"
+#include "AsyncImporter.h"
 #include "AssetCache.h"
 
 class AssetManager
@@ -29,13 +29,15 @@ public:
 	static AssetCache<AssetType::Mesh, Mesh>&		GetMeshCache() { return MeshCache; }
 	static AssetCache<AssetType::Texture, Texture>& GetTextureCache() { return TextureCache; }
 
-	static void AsyncLoadImage(const std::filesystem::path& Path, bool sRGB);
+	static AssetType GetAssetTypeFromExtension(const std::filesystem::path& Path);
 
-	static void AsyncLoadMesh(const std::filesystem::path& Path, bool KeepGeometryInRAM);
+	static void AsyncLoadImage(const TextureImportOptions& Options);
+
+	static void AsyncLoadMesh(const MeshImportOptions& Options);
 
 	static void RequestUpload(Texture* Texture)
 	{
-		std::scoped_lock _(Mutex);
+		std::scoped_lock Lock(Mutex);
 
 		ImageUploadQueue.push(std::move(Texture));
 		ConditionVariable.notify_all();
@@ -43,7 +45,7 @@ public:
 
 	static void RequestUpload(Mesh* Mesh)
 	{
-		std::scoped_lock _(Mutex);
+		std::scoped_lock Lock(Mutex);
 
 		MeshUploadQueue.push(std::move(Mesh));
 		ConditionVariable.notify_all();
@@ -53,8 +55,8 @@ private:
 	static void UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Uploader);
 	static void UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader);
 
-	inline static AsyncTextureLoader AsyncImageLoader;
-	inline static AsyncMeshLoader  AsyncMeshLoader;
+	inline static AsyncTextureImporter TextureImporter;
+	inline static AsyncMeshImporter	   MeshImporter;
 
 	inline static AssetCache<AssetType::Mesh, Mesh>		  MeshCache;
 	inline static AssetCache<AssetType::Texture, Texture> TextureCache;
