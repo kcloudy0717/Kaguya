@@ -64,8 +64,8 @@ private:
 	std::unique_ptr<D3D12CommandContext> CopyContext1;
 	std::unique_ptr<D3D12CommandContext> CopyContext2;
 
-	RWLock													   ResourceAllocationInfoTableLock;
-	std::unordered_map<UINT64, D3D12_RESOURCE_ALLOCATION_INFO> ResourceAllocationInfoTable;
+	RWLock													   InfoLock;
+	std::unordered_map<UINT64, D3D12_RESOURCE_ALLOCATION_INFO> InfoTable;
 };
 
 template<typename ViewDesc>

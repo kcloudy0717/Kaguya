@@ -101,22 +101,23 @@ D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(ED3D12CommandQueueType Typ
 
 D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc)
 {
-	UINT64 Hash = CityHash64((const char*)&ResourceDesc, sizeof(D3D12_RESOURCE_DESC));
+	char Buffer[sizeof(D3D12_RESOURCE_DESC)] = {};
+	std::memcpy(Buffer, &ResourceDesc, sizeof(D3D12_RESOURCE_DESC));
+	UINT64 Hash = CityHash64(Buffer, sizeof(D3D12_RESOURCE_DESC));
 
 	{
-		ScopedReadLock _(ResourceAllocationInfoTableLock);
-		if (auto iter = ResourceAllocationInfoTable.find(Hash); iter != ResourceAllocationInfoTable.end())
+		ScopedReadLock Lock(InfoLock);
+		if (auto Iter = InfoTable.find(Hash); Iter != InfoTable.end())
 		{
-			return iter->second;
+			return Iter->second;
 		}
 	}
 
-	ScopedWriteLock _(ResourceAllocationInfoTableLock);
+	D3D12_RESOURCE_ALLOCATION_INFO Info = GetDevice()->GetResourceAllocationInfo(0, 1, &ResourceDesc);
 
-	D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(0, 1, &ResourceDesc);
-	ResourceAllocationInfoTable.insert(std::make_pair(Hash, ResourceAllocationInfo));
-
-	return ResourceAllocationInfo;
+	ScopedWriteLock Lock(InfoLock);
+	InfoTable.insert(std::make_pair(Hash, Info));
+	return Info;
 }
 
 bool D3D12LinkedDevice::ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
@@ -137,8 +138,8 @@ bool D3D12LinkedDevice::ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& Resourc
 		// allocation less than 4MB.
 		ResourceDesc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 
-		D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(ResourceDesc);
-		if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		D3D12_RESOURCE_ALLOCATION_INFO Info = GetResourceAllocationInfo(ResourceDesc);
+		if (Info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 		{
 			// If the alignment requested is not granted, then let D3D tell us
 			// the alignment that needs to be used for these resources.

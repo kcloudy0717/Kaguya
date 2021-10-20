@@ -6,11 +6,8 @@ set(PROJECTNAME Kaguya)
 set(PROJECTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Engine")
 set(Main "main.cpp")
 
-file(GLOB_RECURSE inc
-${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.h)
-
-file(GLOB_RECURSE src
-${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.cpp)
+file(GLOB_RECURSE inc ${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.h)
+file(GLOB_RECURSE src ${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.cpp)
 
 set(imgui
 	${DEPDIR}/imgui/imconfig.h
@@ -78,7 +75,6 @@ add_executable(
 
 file(GLOB_RECURSE inc_hlsl
 ${PROJECT_SOURCE_DIR}/Shaders/*.hlsli)
-
 file(GLOB_RECURSE src_hlsl
 ${PROJECT_SOURCE_DIR}/Shaders/*.hlsl)
 
@@ -87,12 +83,12 @@ source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${src_hlsl})
 set_source_files_properties(${src_hlsl} PROPERTIES VS_TOOL_OVERRIDE None)
 
 add_custom_target(Shaders
-ALL SOURCES ${inc_hlsl} ${src_hlsl}
-DEPENDS ${inc_hlsl} ${src_hlsl})
+	ALL SOURCES ${inc_hlsl} ${src_hlsl}
+	DEPENDS ${inc_hlsl} ${src_hlsl})
 add_custom_command(
-TARGET Shaders
-COMMAND ${CMAKE_COMMAND}
--E copy_directory ${PROJECT_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders)
+	TARGET Shaders
+	COMMAND ${CMAKE_COMMAND}
+	-E copy_directory ${PROJECT_SOURCE_DIR}/Shaders ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIGURATION>/Shaders)
 
 add_dependencies(${PROJECTNAME} Shaders)
 
@@ -162,51 +158,51 @@ target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/
 
 # DLL
 add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy 
-	${DEPDIR}/assimp/bin/release/assimp-vc142-mt.dll
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy 
+		${DEPDIR}/assimp/bin/release/assimp-vc142-mt.dll
 
-	${DEPDIR}/dxc/dxcompiler.dll
-	${DEPDIR}/dxc/dxil.dll
+		${DEPDIR}/dxc/dxcompiler.dll
+		${DEPDIR}/dxc/dxil.dll
 
-	${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
-	${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
+		${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
+		${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
 
-	${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
+		${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
 
-	${CMAKE_SOURCE_DIR}/imgui.ini
+		${CMAKE_SOURCE_DIR}/imgui.ini
 
-	$<TARGET_FILE_DIR:${PROJECTNAME}>
-DEPENDS ${PROJECTNAME})
+		$<TARGET_FILE_DIR:${PROJECTNAME}>
+	DEPENDS ${PROJECTNAME})
 
 # D3D12
 add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+		${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
 
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
-DEPENDS ${PROJECTNAME})
+		$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
+	DEPENDS ${PROJECTNAME})
 
 # PhysX
 add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy 
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
-	${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy 
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
+		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
 
-	$<TARGET_FILE_DIR:${PROJECTNAME}>
-DEPENDS ${PROJECTNAME})
+		$<TARGET_FILE_DIR:${PROJECTNAME}>
+	DEPENDS ${PROJECTNAME})
 
 # Copy assets
 add_custom_command(
-TARGET ${PROJECTNAME} POST_BUILD
-COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/Assets/Assets
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+		${CMAKE_SOURCE_DIR}/Assets/Assets
 
-	$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
-DEPENDS ${PROJECTNAME})
+		$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
+	DEPENDS ${PROJECTNAME})
