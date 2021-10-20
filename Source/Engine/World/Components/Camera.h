@@ -50,6 +50,7 @@ struct Camera : Component
 
 REGISTER_CLASS_ATTRIBUTES(
 	Camera,
+	"Camera",
 	CLASS_ATTRIBUTE(Camera, FoVY),
 	CLASS_ATTRIBUTE(Camera, AspectRatio),
 	CLASS_ATTRIBUTE(Camera, NearZ),

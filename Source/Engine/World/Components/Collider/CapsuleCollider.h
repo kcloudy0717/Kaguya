@@ -15,5 +15,6 @@ struct CapsuleCollider : Component
 
 REGISTER_CLASS_ATTRIBUTES(
 	CapsuleCollider,
+	"CapsuleCollider",
 	CLASS_ATTRIBUTE(CapsuleCollider, Radius),
 	CLASS_ATTRIBUTE(CapsuleCollider, Height))

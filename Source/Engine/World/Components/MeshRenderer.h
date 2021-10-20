@@ -61,10 +61,11 @@ struct MeshRenderer : Component
 	Material	Material;
 };
 
-REGISTER_CLASS_ATTRIBUTES(MaterialTexture, CLASS_ATTRIBUTE(MaterialTexture, HandleId))
+REGISTER_CLASS_ATTRIBUTES(MaterialTexture, "MaterialTexture", CLASS_ATTRIBUTE(MaterialTexture, HandleId))
 
 REGISTER_CLASS_ATTRIBUTES(
 	Material,
+	"Material",
 	CLASS_ATTRIBUTE(Material, BSDFType),
 	CLASS_ATTRIBUTE(Material, baseColor),
 	CLASS_ATTRIBUTE(Material, metallic),
@@ -82,4 +83,4 @@ REGISTER_CLASS_ATTRIBUTES(
 	CLASS_ATTRIBUTE(Material, etaB),
 	CLASS_ATTRIBUTE(Material, Albedo))
 
-REGISTER_CLASS_ATTRIBUTES(MeshRenderer, CLASS_ATTRIBUTE(MeshRenderer, Material))
+REGISTER_CLASS_ATTRIBUTES(MeshRenderer, "MeshRenderer", CLASS_ATTRIBUTE(MeshRenderer, Material))

@@ -12,4 +12,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED)
 add_definitions(-DUNICODE)
 add_definitions(-D_UNICODE)
 
-add_subdirectory(Kaguya)
+add_subdirectory(Source)

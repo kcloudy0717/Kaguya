@@ -33,6 +33,7 @@ struct Transform : Component
 
 REGISTER_CLASS_ATTRIBUTES(
 	Transform,
+	"Transform",
 	CLASS_ATTRIBUTE(Transform, Position),
 	CLASS_ATTRIBUTE(Transform, Scale),
 	CLASS_ATTRIBUTE(Transform, Orientation))

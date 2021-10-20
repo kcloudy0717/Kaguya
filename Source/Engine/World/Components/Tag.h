@@ -14,4 +14,4 @@ struct Tag : Component
 	std::string Name;
 };
 
-REGISTER_CLASS_ATTRIBUTES(Tag, CLASS_ATTRIBUTE(Tag, Name))
+REGISTER_CLASS_ATTRIBUTES(Tag, "Tag", CLASS_ATTRIBUTE(Tag, Name))

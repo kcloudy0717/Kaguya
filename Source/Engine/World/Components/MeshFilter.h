@@ -14,4 +14,4 @@ struct MeshFilter : Component
 	Mesh*		Mesh	 = nullptr;
 };
 
-REGISTER_CLASS_ATTRIBUTES(MeshFilter, CLASS_ATTRIBUTE(MeshFilter, HandleId))
+REGISTER_CLASS_ATTRIBUTES(MeshFilter, "MeshFilter", CLASS_ATTRIBUTE(MeshFilter, HandleId))

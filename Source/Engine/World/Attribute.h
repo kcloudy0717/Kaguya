@@ -79,15 +79,14 @@ private:
 
 #define CLASS_ATTRIBUTE(Class, x) Attribute(#x, &Class::x)
 
-#define REGISTER_CLASS_ATTRIBUTES(Class, ...)                                                                          \
+#define REGISTER_CLASS_ATTRIBUTES(Class, Name, ...)                                                                    \
 	template<>                                                                                                         \
 	inline const char* RegisterClassName<Class>()                                                                      \
 	{                                                                                                                  \
-		return #Class;                                                                                                 \
+		return Name;                                                                                                   \
 	}                                                                                                                  \
 	template<>                                                                                                         \
 	inline auto RegisterClassAttributes<Class>()                                                                       \
 	{                                                                                                                  \
-		CLASS_ATTRIBUTE(Tag, Name);                                                                                    \
 		return Attributes(__VA_ARGS__);                                                                                \
 	}

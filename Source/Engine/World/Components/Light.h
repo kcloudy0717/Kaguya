@@ -15,6 +15,7 @@ struct Light : Component
 
 REGISTER_CLASS_ATTRIBUTES(
 	Light,
+	"Light",
 	CLASS_ATTRIBUTE(Light, Type),
 	CLASS_ATTRIBUTE(Light, I),
 	CLASS_ATTRIBUTE(Light, Width),

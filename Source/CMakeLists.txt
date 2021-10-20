@@ -3,14 +3,14 @@ cmake_minimum_required(VERSION 3.16)
 set(DEPDIR "${CMAKE_SOURCE_DIR}/Dependencies")
 
 set(PROJECTNAME Kaguya)
-set(PROJECTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Kaguya")
+set(PROJECTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Engine")
 set(Main "main.cpp")
 
 file(GLOB_RECURSE inc
-${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.h)
+${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.h)
 
 file(GLOB_RECURSE src
-${CMAKE_CURRENT_SOURCE_DIR}/Kaguya/*.cpp)
+${CMAKE_CURRENT_SOURCE_DIR}/Engine/*.cpp)
 
 set(imgui
 	${DEPDIR}/imgui/imconfig.h

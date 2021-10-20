@@ -11,4 +11,4 @@ struct BoxCollider : Component
 	DirectX::XMFLOAT3 Extents = { 1.0f, 1.0f, 1.0f };
 };
 
-REGISTER_CLASS_ATTRIBUTES(BoxCollider, CLASS_ATTRIBUTE(BoxCollider, Extents))
+REGISTER_CLASS_ATTRIBUTES(BoxCollider, "BoxCollider", CLASS_ATTRIBUTE(BoxCollider, Extents))

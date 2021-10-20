@@ -425,7 +425,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						Context->IASetVertexBuffers(0, 1, &VertexBufferView);
 						Context->IASetIndexBuffer(&IndexBufferView);
 
-						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Vertices.size(), 1, 0, 0, 0);
+						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Indices.size(), 1, 0, 0, 0);
 					}*/
 					Context->ExecuteIndirect(
 						CommandSignature,
@@ -440,7 +440,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				Context.EndRenderPass();
 			};
 		});
-
 #endif //
 
 	auto&				 Params	 = GBuffer->Scope.Get<GBufferParams>();

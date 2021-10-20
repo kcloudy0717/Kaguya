@@ -48,9 +48,11 @@ void ViewportWindow::OnRender()
 	if (!Application::GetInputHandler().CursorEnabled)
 	{
 		Application::GetInputHandler().RawInputEnabled = true;
+		ClipCursor(&Rect);
 	}
 	else
 	{
 		Application::GetInputHandler().RawInputEnabled = false;
+		ClipCursor(nullptr);
 	}
 }
