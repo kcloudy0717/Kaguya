@@ -11,7 +11,7 @@ D3D12ResourceUploader::D3D12ResourceUploader(D3D12LinkedDevice* Parent)
 
 D3D12ResourceUploader::~D3D12ResourceUploader()
 {
-	if (SyncHandle.IsValid())
+	if (SyncHandle)
 	{
 		SyncHandle.WaitForCompletion();
 	}
@@ -19,7 +19,7 @@ D3D12ResourceUploader::~D3D12ResourceUploader()
 
 void D3D12ResourceUploader::Begin()
 {
-	if (SyncHandle.IsValid() && SyncHandle.IsComplete())
+	if (SyncHandle && SyncHandle.IsComplete())
 	{
 		TrackedResources.clear();
 	}

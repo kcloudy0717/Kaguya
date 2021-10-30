@@ -14,8 +14,8 @@ void AssetManager::Initialize()
 
 			while (true)
 			{
-				std::unique_lock _(Mutex);
-				ConditionVariable.wait(_);
+				std::unique_lock Lock(Mutex);
+				ConditionVariable.wait(Lock);
 
 				if (Quit)
 				{
@@ -37,10 +37,10 @@ void AssetManager::Initialize()
 				}
 
 				// Process Texture
-				while (!ImageUploadQueue.empty())
+				while (!TextureUploadQueue.empty())
 				{
-					Texture* Texture = ImageUploadQueue.front();
-					ImageUploadQueue.pop();
+					Texture* Texture = TextureUploadQueue.front();
+					TextureUploadQueue.pop();
 					UploadImage(Texture, ResourceUploader);
 					Textures.push_back(Texture);
 				}
@@ -49,11 +49,17 @@ void AssetManager::Initialize()
 
 				for (auto Mesh : Meshes)
 				{
+					// Release memory
+					Mesh->Release();
+
 					Mesh->Handle.State = AssetState::Ready;
 					MeshCache.UpdateHandleState(Mesh->Handle);
 				}
 				for (auto Texture : Textures)
 				{
+					// Release memory
+					Texture->Release();
+
 					Texture->Handle.State = AssetState::Ready;
 					TextureCache.UpdateHandleState(Texture->Handle);
 				}
@@ -66,10 +72,8 @@ void AssetManager::Shutdown()
 	Quit = true;
 	ConditionVariable.notify_all();
 
-	Thread.join();
-
-	TextureCache.DestroyAll();
 	MeshCache.DestroyAll();
+	TextureCache.DestroyAll();
 }
 
 AssetType AssetManager::GetAssetTypeFromExtension(const std::filesystem::path& Path)
@@ -88,19 +92,11 @@ AssetType AssetManager::GetAssetTypeFromExtension(const std::filesystem::path& P
 
 void AssetManager::AsyncLoadImage(const TextureImportOptions& Options)
 {
-	if (!exists(Options.Path))
-	{
-		return;
-	}
 	TextureImporter.RequestAsyncLoad(Options);
 }
 
 void AssetManager::AsyncLoadMesh(const MeshImportOptions& Options)
 {
-	if (!exists(Options.Path))
-	{
-		return;
-	}
 	MeshImporter.RequestAsyncLoad(Options);
 }
 

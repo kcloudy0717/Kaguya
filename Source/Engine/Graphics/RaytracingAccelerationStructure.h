@@ -20,7 +20,7 @@ public:
 
 	void Reset();
 
-	void AddInstance(const Transform& Transform, MeshRenderer* MeshRenderer);
+	void AddInstance(const Transform& Transform, StaticMeshComponent* StaticMesh);
 
 	void Build(D3D12CommandContext& Context);
 
@@ -33,11 +33,11 @@ public:
 
 	D3D12RaytracingAccelerationStructureManager Manager;
 
-	D3D12RaytracingScene	   TopLevelAccelerationStructure;
-	std::vector<MeshRenderer*> MeshRenderers;
-	std::set<Mesh*>			   ReferencedGeometries;
-	UINT					   CurrentInstanceID						  = 0;
-	UINT					   CurrentInstanceContributionToHitGroupIndex = 0;
+	D3D12RaytracingScene			  TopLevelAccelerationStructure;
+	std::vector<StaticMeshComponent*> StaticMeshes;
+	std::set<Mesh*>					  ReferencedGeometries;
+	UINT							  CurrentInstanceID							 = 0;
+	UINT							  CurrentInstanceContributionToHitGroupIndex = 0;
 
 	D3D12Buffer	  TlasScratch;
 	D3D12ASBuffer TlasResult;

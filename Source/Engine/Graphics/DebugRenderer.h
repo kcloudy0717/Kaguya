@@ -35,11 +35,11 @@ private:
 };
 
 #if _DEBUG || ENABLE_DEBUG_RENDERER
-#define DEBUG_RENDERER_INITIALIZE(RenderPass)			   DebugRenderer::Initialize(RenderPass)
-#define DEBUG_RENDERER_SHUTDOWN()						   DebugRenderer::Shutdown();
-#define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)			   DebugRenderer::AddLine(V0, V1, Color)
-#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Matrix, Box, Color) DebugRenderer::AddBoundingBox(Matrix, Box, Color)
-#define DEBUG_RENDERER_RENDER(ViewProjection, Context)	   DebugRenderer::Render(ViewProjection, Context)
+#define DEBUG_RENDERER_INITIALIZE(RenderPass)				  DebugRenderer::Initialize(RenderPass)
+#define DEBUG_RENDERER_SHUTDOWN()							  DebugRenderer::Shutdown();
+#define DEBUG_RENDERER_ADD_LINE(V0, V1, Color)				  DebugRenderer::AddLine(V0, V1, Color)
+#define DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Box, Color) DebugRenderer::AddBoundingBox(Transform, Box, Color)
+#define DEBUG_RENDERER_RENDER(ViewProjection, Context)		  DebugRenderer::Render(ViewProjection, Context)
 #else
 #define DEBUG_RENDERER_INITIALIZE(RenderPass)
 #define DEBUG_RENDERER_SHUTDOWN()

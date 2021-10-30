@@ -1,4 +1,6 @@
 #include "Player.script.h"
+#include "Physics/PhysicsCore.h"
+#include "../Components.h"
 
 // https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/CameraController.cpp
 void ApplyMomentum(float& OldValue, float& NewValue, float DeltaTime)
@@ -29,130 +31,34 @@ void PlayerScript::OnDestroy()
 
 void PlayerScript::OnUpdate(float DeltaTime)
 {
-	using namespace DirectX;
-	using namespace physx;
-
-	InputHandler& InputHandler = Application::GetInputHandler();
-	Mouse&		  Mouse		   = Application::GetMouse();
-	Keyboard&	  Keyboard	   = Application::GetKeyboard();
-
-	auto& TransformComp = GetComponent<Transform>();
-	auto& CameraComp	= GetComponent<Camera>();
-	// auto& controller = GetComponent<CharacterController>();
+	auto& Camera = GetComponent<CameraComponent>();
 
 	bool Fwd = false, Bwd = false, Right = false, Left = false, Up = false, Down = false;
-	if (InputHandler.RawInputEnabled)
+	if (Application::InputManager.RawInputEnabled)
 	{
-		Fwd	  = Keyboard.IsPressed('W');
-		Bwd	  = Keyboard.IsPressed('S');
-		Right = Keyboard.IsPressed('D');
-		Left  = Keyboard.IsPressed('A');
-		Up	  = Keyboard.IsPressed('E');
-		Down  = Keyboard.IsPressed('Q');
-
-		// if (Keyboard.IsPressed(' '))
-		//{
-		//	if (canJump(controller.Controller))
-		//	{
-		//		Jump.startJump(30.0f);
-		//	}
-		//}
+		Fwd	  = Application::InputManager.IsPressed('W');
+		Bwd	  = Application::InputManager.IsPressed('S');
+		Right = Application::InputManager.IsPressed('D');
+		Left  = Application::InputManager.IsPressed('A');
+		Up	  = Application::InputManager.IsPressed('E');
+		Down  = Application::InputManager.IsPressed('Q');
 	}
 
-	auto	 v = CameraComp.pTransform->Forward();
-	XMFLOAT3 viewDir;
-	XMStoreFloat3(&viewDir, v);
-
-	PxVec3 disp;
-
-	const PxF32 heightDelta = Jump.getHeight(DeltaTime);
-	float		dy			= Gravity * DeltaTime;
-	if (heightDelta != 0.0f)
+	if (Application::InputManager.RawInputEnabled)
 	{
-		dy = heightDelta;
-	}
+		float z = Camera.MovementSpeed * ((Fwd * DeltaTime) + (Bwd * -DeltaTime));
+		float x = Camera.StrafeSpeed * ((Right * DeltaTime) + (Left * -DeltaTime));
+		float y = Camera.StrafeSpeed * ((Up * DeltaTime) + (Down * -DeltaTime));
 
-	PxVec3 targetKeyDisplacement(0);
-
-	PxVec3 forward = ToPxVec3(viewDir);
-	forward.y	   = 0;
-	forward.normalize();
-	PxVec3 up	 = PxVec3(0, 1, 0);
-	PxVec3 right = up.cross(forward);
-
-	{
-		if (InputHandler.RawInputEnabled)
+		if (Camera.Momentum)
 		{
-			float z = CameraComp.MovementSpeed * ((Fwd * DeltaTime) + (Bwd * -DeltaTime));
-			float x = CameraComp.StrafeSpeed * ((Right * DeltaTime) + (Left * -DeltaTime));
-			float y = CameraComp.StrafeSpeed * ((Up * DeltaTime) + (Down * -DeltaTime));
-
-			if (CameraComp.Momentum)
-			{
-				ApplyMomentum(LastForward, z, DeltaTime);
-				ApplyMomentum(LastStrafe, x, DeltaTime);
-				ApplyMomentum(LastAscent, y, DeltaTime);
-			}
-
-			CameraComp.Translate(x, y, z);
-
-			targetKeyDisplacement += z * forward;
-			targetKeyDisplacement += x * right;
-
-			/*if (Keyboard.IsPressed('W'))	targetKeyDisplacement += m_MoveSpeed * forward;
-			if (Keyboard.IsPressed('S'))	targetKeyDisplacement -= m_MoveSpeed * forward;
-
-			if (Keyboard.IsPressed('A'))	targetKeyDisplacement += m_StrafeSpeed * right;
-			if (Keyboard.IsPressed('D'))	targetKeyDisplacement -= m_StrafeSpeed * right;*/
-
-			while (const auto e = Mouse.ReadRawInput())
-			{
-				CameraComp.Rotate(
-					e->y * DeltaTime * CameraComp.MouseSensitivityY,
-					e->x * DeltaTime * CameraComp.MouseSensitivityX,
-					0.0f);
-			}
+			ApplyMomentum(LastForward, z, DeltaTime);
+			ApplyMomentum(LastStrafe, x, DeltaTime);
+			ApplyMomentum(LastAscent, y, DeltaTime);
 		}
 
-		// targetKeyDisplacement *= mKeyShiftDown ? mRunningSpeed : mWalkingSpeed;
-		// targetKeyDisplacement *= dt;
+		Camera.Translate(x, y, z);
 	}
 
-	disp   = targetKeyDisplacement;
-	disp.y = dy;
-
-	// PxControllerFilters				  filters;
-	// physx::PxControllerCollisionFlags flags = controller.Controller->move(disp, 0.0f, dt, filters);
-	// if (flags & PxControllerCollisionFlag::eCOLLISION_DOWN)
-	//{
-	//	Jump.stopJump();
-	//}
-
-	// const auto& p			  = controller.Controller->getFootPosition();
-	// camera.Transform.Position = XMFLOAT3(float(p.x), float(p.y + 1.75f), float(p.z));
-
-	// if (InputHandler.RawInputEnabled)
-	//{
-	//	float forward = m_MoveSpeed * (
-	//		(Keyboard.IsPressed('W') * dt) +
-	//		(Keyboard.IsPressed('S') * -dt));
-	//	float strafe = m_StrafeSpeed * (
-	//		(Keyboard.IsPressed('D') * dt) +
-	//		(Keyboard.IsPressed('A') * -dt));
-	//	float ascent = m_StrafeSpeed * (
-	//		(Keyboard.IsPressed('E') * dt) +
-	//		(Keyboard.IsPressed('Q') * -dt));
-	//
-	//	if (m_Momentum)
-	//	{
-	//		ApplyMomentum(m_LastForward, forward, dt);
-	//		ApplyMomentum(m_LastStrafe, strafe, dt);
-	//		ApplyMomentum(m_LastAscent, ascent, dt);
-	//	}
-	//
-	//	camera.Transform.Translate(strafe, ascent, forward);
-	//
-	//}
-
-	CameraComp.Update();
+	Camera.Update();
 }

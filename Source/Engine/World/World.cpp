@@ -1,26 +1,36 @@
 #include "World.h"
 #include "Entity.h"
-#include "Physics/PhysicsManager.h"
+#include "Physics/PhysicsDevice.h"
 #include "Core/Asset/AssetManager.h"
 
 #include "Scripts/Player.script.h"
 
 static const char* DefaultEntityName = "GameObject";
 
+World::World()
+{
+	Clear(true);
+}
+
+void World::Initialize(PhysicsDevice* Device)
+{
+	PhysicsScene = Device->CreateScene();
+}
+
 auto World::CreateEntity(std::string_view Name /*= {}*/) -> Entity
 {
-	Entity Entity = { Registry.create(), this };
-	Entity.AddComponent<Tag>(Name.empty() ? DefaultEntityName : Name);
-	Entity.AddComponent<Transform>();
+	Entity Entity = Entities.emplace_back(Registry.create(), this);
+	auto&  Core	  = Entity.AddComponent<CoreComponent>();
+	Core.Name	  = Name.empty() ? DefaultEntityName : Name;
 	return Entity;
 }
 
 auto World::GetMainCamera() -> Entity
 {
-	auto View = Registry.view<Camera>();
+	auto View = Registry.view<CameraComponent>();
 	for (entt::entity Handle : View)
 	{
-		const auto& Component = View.get<Camera>(Handle);
+		const auto& Component = View.get<CameraComponent>(Handle);
 		if (Component.Main)
 		{
 			return Entity(Handle, this);
@@ -29,49 +39,80 @@ auto World::GetMainCamera() -> Entity
 	return Entity(entt::null, this);
 }
 
-auto World::GetEntityByTag(std::string_view Name) -> Entity
-{
-	auto View = Registry.view<Tag>();
-	for (entt::entity Handle : View)
-	{
-		const auto& Component = View.get<Tag>(Handle);
-		if (Component.Name == Name)
-		{
-			return Entity(Handle, this);
-		}
-	}
-	return Entity(entt::null, this);
-}
-
-void World::Clear(bool bAddDefaultEntities /*= true*/)
+void World::Clear(bool AddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
 	Registry.clear();
 	ActiveCamera = nullptr;
-	if (bAddDefaultEntities)
+	Entities.clear();
+	PhysicsScene.Reset();
+	if (AddDefaultEntities)
 	{
-		AddDefaultEntities();
+		Entity MainCamera = CreateEntity("Main Camera");
+		MainCamera.AddComponent<CameraComponent>();
 	}
 }
 
-void World::DestroyEntity(Entity Entity)
+void World::DestroyEntity(size_t Index)
 {
+	Entity Entity = Entities[Index];
 	Registry.destroy(Entity);
+	Entities.erase(Entities.begin() + Index);
 }
 
-void World::Update(float dt)
+void World::CloneEntity(size_t Index)
+{
+	Entity Entity = Entities[Index];
+	Entity.Clone();
+}
+
+void World::Update(float DeltaTime)
 {
 	ResolveComponentDependencies();
-	UpdateScripts(dt);
-	UpdatePhysics(dt);
+	UpdateScripts(DeltaTime);
+	if (SimulatePhysics)
+	{
+		PhysicsScene.Simulate(DeltaTime);
+	}
+}
+
+void World::BeginPlay()
+{
+	PhysicsScene.Reset();
+
+	for (auto Entity : Entities)
+	{
+		if (Entity.HasComponent<StaticRigidBodyComponent>())
+		{
+			if (Entity.HasComponent<BoxColliderComponent>())
+			{
+				PhysicsScene.AddStaticActor(Entity, Entity.GetComponent<BoxColliderComponent>());
+			}
+			else if (Entity.HasComponent<CapsuleColliderComponent>())
+			{
+				PhysicsScene.AddStaticActor(Entity, Entity.GetComponent<CapsuleColliderComponent>());
+			}
+		}
+		else if (Entity.HasComponent<DynamicRigidBodyComponent>())
+		{
+			if (Entity.HasComponent<BoxColliderComponent>())
+			{
+				PhysicsScene.AddDynamicActor(Entity, Entity.GetComponent<BoxColliderComponent>());
+			}
+			else if (Entity.HasComponent<CapsuleColliderComponent>())
+			{
+				PhysicsScene.AddDynamicActor(Entity, Entity.GetComponent<CapsuleColliderComponent>());
+			}
+		}
+	}
 }
 
 void World::ResolveComponentDependencies()
 {
-	Registry.view<Transform, Camera>().each(
-		[&](auto&& Transform, auto&& Camera)
+	Registry.view<CoreComponent, CameraComponent>().each(
+		[&](CoreComponent& Core, CameraComponent& Camera)
 		{
-			Camera.pTransform = &Transform;
+			Camera.pTransform = &Core.Transform;
 
 			if (Camera.Dirty)
 			{
@@ -80,49 +121,32 @@ void World::ResolveComponentDependencies()
 			}
 		});
 
-	// Refresh all mesh filters
-	Registry.view<MeshFilter>().each(
-		[](auto&& MeshFilter)
+	// Refresh StaticMeshComponent
+	Registry.view<StaticMeshComponent>().each(
+		[](StaticMeshComponent& StaticMesh)
 		{
-			auto Handle			= MeshFilter.Handle;
-			MeshFilter.Mesh		= AssetManager::GetMeshCache().GetValidAsset(Handle);
-			MeshFilter.HandleId = Handle.Id;
-		});
-
-	// Refresh all mesh renderers
-	Registry.view<MeshFilter, MeshRenderer>().each(
-		[](auto&& MeshFilter, auto&& MeshRenderer)
-		{
-			MeshRenderer.pMeshFilter = &MeshFilter;
-
-			auto Handle	 = MeshRenderer.Material.Albedo.Handle;
-			auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
-			if (Texture)
 			{
-				MeshRenderer.Material.Albedo.HandleId	= Handle.Id;
-				MeshRenderer.Material.TextureIndices[0] = Texture->SRV.GetIndex();
+				auto Handle			= StaticMesh.Handle;
+				StaticMesh.Mesh		= AssetManager::GetMeshCache().GetValidAsset(Handle);
+				StaticMesh.HandleId = Handle.Id;
+			}
+
+			{
+				auto Handle	 = StaticMesh.Material.Albedo.Handle;
+				auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+				if (Texture)
+				{
+					StaticMesh.Material.Albedo.HandleId	  = Handle.Id;
+					StaticMesh.Material.TextureIndices[0] = Texture->SRV.GetIndex();
+				}
 			}
 		});
 }
 
-void World::UpdateScripts(float dt)
+void World::UpdateScripts(float DeltaTime)
 {
-	Registry.view<Transform, StaticRigidBody>().each(
-		[&](auto&& Transform, auto&& StaticRigidBody)
-		{
-			physx::PxTransform pxTransform(ToPxVec3(Transform.Position), ToPxQuat(Transform.Orientation));
-			StaticRigidBody.Actor->setGlobalPose(pxTransform);
-		});
-
-	Registry.view<Transform, DynamicRigidBody>().each(
-		[&](auto&& Transform, auto&& DynamicRigidBody)
-		{
-			physx::PxTransform pxTransform(ToPxVec3(Transform.Position), ToPxQuat(Transform.Orientation));
-			DynamicRigidBody.Actor->setGlobalPose(pxTransform);
-		});
-
-	Registry.view<NativeScript>().each(
-		[&](auto Handle, NativeScript& NativeScript)
+	Registry.view<NativeScriptComponent>().each(
+		[&](auto Handle, NativeScriptComponent& NativeScript)
 		{
 			if (!NativeScript.Instance)
 			{
@@ -131,22 +155,8 @@ void World::UpdateScripts(float dt)
 				NativeScript.Instance->OnCreate();
 			}
 
-			NativeScript.Instance->OnUpdate(dt);
+			NativeScript.Instance->OnUpdate(DeltaTime);
 		});
-}
-
-void World::UpdatePhysics(float dt)
-{
-	if (PhysicsManager::Simulate(dt))
-	{
-		WorldState |= EWorldState_Update;
-	}
-}
-
-void World::AddDefaultEntities()
-{
-	Entity MainCamera = CreateEntity("Main Camera");
-	MainCamera.AddComponent<Camera>();
 }
 
 template<typename T>
@@ -155,22 +165,17 @@ void World::OnComponentAdded(Entity Entity, T& Component)
 }
 
 template<>
-void World::OnComponentAdded<Tag>(Entity Entity, Tag& Component)
+void World::OnComponentAdded<CoreComponent>(Entity Entity, CoreComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<Transform>(Entity Entity, Transform& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<Camera>(Entity Entity, Camera& Component)
+void World::OnComponentAdded<CameraComponent>(Entity Entity, CameraComponent& Component)
 {
 	if (!ActiveCamera)
 	{
 		ActiveCamera = &Component;
-		Entity.AddComponent<NativeScript>().Bind<PlayerScript>();
+		Entity.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 	}
 	else
 	{
@@ -179,112 +184,67 @@ void World::OnComponentAdded<Camera>(Entity Entity, Camera& Component)
 }
 
 template<>
-void World::OnComponentAdded<Light>(Entity Entity, Light& Component)
+void World::OnComponentAdded<LightComponent>(Entity Entity, LightComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<MeshFilter>(Entity Entity, MeshFilter& Component)
+void World::OnComponentAdded<StaticMeshComponent>(Entity Entity, StaticMeshComponent& Component)
 {
-	// If we added a MeshFilter component, check to see if we have a MeshRenderer component
-	// and connect them
-	if (Entity.HasComponent<MeshRenderer>())
+	if (Entity.HasComponent<MeshColliderComponent>())
 	{
-		MeshRenderer& MeshRendererComponent = Entity.GetComponent<MeshRenderer>();
-		MeshRendererComponent.pMeshFilter	= &Component;
-
-		WorldState |= EWorldState_Update;
-	}
-
-	if (Entity.HasComponent<MeshCollider>())
-	{
-		MeshCollider& MeshColliderComponent = Entity.GetComponent<MeshCollider>();
-
+		auto& MeshCollider = Entity.GetComponent<MeshColliderComponent>();
 		if (Component.Mesh)
 		{
-			MeshColliderComponent.Vertices = Component.Mesh->Vertices;
-			MeshColliderComponent.Indices  = Component.Mesh->Indices;
+			MeshCollider.Vertices = Component.Mesh->Vertices;
+			MeshCollider.Indices  = Component.Mesh->Indices;
 		}
 	}
 }
 
 template<>
-void World::OnComponentAdded<MeshRenderer>(Entity Entity, MeshRenderer& Component)
+void World::OnComponentAdded<CharacterControllerComponent>(Entity Entity, CharacterControllerComponent& Component)
 {
-	// If we added a MeshRenderer component, check to see if we have a MeshFilter component
-	// and connect them
-	if (Entity.HasComponent<MeshFilter>())
+	Component.Controller->setPosition(ToPxExtendedVec3(Entity.GetComponent<CoreComponent>().Transform.Position));
+}
+
+template<>
+void World::OnComponentAdded<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
+{
+}
+
+template<>
+void World::OnComponentAdded<BoxColliderComponent>(Entity Entity, BoxColliderComponent& Component)
+{
+}
+
+template<>
+void World::OnComponentAdded<CapsuleColliderComponent>(Entity Entity, CapsuleColliderComponent& Component)
+{
+}
+
+template<>
+void World::OnComponentAdded<MeshColliderComponent>(Entity Entity, MeshColliderComponent& Component)
+{
+	if (Entity.HasComponent<StaticMeshComponent>())
 	{
-		MeshFilter& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
-		Component.pMeshFilter			= &MeshFilterComponent;
-
-		WorldState |= EWorldState_Update;
-	}
-}
-
-template<>
-void World::OnComponentAdded<CharacterController>(Entity Entity, CharacterController& Component)
-{
-	Component.Controller->setPosition(ToPxExtendedVec3(Entity.GetComponent<Transform>().Position));
-}
-
-template<>
-void World::OnComponentAdded<NativeScript>(Entity Entity, NativeScript& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<BoxCollider>(Entity Entity, BoxCollider& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<CapsuleCollider>(Entity Entity, CapsuleCollider& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<MeshCollider>(Entity Entity, MeshCollider& Component)
-{
-	if (Entity.HasComponent<MeshFilter>())
-	{
-		MeshFilter& MeshFilterComponent = Entity.GetComponent<MeshFilter>();
-		if (MeshFilterComponent.Mesh)
+		auto& StaticMesh = Entity.GetComponent<StaticMeshComponent>();
+		if (StaticMesh.Mesh)
 		{
-			Component.Vertices = MeshFilterComponent.Mesh->Vertices;
-			Component.Indices  = MeshFilterComponent.Mesh->Indices;
+			Component.Vertices = StaticMesh.Mesh->Vertices;
+			Component.Indices  = StaticMesh.Mesh->Indices;
 		}
 	}
 }
 
 template<>
-void World::OnComponentAdded<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
+void World::OnComponentAdded<StaticRigidBodyComponent>(Entity Entity, StaticRigidBodyComponent& Component)
 {
-	if (Entity.HasComponent<BoxCollider>())
-	{
-		Component.Actor = PhysicsManager::AddStaticActorEntity(Entity, Entity.GetComponent<BoxCollider>());
-	}
-	else if (Entity.HasComponent<CapsuleCollider>())
-	{
-		Component.Actor = PhysicsManager::AddStaticActorEntity(Entity, Entity.GetComponent<CapsuleCollider>());
-	}
-	else if (Entity.HasComponent<MeshCollider>())
-	{
-		Component.Actor = PhysicsManager::AddGenericActor(Entity, Entity.GetComponent<MeshCollider>());
-	}
 }
 
 template<>
-void World::OnComponentAdded<DynamicRigidBody>(Entity Entity, DynamicRigidBody& Component)
+void World::OnComponentAdded<DynamicRigidBodyComponent>(Entity Entity, DynamicRigidBodyComponent& Component)
 {
-	if (Entity.HasComponent<BoxCollider>())
-	{
-		Component.Actor = PhysicsManager::AddDynamicActorEntity(Entity, Entity.GetComponent<BoxCollider>());
-	}
-	else if (Entity.HasComponent<CapsuleCollider>())
-	{
-		Component.Actor = PhysicsManager::AddDynamicActorEntity(Entity, Entity.GetComponent<CapsuleCollider>());
-	}
 }
 
 //===============================================================================================================================
@@ -294,66 +254,56 @@ void World::OnComponentRemoved(Entity Entity, T& Component)
 }
 
 template<>
-void World::OnComponentRemoved<Tag>(Entity Entity, Tag& Component)
+void World::OnComponentRemoved<CoreComponent>(Entity Entity, CoreComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<Transform>(Entity Entity, Transform& Component)
+void World::OnComponentRemoved<CameraComponent>(Entity Entity, CameraComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<Camera>(Entity Entity, Camera& Component)
+void World::OnComponentRemoved<LightComponent>(Entity Entity, LightComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<Light>(Entity Entity, Light& Component)
+void World::OnComponentRemoved<StaticMeshComponent>(Entity Entity, StaticMeshComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<MeshFilter>(Entity Entity, MeshFilter& Component)
+void World::OnComponentRemoved<CharacterControllerComponent>(Entity Entity, CharacterControllerComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<MeshRenderer>(Entity Entity, MeshRenderer& Component)
+void World::OnComponentRemoved<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<CharacterController>(Entity Entity, CharacterController& Component)
+void World::OnComponentRemoved<BoxColliderComponent>(Entity Entity, BoxColliderComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<NativeScript>(Entity Entity, NativeScript& Component)
+void World::OnComponentRemoved<CapsuleColliderComponent>(Entity Entity, CapsuleColliderComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<BoxCollider>(Entity Entity, BoxCollider& Component)
+void World::OnComponentRemoved<MeshColliderComponent>(Entity Entity, MeshColliderComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<CapsuleCollider>(Entity Entity, CapsuleCollider& Component)
+void World::OnComponentRemoved<StaticRigidBodyComponent>(Entity Entity, StaticRigidBodyComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<MeshCollider>(Entity Entity, MeshCollider& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<StaticRigidBody>(Entity Entity, StaticRigidBody& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<DynamicRigidBody>(Entity Entity, DynamicRigidBody& Component)
+void World::OnComponentRemoved<DynamicRigidBodyComponent>(Entity Entity, DynamicRigidBodyComponent& Component)
 {
 }

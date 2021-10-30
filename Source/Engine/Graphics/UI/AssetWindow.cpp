@@ -111,7 +111,7 @@ void AssetWindow::OnRender()
 													 { L"All Files (*.*)", L"*.*" }
 					};
 
-					MeshOptions.Path = Application::OpenDialog(ComDlgFS);
+					MeshOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!MeshOptions.Path.empty())
 					{
 						AssetManager::AsyncLoadMesh(MeshOptions);
@@ -150,7 +150,7 @@ void AssetWindow::OnRender()
 													 { L"All Files (*.*)", L"*.*" }
 					};
 
-					TextureOptions.Path = Application::OpenDialog(ComDlgFS);
+					TextureOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!TextureOptions.Path.empty())
 					{
 						AssetManager::AsyncLoadImage(TextureOptions);
@@ -189,9 +189,9 @@ void AssetWindow::OnRender()
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
-		auto& ImageCache = AssetManager::GetTextureCache();
+		auto& TextureCache = AssetManager::GetTextureCache();
 		ValidImageHandles.clear();
-		for (auto Handle : ImageCache)
+		for (auto Handle : TextureCache)
 		{
 			if (Handle.IsValid())
 			{
@@ -243,12 +243,12 @@ void AssetWindow::OnRender()
 
 	if (AddAllMeshToHierarchy)
 	{
-		MeshCache.Each(
+		MeshCache.EnumerateAsset(
 			[&](AssetHandle Handle, Mesh* Mesh)
 			{
-				auto Entity = pWorld->CreateEntity(Mesh->Name);
-				Entity.AddComponent<MeshFilter>(Handle);
-				Entity.AddComponent<MeshRenderer>();
+				auto  Entity	  = pWorld->CreateEntity(Mesh->Name);
+				auto& StaticMesh  = Entity.AddComponent<StaticMeshComponent>();
+				StaticMesh.Handle = Handle;
 			});
 	}
 

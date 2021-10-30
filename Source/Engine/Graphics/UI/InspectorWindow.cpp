@@ -136,10 +136,10 @@ void InspectorWindow::OnRender()
 {
 	if (SelectedEntity)
 	{
-		RenderComponent<Tag, true>(
-			"Tag",
+		RenderComponent<CoreComponent, true>(
+			"Core",
 			SelectedEntity,
-			[&](Tag& Component)
+			[&](CoreComponent& Component)
 			{
 				char Buffer[MAX_PATH] = {};
 				strcpy_s(Buffer, MAX_PATH, Component.Name.data());
@@ -148,20 +148,12 @@ void InspectorWindow::OnRender()
 					Component.Name = Buffer;
 				}
 
-				return false;
-			});
-
-		RenderComponent<Transform, true>(
-			"Transform",
-			SelectedEntity,
-			[&](Transform& Component)
-			{
 				bool IsEdited = false;
 
 				DirectX::XMFLOAT4X4 World, View, Projection;
 
 				// Dont transpose this
-				XMStoreFloat4x4(&World, Component.Matrix());
+				XMStoreFloat4x4(&World, Component.Transform.Matrix());
 
 				float Translation[3], Rotation[3], Scale[3];
 				ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&World), Translation, Rotation, Scale);
@@ -181,39 +173,43 @@ void InspectorWindow::OnRender()
 
 				if (IsEdited)
 				{
-					Component.SetTransform(XMLoadFloat4x4(&World));
+					Component.Transform.SetTransform(XMLoadFloat4x4(&World));
 				}
 
 				return IsEdited;
 			});
 
-		RenderComponent<Camera, false>(
+		RenderComponent<CameraComponent, false>(
 			"Camera",
 			SelectedEntity,
-			[&](Camera& Component)
+			[&](CameraComponent& Component)
 			{
 				bool IsEdited = false;
 
-				IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, Camera().FoVY, 45.0f, 85.0f);
-				IsEdited |= RenderFloatControl("Near", &Component.NearZ, Camera().NearZ, 0.1f, 1.0f);
-				IsEdited |= RenderFloatControl("Far", &Component.FarZ, Camera().FarZ, 10.0f, 10000.0f);
+				IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, CameraComponent().FoVY, 45.0f, 85.0f);
+				IsEdited |= RenderFloatControl("Near", &Component.NearZ, CameraComponent().NearZ, 0.1f, 1.0f);
+				IsEdited |= RenderFloatControl("Far", &Component.FarZ, CameraComponent().FarZ, 10.0f, 10000.0f);
 
 				IsEdited |= RenderFloatControl(
 					"Movement Speed",
 					&Component.MovementSpeed,
-					Camera().MovementSpeed,
+					CameraComponent().MovementSpeed,
 					1.0f,
 					1000.0f);
-				IsEdited |=
-					RenderFloatControl("Strafe Speed", &Component.StrafeSpeed, Camera().StrafeSpeed, 1.0f, 1000.0f);
+				IsEdited |= RenderFloatControl(
+					"Strafe Speed",
+					&Component.StrafeSpeed,
+					CameraComponent().StrafeSpeed,
+					1.0f,
+					1000.0f);
 
 				return IsEdited;
 			});
 
-		RenderComponent<Light, false>(
+		RenderComponent<LightComponent, false>(
 			"Light",
 			SelectedEntity,
-			[&](Light& Component)
+			[&](LightComponent& Component)
 			{
 				bool IsEdited = false;
 
@@ -237,10 +233,10 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<MeshFilter, false>(
-			"Mesh Filter",
+		RenderComponent<StaticMeshComponent, false>(
+			"Static Mesh",
 			SelectedEntity,
-			[&](MeshFilter& Component)
+			[&](StaticMeshComponent& Component)
 			{
 				bool IsEdited = false;
 
@@ -269,16 +265,6 @@ void InspectorWindow::OnRender()
 					ImGui::EndDragDropTarget();
 				}
 
-				return IsEdited;
-			});
-
-		RenderComponent<MeshRenderer, false>(
-			"Mesh Renderer",
-			SelectedEntity,
-			[&](MeshRenderer& Component)
-			{
-				bool IsEdited = false;
-
 				if (ImGui::TreeNode("Material"))
 				{
 					auto& Material = Component.Material;
@@ -301,26 +287,26 @@ void InspectorWindow::OnRender()
 					case EBSDFTypes::Lambertian:
 						[[fallthrough]];
 					case EBSDFTypes::Mirror:
-						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						IsEdited |= RenderFloat3Control("R", &Material.BaseColor.x);
 						break;
 					case EBSDFTypes::Glass:
-						IsEdited |= RenderFloat3Control("R", &Material.baseColor.x);
+						IsEdited |= RenderFloat3Control("R", &Material.BaseColor.x);
 						IsEdited |= RenderFloat3Control("T", &Material.T.x);
-						IsEdited |= ImGui::SliderFloat("etaA", &Material.etaA, 1, 3);
-						IsEdited |= ImGui::SliderFloat("etaB", &Material.etaB, 1, 3);
+						IsEdited |= ImGui::SliderFloat("EtaA", &Material.EtaA, 1, 3);
+						IsEdited |= ImGui::SliderFloat("EtaB", &Material.EtaB, 1, 3);
 						break;
 					case EBSDFTypes::Disney:
-						IsEdited |= RenderFloat3Control("Base Color", &Material.baseColor.x);
-						IsEdited |= ImGui::SliderFloat("Metallic", &Material.metallic, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Subsurface", &Material.subsurface, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Specular", &Material.specular, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Roughness", &Material.roughness, 0, 1);
-						IsEdited |= ImGui::SliderFloat("SpecularTint", &Material.specularTint, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Anisotropic", &Material.anisotropic, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Sheen", &Material.sheen, 0, 1);
-						IsEdited |= ImGui::SliderFloat("SheenTint", &Material.sheenTint, 0, 1);
-						IsEdited |= ImGui::SliderFloat("Clearcoat", &Material.clearcoat, 0, 1);
-						IsEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.clearcoatGloss, 0, 1);
+						IsEdited |= RenderFloat3Control("Base Color", &Material.BaseColor.x);
+						IsEdited |= ImGui::SliderFloat("Metallic", &Material.Metallic, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Subsurface", &Material.Subsurface, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Specular", &Material.Specular, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Roughness", &Material.Roughness, 0, 1);
+						IsEdited |= ImGui::SliderFloat("SpecularTint", &Material.SpecularTint, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Anisotropic", &Material.Anisotropic, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Sheen", &Material.Sheen, 0, 1);
+						IsEdited |= ImGui::SliderFloat("SheenTint", &Material.SheenTint, 0, 1);
+						IsEdited |= ImGui::SliderFloat("Clearcoat", &Material.Clearcoat, 0, 1);
+						IsEdited |= ImGui::SliderFloat("ClearcoatGloss", &Material.ClearcoatGloss, 0, 1);
 						break;
 					default:
 						break;
@@ -364,10 +350,10 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<BoxCollider, false>(
+		RenderComponent<BoxColliderComponent, false>(
 			"Box Collider",
 			SelectedEntity,
-			[&](BoxCollider& Component)
+			[&](BoxColliderComponent& Component)
 			{
 				bool IsEdited = false;
 
@@ -376,10 +362,10 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<CapsuleCollider, false>(
+		RenderComponent<CapsuleColliderComponent, false>(
 			"Capsule Collider",
 			SelectedEntity,
-			[&](CapsuleCollider& Component)
+			[&](CapsuleColliderComponent& Component)
 			{
 				bool IsEdited = false;
 
@@ -389,28 +375,28 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<MeshCollider, false>(
+		RenderComponent<MeshColliderComponent, false>(
 			"Mesh Collider",
 			SelectedEntity,
-			[&](MeshCollider& Component)
+			[&](MeshColliderComponent& Component)
 			{
 				return false;
 			});
 
-		RenderComponent<StaticRigidBody, false>(
+		RenderComponent<StaticRigidBodyComponent, false>(
 			"Static Rigid Body",
 			SelectedEntity,
-			[&](StaticRigidBody& Component)
+			[&](StaticRigidBodyComponent& Component)
 			{
 				bool IsEdited = false;
 
 				return IsEdited;
 			});
 
-		RenderComponent<DynamicRigidBody, false>(
+		RenderComponent<DynamicRigidBodyComponent, false>(
 			"Dynamic Rigid Body",
 			SelectedEntity,
-			[&](DynamicRigidBody& Component)
+			[&](DynamicRigidBodyComponent& Component)
 			{
 				bool IsEdited = false;
 
@@ -424,16 +410,16 @@ void InspectorWindow::OnRender()
 
 		if (ImGui::BeginPopup("Component List"))
 		{
-			AddNewComponent<MeshFilter>("Mesh Filter", SelectedEntity);
-			AddNewComponent<MeshRenderer>("Mesh Renderer", SelectedEntity);
-			AddNewComponent<Light>("Light", SelectedEntity);
+			AddNewComponent<StaticMeshComponent>("Static Mesh", SelectedEntity);
 
-			AddNewComponent<BoxCollider>("Box Collider", SelectedEntity);
-			AddNewComponent<CapsuleCollider>("Capsule Collider", SelectedEntity);
-			AddNewComponent<MeshCollider>("Mesh Collider", SelectedEntity);
+			AddNewComponent<LightComponent>("Light", SelectedEntity);
 
-			AddNewComponent<StaticRigidBody>("Static Rigid Body", SelectedEntity);
-			AddNewComponent<DynamicRigidBody>("Dynamic Rigid Body", SelectedEntity);
+			AddNewComponent<BoxColliderComponent>("Box Collider", SelectedEntity);
+			AddNewComponent<CapsuleColliderComponent>("Capsule Collider", SelectedEntity);
+			AddNewComponent<MeshColliderComponent>("Mesh Collider", SelectedEntity);
+
+			AddNewComponent<StaticRigidBodyComponent>("Static Rigid Body", SelectedEntity);
+			AddNewComponent<DynamicRigidBodyComponent>("Dynamic Rigid Body", SelectedEntity);
 
 			ImGui::EndPopup();
 		}

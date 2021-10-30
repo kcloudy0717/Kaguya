@@ -1,6 +1,7 @@
 #pragma once
 #include <entt.hpp>
-#include "World.h"
+
+class World;
 
 class Entity
 {
@@ -13,57 +14,29 @@ public:
 	}
 
 	template<typename T, typename... TArgs>
-	auto AddComponent(TArgs&&... Args) -> T&
-	{
-		assert(!HasComponent<T>());
-
-		T& Component = World->Registry.emplace<T>(Handle, std::forward<TArgs>(Args)...);
-		World->OnComponentAdded<T>(*this, Component);
-		return Component;
-	}
+	auto AddComponent(TArgs&&... Args) -> T&;
 
 	template<typename T>
-	[[nodiscard]] auto GetComponent() -> T&
-	{
-		assert(HasComponent<T>());
-
-		return World->Registry.get<T>(Handle);
-	}
+	[[nodiscard]] auto GetComponent() -> T&;
 
 	template<typename T, typename... TArgs>
-	[[nodiscard]] auto GetOrAddComponent(TArgs&&... Args) -> T&
-	{
-		if (HasComponent<T>())
-		{
-			return GetComponent<T>();
-		}
-		return AddComponent<T>(std::forward<TArgs>(Args)...);
-	}
+	[[nodiscard]] auto GetOrAddComponent(TArgs&&... Args) -> T&;
 
 	template<typename T>
-	[[nodiscard]] auto HasComponent() -> bool
-	{
-		return World->Registry.any_of<T>(Handle);
-	}
+	[[nodiscard]] auto HasComponent() -> bool;
 
 	template<typename T>
-	void RemoveComponent()
-	{
-		assert(HasComponent<T>());
+	void RemoveComponent();
 
-		T& Component = GetComponent<T>();
-		World->OnComponentRemoved<T>(*this, Component);
+	void OnComponentModified();
 
-		World->Registry.remove<T>(Handle);
-	}
-
-	void OnComponentModified() { World->WorldState |= EWorldState_Update; }
-
-	operator bool() const noexcept { return Handle != entt::null && World->Registry.valid(Handle); }
+	operator bool() const noexcept;
 
 	operator entt::entity() const noexcept { return Handle; }
 
 	auto operator<=>(const Entity&) const = default;
+
+	Entity Clone();
 
 private:
 	entt::entity Handle = entt::null;
@@ -76,13 +49,13 @@ public:
 	virtual ~ScriptableEntity() = default;
 
 	template<typename T>
-	T& GetComponent()
+	[[nodiscard]] T& GetComponent()
 	{
 		return Entity.GetComponent<T>();
 	}
 
 	template<typename T>
-	bool HasComponent() const
+	[[nodiscard]] bool HasComponent() const
 	{
 		return Entity.HasComponent<T>();
 	}

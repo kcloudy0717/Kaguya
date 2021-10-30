@@ -26,9 +26,34 @@ public:
 		BoundingBox.Extents = Vector3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
 	}
 
+	void UpdateInfo()
+	{
+		VertexCount		 = static_cast<std::uint32_t>(Vertices.size());
+		IndexCount		 = static_cast<std::uint32_t>(Indices.size());
+		MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
+		VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
+		PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
+	}
+
+	void Release()
+	{
+		// Physics needs this
+		// std::vector<Vertex>().swap(Vertices);
+		// std::vector<uint32_t>().swap(Indices);
+		std::vector<DirectX::Meshlet>().swap(Meshlets);
+		std::vector<uint8_t>().swap(UniqueVertexIndices);
+		std::vector<DirectX::MeshletTriangle>().swap(PrimitiveIndices);
+	}
+
 	MeshImportOptions Options;
 
 	std::string Name;
+
+	std::uint32_t VertexCount	   = 0;
+	std::uint32_t IndexCount	   = 0;
+	std::uint32_t MeshletCount	   = 0;
+	std::uint32_t VertexIndexCount = 0;
+	std::uint32_t PrimitiveCount   = 0;
 
 	std::vector<Vertex>					  Vertices;
 	std::vector<uint32_t>				  Indices;

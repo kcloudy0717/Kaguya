@@ -1,67 +1,66 @@
 #pragma once
 #include <filesystem>
 
+#include "Window.h"
 #include "Stopwatch.h"
-#include "InputHandler.h"
+#include "InputManager.h"
 
 struct ApplicationOptions
 {
-	std::wstring		  Name;
-	int					  Width	 = CW_USEDEFAULT;
-	int					  Height = CW_USEDEFAULT;
-	std::optional<int>	  x;
-	std::optional<int>	  y;
-	bool				  Maximize = false;
 	std::filesystem::path Icon;
 };
 
-class Application final
+class IApplicationMessageHandler;
+
+class Application
 {
 public:
-	explicit Application(const std::string& LoggerName);
+	inline static LPCWSTR WindowClass = L"KaguyaWindow";
 
-	int Run(const ApplicationOptions& Options);
+	explicit Application(const std::string& LoggerName, const ApplicationOptions& Options);
+	virtual ~Application();
 
-	static int	 GetWidth() { return WindowWidth; }
-	static int	 GetHeight() { return WindowHeight; }
-	static float GetAspectRatio() { return AspectRatio; }
-	static HWND	 GetWindowHandle() { return hWnd.get(); }
+	void Run();
 
-	static InputHandler& GetInputHandler() { return InputHandler; }
-	static Mouse&		 GetMouse() { return InputHandler.Mouse; }
-	static Keyboard&	 GetKeyboard() { return InputHandler.Keyboard; }
+	void SetMessageHandler(IApplicationMessageHandler* MessageHandler);
 
-	static std::filesystem::path OpenDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs);
-	static std::filesystem::path SaveDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs);
+	void AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc);
 
-	Delegate<bool()>						Initialize;
-	Delegate<void()>						Shutdown;
-	Delegate<void(float DeltaTime)>			Update;
-	Delegate<void(UINT Width, UINT Height)> Resize;
+	void SetRawInputMode(bool Enable, Window* Window);
+
+	virtual bool Initialize()			 = 0;
+	virtual void Shutdown()				 = 0;
+	virtual void Update(float DeltaTime) = 0;
 
 private:
-	static bool ProcessMessages();
-
 	static LRESULT CALLBACK WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
+
+	void	PumpMessages();
+	LRESULT ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
 	// Components
 	inline static std::filesystem::path ExecutableDirectory;
-
-protected:
-	inline static UINT				  WindowWidth, WindowHeight;
-	inline static float				  AspectRatio;
-	inline static wil::unique_hicon	  hIcon;
-	inline static wil::unique_hcursor hCursor;
-	inline static wil::unique_hwnd	  hWnd;
-	inline static InputHandler		  InputHandler;
-	inline static Stopwatch			  Stopwatch;
-
-	inline static bool Minimized = false;
-	inline static bool Maximized = false;
-	inline static bool Resizing	 = false;
+	inline static InputManager			InputManager;
 
 private:
-	inline static bool Initialized = false;
-	inline static int  ExitCode	   = 0;
+	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWrapper;
+	HINSTANCE									  HInstance;
+
+protected:
+	wil::unique_hicon	HIcon;
+	wil::unique_hcursor HCursor;
+	Stopwatch			Stopwatch;
+
+	bool Minimized = false;
+	bool Maximized = false;
+	bool Resizing  = false;
+
+	bool RequestExit = false;
+
+private:
+	bool Initialized = false;
+
+	IApplicationMessageHandler* MessageHandler = nullptr;
+	std::vector<Window*>		Windows;
 };

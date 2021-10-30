@@ -27,7 +27,7 @@ struct MRT
 	float2 Motion : SV_Target2;
 };
 
-struct VSOutput
+struct VertexAttributes
 {
 	float4 Position : SV_POSITION;
 	float4 CurrPosition : CURR_POSITION;
@@ -36,9 +36,9 @@ struct VSOutput
 	float3 N : NORMAL;
 };
 
-VSOutput VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOORD, float3 Normal : NORMAL)
+VertexAttributes VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOORD, float3 Normal : NORMAL)
 {
-	VSOutput output;
+	VertexAttributes output;
 
 	Mesh mesh = g_Meshes[MeshIndex];
 
@@ -58,7 +58,7 @@ VSOutput VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOORD, floa
 	return output;
 }
 
-MRT PSMain(VSOutput input)
+MRT PSMain(VertexAttributes input)
 {
 	Mesh	 mesh	  = g_Meshes[MeshIndex];
 	Material material = g_Materials[mesh.MaterialIndex];

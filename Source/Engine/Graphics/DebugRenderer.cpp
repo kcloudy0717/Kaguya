@@ -3,16 +3,20 @@
 
 void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 {
-	VS = RenderCore::Compiler->CompileShader(
-		EShaderType::Vertex,
-		Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
-		L"VSMain",
-		{});
-	PS = RenderCore::Compiler->CompileShader(
-		EShaderType::Pixel,
-		Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
-		L"PSMain",
-		{});
+	{
+		ShaderCompileOptions Options(L"VSMain");
+		VS = RenderCore::Compiler->CompileShader(
+			EShaderType::Vertex,
+			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
+			Options);
+	}
+	{
+		ShaderCompileOptions Options(L"PSMain");
+		PS = RenderCore::Compiler->CompileShader(
+			EShaderType::Pixel,
+			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
+			Options);
+	}
 
 	Rs = RenderCore::Device->CreateRootSignature(
 		[](RootSignatureBuilder& Builder)

@@ -15,20 +15,8 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-void* PathIntegrator::GetViewportDescriptor()
-{
-	if (ValidViewport)
-	{
-		return reinterpret_cast<void*>(Registry.GetTextureSRV(Viewport).GetGpuHandle().ptr);
-	}
-
-	return nullptr;
-}
-
 void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	ValidViewport = false;
-
 	float r = 1.5f;
 	switch (FSRState.QualityMode)
 	{
@@ -112,8 +100,9 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 {
 	bool ResetPathIntegrator = false;
 
-	if (ImGui::Begin("Path Integrator"))
+	if (ImGui::Begin("Renderer"))
 	{
+		ImGui::Text("Path Integrator");
 		if (ImGui::Button("Restore Defaults"))
 		{
 			PathIntegratorState = {};
@@ -162,19 +151,19 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 	NumMaterials = NumLights = 0;
 	AccelerationStructure.Reset();
-	World->Registry.view<Transform, MeshFilter, MeshRenderer>().each(
-		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
+	World->Registry.view<CoreComponent, StaticMeshComponent>().each(
+		[&](CoreComponent& Core, StaticMeshComponent& StaticMeshComponent)
 		{
-			if (MeshFilter.Mesh)
+			if (StaticMeshComponent.Mesh)
 			{
-				AccelerationStructure.AddInstance(Transform, &MeshRenderer);
-				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(MeshRenderer.Material);
+				AccelerationStructure.AddInstance(Core.Transform, &StaticMeshComponent);
+				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(StaticMeshComponent.Material);
 			}
 		});
-	World->Registry.view<Transform, Light>().each(
-		[&](auto&& Transform, auto&& Light)
+	World->Registry.view<CoreComponent, LightComponent>().each(
+		[&](CoreComponent& Core, LightComponent& Light)
 		{
-			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
+			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
 		});
 
 	D3D12SyncHandle CopySyncHandle;
@@ -185,10 +174,10 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 
 		// Update shader table
 		HitGroupShaderTable->Reset();
-		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.MeshRenderers))
+		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.StaticMeshes))
 		{
-			ID3D12Resource* VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource.GetResource();
-			ID3D12Resource* IndexBuffer	 = MeshRenderer->pMeshFilter->Mesh->IndexResource.GetResource();
+			ID3D12Resource* VertexBuffer = MeshRenderer->Mesh->VertexResource.GetResource();
+			ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
 
 			D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
 			Record.ShaderIdentifier									= RaytracingPipelineStates::g_DefaultSID;
@@ -466,18 +455,20 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			};
 		});
 
-	if (FSRState.Enable)
-	{
-		Viewport = FSR->Scope.Get<FSRParameter>().RCASOutput;
-	}
-	else
-	{
-		Viewport = Tonemap->Scope.Get<TonemapParameter>().Output;
-	}
-	ValidViewport = true;
-
 	RenderGraph.Setup();
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
 	RenderGraph.RenderGui();
+
+	RenderResourceHandle Handle;
+	if (FSRState.Enable)
+	{
+		Handle = FSR->Scope.Get<FSRParameter>().RCASOutput;
+	}
+	else
+	{
+		Handle = Tonemap->Scope.Get<TonemapParameter>().Output;
+	}
+	ValidViewport = true;
+	Viewport	  = reinterpret_cast<void*>(Registry.GetTextureSRV(Handle).GetGpuHandle().ptr);
 }

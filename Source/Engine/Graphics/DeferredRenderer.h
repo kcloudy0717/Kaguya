@@ -6,7 +6,7 @@
 class DeferredRenderer final : public Renderer
 {
 public:
-	void* GetViewportDescriptor() override;
+	using Renderer::Renderer;
 
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
@@ -46,8 +46,8 @@ private:
 	D3D12Buffer				 IndirectCommandBuffer;
 	D3D12UnorderedAccessView UAV;
 
-	std::vector<MeshRenderer*> MeshRenderers;
-	std::vector<Hlsl::Mesh>	   HlslMeshes;
+	std::vector<StaticMeshComponent*> StaticMeshes;
+	std::vector<Hlsl::Mesh>			  HlslMeshes;
 
 	D3D12Buffer		Materials;
 	Hlsl::Material* pMaterial = nullptr;
@@ -57,8 +57,6 @@ private:
 	Hlsl::Mesh*		pMeshes = nullptr;
 
 	UINT NumMaterials = 0, NumLights = 0, NumMeshes = 0;
-
-	RenderResourceHandle Viewport;
 
 	int ViewMode = 0;
 };

@@ -1,43 +1,18 @@
 #include "Application.h"
 
+#include "IApplicationMessageHandler.h"
+
 #include <shellapi.h>
+#include <uxtheme.h>
+#include <dwmapi.h>
 
 #pragma comment(lib, "runtimeobject.lib")
 
 using Microsoft::WRL::ComPtr;
 
-// https://www.gamedev.net/forums/topic/693260-vk_snapshot-and-keydown/
-enum Hotkeys
-{
-	UNUSED		= 0,
-	PRINTSCREEN = 1,
-};
-
-class ImGuiContextManager
-{
-public:
-	ImGuiContextManager(HWND hWnd)
-	{
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGui::StyleColorsDark();
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
-		// Initialize ImGui for win32
-		ImGui_ImplWin32_Init(hWnd);
-	}
-
-	~ImGuiContextManager()
-	{
-		ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-	}
-};
-
-// Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-Application::Application(const std::string& LoggerName)
+Application::Application(const std::string& LoggerName, const ApplicationOptions& Options)
+	: InitializeWrapper(RO_INIT_MULTITHREADED)
+	, HInstance(GetModuleHandle(nullptr))
 {
 	// Initialize ExecutableDirectory
 	int Argc;
@@ -50,208 +25,137 @@ Application::Application(const std::string& LoggerName)
 	// Initialize Log
 	Log::Initialize(LoggerName);
 	LOG_INFO("Log Initialized");
-}
-
-int Application::Run(const ApplicationOptions& Options)
-{
-	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWinRT(RO_INIT_MULTITHREADED);
-
-	HINSTANCE hInstance = GetModuleHandle(nullptr);
 
 	if (!Options.Icon.empty())
 	{
 		assert(Options.Icon.extension() == ".ico");
-		hIcon = wil::unique_hicon(static_cast<HICON>(
+		HIcon = wil::unique_hicon(static_cast<HICON>(
 			LoadImage(nullptr, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
 	}
 
-	hCursor = wil::unique_hcursor(::LoadCursor(nullptr, IDC_ARROW));
+	HCursor = wil::unique_hcursor(::LoadCursor(nullptr, IDC_ARROW));
 
 	// Register window class
-	WNDCLASSEXW wcexw	= {};
-	wcexw.cbSize		= sizeof(WNDCLASSEX);
-	wcexw.style			= CS_HREDRAW | CS_VREDRAW;
-	wcexw.lpfnWndProc	= WindowProc;
-	wcexw.cbClsExtra	= 0;
-	wcexw.cbWndExtra	= 0;
-	wcexw.hInstance		= hInstance;
-	wcexw.hIcon			= hIcon.get();
-	wcexw.hCursor		= hCursor.get();
-	wcexw.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-	wcexw.lpszMenuName	= nullptr;
-	wcexw.lpszClassName = TEXT("Kai Window Class");
-	wcexw.hIconSm		= hIcon.get();
-	if (!RegisterClassExW(&wcexw))
+	WNDCLASSEXW ClassDesc	= {};
+	ClassDesc.cbSize		= sizeof(WNDCLASSEX);
+	ClassDesc.style			= CS_DBLCLKS;
+	ClassDesc.lpfnWndProc	= WindowProc;
+	ClassDesc.cbClsExtra	= 0;
+	ClassDesc.cbWndExtra	= 0;
+	ClassDesc.hInstance		= HInstance;
+	ClassDesc.hIcon			= HIcon.get();
+	ClassDesc.hCursor		= HCursor.get();
+	ClassDesc.hbrBackground = nullptr;
+	ClassDesc.lpszMenuName	= nullptr;
+	ClassDesc.lpszClassName = WindowClass;
+	ClassDesc.hIconSm		= HIcon.get();
+	if (!RegisterClassExW(&ClassDesc))
 	{
 		ErrorExit(TEXT("RegisterClassExW"));
 	}
+}
 
-	// Create window
-	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
-	dwStyle |= Options.Maximize ? WS_MAXIMIZE : 0;
+Application::~Application()
+{
+	UnregisterClassW(WindowClass, HInstance);
+}
 
-	RECT WindowRect = { 0, 0, static_cast<LONG>(Options.Width), static_cast<LONG>(Options.Height) };
-	AdjustWindowRect(&WindowRect, dwStyle, FALSE);
-
-	int x		 = Options.x.value_or(CW_USEDEFAULT);
-	int y		 = Options.y.value_or(CW_USEDEFAULT);
-	WindowWidth	 = WindowRect.right - WindowRect.left;
-	WindowHeight = WindowRect.bottom - WindowRect.top;
-	AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
-
-	hWnd = wil::unique_hwnd(::CreateWindowW(
-		wcexw.lpszClassName,
-		Options.Name.data(),
-		dwStyle,
-		x,
-		y,
-		WindowWidth,
-		WindowHeight,
-		nullptr, // No parent window
-		nullptr, // No menus
-		hInstance,
-		this));
-	if (!hWnd)
-	{
-		ErrorExit(TEXT("CreateWindowW"));
-	}
-
-	// Register prt sc hotkey to the window
-	RegisterHotKey(hWnd.get(), PRINTSCREEN, 0, VK_SNAPSHOT);
-
-	// Initialize ImGui
-	ImGuiContextManager ImGuiContextManager(hWnd.get());
-
-	// Initialize InputHandler
-	InputHandler = { hWnd.get() };
-
-	ShowWindow(hWnd.get(), SW_SHOW);
-
+void Application::Run()
+{
 	Initialized = Initialize();
 
 	Stopwatch.Restart();
-	do
+	while (!RequestExit)
 	{
+		PumpMessages();
+
 		Stopwatch.Signal();
 		if (!Minimized)
 		{
 			Update(static_cast<float>(Stopwatch.GetDeltaTime()));
 		}
-	} while (ProcessMessages());
+	}
 
 	Shutdown();
-
-	UnregisterClass(wcexw.lpszClassName, hInstance);
-	return ExitCode;
 }
 
-std::filesystem::path Application::OpenDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs)
+void Application::SetMessageHandler(IApplicationMessageHandler* MessageHandler)
 {
-	// COMDLG_FILTERSPEC ComDlgFS[3] = { { L"C++ code files", L"*.cpp;*.h;*.rc" },
-	//								  { L"Executable Files", L"*.exe;*.dll" },
-	//								  { L"All Files (*.*)", L"*.*" } };
-	std::filesystem::path	Path;
-	ComPtr<IFileOpenDialog> FileOpen;
-	if (SUCCEEDED(CoCreateInstance(
-			CLSID_FileOpenDialog,
-			nullptr,
-			CLSCTX_ALL,
-			IID_PPV_ARGS(FileOpen.ReleaseAndGetAddressOf()))))
-	{
-		FileOpen->SetFileTypes(static_cast<UINT>(FilterSpecs.size()), FilterSpecs.data());
+	this->MessageHandler = MessageHandler;
+}
 
-		// Show the Open dialog box.
-		// Get the file name from the dialog box.
-		if (SUCCEEDED(FileOpen->Show(nullptr)))
-		{
-			ComPtr<IShellItem> Item;
-			if (SUCCEEDED(FileOpen->GetResult(&Item)))
-			{
-				PWSTR pszFilePath;
-				// Display the file name to the user.
-				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-				{
-					Path = pszFilePath;
-					CoTaskMemFree(pszFilePath);
-				}
-			}
-		}
+void Application::AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc)
+{
+	Windows.push_back(Window);
+	Window->Initialize(this, Parent, HInstance, Desc);
+	LOG_INFO(L"Added Window: Address: {}, Name: {}", fmt::ptr(Window), Window->GetDesc().Name);
+}
+
+void Application::SetRawInputMode(bool Enable, Window* Window)
+{
+	Window->SetRawInput(Enable);
+}
+
+LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+{
+	Application* WindowsApplication = nullptr;
+	if (uMsg == WM_NCCREATE)
+	{
+		// Save the Application* passed in to CreateWindow.
+		auto CreateStruct  = std::bit_cast<LPCREATESTRUCT>(lParam);
+		WindowsApplication = static_cast<Application*>(CreateStruct->lpCreateParams);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(WindowsApplication));
+	}
+	else
+	{
+		WindowsApplication = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 	}
 
-	return Path;
-}
-
-std::filesystem::path Application::SaveDialog(std::span<COMDLG_FILTERSPEC> FilterSpecs)
-{
-	std::filesystem::path	Path;
-	ComPtr<IFileSaveDialog> FileSave;
-	if (SUCCEEDED(CoCreateInstance(
-			CLSID_FileSaveDialog,
-			nullptr,
-			CLSCTX_ALL,
-			IID_PPV_ARGS(FileSave.ReleaseAndGetAddressOf()))))
+	if (WindowsApplication)
 	{
-		FileSave->SetFileTypes(static_cast<UINT>(FilterSpecs.size()), FilterSpecs.data());
-
-		// Show the Save dialog box.
-		// Get the file name from the dialog box.
-		if (SUCCEEDED(FileSave->Show(nullptr)))
-		{
-			ComPtr<IShellItem> Item;
-			if (SUCCEEDED(FileSave->GetResult(&Item)))
-			{
-				PWSTR pszFilePath;
-				// Display the file name to the user.
-				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-				{
-					Path = pszFilePath;
-					CoTaskMemFree(pszFilePath);
-				}
-			}
-		}
+		return WindowsApplication->ProcessMessage(hWnd, uMsg, wParam, lParam);
 	}
 
-	return Path;
+	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-bool Application::ProcessMessages()
+void Application::PumpMessages()
 {
 	MSG Msg = {};
 	while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
 	{
 		TranslateMessage(&Msg);
 		DispatchMessage(&Msg);
-
-		if (Msg.message == WM_QUIT)
-		{
-			ExitCode = static_cast<int>(Msg.wParam);
-			return false;
-		}
 	}
-	return true;
 }
 
-LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
 	{
 		return true;
 	}
 
-	auto This = std::bit_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+	auto WindowIter = std::ranges::find_if(
+		Windows.begin(),
+		Windows.end(),
+		[=](Window* Window)
+		{
+			return Window->GetWindowHandle() == hWnd;
+		});
+	if (WindowIter == Windows.end())
+	{
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
+	Window* CurrentWindow = *WindowIter;
 
-	InputHandler.Process(uMsg, wParam, lParam);
+	MessageHandler->DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
 
 	switch (uMsg)
 	{
-	case WM_CREATE:
-	{
-		// Save the Application* passed in to CreateWindow.
-		auto CreateStruct = std::bit_cast<LPCREATESTRUCT>(lParam);
-		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(CreateStruct->lpCreateParams));
-	}
-	break;
-
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
 		auto Info			 = std::bit_cast<MINMAXINFO*>(lParam);
@@ -259,12 +163,185 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	}
 	break;
 
-		// case WM_PAINT:
-		//{
-		//	Stopwatch.Signal();
-		//	This->Update(static_cast<float>(Stopwatch.GetDeltaTime()));
-		//}
-		// break;
+	case WM_KILLFOCUS:
+	{
+		InputManager.ResetKeyState();
+	}
+	break;
+
+	case WM_SYSKEYDOWN:
+	case WM_KEYDOWN:
+	{
+		auto VirtualKey = static_cast<unsigned char>(wParam);
+		bool IsRepeat	= (lParam & 0x40000000) != 0;
+
+		MessageHandler->OnKeyDown(VirtualKey, IsRepeat);
+		if (!(lParam & 0x40000000) || InputManager.AutoRepeat) // Filter AutoRepeat
+		{
+			InputManager.OnKeyDown(VirtualKey);
+		}
+	}
+	break;
+
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
+	{
+		auto VirtualKey = static_cast<unsigned char>(wParam);
+		MessageHandler->OnKeyUp(VirtualKey);
+		InputManager.OnKeyUp(VirtualKey);
+	}
+	break;
+
+	case WM_CHAR:
+	{
+		auto Character = static_cast<unsigned char>(wParam);
+		bool IsRepeat  = (lParam & 0x40000000) != 0;
+		MessageHandler->OnKeyChar(Character, IsRepeat);
+	}
+	break;
+
+	case WM_MOUSEMOVE:
+	{
+		auto [x, y]		= MAKEPOINTS(lParam);
+		RECT ClientRect = {};
+		::GetClientRect(hWnd, &ClientRect);
+		LONG Width	= ClientRect.right - ClientRect.left;
+		LONG Height = ClientRect.bottom - ClientRect.top;
+
+		if (x >= 0 && x < Width && y >= 0 && y < Height)
+		{
+			MessageHandler->OnMouseMove(Vector2i(x, y));
+		}
+	}
+	break;
+
+	case WM_LBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	{
+		auto Button = EMouseButton::Unknown;
+		if (uMsg == WM_LBUTTONDOWN)
+		{
+			Button = EMouseButton::Left;
+		}
+		if (uMsg == WM_MBUTTONDOWN)
+		{
+			Button = EMouseButton::Middle;
+		}
+		if (uMsg == WM_RBUTTONDOWN)
+		{
+			Button = EMouseButton::Right;
+		}
+
+		auto [x, y] = MAKEPOINTS(lParam);
+		MessageHandler->OnMouseDown(CurrentWindow, Button, Vector2i(x, y));
+	}
+	break;
+
+	case WM_LBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_RBUTTONUP:
+	{
+		auto Button = EMouseButton::Unknown;
+		if (uMsg == WM_LBUTTONUP)
+		{
+			Button = EMouseButton::Left;
+		}
+		if (uMsg == WM_MBUTTONUP)
+		{
+			Button = EMouseButton::Middle;
+		}
+		if (uMsg == WM_RBUTTONUP)
+		{
+			Button = EMouseButton::Right;
+		}
+
+		auto [x, y] = MAKEPOINTS(lParam);
+		MessageHandler->OnMouseUp(Button, Vector2i(x, y));
+	}
+	break;
+
+	case WM_LBUTTONDBLCLK:
+	case WM_MBUTTONDBLCLK:
+	case WM_RBUTTONDBLCLK:
+	{
+		auto Button = EMouseButton::Unknown;
+		if (uMsg == WM_LBUTTONDBLCLK)
+		{
+			Button = EMouseButton::Left;
+		}
+		if (uMsg == WM_MBUTTONDBLCLK)
+		{
+			Button = EMouseButton::Middle;
+		}
+		if (uMsg == WM_RBUTTONDBLCLK)
+		{
+			Button = EMouseButton::Right;
+		}
+
+		auto [x, y] = MAKEPOINTS(lParam);
+		MessageHandler->OnMouseDoubleClick(CurrentWindow, Button, Vector2i(x, y));
+	}
+	break;
+
+	case WM_MOUSEWHEEL:
+	{
+		static constexpr float WheelScale = 1.0f / 120.0f;
+		int					   WheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+		auto [x, y] = MAKEPOINTS(lParam);
+		MessageHandler->OnMouseWheel(static_cast<float>(WheelDelta) * WheelScale, Vector2i(x, y));
+	}
+	break;
+
+	case WM_INPUT:
+	{
+		if (!CurrentWindow->IsUsingRawInput())
+		{
+			break;
+		}
+
+		UINT Size = 0;
+		GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, nullptr, &Size, sizeof(RAWINPUTHEADER));
+
+		if (!Size)
+		{
+			break;
+		}
+
+		auto Buffer = std::make_unique<BYTE[]>(Size);
+		GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, Buffer.get(), &Size, sizeof(RAWINPUTHEADER));
+
+		auto RawInput = reinterpret_cast<RAWINPUT*>(Buffer.get());
+
+		switch (RawInput->header.dwType)
+		{
+		case RIM_TYPEMOUSE:
+		{
+			const RAWMOUSE& RawMouse = RawInput->data.mouse;
+
+			// bool IsAbsolute = (RawMouse.usFlags & MOUSE_MOVE_ABSOLUTE) == MOUSE_MOVE_ABSOLUTE;
+			// if (IsAbsolute)
+			// {
+			// 	bool IsVirtualDesktop = (RawMouse.usFlags & MOUSE_VIRTUAL_DESKTOP) == MOUSE_VIRTUAL_DESKTOP;
+			//
+			// 	int Width  = GetSystemMetrics(IsVirtualDesktop ? SM_CXVIRTUALSCREEN : SM_CXSCREEN);
+			// 	int Height = GetSystemMetrics(IsVirtualDesktop ? SM_CYVIRTUALSCREEN : SM_CYSCREEN);
+			//
+			// 	auto AbsoluteX = static_cast<int>((RawMouse.lLastX / 65535.0f) * Width);
+			// 	auto AbsoluteY = static_cast<int>((RawMouse.lLastY / 65535.0f) * Height);
+			// }
+			int RelativeX = RawMouse.lLastX;
+			int RelativeY = RawMouse.lLastY;
+			MessageHandler->OnRawMouseMove(Vector2i(RelativeX, RelativeY));
+		}
+		break;
+
+		default:
+			break;
+		}
+	}
+	break;
 
 	case WM_SIZE:
 	{
@@ -273,9 +350,8 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 			break;
 		}
 
-		WindowWidth	 = LOWORD(lParam);
-		WindowHeight = HIWORD(lParam);
-		AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
+		int WindowWidth	 = LOWORD(lParam);
+		int WindowHeight = HIWORD(lParam);
 
 		bool ShouldResize = false;
 
@@ -313,45 +389,23 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 
 		if (ShouldResize)
 		{
-			if (This && Initialized)
+			if (Initialized)
 			{
-				This->Resize(WindowWidth, WindowHeight);
+				MessageHandler->OnWindowResize(CurrentWindow, WindowWidth, WindowHeight);
 			}
 		}
 	}
 	break;
 
-	case WM_HOTKEY:
+	case WM_CLOSE:
 	{
-		if (wParam == PRINTSCREEN)
-		{
-			UNREFERENCED_PARAMETER(wParam);
-		}
-	}
-	break;
-
-	case WM_ACTIVATE:
-	{
-		// Confine/free cursor on window to foreground/background if cursor disabled
-		if (!InputHandler.CursorEnabled)
-		{
-			if (wParam & WA_ACTIVE)
-			{
-				InputHandler.ConfineCursor();
-				InputHandler.HideCursor();
-			}
-			else
-			{
-				InputHandler.FreeCursor();
-				InputHandler.ShowCursor();
-			}
-		}
+		MessageHandler->OnWindowClose(CurrentWindow);
 	}
 	break;
 
 	case WM_DESTROY:
 	{
-		PostQuitMessage(0);
+		Windows.erase(WindowIter);
 	}
 	break;
 

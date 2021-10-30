@@ -15,11 +15,11 @@ public:
 
 	[[nodiscard]] D3D12SyncHandle GetSyncHandle() const { return SyncHandle; }
 
-	[[nodiscard]] bool HasValidSyncHandle() const { return SyncHandle.IsValid(); }
+	[[nodiscard]] bool HasValidSyncHandle() const { return static_cast<bool>(SyncHandle); }
 
 	void SetSyncPoint(const D3D12SyncHandle& SyncHandle) noexcept
 	{
-		assert(SyncHandle.IsValid());
+		assert(SyncHandle);
 		this->SyncHandle = SyncHandle;
 	}
 

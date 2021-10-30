@@ -30,6 +30,8 @@
 #include "Async/Generator.h"
 
 // System
+#include "System/FileSystem.h"
+#include "System/FileSystemWatcher.h"
 #include "System/AsyncFileStream.h"
 #include "System/FileStream.h"
 #include "System/BinaryReader.h"

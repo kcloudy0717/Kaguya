@@ -89,6 +89,213 @@ void D3D12RaytracingMemoryPage::Initialize(D3D12_HEAP_TYPE HeapType, D3D12_RESOU
 	VirtualAddress = Resource->GetGPUVirtualAddress();
 }
 
+D3D12RaytracingMemoryAllocator::D3D12RaytracingMemoryAllocator(
+	D3D12LinkedDevice*	  Parent,
+	D3D12_HEAP_TYPE		  HeapType,
+	D3D12_RESOURCE_STATES InitialResourceState,
+	UINT64				  DefaultPageSize,
+	UINT64				  Alignment)
+	: D3D12LinkedDeviceChild(Parent)
+	, HeapType(HeapType)
+	, InitialResourceState(InitialResourceState)
+	, DefaultPageSize(DefaultPageSize)
+	, Alignment(Alignment)
+{
+}
+
+RaytracingMemorySection D3D12RaytracingMemoryAllocator::Allocate(UINT64 SizeInBytes)
+{
+	// Align allocation
+	const UINT64 AlignedSizeInBytes = AlignUp(SizeInBytes, Alignment);
+
+	if (Pages.empty())
+	{
+		// Do not suballocate if the memory request is larger than the block size
+		CreatePage(AlignedSizeInBytes > DefaultPageSize ? AlignedSizeInBytes : DefaultPageSize);
+	}
+
+	size_t NumPages = Pages.size();
+
+	RaytracingMemorySection Section;
+
+	if (AlignedSizeInBytes > DefaultPageSize)
+	{
+		CreatePage(AlignedSizeInBytes);
+
+		D3D12RaytracingMemoryPage* Page = Pages.back().get();
+		Section.Parent					= Page;
+		Section.Size					= AlignedSizeInBytes;
+		Section.Offset					= Page->CurrentOffset;
+		Section.VirtualAddress			= Page->VirtualAddress + Page->CurrentOffset;
+
+		const UINT64 OffsetInBytes = Page->CurrentOffset + AlignedSizeInBytes;
+		Page->CurrentOffset		   = OffsetInBytes;
+		Page->NumSubBlocks++;
+	}
+	else
+	{
+		for (size_t i = 0; i < NumPages; ++i)
+		{
+			D3D12RaytracingMemoryPage* Page = Pages[i].get();
+
+			// Search within a block to find space for a new allocation
+			// Modifies subBlock if able to suballocate in the block
+			bool FoundFreeSubBlock	 = FindFreeSubBlock(Page, &Section, AlignedSizeInBytes);
+			bool ContinueBlockSearch = false;
+
+			// No memory reuse opportunities available so add a new suballocation
+			if (!FoundFreeSubBlock)
+			{
+				UINT64 OffsetInBytes = Page->CurrentOffset + AlignedSizeInBytes;
+
+				// Add a suballocation to the current offset of an existing block
+				if (OffsetInBytes <= Page->PageSize)
+				{
+					// Only ever change the memory size if this is a new allocation
+					Section.Size		   = AlignedSizeInBytes;
+					Section.Offset		   = Page->CurrentOffset;
+					Section.VirtualAddress = Page->VirtualAddress + Page->CurrentOffset;
+
+					Page->CurrentOffset = OffsetInBytes;
+					Page->NumSubBlocks++;
+				}
+				// If this block can't support this allocation
+				else
+				{
+					// If all blocks traversed and suballocation doesn't fit then create a new block
+					if (i == NumPages - 1)
+					{
+						// If suballocation block size is too small then do custom allocation of
+						// individual blocks that match the resource's size
+						UINT64 NewBlockSize =
+							AlignedSizeInBytes > DefaultPageSize ? AlignedSizeInBytes : DefaultPageSize;
+						CreatePage(NewBlockSize);
+						NumPages++;
+					}
+					ContinueBlockSearch = true;
+				}
+			}
+			// Assign SubBlock to the Block and discontinue suballocation search
+			if (ContinueBlockSearch == false)
+			{
+				Section.Parent = Pages[i].get();
+				break;
+			}
+		}
+	}
+
+	return Section;
+}
+
+void D3D12RaytracingMemoryAllocator::Release(RaytracingMemorySection* Section)
+{
+	for (size_t i = 0; i < Pages.size(); ++i)
+	{
+		D3D12RaytracingMemoryPage* Page = Pages[i].get();
+		if (Page == Section->Parent)
+		{
+			Section->IsFree = true;
+
+			// Release the big chunks that are a single resource
+			if (Section->Size == Page->PageSize)
+			{
+				Pages.erase(Pages.begin() + i);
+			}
+			else
+			{
+				Page->FreeMemorySections.push_back(*Section);
+
+				Page->NumSubBlocks--;
+
+				// If this suballocation was the final remaining allocation then release the suballocator block
+				// but only if there is more than one block
+				if ((Page->NumSubBlocks == 0) && (Pages.size() > 1))
+				{
+					Pages.erase(Pages.begin() + i);
+				}
+			}
+			break;
+		}
+	}
+}
+
+UINT64 D3D12RaytracingMemoryAllocator::GetSize()
+{
+	UINT64 Size = 0;
+	for (const auto& Page : Pages)
+	{
+		Size += Page->PageSize;
+	}
+	return Size;
+}
+
+void D3D12RaytracingMemoryAllocator::CreatePage(UINT64 PageSize)
+{
+	auto Page = std::make_unique<D3D12RaytracingMemoryPage>(GetParentLinkedDevice(), PageSize);
+	Page->Initialize(HeapType, InitialResourceState);
+	Pages.push_back(std::move(Page));
+}
+
+bool D3D12RaytracingMemoryAllocator::FindFreeSubBlock(
+	D3D12RaytracingMemoryPage* Page,
+	RaytracingMemorySection*   OutMemorySection,
+	UINT64					   SizeInBytes)
+{
+	bool FoundFreeSubBlock	 = false;
+	auto MinUnusedMemoryIter = Page->FreeMemorySections.end();
+	auto FreeSubBlockIter	 = Page->FreeMemorySections.begin();
+
+	uint64_t MinUnusedMemorySubBlock = ~0ull;
+
+	while (FreeSubBlockIter != Page->FreeMemorySections.end())
+	{
+		if (SizeInBytes <= FreeSubBlockIter->Size)
+		{
+			// Attempt to find the exact fit and if not fallback to the least wasted unused memory
+			if (FreeSubBlockIter->Size - SizeInBytes == 0)
+			{
+				// Keep previous allocation size
+				OutMemorySection->Size	 = FreeSubBlockIter->Size;
+				OutMemorySection->Offset = FreeSubBlockIter->Offset;
+				FoundFreeSubBlock		 = true;
+
+				// Remove from the list
+				Page->FreeMemorySections.erase(FreeSubBlockIter);
+				Page->NumSubBlocks++;
+				break;
+			}
+			else
+			{
+				// Keep track of the available SubBlock with least fragmentation
+				const uint64_t UnusedMemory = FreeSubBlockIter->Size - SizeInBytes;
+				if (UnusedMemory < MinUnusedMemorySubBlock)
+				{
+					MinUnusedMemoryIter		= FreeSubBlockIter;
+					MinUnusedMemorySubBlock = UnusedMemory;
+				}
+			}
+		}
+		++FreeSubBlockIter;
+	}
+
+	// Did not find a perfect match so take the closest and get hit with fragmentation
+	// Reject SubBlock if the closest available SubBlock is twice the required size
+	if ((FoundFreeSubBlock == false) && (MinUnusedMemoryIter != Page->FreeMemorySections.end()) &&
+		(MinUnusedMemorySubBlock < 2 * SizeInBytes))
+	{
+		// Keep previous allocation size
+		OutMemorySection->Size	 = MinUnusedMemoryIter->Size;
+		OutMemorySection->Offset = MinUnusedMemoryIter->Offset;
+		FoundFreeSubBlock		 = true;
+
+		// Remove from the list
+		Page->FreeMemorySections.erase(MinUnusedMemoryIter);
+		++Page->NumSubBlocks;
+	}
+
+	return FoundFreeSubBlock;
+}
+
 D3D12RaytracingAccelerationStructureManager::D3D12RaytracingAccelerationStructureManager(
 	D3D12LinkedDevice* Parent,
 	UINT64			   PageSize)
@@ -223,7 +430,7 @@ void D3D12RaytracingAccelerationStructureManager::Compact(
 {
 	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
 
-	if (!AccelerationStructure->SyncHandle.IsValid())
+	if (!AccelerationStructure->SyncHandle)
 	{
 		return;
 	}
@@ -275,4 +482,43 @@ void D3D12RaytracingAccelerationStructureManager::Compact(
 				});
 		}
 	}
+}
+
+void D3D12RaytracingAccelerationStructureManager::SetSyncHandle(
+	UINT64			AccelerationStructureIndex,
+	D3D12SyncHandle SyncHandle)
+{
+	AccelerationStructures[AccelerationStructureIndex]->SyncHandle = SyncHandle;
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureAddress(
+	UINT64 AccelerationStructureIndex)
+{
+	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
+
+	return AccelerationStructure->IsCompacted ? AccelerationStructure->ResultCompactedMemory.VirtualAddress
+											  : AccelerationStructure->ResultMemory.VirtualAddress;
+}
+
+UINT64 D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureIndex()
+{
+	UINT64 NewIndex;
+	if (!IndexQueue.empty())
+	{
+		NewIndex						 = IndexQueue.front();
+		AccelerationStructures[NewIndex] = std::make_unique<D3D12AccelerationStructure>();
+		IndexQueue.pop();
+	}
+	else
+	{
+		AccelerationStructures.push_back(std::make_unique<D3D12AccelerationStructure>());
+		NewIndex = Index++;
+	}
+	return NewIndex;
+}
+
+void D3D12RaytracingAccelerationStructureManager::ReleaseAccelerationStructure(UINT64 Index)
+{
+	IndexQueue.push(Index);
+	AccelerationStructures[Index] = nullptr;
 }

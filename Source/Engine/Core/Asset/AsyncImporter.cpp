@@ -116,7 +116,7 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 	BinaryPath.replace_extension(MeshExportExtension);
 
 	std::vector<Mesh*> Meshes;
-	if (std::filesystem::exists(BinaryPath))
+	if (exists(BinaryPath))
 	{
 		Meshes = ImportExisting(BinaryPath, Options);
 	}
@@ -188,15 +188,14 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 				Matrix);
 
 			// Parse index data
-			std::vector<std::uint32_t> indices;
-			indices.reserve(static_cast<size_t>(paiMesh->mNumFaces) * 3);
-			for (unsigned int f = 0; f < paiMesh->mNumFaces; ++f)
+			std::vector<std::uint32_t> Indices;
+			Indices.reserve(static_cast<size_t>(paiMesh->mNumFaces) * 3);
+			std::span Faces = { paiMesh->mFaces, paiMesh->mNumFaces };
+			for (const auto& Face : Faces)
 			{
-				const aiFace& aiFace = paiMesh->mFaces[f];
-
-				indices.push_back(aiFace.mIndices[0]);
-				indices.push_back(aiFace.mIndices[1]);
-				indices.push_back(aiFace.mIndices[2]);
+				Indices.push_back(Face.mIndices[0]);
+				Indices.push_back(Face.mIndices[1]);
+				Indices.push_back(Face.mIndices[2]);
 			}
 
 			Mesh* Mesh	  = Meshes.emplace_back(AssetManager::CreateAsset<AssetType::Mesh>());
@@ -211,7 +210,7 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 			}
 
 			Mesh->Vertices = std::move(Vertices);
-			Mesh->Indices  = std::move(indices);
+			Mesh->Indices  = std::move(Indices);
 
 			std::vector<XMFLOAT3> Positions;
 			Positions.reserve(Mesh->Vertices.size());
@@ -236,6 +235,7 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 
 	for (auto Mesh : Meshes)
 	{
+		Mesh->UpdateInfo();
 		Mesh->ComputeBoundingBox();
 		AssetManager::RequestUpload(Mesh);
 	}
@@ -275,7 +275,7 @@ void AsyncMeshImporter::Export(const std::filesystem::path& BinaryPath, const st
 
 std::vector<Mesh*> AsyncMeshImporter::ImportExisting(
 	const std::filesystem::path& BinaryPath,
-	const MeshImportOptions&	 Metadata)
+	const MeshImportOptions&	 Options)
 {
 	std::vector<Mesh*> Meshes;
 
@@ -307,7 +307,7 @@ std::vector<Mesh*> AsyncMeshImporter::ImportExisting(
 		Reader.Read(PrimitiveIndices.data(), PrimitiveIndices.size() * sizeof(MeshletTriangle));
 
 		Mesh		  = AssetManager::CreateAsset<AssetType::Mesh>();
-		Mesh->Options = Metadata;
+		Mesh->Options = Options;
 		Mesh->Name	  = string;
 
 		Mesh->Vertices			  = std::move(Vertices);
@@ -315,6 +315,8 @@ std::vector<Mesh*> AsyncMeshImporter::ImportExisting(
 		Mesh->Meshlets			  = std::move(Meshlets);
 		Mesh->UniqueVertexIndices = std::move(UniqueVertexIndices);
 		Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);
+
+		Mesh->UpdateInfo();
 	}
 
 	return Meshes;

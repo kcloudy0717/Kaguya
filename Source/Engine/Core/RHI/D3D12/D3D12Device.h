@@ -1,6 +1,7 @@
 #pragma once
 #include <Core/RHI/RHICommon.h>
 #include "D3D12Common.h"
+#include "D3D12Fence.h"
 #include "D3D12LinkedDevice.h"
 #include "D3D12RenderPass.h"
 #include "D3D12RenderTarget.h"

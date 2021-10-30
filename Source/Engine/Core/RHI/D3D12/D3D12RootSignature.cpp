@@ -95,17 +95,18 @@ D3D12RootSignature::D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> SerializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_D3D12_API(D3D12SerializeVersionedRootSignature(
-		&Desc,
-		SerializedRootSignatureBlob.ReleaseAndGetAddressOf(),
-		ErrorBlob.ReleaseAndGetAddressOf()));
+	VERIFY_D3D12_API(D3D12SerializeVersionedRootSignature(&Desc, &SerializedRootSignatureBlob, &ErrorBlob));
+	if (ErrorBlob)
+	{
+		LOG_ERROR("{}", static_cast<const char*>(ErrorBlob->GetBufferPointer()));
+	}
 
 	// Create the root signature
 	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(
 		0,
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),
-		IID_PPV_ARGS(RootSignature.ReleaseAndGetAddressOf())));
+		IID_PPV_ARGS(&RootSignature)));
 
 	for (UINT i = 0; i < Desc.Desc_1_1.NumParameters; ++i)
 	{

@@ -14,35 +14,16 @@ class PxController;
 
 #include "Attribute.h"
 
-// Core
-#include "Components/Component.h"
-#include "Components/Tag.h"
-#include "Components/Transform.h"
-#include "Components/Camera.h"
-#include "Components/Light.h"
-#include "Components/MeshFilter.h"
-#include "Components/MeshRenderer.h"
-#include "Components/CharacterController.h"
-#include "Components/NativeScript.h"
+#include "Components/CoreComponent.h"
+#include "Components/CameraComponent.h"
+#include "Components/LightComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/CharacterControllerComponent.h"
+#include "Components/NativeScriptComponent.h"
 
-// Collider
-#include "Components/Collider/BoxCollider.h"
-#include "Components/Collider/CapsuleCollider.h"
-#include "Components/Collider/MeshCollider.h"
+#include "Components/BoxColliderComponent.h"
+#include "Components/CapsuleColliderComponent.h"
+#include "Components/MeshColliderComponent.h"
 
-// Rigid Body
-
-// struct RigidBody : Component
-//{
-//	RigidBody() noexcept = default;
-//
-//	enum EType
-//	{
-//		Static,
-//		Dynamic
-//	} Type = EType::Static;
-//	physx::PxRigidActor* Actor;
-//};
-
-#include "Components/RigidBody/StaticRigidBody.h"
-#include "Components/RigidBody/DynamicRigidBody.h"
+#include "Components/StaticRigidBodyComponent.h"
+#include "Components/DynamicRigidBodyComponent.h"

@@ -46,33 +46,59 @@ enum class EShaderType
 	Mesh
 };
 
+struct ShaderCompileOptions
+{
+	ShaderCompileOptions(std::wstring_view EntryPoint)
+		: EntryPoint(EntryPoint)
+	{
+	}
+
+	void SetDefine(std::wstring_view Define, std::wstring_view Value) { Defines[Define] = Value; }
+
+	std::wstring_view EntryPoint;
+
+	std::map<std::wstring_view, std::wstring_view> Defines;
+};
+
+struct ShaderCompilationResult
+{
+	IDxcBlob* Binary;
+
+	std::wstring PdbName;
+	IDxcBlob*	 Pdb;
+
+	DxcShaderHash ShaderHash;
+};
+
 class Shader
 {
 public:
 	Shader() noexcept = default;
-	Shader(EShaderType ShaderType, IDxcBlob* Blob, IDxcBlob* PdbBlob, std::wstring PdbName) noexcept
+	Shader(EShaderType ShaderType, const ShaderCompilationResult& Result) noexcept
 		: ShaderType(ShaderType)
-		, Blob(Blob)
-		, PdbBlob(PdbBlob)
-		, PdbName(std::move(PdbName))
+		, Binary(Result.Binary)
+		, PdbName(Result.PdbName)
+		, Pdb(Result.Pdb)
+		, ShaderHash(Result.ShaderHash)
 	{
-		AftermathShaderDatabase::AddShader(Blob, PdbBlob);
+		AftermathShaderDatabase::AddShader(Binary, Pdb);
 	}
 
 	operator D3D12_SHADER_BYTECODE() const
 	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Blob->GetBufferPointer(),
-									  .BytecodeLength  = Blob->GetBufferSize() };
+		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Binary->GetBufferPointer(),
+									  .BytecodeLength  = Binary->GetBufferSize() };
 	}
 
-	[[nodiscard]] auto GetBufferPointer() const -> LPVOID { return Blob->GetBufferPointer(); }
-	[[nodiscard]] auto GetBufferSize() const -> SIZE_T { return Blob->GetBufferSize(); }
+	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
 
 private:
 	EShaderType						 ShaderType;
-	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
-	Microsoft::WRL::ComPtr<IDxcBlob> PdbBlob;
+	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
 	std::wstring					 PdbName;
+	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
+
+	DxcShaderHash ShaderHash = {};
 };
 
 /*
@@ -85,24 +111,29 @@ class Library
 {
 public:
 	Library() noexcept = default;
-	Library(IDxcBlob* Blob, IDxcBlob* PdbBlob, std::wstring PdbName) noexcept
-		: Blob(Blob)
-		, PdbBlob(PdbBlob)
-		, PdbName(std::move(PdbName))
+	Library(const ShaderCompilationResult& Result) noexcept
+		: Binary(Result.Binary)
+		, PdbName(std::move(Result.PdbName))
+		, Pdb(Result.Pdb)
+		, ShaderHash(Result.ShaderHash)
 	{
-		AftermathShaderDatabase::AddShader(Blob, PdbBlob);
+		AftermathShaderDatabase::AddShader(Binary, Pdb);
 	}
 
 	operator D3D12_SHADER_BYTECODE() const
 	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Blob->GetBufferPointer(),
-									  .BytecodeLength  = Blob->GetBufferSize() };
+		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Binary->GetBufferPointer(),
+									  .BytecodeLength  = Binary->GetBufferSize() };
 	}
 
+	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
+
 private:
-	Microsoft::WRL::ComPtr<IDxcBlob> Blob;
-	Microsoft::WRL::ComPtr<IDxcBlob> PdbBlob;
+	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
 	std::wstring					 PdbName;
+	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
+
+	DxcShaderHash ShaderHash = {};
 };
 
 class ShaderCompiler
@@ -117,13 +148,10 @@ public:
 
 	void SetShaderModel(EShaderModel ShaderModel) noexcept;
 
-	void SetIncludeDirectory(const std::filesystem::path& Path);
-
 	[[nodiscard]] Shader CompileShader(
-		EShaderType					  ShaderType,
-		const std::filesystem::path&  Path,
-		std::wstring_view			  EntryPoint,
-		const std::vector<DxcDefine>& ShaderDefines) const;
+		EShaderType					 ShaderType,
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
 
 	[[nodiscard]] Library CompileLibrary(const std::filesystem::path& Path) const;
 
@@ -141,26 +169,15 @@ private:
 
 	[[nodiscard]] std::wstring LibraryProfileString() const;
 
-	void Compile(
+	[[nodiscard]] ShaderCompilationResult Compile(
 		const std::filesystem::path&  Path,
 		std::wstring_view			  EntryPoint,
 		std::wstring_view			  Profile,
-		const std::vector<DxcDefine>& ShaderDefines,
-		_Outptr_result_maybenull_ IDxcBlob** OutBlob,
-		_Outptr_result_maybenull_ IDxcBlob** OutPdbBlob,
-		std::wstring&						 PdbName) const;
-
-	void SpirV(
-		const std::filesystem::path&  Path,
-		std::wstring_view			  EntryPoint,
-		std::wstring_view			  Profile,
-		const std::vector<DxcDefine>& ShaderDefines,
-		_Outptr_result_maybenull_ IDxcBlob** OutBlob) const;
+		const std::vector<DxcDefine>& ShaderDefines) const;
 
 private:
 	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
 	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
 	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
 	EShaderModel							   ShaderModel;
-	std::wstring							   IncludeDirectory;
 };

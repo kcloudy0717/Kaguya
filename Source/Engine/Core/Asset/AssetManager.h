@@ -39,7 +39,7 @@ public:
 	{
 		std::scoped_lock Lock(Mutex);
 
-		ImageUploadQueue.push(std::move(Texture));
+		TextureUploadQueue.push(std::move(Texture));
 		ConditionVariable.notify_all();
 	}
 
@@ -55,8 +55,8 @@ private:
 	static void UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Uploader);
 	static void UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader);
 
-	inline static AsyncTextureImporter TextureImporter;
 	inline static AsyncMeshImporter	   MeshImporter;
+	inline static AsyncTextureImporter TextureImporter;
 
 	inline static AssetCache<AssetType::Mesh, Mesh>		  MeshCache;
 	inline static AssetCache<AssetType::Texture, Texture> TextureCache;
@@ -64,8 +64,8 @@ private:
 	// Upload stuff to the GPU
 	inline static std::mutex			  Mutex;
 	inline static std::condition_variable ConditionVariable;
-	inline static std::queue<Texture*>	  ImageUploadQueue;
 	inline static std::queue<Mesh*>		  MeshUploadQueue;
+	inline static std::queue<Texture*>	  TextureUploadQueue;
 
 	inline static std::jthread		Thread;
 	inline static std::atomic<bool> Quit = false;

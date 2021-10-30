@@ -1,8 +1,8 @@
 #pragma once
 #include <entt.hpp>
 #include "Components.h"
-
-class Entity;
+#include "Entity.h"
+#include "Physics/PhysicsScene.h"
 
 enum EWorldState
 {
@@ -18,15 +18,17 @@ public:
 	static constexpr size_t LightLimit	  = 32;
 	static constexpr size_t MeshLimit	  = 8192;
 
-	World() { AddDefaultEntities(); }
+	World();
+
+	void Initialize(PhysicsDevice* Device);
 
 	[[nodiscard]] auto CreateEntity(std::string_view Name = {}) -> Entity;
 	[[nodiscard]] auto GetMainCamera() -> Entity;
-	[[nodiscard]] auto GetEntityByTag(std::string_view Name) -> Entity;
 
-	void Clear(bool bAddDefaultEntities = true);
+	void Clear(bool AddDefaultEntities = true);
 
-	void DestroyEntity(Entity Entity);
+	void DestroyEntity(size_t Index);
+	void CloneEntity(size_t Index);
 
 	template<typename T>
 	void OnComponentAdded(Entity Entity, T& Component);
@@ -34,41 +36,91 @@ public:
 	template<typename T>
 	void OnComponentRemoved(Entity Entity, T& Component);
 
-	void Update(float dt);
+	void Update(float DeltaTime);
+
+	void BeginPlay();
 
 private:
 	void ResolveComponentDependencies();
-	void UpdateScripts(float dt);
-	void UpdatePhysics(float dt);
-
-	void AddDefaultEntities();
+	void UpdateScripts(float DeltaTime);
 
 public:
-	EWorldState	   WorldState = EWorldState::EWorldState_Render;
-	entt::registry Registry;
-	Camera*		   ActiveCamera = nullptr;
+	EWorldState			WorldState = EWorldState::EWorldState_Render;
+	entt::registry		Registry;
+	CameraComponent*	ActiveCamera = nullptr;
+	std::vector<Entity> Entities;
+
+	bool SimulatePhysics = false;
+
+private:
+	PhysicsScene PhysicsScene;
 };
+
+template<typename T, typename... TArgs>
+auto Entity::AddComponent(TArgs&&... Args) -> T&
+{
+	assert(!HasComponent<T>());
+
+	T& Component = World->Registry.emplace<T>(Handle, std::forward<TArgs>(Args)...);
+	World->OnComponentAdded<T>(*this, Component);
+	return Component;
+}
+
+template<typename T>
+[[nodiscard]] auto Entity::GetComponent() -> T&
+{
+	assert(HasComponent<T>());
+
+	return World->Registry.get<T>(Handle);
+}
+
+template<typename T, typename... TArgs>
+[[nodiscard]] auto Entity::GetOrAddComponent(TArgs&&... Args) -> T&
+{
+	if (HasComponent<T>())
+	{
+		return GetComponent<T>();
+	}
+	return AddComponent<T>(std::forward<TArgs>(Args)...);
+}
+
+template<typename T>
+[[nodiscard]] auto Entity::HasComponent() -> bool
+{
+	return World->Registry.any_of<T>(Handle);
+}
+
+template<typename T>
+void Entity::RemoveComponent()
+{
+	assert(HasComponent<T>());
+
+	T& Component = GetComponent<T>();
+	World->OnComponentRemoved<T>(*this, Component);
+
+	World->Registry.remove<T>(Handle);
+}
 
 namespace Hlsl
 {
 struct Material
 {
 	unsigned int	  BSDFType;
-	DirectX::XMFLOAT3 baseColor;
-	float			  metallic;
-	float			  subsurface;
-	float			  specular;
-	float			  roughness;
-	float			  specularTint;
-	float			  anisotropic;
-	float			  sheen;
-	float			  sheenTint;
-	float			  clearcoat;
-	float			  clearcoatGloss;
+	DirectX::XMFLOAT3 BaseColor;
+	float			  Metallic;
+	float			  Subsurface;
+	float			  Specular;
+	float			  Roughness;
+	float			  SpecularTint;
+	float			  Anisotropic;
+	float			  Sheen;
+	float			  SheenTint;
+	float			  Clearcoat;
+	float			  ClearcoatGloss;
 
 	// Used by Glass BxDF
 	DirectX::XMFLOAT3 T;
-	float			  etaA, etaB;
+	float			  EtaA, EtaB;
 
 	int Albedo;
 };
@@ -146,26 +198,26 @@ struct Camera
 inline Hlsl::Material GetHLSLMaterialDesc(const Material& Material)
 {
 	return { .BSDFType		 = (unsigned int)Material.BSDFType,
-			 .baseColor		 = Material.baseColor,
-			 .metallic		 = Material.metallic,
-			 .subsurface	 = Material.subsurface,
-			 .specular		 = Material.specular,
-			 .roughness		 = Material.roughness,
-			 .specularTint	 = Material.specularTint,
-			 .anisotropic	 = Material.anisotropic,
-			 .sheen			 = Material.sheen,
-			 .sheenTint		 = Material.sheenTint,
-			 .clearcoat		 = Material.clearcoat,
-			 .clearcoatGloss = Material.clearcoatGloss,
+			 .BaseColor		 = Material.BaseColor,
+			 .Metallic		 = Material.Metallic,
+			 .Subsurface	 = Material.Subsurface,
+			 .Specular		 = Material.Specular,
+			 .Roughness		 = Material.Roughness,
+			 .SpecularTint	 = Material.SpecularTint,
+			 .Anisotropic	 = Material.Anisotropic,
+			 .Sheen			 = Material.Sheen,
+			 .SheenTint		 = Material.SheenTint,
+			 .Clearcoat		 = Material.Clearcoat,
+			 .ClearcoatGloss = Material.ClearcoatGloss,
 
 			 .T	   = Material.T,
-			 .etaA = Material.etaA,
-			 .etaB = Material.etaB,
+			 .EtaA = Material.EtaA,
+			 .EtaB = Material.EtaB,
 
 			 .Albedo = Material.TextureIndices[0] };
 }
 
-inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const Light& Light)
+inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const LightComponent& Light)
 {
 	using namespace DirectX;
 
@@ -206,7 +258,7 @@ inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform)
 	return Mesh;
 }
 
-inline Hlsl::Camera GetHLSLCameraDesc(const Camera& Camera)
+inline Hlsl::Camera GetHLSLCameraDesc(const CameraComponent& Camera)
 {
 	using namespace DirectX;
 

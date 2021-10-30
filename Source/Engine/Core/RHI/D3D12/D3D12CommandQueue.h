@@ -8,7 +8,7 @@ class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 public:
 	explicit D3D12CommandAllocatorPool(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
 
-	D3D12CommandAllocator* RequestCommandAllocator();
+	[[nodiscard]] D3D12CommandAllocator* RequestCommandAllocator();
 
 	void DiscardCommandAllocator(D3D12CommandAllocator* CommandAllocator);
 
@@ -29,18 +29,17 @@ public:
 
 	[[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const { return CommandQueue.Get(); }
 	[[nodiscard]] UINT64			  GetFrequency() const { return Frequency; }
-	[[nodiscard]] UINT64			  GetCompletedValue() const { return Fence->GetCompletedValue(); }
 
-	[[nodiscard]] UINT64 AdvanceGpu();
+	[[nodiscard]] UINT64 Signal();
 
-	[[nodiscard]] bool IsFenceComplete(UINT64 FenceValue) const;
+	[[nodiscard]] bool IsFenceComplete(UINT64 FenceValue);
 
 	void HostWaitForValue(UINT64 FenceValue);
 
 	void Wait(D3D12CommandQueue* CommandQueue);
 	void WaitForSyncHandle(const D3D12SyncHandle& SyncHandle);
 
-	void WaitIdle() { HostWaitForValue(AdvanceGpu()); }
+	void WaitIdle() { HostWaitForValue(Signal()); }
 
 	[[nodiscard]] D3D12CommandListHandle RequestCommandList(D3D12CommandAllocator* CommandAllocator);
 
@@ -56,16 +55,14 @@ private:
 		D3D12CommandListHandle& CommandListHandle,
 		D3D12CommandListHandle& ResourceBarrierCommandListHandle);
 
-	D3D12CommandListHandle CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator) const;
+	[[nodiscard]] D3D12CommandListHandle CreateCommandListHandle(D3D12CommandAllocator* CommandAllocator) const;
 
 private:
 	D3D12_COMMAND_LIST_TYPE CommandListType;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 	UINT64									   Frequency = 0;
-	Microsoft::WRL::ComPtr<ID3D12Fence>		   Fence;
-	CriticalSection							   FenceMutex;
-	UINT64									   FenceValue = 1;
+	D3D12Fence								   Fence;
 	D3D12SyncHandle							   SyncHandle;
 
 	// Command allocators used exclusively for resolving resource barriers

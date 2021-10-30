@@ -107,7 +107,7 @@ namespace std
 template<>
 struct hash<RenderResourceHandle>
 {
-	size_t operator()(const RenderResourceHandle& RenderResourceHandle) const
+	size_t operator()(const RenderResourceHandle& RenderResourceHandle) const noexcept
 	{
 		return CityHash64((char*)&RenderResourceHandle, sizeof(RenderResourceHandle));
 	}

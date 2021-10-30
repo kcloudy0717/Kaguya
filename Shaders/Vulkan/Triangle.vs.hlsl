@@ -5,7 +5,7 @@ struct Vertex
 	[[vk::location(2)]] float3 Normal : NORMAL;
 };
 
-struct VSOutput
+struct VertexAttributes
 {
 	float4					   Pos : SV_POSITION;
 	[[vk::location(0)]] float2 TextureCoord : TEXCOORD;
@@ -34,9 +34,9 @@ struct UniformSceneConstants
 
 [[vk::binding(0, 2)]] ConstantBuffer<UniformSceneConstants> SceneConstants;
 
-VSOutput main(Vertex Vertex)
+VertexAttributes main(Vertex Vertex)
 {
-	VSOutput output		= (VSOutput)0;
+	VertexAttributes output		= (VertexAttributes)0;
 	output.Pos			= mul(float4(Vertex.Position, 1.0f), PushConstants.Transform);
 	output.Pos			= mul(float4(output.Pos.xyz, 1.0f), SceneConstants.ViewProjection);
 	output.TextureCoord = Vertex.TextureCoord;

@@ -14,6 +14,11 @@ struct TextureImportOptions
 class Texture : public Asset
 {
 public:
+	void Release()
+	{
+		TexImage.Release();
+	}
+
 	TextureImportOptions Options;
 
 	Vector2i Resolution;

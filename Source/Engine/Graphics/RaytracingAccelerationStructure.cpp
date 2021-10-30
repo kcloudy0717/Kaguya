@@ -6,7 +6,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 	, NumInstances(NumInstances)
 	, TopLevelAccelerationStructure(NumInstances)
 {
-	MeshRenderers.reserve(NumInstances);
+	StaticMeshes.reserve(NumInstances);
 
 	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
 }
@@ -25,13 +25,13 @@ void RaytracingAccelerationStructure::Initialize()
 void RaytracingAccelerationStructure::Reset()
 {
 	TopLevelAccelerationStructure.Reset();
-	MeshRenderers.clear();
+	StaticMeshes.clear();
 	ReferencedGeometries.clear();
 	CurrentInstanceID						   = 0;
 	CurrentInstanceContributionToHitGroupIndex = 0;
 }
 
-void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, MeshRenderer* MeshRenderer)
+void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, StaticMeshComponent* StaticMesh)
 {
 	assert(TopLevelAccelerationStructure.size() < NumInstances);
 
@@ -44,10 +44,10 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, Me
 	RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved later
 
 	TopLevelAccelerationStructure.AddInstance(RaytracingInstanceDesc);
-	MeshRenderers.push_back(MeshRenderer);
-	ReferencedGeometries.insert(MeshRenderer->pMeshFilter->Mesh);
+	StaticMeshes.push_back(StaticMesh);
+	ReferencedGeometries.insert(StaticMesh->Mesh);
 
-	CurrentInstanceContributionToHitGroupIndex += MeshRenderer->pMeshFilter->Mesh->Blas.Size() * NumHitGroups;
+	CurrentInstanceContributionToHitGroupIndex += StaticMesh->Mesh->Blas.Size() * NumHitGroups;
 }
 
 void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
@@ -91,7 +91,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	D3D12ScopedEvent(Context, "TLAS");
 	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
 	{
-		Instance.AccelerationStructure = MeshRenderers[i]->pMeshFilter->Mesh->AccelerationStructure;
+		Instance.AccelerationStructure = StaticMeshes[i]->Mesh->AccelerationStructure;
 	}
 
 	UINT64 ScratchSize = 0, ResultSize = 0;

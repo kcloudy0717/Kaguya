@@ -108,6 +108,8 @@ protected:
 
 // Represents a Fence and Value pair, similar to that of a coroutine handle
 // you can query the status of a command execution point and wait for it
+class D3D12Fence;
+
 class D3D12SyncHandle
 {
 public:
@@ -116,13 +118,14 @@ public:
 		, Value(0)
 	{
 	}
-	D3D12SyncHandle(ID3D12Fence* Fence, UINT64 Value) noexcept
+	D3D12SyncHandle(D3D12Fence* Fence, UINT64 Value) noexcept
 		: Fence(Fence)
 		, Value(Value)
 	{
 	}
 
-	[[nodiscard]] auto IsValid() const noexcept -> bool;
+	explicit operator bool() const noexcept;
+
 	[[nodiscard]] auto GetValue() const noexcept -> UINT64;
 	[[nodiscard]] auto IsComplete() const -> bool;
 	auto			   WaitForCompletion() const -> void;
@@ -130,8 +133,8 @@ public:
 private:
 	friend class D3D12CommandQueue;
 
-	ID3D12Fence* Fence;
-	UINT64		 Value;
+	D3D12Fence* Fence;
+	UINT64		Value;
 };
 
 template<typename TFunc>

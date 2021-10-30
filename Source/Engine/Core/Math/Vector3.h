@@ -87,12 +87,6 @@ struct Vector3
 };
 
 template<typename T>
-[[nodiscard]] Vector3<T> operator*(T s, const Vector3<T>& v) noexcept
-{
-	return v * s;
-}
-
-template<typename T>
 [[nodiscard]] T length(const Vector3<T>& v) noexcept
 {
 	return std::hypot(v.x, v.y, v.z);

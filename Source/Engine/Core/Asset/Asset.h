@@ -49,7 +49,7 @@ public:
 	AssetHandle Handle;
 };
 
-struct unique_asset_deleter
+struct UniqueAssetDeleter
 {
 	template<typename T>
 	void operator()(T* Ptr) const
@@ -58,7 +58,7 @@ struct unique_asset_deleter
 	}
 };
 
-template<typename T, class Deleter = unique_asset_deleter>
+template<typename T, class Deleter = UniqueAssetDeleter>
 class AssetPtr : protected std::unique_ptr<T, Deleter>
 {
 public:

@@ -1,5 +1,4 @@
 #pragma once
-#include <cassert>
 #include <stdexcept>
 
 class Exception : public std::exception

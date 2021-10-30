@@ -2,24 +2,38 @@
 
 using Microsoft::WRL::ComPtr;
 
-D3D12SwapChain::D3D12SwapChain(
-	HWND				hWnd,
-	IDXGIFactory5*		Factory5,
-	ID3D12Device*		Device,
-	ID3D12CommandQueue* CommandQueue)
-	: Device(Device)
+D3D12SwapChain::D3D12SwapChain(D3D12Device* Parent, HWND HWnd)
+	: D3D12DeviceChild(Parent)
+	, WindowHandle(HWnd)
+	, Fence(Parent)
 {
+}
+
+D3D12SwapChain::~D3D12SwapChain()
+{
+	if (SyncHandle)
+	{
+		SyncHandle.WaitForCompletion();
+	}
+}
+
+void D3D12SwapChain::Initialize()
+{
+	Fence.Initialize(0, D3D12_FENCE_FLAG_NONE);
+
+	IDXGIFactory6*		Factory		 = GetParentDevice()->GetDxgiFactory6();
+	ID3D12CommandQueue* CommandQueue = GetParentDevice()->GetDevice()->GetGraphicsQueue()->GetCommandQueue();
+
 	// Check tearing support
 	BOOL AllowTearing = FALSE;
-	if (FAILED(Factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
+	if (FAILED(Factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
 	{
 		AllowTearing = FALSE;
 	}
 	TearingSupport = AllowTearing == TRUE;
 
+	// Width/Height can be set to 0
 	DXGI_SWAP_CHAIN_DESC1 Desc = {};
-	Desc.Width				   = 0;
-	Desc.Height				   = 0;
 	Desc.Format				   = Format;
 	Desc.Stereo				   = FALSE;
 	Desc.SampleDesc			   = DefaultSampleDesc();
@@ -31,34 +45,20 @@ D3D12SwapChain::D3D12SwapChain(
 	Desc.Flags = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	ComPtr<IDXGISwapChain1> SwapChain1;
-	VERIFY_D3D12_API(Factory5->CreateSwapChainForHwnd(CommandQueue, hWnd, &Desc, nullptr, nullptr, &SwapChain1));
-	VERIFY_D3D12_API(Factory5->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER)); // No full screen via alt + enter
+	VERIFY_D3D12_API(Factory->CreateSwapChainForHwnd(CommandQueue, WindowHandle, &Desc, nullptr, nullptr, &SwapChain1));
+	// No full screen via alt + enter
+	VERIFY_D3D12_API(Factory->MakeWindowAssociation(WindowHandle, DXGI_MWA_NO_ALT_ENTER));
 	SwapChain1.As(&SwapChain4);
+	SwapChain1->GetDesc1(&Desc);
 
-	// Create Descriptor heap
-	D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = { .Type			= D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-											.NumDescriptors = BackBufferCount,
-											.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-											.NodeMask		= 0 };
-	VERIFY_D3D12_API(Device->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(RTVHeaps.ReleaseAndGetAddressOf())));
-	UINT RTVSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	RenderTargetViews = GetParentDevice()->GetDevice()->GetRtvAllocator().Allocate(BackBufferCount);
 
-	// Initialize RTVs
-	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress(RTVHeaps->GetCPUDescriptorHandleForHeapStart());
-	for (UINT i = 0; i < BackBufferCount; i++)
-	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(RenderTargetViews[i], CpuBaseAddress, i, RTVSize);
-	}
-
-	CreateRenderTargetViews();
+	Resize(Desc.Width, Desc.Height);
 }
 
 ID3D12Resource* D3D12SwapChain::GetBackBuffer(UINT Index) const
 {
-	ID3D12Resource* BackBuffer = nullptr;
-	VERIFY_D3D12_API(SwapChain4->GetBuffer(Index, IID_PPV_ARGS(&BackBuffer)));
-	BackBuffer->Release();
-	return BackBuffer;
+	return BackBuffers[Index].Get();
 }
 
 std::pair<ID3D12Resource*, D3D12_CPU_DESCRIPTOR_HANDLE> D3D12SwapChain::GetCurrentBackBufferResource() const
@@ -68,49 +68,77 @@ std::pair<ID3D12Resource*, D3D12_CPU_DESCRIPTOR_HANDLE> D3D12SwapChain::GetCurre
 	return { BackBuffer, RenderTargetViews[BackBufferIndex] };
 }
 
+D3D12_VIEWPORT D3D12SwapChain::GetViewport() const noexcept
+{
+	return CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height));
+}
+
+D3D12_RECT D3D12SwapChain::GetScissorRect() const noexcept
+{
+	return CD3DX12_RECT(0, 0, Width, Height);
+}
+
 void D3D12SwapChain::Resize(UINT Width, UINT Height)
 {
-	// Resize backbuffer
-	// Note: Cannot use ResizeBuffers1 when debugging in Nsight Graphics, it will crash
+	if (SyncHandle)
+	{
+		SyncHandle.WaitForCompletion();
+	}
+
+	for (auto& BackBuffer : BackBuffers)
+	{
+		BackBuffer.Reset();
+	}
+
+	if (this->Width != Width || this->Height != Height)
+	{
+		this->Width	 = Width;
+		this->Height = Height;
+
+		assert(Width > 0 && Height > 0);
+	}
+
 	DXGI_SWAP_CHAIN_DESC1 Desc = {};
 	VERIFY_D3D12_API(SwapChain4->GetDesc1(&Desc));
 	VERIFY_D3D12_API(SwapChain4->ResizeBuffers(0, Width, Height, DXGI_FORMAT_UNKNOWN, Desc.Flags));
 
+	for (UINT i = 0; i < BackBufferCount; ++i)
+	{
+		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&BackBuffers[i])));
+	}
+
 	CreateRenderTargetViews();
 }
 
-void D3D12SwapChain::Present(bool VSync)
+void D3D12SwapChain::Present(bool VSync, IPresent& Present)
 {
-	try
+	Present.PrePresent();
+
+	UINT	SyncInterval = VSync ? 1u : 0u;
+	UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+	HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
+	if (SUCCEEDED(Result))
 	{
-		UINT	SyncInterval = VSync ? 1u : 0u;
-		UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-		HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
-		if (Result == DXGI_ERROR_DEVICE_REMOVED)
-		{
-			// TODO: Handle device removal
-			throw DXGI_ERROR_DEVICE_REMOVED;
-		}
+		Present.PostPresent();
 	}
-	catch (HRESULT Result)
-	{
-		(void)Result;
-	}
+
+	UINT64 ValueToWaitFor = Fence.Signal(GetParentDevice()->GetDevice()->GetGraphicsQueue());
+	SyncHandle			  = D3D12SyncHandle(&Fence, ValueToWaitFor);
 }
 
 void D3D12SwapChain::CreateRenderTargetViews()
 {
 	for (UINT i = 0; i < BackBufferCount; ++i)
 	{
-		ComPtr<ID3D12Resource> BackBuffer;
-		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&BackBuffer)));
-
 		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
 		ViewDesc.Format						   = Format;
 		ViewDesc.ViewDimension				   = D3D12_RTV_DIMENSION_TEXTURE2D;
 		ViewDesc.Texture2D.MipSlice			   = 0;
 		ViewDesc.Texture2D.PlaneSlice		   = 0;
 
-		Device->CreateRenderTargetView(BackBuffer.Get(), &ViewDesc, RenderTargetViews[i]);
+		GetParentDevice()->GetD3D12Device()->CreateRenderTargetView(
+			BackBuffers[i].Get(),
+			&ViewDesc,
+			RenderTargetViews[i]);
 	}
 }

@@ -57,9 +57,6 @@ source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${spdlog})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${dxc})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
-add_compile_options(/W3) # warning level 3
-add_compile_options(/MP) # Multi-processor compilation
-
 add_executable(
 	${PROJECTNAME}
 	${Main}
@@ -73,10 +70,13 @@ add_executable(
 	${dxc}
 	${cityhash})
 
-file(GLOB_RECURSE inc_hlsl
-${PROJECT_SOURCE_DIR}/Shaders/*.hlsli)
-file(GLOB_RECURSE src_hlsl
-${PROJECT_SOURCE_DIR}/Shaders/*.hlsl)
+if (MSVC)
+	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
+	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
+endif()
+
+file(GLOB_RECURSE inc_hlsl ${PROJECT_SOURCE_DIR}/Shaders/*.hlsli)
+file(GLOB_RECURSE src_hlsl ${PROJECT_SOURCE_DIR}/Shaders/*.hlsl)
 
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${inc_hlsl})
 source_group(TREE ${PROJECT_SOURCE_DIR} FILES ${src_hlsl})

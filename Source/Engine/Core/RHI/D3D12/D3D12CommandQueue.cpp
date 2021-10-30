@@ -45,6 +45,7 @@ void D3D12CommandAllocatorPool::DiscardCommandAllocator(D3D12CommandAllocator* C
 D3D12CommandQueue::D3D12CommandQueue(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
 	: D3D12LinkedDeviceChild(Parent)
 	, CommandListType(CommandListType)
+	, Fence(Parent->GetParentDevice())
 	, ResourceBarrierCommandAllocatorPool(Parent, CommandListType)
 {
 }
@@ -61,14 +62,12 @@ void D3D12CommandQueue::Initialize(ED3D12CommandQueueType CommandQueueType, UINT
 	Desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	Desc.NodeMask				  = NodeMask;
 
-	VERIFY_D3D12_API(
-		Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(CommandQueue.ReleaseAndGetAddressOf())));
-	VERIFY_D3D12_API(
-		Device->GetDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(Device->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
+	Fence.Initialize(0, D3D12_FENCE_FLAG_NONE);
 
 	CommandQueue->SetName(GetCommandQueueTypeString(CommandQueueType));
 #ifdef _DEBUG
-	Fence->SetName(GetCommandQueueTypeFenceString(CommandQueueType));
+	Fence.GetApiHandle()->SetName(GetCommandQueueTypeFenceString(CommandQueueType));
 #endif
 
 	if (FAILED(CommandQueue->GetTimestampFrequency(&Frequency)))
@@ -84,27 +83,19 @@ void D3D12CommandQueue::Initialize(ED3D12CommandQueueType CommandQueueType, UINT
 	ResourceBarrierCommandAllocator = ResourceBarrierCommandAllocatorPool.RequestCommandAllocator();
 }
 
-UINT64 D3D12CommandQueue::AdvanceGpu()
+UINT64 D3D12CommandQueue::Signal()
 {
-	std::scoped_lock _(FenceMutex);
-	VERIFY_D3D12_API(CommandQueue->Signal(Fence.Get(), FenceValue));
-	return FenceValue++;
+	return Fence.Signal(this);
 }
 
-bool D3D12CommandQueue::IsFenceComplete(UINT64 FenceValue) const
+bool D3D12CommandQueue::IsFenceComplete(UINT64 FenceValue)
 {
-	return Fence->GetCompletedValue() >= FenceValue;
+	return Fence.IsFenceComplete(FenceValue);
 }
 
 void D3D12CommandQueue::HostWaitForValue(UINT64 FenceValue)
 {
-	if (IsFenceComplete(FenceValue))
-	{
-		return;
-	}
-
-	std::scoped_lock _(FenceMutex);
-	VERIFY_D3D12_API(Fence->SetEventOnCompletion(FenceValue, nullptr));
+	Fence.HostWaitForValue(FenceValue);
 }
 
 void D3D12CommandQueue::Wait(D3D12CommandQueue* CommandQueue)
@@ -114,9 +105,9 @@ void D3D12CommandQueue::Wait(D3D12CommandQueue* CommandQueue)
 
 void D3D12CommandQueue::WaitForSyncHandle(const D3D12SyncHandle& SyncHandle)
 {
-	if (SyncHandle.IsValid())
+	if (SyncHandle)
 	{
-		VERIFY_D3D12_API(CommandQueue->Wait(SyncHandle.Fence, SyncHandle.Value));
+		VERIFY_D3D12_API(CommandQueue->Wait(SyncHandle.Fence->GetApiHandle(), SyncHandle.Value));
 	}
 }
 
@@ -197,8 +188,8 @@ void D3D12CommandQueue::ExecuteCommandLists(
 	}
 
 	CommandQueue->ExecuteCommandLists(NumCommandLists, CommandLists);
-	UINT64 FenceValue = AdvanceGpu();
-	SyncHandle		  = D3D12SyncHandle(Fence.Get(), FenceValue);
+	UINT64 FenceValue = Signal();
+	SyncHandle		  = D3D12SyncHandle(&Fence, FenceValue);
 
 	// Discard command lists
 	for (UINT i = 0; i < NumCommandListHandles; ++i)

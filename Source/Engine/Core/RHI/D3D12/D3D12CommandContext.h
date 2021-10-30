@@ -105,6 +105,7 @@ public:
 
 	D3D12LinearAllocator CpuConstantAllocator;
 
+	// TODO: Finish cache
 	// State Cache
 	struct StateCache
 	{

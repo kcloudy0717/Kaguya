@@ -1,6 +1,14 @@
 #include "Renderer.h"
 #include "RendererRegistry.h"
 
+Renderer::Renderer(HWND HWnd)
+	: SwapChain(RenderCore::Device, HWnd)
+	, Allocator(64 * 1024)
+	, Registry(Scheduler)
+{
+	SwapChain.Initialize();
+}
+
 void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 {
 	// Clamp at 4k
@@ -11,6 +19,7 @@ void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
 		return;
 	}
 
+	ValidViewport = false;
 	SetViewportResolution(Width, Height);
 }
 
@@ -21,6 +30,10 @@ void Renderer::OnInitialize()
 
 void Renderer::OnDestroy()
 {
+	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
+	RenderCore::Device->GetDevice()->GetAsyncComputeQueue()->WaitIdle();
+	RenderCore::Device->GetDevice()->GetCopyQueue1()->WaitIdle();
+	RenderCore::Device->GetDevice()->GetCopyQueue2()->WaitIdle();
 	Destroy();
 }
 
@@ -91,7 +104,7 @@ void Renderer::OnRender(World* World)
 		D3D12ScopedEvent(Context, "Render");
 		Render(World, Context);
 
-		auto [pRenderTarget, RenderTargetView] = RenderCore::SwapChain->GetCurrentBackBufferResource();
+		auto [pRenderTarget, RenderTargetView] = SwapChain.GetCurrentBackBufferResource();
 
 		auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			pRenderTarget,
@@ -99,9 +112,8 @@ void Renderer::OnRender(World* World)
 			D3D12_RESOURCE_STATE_RENDER_TARGET);
 		Context->ResourceBarrier(1, &Barrier);
 		{
-			auto Viewport =
-				CD3DX12_VIEWPORT(0.0f, 0.0f, float(Application::GetWidth()), float(Application::GetHeight()));
-			auto ScissorRect = CD3DX12_RECT(0, 0, Application::GetWidth(), Application::GetHeight());
+			D3D12_VIEWPORT Viewport	   = SwapChain.GetViewport();
+			D3D12_RECT	   ScissorRect = SwapChain.GetScissorRect();
 
 			Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			Context->RSSetViewports(1, &Viewport);
@@ -125,21 +137,27 @@ void Renderer::OnRender(World* World)
 		Context->ResourceBarrier(1, &Barrier);
 	}
 	Context.CloseCommandList();
+
 	// TODO: Present submits work, and if you don't Signal() after that, you can't safely know when to destroy/resize
 	// the swapchain, move signaling after present
-	D3D12SyncHandle MainSyncHandle = Context.Execute(false);
-
-	RenderCore::SwapChain->Present(false);
+	RendererPresent Present(Context);
+	SwapChain.Present(false, Present);
 
 	RenderCore::Device->OnEndFrame();
-
-	MainSyncHandle.WaitForCompletion();
-
 	++FrameIndex;
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
-	RenderCore::SwapChain->Resize(Width, Height);
+	SwapChain.Resize(Width, Height);
+}
+
+void* Renderer::GetViewportDescriptor() const noexcept
+{
+	if (ValidViewport)
+	{
+		return Viewport;
+	}
+
+	return nullptr;
 }

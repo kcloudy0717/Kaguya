@@ -37,22 +37,24 @@ void ViewportWindow::OnRender()
 
 	if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
 	{
-		Application::GetInputHandler().DisableCursor();
+		Application::InputManager.DisableCursor(pWindow->GetWindowHandle());
 	}
 	else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{
-		Application::GetInputHandler().EnableCursor();
+		Application::InputManager.EnableCursor();
 	}
 
 	// Camera operates in raw input mode
-	if (!Application::GetInputHandler().CursorEnabled)
+	if (!Application::InputManager.CursorEnabled)
 	{
-		Application::GetInputHandler().RawInputEnabled = true;
+		Application::InputManager.RawInputEnabled = true;
+		pWindow->SetRawInput(true);
 		ClipCursor(&Rect);
 	}
 	else
 	{
-		Application::GetInputHandler().RawInputEnabled = false;
+		Application::InputManager.RawInputEnabled = false;
+		pWindow->SetRawInput(false);
 		ClipCursor(nullptr);
 	}
 }

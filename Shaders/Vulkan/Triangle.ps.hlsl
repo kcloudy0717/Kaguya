@@ -1,4 +1,4 @@
-struct VSOutput
+struct VertexAttributes
 {
 	float4					   Pos : SV_POSITION;
 	[[vk::location(0)]] float2 TextureCoord : TEXCOORD;
@@ -27,7 +27,7 @@ struct UniformSceneConstants
 
 [[vk::binding(0, 2)]] ConstantBuffer<UniformSceneConstants> SceneConstants;
 
-float4 main(VSOutput Input)
+float4 main(VertexAttributes Input)
 	: SV_TARGET
 {
     Texture2D t = Texture2DTable[PushConstants.TextureId];

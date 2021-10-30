@@ -46,84 +46,88 @@ struct Shaders
 
 		// VS
 		{
+			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::FullScreenTriangle = RenderCore::Compiler->CompileShader(
 				EShaderType::Vertex,
 				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
-				g_VSEntryPoint,
-				{});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::GBuffer = RenderCore::Compiler->CompileShader(
 				EShaderType::Vertex,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
-				g_VSEntryPoint,
-				{});
+				Options);
 		}
 
 		// MS
 		{
+			ShaderCompileOptions Options(g_MSEntryPoint);
 			MS::Meshlet = RenderCore::Compiler->CompileShader(
 				EShaderType::Mesh,
 				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
-				g_MSEntryPoint,
-				{});
+				Options);
 		}
 
 		// PS
 		{
+			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::ToneMap = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/ToneMap.hlsl",
-				g_PSEntryPoint,
-				{});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::GBuffer = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
-				g_PSEntryPoint,
-				{});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::Meshlet = RenderCore::Compiler->CompileShader(
 				EShaderType::Pixel,
 				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
-				g_PSEntryPoint,
-				{});
+				Options);
 		}
 
 		// CS
 		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
+			Options.SetDefine(L"SAMPLE_SLOW_FALLBACK", L"0");
+			Options.SetDefine(L"SAMPLE_BILINEAR", L"0");
+			Options.SetDefine(L"SAMPLE_EASU", L"1");
+			Options.SetDefine(L"SAMPLE_RCAS", L"0");
 			CS::EASU = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/FSR.hlsl",
-				g_CSEntryPoint,
-				{
-					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
-					{ L"SAMPLE_BILINEAR", L"0" },
-					{ L"SAMPLE_EASU", L"1" },
-					{ L"SAMPLE_RCAS", L"0" },
-				});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
+			Options.SetDefine(L"SAMPLE_SLOW_FALLBACK", L"0");
+			Options.SetDefine(L"SAMPLE_BILINEAR", L"0");
+			Options.SetDefine(L"SAMPLE_EASU", L"0");
+			Options.SetDefine(L"SAMPLE_RCAS", L"1");
 			CS::RCAS = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/FSR.hlsl",
-				g_CSEntryPoint,
-				{
-					{ L"SAMPLE_SLOW_FALLBACK", L"0" },
-					{ L"SAMPLE_BILINEAR", L"0" },
-					{ L"SAMPLE_EASU", L"0" },
-					{ L"SAMPLE_RCAS", L"1" },
-				});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCull = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/IndirectCull.hlsl",
-				g_CSEntryPoint,
-				{});
-
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCullMeshShaders = RenderCore::Compiler->CompileShader(
 				EShaderType::Compute,
 				ExecutableDirectory / L"Shaders/IndirectCullMeshShader.hlsl",
-				g_CSEntryPoint,
-				{});
+				Options);
 		}
 	}
 };

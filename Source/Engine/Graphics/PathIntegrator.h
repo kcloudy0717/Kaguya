@@ -33,10 +33,10 @@ struct FSRState
 	float RCASAttenuation = 0.0f;
 };
 
-class PathIntegrator : public Renderer
+class PathIntegrator final : public Renderer
 {
 public:
-	void* GetViewportDescriptor() override;
+	using Renderer::Renderer;
 
 private:
 	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
@@ -70,9 +70,7 @@ private:
 	};
 
 	D3D12RaytracingShaderBindingTable		  ShaderBindingTable;
-	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable;
-	D3D12RaytracingShaderTable<void>*		  MissShaderTable;
-	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable;
-
-	RenderResourceHandle Viewport;
+	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable = nullptr;
+	D3D12RaytracingShaderTable<void>*		  MissShaderTable		   = nullptr;
+	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable	   = nullptr;
 };

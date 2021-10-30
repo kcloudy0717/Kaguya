@@ -203,25 +203,25 @@ std::string D3D12Exception::GetError() const
 #undef STRINGIFY
 }
 
-auto D3D12SyncHandle::IsValid() const noexcept -> bool
+D3D12SyncHandle::operator bool() const noexcept
 {
 	return Fence != nullptr;
 }
 
 auto D3D12SyncHandle::GetValue() const noexcept -> UINT64
 {
-	assert(IsValid());
+	assert(static_cast<bool>(*this));
 	return Value;
 }
 
 auto D3D12SyncHandle::IsComplete() const -> bool
 {
-	assert(IsValid());
-	return Fence->GetCompletedValue() >= Value;
+	assert(static_cast<bool>(*this));
+	return Fence->IsFenceComplete(Value);
 }
 
 auto D3D12SyncHandle::WaitForCompletion() const -> void
 {
-	assert(IsValid());
-	VERIFY_D3D12_API(Fence->SetEventOnCompletion(Value, nullptr));
+	assert(static_cast<bool>(*this));
+	Fence->HostWaitForValue(Value);
 }

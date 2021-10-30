@@ -66,9 +66,9 @@ D3D12Allocation D3D12LinearAllocator::Allocate(
 
 D3D12LinearAllocatorPage* D3D12LinearAllocator::RequestPage()
 {
-	std::scoped_lock _(CriticalSection);
+	std::scoped_lock Lock(CriticalSection);
 
-	while (SyncHandle.IsValid() && !RetiredPages.empty() && RetiredPages.front().first <= SyncHandle.GetValue())
+	while (SyncHandle && !RetiredPages.empty() && RetiredPages.front().first <= SyncHandle.GetValue())
 	{
 		AvailablePages.push(RetiredPages.front().second);
 		RetiredPages.pop();
@@ -114,7 +114,7 @@ D3D12LinearAllocatorPage* D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) c
 
 void D3D12LinearAllocator::DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages)
 {
-	std::scoped_lock _(CriticalSection);
+	std::scoped_lock Lock(CriticalSection);
 	for (const auto& Page : Pages)
 	{
 		RetiredPages.push(std::make_pair(FenceValue, Page));

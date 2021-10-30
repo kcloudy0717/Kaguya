@@ -101,7 +101,7 @@ public:
 	void Import(const MeshImportOptions& Options);
 
 	void			   Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes);
-	std::vector<Mesh*> ImportExisting(const std::filesystem::path& BinaryPath, const MeshImportOptions& Metadata);
+	std::vector<Mesh*> ImportExisting(const std::filesystem::path& BinaryPath, const MeshImportOptions& Options);
 
 	struct ExportHeader
 	{

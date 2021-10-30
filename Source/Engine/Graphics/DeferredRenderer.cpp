@@ -3,19 +3,8 @@
 #include "DebugRenderer.h"
 #include "RendererRegistry.h"
 
-void* DeferredRenderer::GetViewportDescriptor()
-{
-	if (ValidViewport)
-	{
-		return reinterpret_cast<void*>(Registry.GetTextureSRV(Viewport).GetGpuHandle().ptr);
-	}
-
-	return nullptr;
-}
-
 void DeferredRenderer::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	ValidViewport = false;
 	Resolution.RefreshViewportResolution(Width, Height);
 	Resolution.RefreshRenderResolution(Width, Height);
 }
@@ -95,7 +84,7 @@ void DeferredRenderer::Initialize()
 	Meshes.Initialize();
 	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
-	MeshRenderers.reserve(World::MeshLimit);
+	StaticMeshes.reserve(World::MeshLimit);
 	HlslMeshes.resize(World::MeshLimit);
 }
 
@@ -106,8 +95,9 @@ void DeferredRenderer::Destroy()
 
 void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 {
-	if (ImGui::Begin("GBuffer"))
+	if (ImGui::Begin("Renderer"))
 	{
+		ImGui::Text("Deferred Renderer");
 		constexpr const char* View[] = { "Albedo", "Normal", "Motion", "Depth" };
 		ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
 
@@ -118,58 +108,69 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	}
 	ImGui::End();
 
-	MeshRenderers.clear();
+	StaticMeshes.clear();
 
 	NumMaterials = NumLights = NumMeshes = 0;
-	World->Registry.view<Transform, MeshFilter, MeshRenderer>().each(
-		[&](auto&& Transform, auto&& MeshFilter, auto&& MeshRenderer)
+	World->Registry.view<CoreComponent, StaticMeshComponent>().each(
+		[&](CoreComponent& Core, StaticMeshComponent& StaticMesh)
 		{
-			if (MeshFilter.Mesh)
+			if (StaticMesh.Mesh)
 			{
-				D3D12Buffer& VertexBuffer = MeshFilter.Mesh->VertexResource;
-				D3D12Buffer& IndexBuffer  = MeshFilter.Mesh->IndexResource;
+				D3D12Buffer& VertexBuffer = StaticMesh.Mesh->VertexResource;
+				D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
 
 				D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
-				DrawIndexedArguments.IndexCountPerInstance		  = static_cast<UINT>(MeshFilter.Mesh->Indices.size());
+				DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->IndexCount;
 				DrawIndexedArguments.InstanceCount				  = 1;
 				DrawIndexedArguments.StartIndexLocation			  = 0;
 				DrawIndexedArguments.BaseVertexLocation			  = 0;
 				DrawIndexedArguments.StartInstanceLocation		  = 0;
 
-				pMaterial[NumMaterials] = GetHLSLMaterialDesc(MeshRenderer.Material);
+				pMaterial[NumMaterials] = GetHLSLMaterialDesc(StaticMesh.Material);
 
-				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Transform);
+				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Core.Transform);
 				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
 
 				Mesh.VertexBuffer		 = VertexBuffer.GetVertexBufferView();
 				Mesh.IndexBuffer		 = IndexBuffer.GetIndexBufferView();
-				Mesh.Meshlets			 = MeshFilter.Mesh->MeshletResource.GetGpuVirtualAddress();
-				Mesh.UniqueVertexIndices = MeshFilter.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
-				Mesh.PrimitiveIndices	 = MeshFilter.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
+				Mesh.Meshlets			 = StaticMesh.Mesh->MeshletResource.GetGpuVirtualAddress();
+				Mesh.UniqueVertexIndices = StaticMesh.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
+				Mesh.PrimitiveIndices	 = StaticMesh.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
 
 				Mesh.MaterialIndex = NumMaterials;
-				Mesh.NumMeshlets   = static_cast<UINT>(MeshFilter.Mesh->Meshlets.size());
+				Mesh.NumMeshlets   = StaticMesh.Mesh->MeshletCount;
 
-				Mesh.BoundingBox = MeshFilter.Mesh->BoundingBox;
+				Mesh.BoundingBox = StaticMesh.Mesh->BoundingBox;
 
 				Mesh.DrawIndexedArguments = DrawIndexedArguments;
 
 				HlslMeshes[NumMeshes] = Mesh;
 
-				MeshRenderers.push_back(&MeshRenderer);
+				StaticMeshes.push_back(&StaticMesh);
 
-				DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Mesh.BoundingBox, Vector3f(1.0f));
+				// DEBUG_RENDERER_ADD_BOUNDINGBOX(Core.Transform, Mesh.BoundingBox, Vector3f(1.0f));
 
 				++NumMaterials;
 				++NumMeshes;
 			}
 		});
-	World->Registry.view<Transform, Light>().each(
-		[&](auto&& Transform, auto&& Light)
+	World->Registry.view<CoreComponent, LightComponent>().each(
+		[&](CoreComponent& Core, LightComponent& Light)
 		{
-			pLights[NumLights++] = GetHLSLLightDesc(Transform, Light);
+			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
 		});
 	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::MeshLimit);
+
+	World->Registry.view<CoreComponent, BoxColliderComponent>().each(
+		[&](CoreComponent& Core, BoxColliderComponent& BoxCollider)
+		{
+			Transform Transform = Core.Transform;
+			Transform.Scale		= { 1.0f, 1.0f, 1.0f };
+			BoundingBox Box;
+			Box.Center	= { 0.0f, 0.0f, 0.0f };
+			Box.Extents = { BoxCollider.Extents.x, BoxCollider.Extents.y, BoxCollider.Extents.z };
+			DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Box, Vector3f(1.0f, 0.0f, 0.0f));
+		});
 
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
@@ -450,11 +451,11 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		Params.Depth,
 	};
 
-	Viewport	  = Views[ViewMode];
-	ValidViewport = true;
-
 	RenderGraph.Setup();
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
 	RenderGraph.RenderGui();
+
+	ValidViewport = true;
+	Viewport	  = reinterpret_cast<void*>(Registry.GetTextureSRV(Views[ViewMode]).GetGpuHandle().ptr);
 }

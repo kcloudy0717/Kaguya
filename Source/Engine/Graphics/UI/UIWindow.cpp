@@ -4,11 +4,12 @@
 
 void UIWindow::Render()
 {
-	ImGui::Begin(Name.data(), nullptr, Flags);
-	IsHovered = ImGui::IsWindowHovered();
+	if (ImGui::Begin(Name.data(), nullptr, Flags))
+	{
+		IsHovered = ImGui::IsWindowHovered();
 
-	OnRender();
-
+		OnRender();
+	}
 	ImGui::End();
 }
 
@@ -57,7 +58,7 @@ bool UIWindow::RenderFloatControl(
 	float			 Width /*= ImGui::CalcItemWidth()*/)
 {
 	bool IsEdited = false;
-	if (ImGui::BeginTable("Float", 2, ImGuiTableFlags_BordersInnerV))
+	if (ImGui::BeginTable(Label.data(), 2, ImGuiTableFlags_BordersInnerV))
 	{
 		ImGui::TableNextRow();
 
@@ -97,7 +98,7 @@ bool UIWindow::RenderFloat2Control(
 	float			 Width /*= ImGui::CalcItemWidth()*/)
 {
 	bool IsEdited = false;
-	if (ImGui::BeginTable("Float2", 3, ImGuiTableFlags_BordersInnerV))
+	if (ImGui::BeginTable(Label.data(), 3, ImGuiTableFlags_BordersInnerV))
 	{
 		ImGui::TableNextRow();
 
@@ -150,7 +151,7 @@ bool UIWindow::RenderFloat3Control(
 	float			 Width /*= ImGui::CalcItemWidth()*/)
 {
 	bool IsEdited = false;
-	if (ImGui::BeginTable("Float3", 4, ImGuiTableFlags_BordersInnerV))
+	if (ImGui::BeginTable(Label.data(), 4, ImGuiTableFlags_BordersInnerV))
 	{
 		ImGui::TableNextRow();
 
