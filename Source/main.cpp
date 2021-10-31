@@ -224,7 +224,6 @@ int main(int /*argc*/, char* /*argv*/[])
 	ImGuiContextManager ImGui;
 
 	Window MainWindow;
-	Window SecondaryWindow;
 
 	{
 		WINDOW_DESC WindowDesc = {};
@@ -237,7 +236,6 @@ int main(int /*argc*/, char* /*argv*/[])
 	ImGui.InitializeWin32(MainWindow.GetWindowHandle());
 
 	MainWindow.Show();
-	SecondaryWindow.Show();
 
 	PhysicsSettings		   PhysicsSettings;
 	PhysicsCoreInitializer Physics(PhysicsSettings);
