@@ -90,16 +90,19 @@ void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
 D3D12RootSignature::D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder)
 	: D3D12DeviceChild(Parent)
 {
-	Desc = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_1, .Desc_1_1 = Builder.Build() };
+	Desc.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1;
+	Desc.Desc_1_1 = Builder.Build();
 
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> SerializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_D3D12_API(D3D12SerializeVersionedRootSignature(&Desc, &SerializedRootSignatureBlob, &ErrorBlob));
-	if (ErrorBlob)
+	HRESULT Result = D3D12SerializeVersionedRootSignature(&Desc, &SerializedRootSignatureBlob, &ErrorBlob);
+	if (FAILED(Result))
 	{
+		assert(ErrorBlob);
 		LOG_ERROR("{}", static_cast<const char*>(ErrorBlob->GetBufferPointer()));
 	}
+	VERIFY_D3D12_API(Result);
 
 	// Create the root signature
 	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(
