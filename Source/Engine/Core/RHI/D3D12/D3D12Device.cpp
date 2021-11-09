@@ -251,6 +251,14 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
 }
 
+void D3D12Device::WaitIdle()
+{
+	LinkedDevice.GetGraphicsQueue()->WaitIdle();
+	LinkedDevice.GetAsyncComputeQueue()->WaitIdle();
+	LinkedDevice.GetCopyQueue1()->WaitIdle();
+	LinkedDevice.GetCopyQueue2()->WaitIdle();
+}
+
 bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
 {
 	return CVar_AsyncPsoCompilation;

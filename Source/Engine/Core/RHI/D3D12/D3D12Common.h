@@ -124,6 +124,18 @@ public:
 	{
 	}
 
+	D3D12SyncHandle(std::nullptr_t) noexcept
+		: D3D12SyncHandle()
+	{
+	}
+
+	D3D12SyncHandle& operator=(std::nullptr_t) noexcept
+	{
+		Fence = nullptr;
+		Value = 0;
+		return *this;
+	}
+
 	explicit operator bool() const noexcept;
 
 	[[nodiscard]] auto GetValue() const noexcept -> UINT64;

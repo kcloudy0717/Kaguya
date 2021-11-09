@@ -138,8 +138,6 @@ void Renderer::OnRender(World* World)
 	}
 	Context.CloseCommandList();
 
-	// TODO: Present submits work, and if you don't Signal() after that, you can't safely know when to destroy/resize
-	// the swapchain, move signaling after present
 	RendererPresent Present(Context);
 	SwapChain.Present(false, Present);
 

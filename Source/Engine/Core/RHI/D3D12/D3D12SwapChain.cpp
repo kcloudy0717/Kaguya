@@ -83,6 +83,7 @@ void D3D12SwapChain::Resize(UINT Width, UINT Height)
 	if (SyncHandle)
 	{
 		SyncHandle.WaitForCompletion();
+		SyncHandle = nullptr;
 	}
 
 	for (auto& BackBuffer : BackBuffers)
@@ -117,10 +118,7 @@ void D3D12SwapChain::Present(bool VSync, IPresent& Present)
 	UINT	SyncInterval = VSync ? 1u : 0u;
 	UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
 	HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
-	if (SUCCEEDED(Result))
-	{
-		Present.PostPresent();
-	}
+	Present.PostPresent();
 
 	UINT64 ValueToWaitFor = Fence.Signal(GetParentDevice()->GetDevice()->GetGraphicsQueue());
 	SyncHandle			  = D3D12SyncHandle(&Fence, ValueToWaitFor);

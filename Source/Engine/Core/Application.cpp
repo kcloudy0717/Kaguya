@@ -3,8 +3,6 @@
 #include "IApplicationMessageHandler.h"
 
 #include <shellapi.h>
-#include <uxtheme.h>
-#include <dwmapi.h>
 
 #pragma comment(lib, "runtimeobject.lib")
 

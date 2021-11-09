@@ -156,6 +156,11 @@ public:
 		IApplicationMessageHandler::OnMouseDoubleClick(Window, Button, Position);
 	}
 
+	void OnMouseWheel(float Delta, Vector2i Position) override
+	{
+		IApplicationMessageHandler::OnMouseWheel(Delta, Position);
+	}
+
 	void OnRawMouseMove(Vector2i Position) override
 	{
 		IApplicationMessageHandler::OnRawMouseMove(Position);
@@ -252,11 +257,11 @@ int main(int /*argc*/, char* /*argv*/[])
 	RenderCoreInitializer Render(DeviceOptions, DeviceFeatures);
 
 	World World;
-	// auto Renderer = std::make_unique<PathIntegrator>(MainWindow.GetWindowHandle());
-	auto Renderer = std::make_unique<DeferredRenderer>(MainWindow.GetWindowHandle());
+	// PathIntegrator Renderer(MainWindow.GetWindowHandle());
+	DeferredRenderer Renderer(MainWindow.GetWindowHandle());
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;
-	Editor.Renderer	  = Renderer.get();
+	Editor.Renderer	  = &Renderer;
 	Editor.Run();
 }

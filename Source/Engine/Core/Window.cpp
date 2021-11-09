@@ -85,6 +85,11 @@ void Window::Destroy()
 	WindowHandle.reset();
 }
 
+void Window::SetRawInput(bool Enable)
+{
+	RawInput = Enable;
+}
+
 bool Window::IsMaximized() const noexcept
 {
 	return IsZoomed(WindowHandle.get());
@@ -108,6 +113,22 @@ bool Window::IsForeground() const noexcept
 bool Window::IsUsingRawInput() const noexcept
 {
 	return RawInput;
+}
+
+bool Window::IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept
+{
+	bool Result = false;
+
+	RECT WindowRect = {};
+	GetWindowRect(WindowHandle.get(), &WindowRect);
+	HRGN Region = CreateRectRgn(0, 0, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top);
+	if (Region)
+	{
+		Result = PtInRegion(Region, X, Y);
+		DeleteObject(Region);
+	}
+
+	return Result;
 }
 
 void Window::Resize(int Width, int Height)

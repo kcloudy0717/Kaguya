@@ -122,7 +122,7 @@ void D3D12PipelineState::CompileMeshShaderPipeline(const D3D12PipelineParserCall
 	Desc.CachedPSO	= D3D12_CACHED_PIPELINE_STATE();
 	Desc.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE;
 
-	auto							 Stream		= CD3DX12_PIPELINE_MESH_STATE_STREAM(Desc);
+	CD3DX12_PIPELINE_STATE_STREAM2	 Stream(Desc);
 	D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {};
 	StreamDesc.pPipelineStateSubobjectStream	= &Stream;
 	StreamDesc.SizeInBytes						= sizeof(Stream);

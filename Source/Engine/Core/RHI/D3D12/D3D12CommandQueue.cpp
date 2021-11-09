@@ -11,7 +11,7 @@ D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(
 
 D3D12CommandAllocator* D3D12CommandAllocatorPool::RequestCommandAllocator()
 {
-	std::scoped_lock _(CriticalSection);
+	std::scoped_lock Lock(CriticalSection);
 
 	D3D12CommandAllocator* Allocator = nullptr;
 

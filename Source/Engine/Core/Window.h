@@ -29,13 +29,14 @@ public:
 	void Hide();
 	void Destroy();
 
-	void SetRawInput(bool Enable) { RawInput = Enable; }
+	void SetRawInput(bool Enable);
 
 	[[nodiscard]] bool IsMaximized() const noexcept;
 	[[nodiscard]] bool IsMinimized() const noexcept;
 	[[nodiscard]] bool IsVisible() const noexcept;
 	[[nodiscard]] bool IsForeground() const noexcept;
 	[[nodiscard]] bool IsUsingRawInput() const noexcept;
+	[[nodiscard]] bool IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept;
 
 	void Resize(int Width, int Height);
 
@@ -46,9 +47,9 @@ private:
 	WINDOW_DESC		 Desc = {};
 	wil::unique_hwnd WindowHandle;
 
-	int	  WindowWidth  = 0;
-	int	  WindowHeight = 0;
-	float AspectRatio  = 1.0f;
+	std::int32_t WindowWidth  = 0;
+	std::int32_t WindowHeight = 0;
+	float		 AspectRatio  = 1.0f;
 
 	bool Visible  = false;
 	bool RawInput = false;

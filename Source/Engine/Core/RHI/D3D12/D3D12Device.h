@@ -49,6 +49,8 @@ public:
 	void OnBeginFrame() { Profiler.OnBeginFrame(); }
 	void OnEndFrame() { Profiler.OnEndFrame(); }
 
+	void WaitIdle();
+
 	[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
 	[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
 	[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
