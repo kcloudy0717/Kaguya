@@ -1,5 +1,4 @@
 #include "Player.script.h"
-#include "Physics/PhysicsCore.h"
 #include "../Components.h"
 
 // https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/CameraController.cpp

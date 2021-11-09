@@ -171,12 +171,6 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 			ComponentSerializer<CameraComponent>(JsonEntity, Entity);
 			ComponentSerializer<LightComponent>(JsonEntity, Entity);
 			ComponentSerializer<StaticMeshComponent>(JsonEntity, Entity);
-
-			ComponentSerializer<BoxColliderComponent>(JsonEntity, Entity);
-			ComponentSerializer<CapsuleColliderComponent>(JsonEntity, Entity);
-
-			ComponentSerializer<StaticRigidBodyComponent>(JsonEntity, Entity);
-			ComponentSerializer<DynamicRigidBodyComponent>(JsonEntity, Entity);
 		}
 	}
 
@@ -285,12 +279,6 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			ComponentDeserializer<CameraComponent>(JsonEntity, &Entity);
 			ComponentDeserializer<LightComponent>(JsonEntity, &Entity);
 			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Entity);
-
-			ComponentDeserializer<BoxColliderComponent>(JsonEntity, &Entity);
-			ComponentDeserializer<CapsuleColliderComponent>(JsonEntity, &Entity);
-
-			ComponentDeserializer<StaticRigidBodyComponent>(JsonEntity, &Entity);
-			ComponentDeserializer<DynamicRigidBodyComponent>(JsonEntity, &Entity);
 
 			if (Entity.HasComponent<StaticMeshComponent>())
 			{

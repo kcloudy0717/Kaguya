@@ -118,39 +118,6 @@ target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/microsoft.direct3d.d
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
 
-set(PhysX_SDK
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevel_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevelAABB_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/LowLevelDynamics_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysX_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCharacterKinematic_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCommon_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXCooking_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXExtensions_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXFoundation_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXPvdSDK_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXTask_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/PhysXVehicle_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/SceneQuery_static_64.lib
-	debug ${DEPDIR}/PhysX-4.0.1/bin/debug/SimulationController_static_64.lib
-
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevel_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevelAABB_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/LowLevelDynamics_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysX_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCharacterKinematic_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCommon_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXCooking_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXExtensions_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXFoundation_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXPvdSDK_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXTask_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/PhysXVehicle_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/SceneQuery_static_64.lib
-	optimized ${DEPDIR}/PhysX-4.0.1/bin/release/SimulationController_static_64.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/PhysX-4.0.1/include")
-target_link_libraries(${PROJECTNAME} ${PhysX_SDK})
-
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
 target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
 
@@ -182,20 +149,6 @@ add_custom_command(
 		${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
 
 		$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
-	DEPENDS ${PROJECTNAME})
-
-# PhysX
-add_custom_command(
-	TARGET ${PROJECTNAME} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy 
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysX_64.dll
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCommon_64.dll
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXCooking_64.dll
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXDevice64.dll
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXFoundation_64.dll
-		${DEPDIR}/PhysX-4.0.1/bin/$<CONFIGURATION>/PhysXGpu_64.dll
-
-		$<TARGET_FILE_DIR:${PROJECTNAME}>
 	DEPENDS ${PROJECTNAME})
 
 # Copy assets

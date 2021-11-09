@@ -2,7 +2,6 @@
 #include <entt.hpp>
 #include "Components.h"
 #include "Entity.h"
-#include "Physics/PhysicsScene.h"
 
 enum EWorldState
 {
@@ -19,8 +18,6 @@ public:
 	static constexpr size_t MeshLimit	  = 8192;
 
 	World();
-
-	void Initialize(PhysicsDevice* Device);
 
 	[[nodiscard]] auto CreateEntity(std::string_view Name = {}) -> Entity;
 	[[nodiscard]] auto GetMainCamera() -> Entity;
@@ -49,11 +46,6 @@ public:
 	entt::registry		Registry;
 	CameraComponent*	ActiveCamera = nullptr;
 	std::vector<Entity> Entities;
-
-	bool SimulatePhysics = false;
-
-private:
-	PhysicsScene PhysicsScene;
 };
 
 template<typename T, typename... TArgs>

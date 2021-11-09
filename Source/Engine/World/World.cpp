@@ -1,6 +1,5 @@
 #include "World.h"
 #include "Entity.h"
-#include "Physics/PhysicsDevice.h"
 #include "Core/Asset/AssetManager.h"
 
 #include "Scripts/Player.script.h"
@@ -10,11 +9,6 @@ static const char* DefaultEntityName = "GameObject";
 World::World()
 {
 	Clear(true);
-}
-
-void World::Initialize(PhysicsDevice* Device)
-{
-	PhysicsScene = Device->CreateScene();
 }
 
 auto World::CreateEntity(std::string_view Name /*= {}*/) -> Entity
@@ -45,7 +39,6 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 	Registry.clear();
 	ActiveCamera = nullptr;
 	Entities.clear();
-	PhysicsScene.Reset();
 	if (AddDefaultEntities)
 	{
 		Entity MainCamera = CreateEntity("Main Camera");
@@ -70,41 +63,11 @@ void World::Update(float DeltaTime)
 {
 	ResolveComponentDependencies();
 	UpdateScripts(DeltaTime);
-	if (SimulatePhysics)
-	{
-		PhysicsScene.Simulate(DeltaTime);
-	}
 }
 
 void World::BeginPlay()
 {
-	PhysicsScene.Reset();
 
-	for (auto Entity : Entities)
-	{
-		if (Entity.HasComponent<StaticRigidBodyComponent>())
-		{
-			if (Entity.HasComponent<BoxColliderComponent>())
-			{
-				PhysicsScene.AddStaticActor(Entity, Entity.GetComponent<BoxColliderComponent>());
-			}
-			else if (Entity.HasComponent<CapsuleColliderComponent>())
-			{
-				PhysicsScene.AddStaticActor(Entity, Entity.GetComponent<CapsuleColliderComponent>());
-			}
-		}
-		else if (Entity.HasComponent<DynamicRigidBodyComponent>())
-		{
-			if (Entity.HasComponent<BoxColliderComponent>())
-			{
-				PhysicsScene.AddDynamicActor(Entity, Entity.GetComponent<BoxColliderComponent>());
-			}
-			else if (Entity.HasComponent<CapsuleColliderComponent>())
-			{
-				PhysicsScene.AddDynamicActor(Entity, Entity.GetComponent<CapsuleColliderComponent>());
-			}
-		}
-	}
 }
 
 void World::ResolveComponentDependencies()
@@ -191,59 +154,10 @@ void World::OnComponentAdded<LightComponent>(Entity Entity, LightComponent& Comp
 template<>
 void World::OnComponentAdded<StaticMeshComponent>(Entity Entity, StaticMeshComponent& Component)
 {
-	if (Entity.HasComponent<MeshColliderComponent>())
-	{
-		auto& MeshCollider = Entity.GetComponent<MeshColliderComponent>();
-		if (Component.Mesh)
-		{
-			MeshCollider.Vertices = Component.Mesh->Vertices;
-			MeshCollider.Indices  = Component.Mesh->Indices;
-		}
-	}
-}
-
-template<>
-void World::OnComponentAdded<CharacterControllerComponent>(Entity Entity, CharacterControllerComponent& Component)
-{
-	Component.Controller->setPosition(ToPxExtendedVec3(Entity.GetComponent<CoreComponent>().Transform.Position));
 }
 
 template<>
 void World::OnComponentAdded<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<BoxColliderComponent>(Entity Entity, BoxColliderComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<CapsuleColliderComponent>(Entity Entity, CapsuleColliderComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<MeshColliderComponent>(Entity Entity, MeshColliderComponent& Component)
-{
-	if (Entity.HasComponent<StaticMeshComponent>())
-	{
-		auto& StaticMesh = Entity.GetComponent<StaticMeshComponent>();
-		if (StaticMesh.Mesh)
-		{
-			Component.Vertices = StaticMesh.Mesh->Vertices;
-			Component.Indices  = StaticMesh.Mesh->Indices;
-		}
-	}
-}
-
-template<>
-void World::OnComponentAdded<StaticRigidBodyComponent>(Entity Entity, StaticRigidBodyComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentAdded<DynamicRigidBodyComponent>(Entity Entity, DynamicRigidBodyComponent& Component)
 {
 }
 
@@ -274,36 +188,6 @@ void World::OnComponentRemoved<StaticMeshComponent>(Entity Entity, StaticMeshCom
 }
 
 template<>
-void World::OnComponentRemoved<CharacterControllerComponent>(Entity Entity, CharacterControllerComponent& Component)
-{
-}
-
-template<>
 void World::OnComponentRemoved<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<BoxColliderComponent>(Entity Entity, BoxColliderComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<CapsuleColliderComponent>(Entity Entity, CapsuleColliderComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<MeshColliderComponent>(Entity Entity, MeshColliderComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<StaticRigidBodyComponent>(Entity Entity, StaticRigidBodyComponent& Component)
-{
-}
-
-template<>
-void World::OnComponentRemoved<DynamicRigidBodyComponent>(Entity Entity, DynamicRigidBodyComponent& Component)
 {
 }

@@ -4,24 +4,6 @@
 
 void WorldWindow::OnRender()
 {
-	ImGui::Begin("World Options");
-	{
-		static bool Play = false;
-		if (ImGui::Checkbox("Play", &Play))
-		{
-			if (Play)
-			{
-				pWorld->SimulatePhysics = true;
-				pWorld->BeginPlay();
-			}
-			else
-			{
-				pWorld->SimulatePhysics = false;
-			}
-		}
-	}
-	ImGui::End();
-
 	for (auto [Index, Entity] : enumerate(pWorld->Entities))
 	{
 		auto& Name = Entity.GetComponent<CoreComponent>().Name;

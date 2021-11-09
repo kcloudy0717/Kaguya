@@ -161,17 +161,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		});
 	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::MeshLimit);
 
-	World->Registry.view<CoreComponent, BoxColliderComponent>().each(
-		[&](CoreComponent& Core, BoxColliderComponent& BoxCollider)
-		{
-			Transform Transform = Core.Transform;
-			Transform.Scale		= { 1.0f, 1.0f, 1.0f };
-			BoundingBox Box;
-			Box.Center	= { 0.0f, 0.0f, 0.0f };
-			Box.Extents = { BoxCollider.Extents.x, BoxCollider.Extents.y, BoxCollider.Extents.z };
-			DEBUG_RENDERER_ADD_BOUNDINGBOX(Transform, Box, Vector3f(1.0f, 0.0f, 0.0f));
-		});
-
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
 		World->WorldState = EWorldState_Render;

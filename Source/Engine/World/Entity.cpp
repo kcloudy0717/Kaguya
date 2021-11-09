@@ -29,15 +29,7 @@ Entity Entity::Clone()
 	CopyComponentIfExists<CameraComponent>(Clone, *this, World->Registry);
 	CopyComponentIfExists<LightComponent>(Clone, *this, World->Registry);
 	CopyComponentIfExists<StaticMeshComponent>(Clone, *this, World->Registry);
-	CopyComponentIfExists<CharacterControllerComponent>(Clone, *this, World->Registry);
 	// CopyComponentIfExists<NativeScriptComponent>(Clone, *this, World->Registry);
-
-	CopyComponentIfExists<BoxColliderComponent>(Clone, *this, World->Registry);
-	CopyComponentIfExists<CapsuleColliderComponent>(Clone, *this, World->Registry);
-	CopyComponentIfExists<MeshColliderComponent>(Clone, *this, World->Registry);
-
-	CopyComponentIfExists<StaticRigidBodyComponent>(Clone, *this, World->Registry);
-	CopyComponentIfExists<DynamicRigidBodyComponent>(Clone, *this, World->Registry);
 
 	return Clone;
 }

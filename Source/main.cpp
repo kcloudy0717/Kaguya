@@ -13,7 +13,6 @@
 #include "Core/Application.h"
 #include "Core/IApplicationMessageHandler.h"
 #include "Core/Asset/AssetManager.h"
-#include "Physics/PhysicsCore.h"
 #include "RenderCore/RenderCore.h"
 
 #include "Graphics/UI/WorldWindow.h"
@@ -70,8 +69,6 @@ public:
 	bool Initialize() override
 	{
 		AssetManager::Initialize();
-
-		World->Initialize(PhysicsCore::Device);
 
 		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
@@ -241,9 +238,6 @@ int main(int /*argc*/, char* /*argv*/[])
 	ImGui.InitializeWin32(MainWindow.GetWindowHandle());
 
 	MainWindow.Show();
-
-	PhysicsSettings		   PhysicsSettings;
-	PhysicsCoreInitializer Physics(PhysicsSettings);
 
 	DeviceOptions DeviceOptions			   = {};
 	DeviceOptions.EnableDebugLayer		   = true;
