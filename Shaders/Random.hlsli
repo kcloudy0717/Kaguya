@@ -90,3 +90,18 @@ float rand(inout RngStateType rngState)
 }
 
 #endif
+
+struct Sampler
+{
+	RngStateType rng;
+
+	float Get1D() { return rand(rng); }
+
+	float2 Get2D() { return float2(rand(rng), rand(rng)); }
+};
+
+Sampler InitSampler(uint2 pixelCoords, uint2 resolution, uint frameNumber)
+{
+	Sampler object = { initRNG(pixelCoords, resolution, frameNumber) };
+	return object;
+}

@@ -40,9 +40,22 @@ struct Shaders
 		inline static Shader IndirectCullMeshShaders;
 	};
 
+	struct RTX
+	{
+		inline static Shader PathTrace;
+	};
+
 	static void Compile()
 	{
 		const auto& ExecutableDirectory = Application::ExecutableDirectory;
+
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
+			RTX::PathTrace = RenderCore::Compiler->CompileShader(
+				EShaderType::Compute,
+				ExecutableDirectory / L"Shaders/PathTrace1_1.hlsl",
+				Options);
+		}
 
 		// VS
 		{
@@ -195,8 +208,26 @@ struct RootSignatures
 
 	inline static RenderResourceHandle Meshlet;
 
+	struct RTX
+	{
+		inline static RenderResourceHandle PathTrace;
+	};
+
 	static void Compile(RenderDevice& Device)
 	{
+		RTX::PathTrace = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			[](RootSignatureBuilder& Builder)
+			{
+				Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
+
+				Builder.AddShaderResourceView<0, 0>(); // g_Scene				t0 | space0
+				Builder.AddShaderResourceView<1, 0>(); // g_Materials			t1 | space0
+				Builder.AddShaderResourceView<2, 0>(); // g_Lights				t2 | space0
+
+				Builder.AllowResourceDescriptorHeapIndexing();
+				Builder.AllowSampleDescriptorHeapIndexing();
+			}));
+
 		Tonemap = Device.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			[](RootSignatureBuilder& Builder)
 			{
@@ -278,8 +309,25 @@ struct PipelineStates
 
 	inline static RenderResourceHandle Meshlet;
 
+	struct RTX
+	{
+		inline static RenderResourceHandle PathTrace;
+	};
+
 	static void Compile(RenderDevice& Device)
 	{
+		{
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::RTX::PathTrace);
+			Stream.CS			 = &Shaders::RTX::PathTrace;
+
+			RTX::PathTrace = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+		}
+
 		{
 			DepthStencilState DepthStencilState;
 			DepthStencilState.DepthEnable = false;

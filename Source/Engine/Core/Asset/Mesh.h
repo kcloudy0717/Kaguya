@@ -1,6 +1,8 @@
 #pragma once
 #include "Asset.h"
-#include <World/Vertex.h>
+#include "World/Vertex.h"
+#include "Core/Math/Vector3.h"
+#include "Core/Math/BoundingBox.h"
 #include "Core/RHI/D3D12/D3D12Raytracing.h"
 
 struct MeshImportOptions

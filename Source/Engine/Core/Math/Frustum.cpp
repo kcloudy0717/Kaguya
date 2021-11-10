@@ -1,4 +1,4 @@
-﻿#include "Math.h"
+﻿#include "Frustum.h"
 
 Frustum::Frustum(const DirectX::XMFLOAT4X4& Matrix) noexcept
 {

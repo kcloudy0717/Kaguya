@@ -61,7 +61,7 @@ public:
 	{
 	}
 
-	const char* GetName() const noexcept { return Name; }
+	[[nodiscard]] const char* GetName() const noexcept { return Name; }
 
 	// Used exclusively by decltype
 	T GetType() const noexcept { return T(); }

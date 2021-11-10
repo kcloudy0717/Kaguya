@@ -1,4 +1,4 @@
-﻿#include "Math.h"
+﻿#include "Plane.h"
 
 Plane::Plane(Vector3f a, Vector3f b, Vector3f c) noexcept
 {

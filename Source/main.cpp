@@ -23,6 +23,7 @@
 
 #include "Graphics/Renderer.h"
 #include "Graphics/PathIntegrator.h"
+#include "Graphics/PathIntegratorDXR1_1.h"
 #include "Graphics/DeferredRenderer.h"
 
 class ImGuiContextManager
@@ -252,7 +253,8 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	World World;
 	// PathIntegrator Renderer(MainWindow.GetWindowHandle());
-	DeferredRenderer Renderer(MainWindow.GetWindowHandle());
+	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
+	// DeferredRenderer Renderer(MainWindow.GetWindowHandle());
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

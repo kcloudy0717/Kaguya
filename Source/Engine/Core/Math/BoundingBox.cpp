@@ -1,4 +1,4 @@
-﻿#include "Math.h"
+﻿#include "BoundingBox.h"
 
 BoundingBox::BoundingBox(Vector3f Center, Vector3f Extents) noexcept
 	: Center(Center)

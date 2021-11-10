@@ -1,7 +1,8 @@
 #pragma once
 #include "Asset.h"
 #include <DirectXTex.h>
-#include <Core/RHI/D3D12/D3D12Device.h>
+#include "Core/Math/Vector2.h"
+#include "Core/RHI/D3D12/D3D12Device.h"
 
 struct TextureImportOptions
 {
