@@ -16,7 +16,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Bindless resource
 - Asynchronous PSO compilation using coroutines and threadpools
 - Utilization of graphics and asynchronous compute queues
-- Acceleration structure compaction
+- Acceleration structure compaction using modified [RTXMU](https://github.com/NVIDIAGameWorks/RTXMU)
 
 ## Misc
 
@@ -28,29 +28,19 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 ## World
 
 - ECS with the following implemented components:
-  - Tag: used to identify a game object
-  - Transform: controls position, scale, orientation of GameObject
+  - Core: Main component that all actor in the scene have, it contains tag that identifies the actor and a transform which controls position, scale, and orientation
   - Camera: controls camera parameters for scene viewing
   - Light: used to illuminate the scene, controls light parameters
     - Supported types:
       - Point
       - Quad
-  - Mesh Filter: references a mesh in the asset window to be rendered
-  - Mesh Renderer: controls material parameters and submits the referenced mesh to RaytracingAccelerationStructure for path tracing
+  - Static Mesh: references a mesh in the asset window to be rendered and controls material parameters and submits the referenced mesh to RaytracingAccelerationStructure for path tracing
     - Supported BSDFs:
       - Lambertian
       - Mirror
       - Glass
       - Disney
   - NativeScript: C++ scripting
-  - Collider: Adds collider to the entity to detect collisions with other rigidbodies with a collider
-    - Supported Collider:
-      - Box Collider
-      - Capsule Collider
-      - Mesh Collider (WIP)
-  - Rigid Body: Adds rigidbody physics to the entity and can be applied forces and velocities
-    - Static Rigid Body
-    - Dynamic Rigid Body
 
 # Goals
 
@@ -94,7 +84,6 @@ Let me know if you have any trouble setting up the project and getting it up and
 - [json](https://github.com/nlohmann/json.git)
 - [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
 - [Nsight Aftermath](https://developer.nvidia.com/nsight-aftermath)
-- [PhysX](https://github.com/NVIDIAGameWorks/PhysX)
 - [spdlog](https://github.com/gabime/spdlog)
 - [wil](https://github.com/microsoft/wil)
 - [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
