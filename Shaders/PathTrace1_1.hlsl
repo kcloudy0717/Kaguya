@@ -21,6 +21,7 @@ struct GlobalConstants
 	float SkyIntensity;
 
 	uint2 Dimensions;
+	uint  AntiAliasing;
 };
 
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);
@@ -33,7 +34,6 @@ StructuredBuffer<Light>			g_Lights : register(t2, space0);
 
 [numthreads(16, 16, 1)] void CSMain(CSParams Params)
 {
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
 
 	uint2	launchIndex		 = Params.DispatchThreadID.xy;
 	uint2	launchDimensions = g_GlobalConstants.Dimensions;
@@ -46,12 +46,22 @@ StructuredBuffer<Light>			g_Lights : register(t2, space0);
 
 	// Calculate subpixel camera jitter for anti aliasing
 	float2 jitter = pcgSampler.Get2D() - 0.5f;
-	float2 pixel  = (float2(launchIndex) + jitter) / float2(launchDimensions);
+	float2 pixel;
+	if (g_GlobalConstants.AntiAliasing)
+	{
+		pixel = (float2(launchIndex) + jitter) / float2(launchDimensions);
+	}
+	else
+	{
+		pixel = float2(launchIndex)/ float2(launchDimensions);
+	}
 
 	float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 
 	// Initialize ray
 	RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
+
+	float3 L = float3(0, 0, 0);
 
 	// Set up a trace
 	q.TraceRayInline(g_Scene, RAY_FLAG_NONE, 0xff, ray);
@@ -68,10 +78,19 @@ StructuredBuffer<Light>			g_Lights : register(t2, space0);
 	// Was a hit committed?
 	if (q.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
 	{
-		RenderTarget[launchIndex] = float4(q.CandidateTriangleBarycentrics(), 0, 1);
+		L = float3(q.CandidateTriangleBarycentrics(), 0);
 	}
 	else
 	{
-		RenderTarget[launchIndex] = float4(0, 0, 0, 1);
+		L = float3(0, 0, 0);
 	}
+
+	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
+	// Progressive accumulation
+	if (g_GlobalConstants.NumAccumulatedSamples > 0)
+	{
+		L = lerp(RenderTarget[launchIndex].rgb, L, 1.0f / float(g_GlobalConstants.NumAccumulatedSamples));
+	}
+
+	RenderTarget[launchIndex] = float4(L, 1);
 }

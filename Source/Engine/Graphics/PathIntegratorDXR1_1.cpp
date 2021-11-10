@@ -54,6 +54,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 			ResetPathIntegrator = true;
 		}
 
+		ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
 		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
 		ResetPathIntegrator |= ImGui::SliderScalar(
 			"Max Depth",
@@ -158,6 +159,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 					float SkyIntensity;
 
 					DirectX::XMUINT2 Dimensions;
+					unsigned int	 AntiAliasing;
 				} g_GlobalConstants						= {};
 				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*World->ActiveCamera);
 				g_GlobalConstants.Resolution			= { static_cast<float>(Resolution.ViewportWidth),
@@ -171,6 +173,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
 				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
 				g_GlobalConstants.Dimensions			= { ViewData.RenderWidth, ViewData.RenderHeight };
+				g_GlobalConstants.AntiAliasing			= PathIntegratorState.Antialiasing;
 
 				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::RTX::PathTrace));
 				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::RTX::PathTrace));

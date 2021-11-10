@@ -9,6 +9,7 @@ struct PathIntegratorState
 
 	float SkyIntensity = 1.0f;
 	UINT  MaxDepth	   = 3;
+	bool  Antialiasing = true;
 };
 
 enum class EFSRQualityMode
