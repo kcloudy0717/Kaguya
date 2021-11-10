@@ -4,14 +4,14 @@
 
 void WorldWindow::OnRender()
 {
-	for (auto [Index, Entity] : enumerate(pWorld->Entities))
+	for (auto [Index, Actor] : enumerate(pWorld->Actors))
 	{
-		auto& Name = Entity.GetComponent<CoreComponent>().Name;
+		auto& Name = Actor.GetComponent<CoreComponent>().Name;
 
-		ImGuiTreeNodeFlags TreeNodeFlags = (GetSelectedEntity() == Entity ? ImGuiTreeNodeFlags_Selected : 0);
+		ImGuiTreeNodeFlags TreeNodeFlags = (GetSelectedActor() == Actor ? ImGuiTreeNodeFlags_Selected : 0);
 		TreeNodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
 		TreeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
-		bool bOpened  = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Entity, TreeNodeFlags, Name.data());
+		bool bOpened  = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)Actor, TreeNodeFlags, Name.data());
 		bool bClicked = ImGui::IsItemClicked();
 
 		if (bClicked)
@@ -32,20 +32,20 @@ void WorldWindow::OnRender()
 	{
 		if (ImGui::MenuItem("Create Empty"))
 		{
-			Entity NewEntity = pWorld->CreateEntity("");
-			SelectedIndex	 = pWorld->Entities.size() - 1;
+			Actor NewActor = pWorld->CreateActor("");
+			SelectedIndex  = pWorld->Actors.size() - 1;
 		}
 
 		if (SelectedIndex)
 		{
 			if (ImGui::MenuItem("Clone Selected"))
 			{
-				pWorld->CloneEntity(SelectedIndex.value());
+				pWorld->CloneActor(SelectedIndex.value());
 			}
 
 			if (ImGui::MenuItem("Delete Selected"))
 			{
-				pWorld->DestroyEntity(SelectedIndex.value());
+				pWorld->DestroyActor(SelectedIndex.value());
 				SelectedIndex = {};
 			}
 		}

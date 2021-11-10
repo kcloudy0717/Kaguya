@@ -106,7 +106,7 @@ public:
 		ImGuizmo::AllowAxisFlip(false);
 
 		WorldWindow.Render();
-		InspectorWindow.SetContext(World, WorldWindow.GetSelectedEntity());
+		InspectorWindow.SetContext(World, WorldWindow.GetSelectedActor());
 
 		ViewportWindow.SetContext(Renderer->GetViewportDescriptor(), MainWindow);
 		ViewportWindow.Render();
@@ -165,7 +165,7 @@ public:
 
 		if (World)
 		{
-			Entity MainCamera = World->GetMainCamera();
+			Actor MainCamera = World->GetMainCamera();
 			auto&  Camera	  = MainCamera.GetComponent<CameraComponent>();
 
 			if (MainWindow->IsUsingRawInput())

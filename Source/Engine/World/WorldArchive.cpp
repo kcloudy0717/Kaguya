@@ -121,11 +121,11 @@ void from_json(const json& Json, Material& OutMaterial)
 template<typename T>
 struct ComponentSerializer
 {
-	ComponentSerializer(json& Json, Entity Entity)
+	ComponentSerializer(json& Json, Actor Actor)
 	{
-		if (Entity.HasComponent<T>())
+		if (Actor.HasComponent<T>())
 		{
-			auto& Component = Entity.GetComponent<T>();
+			auto& Component = Actor.GetComponent<T>();
 
 			auto& JsonAttributes = Json[GetClass<T>()];
 			ForEachAttribute<T>(
@@ -163,14 +163,14 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 			});
 
 		auto& JsonWorld = Json["World"];
-		for (auto [i, Entity] : enumerate(World->Entities))
+		for (auto [i, Actor] : enumerate(World->Actors))
 		{
 			auto& JsonEntity = JsonWorld[i];
 
-			ComponentSerializer<CoreComponent>(JsonEntity, Entity);
-			ComponentSerializer<CameraComponent>(JsonEntity, Entity);
-			ComponentSerializer<LightComponent>(JsonEntity, Entity);
-			ComponentSerializer<StaticMeshComponent>(JsonEntity, Entity);
+			ComponentSerializer<CoreComponent>(JsonEntity, Actor);
+			ComponentSerializer<CameraComponent>(JsonEntity, Actor);
+			ComponentSerializer<LightComponent>(JsonEntity, Actor);
+			ComponentSerializer<StaticMeshComponent>(JsonEntity, Actor);
 		}
 	}
 
@@ -181,11 +181,11 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 template<typename T>
 struct ComponentDeserializer
 {
-	ComponentDeserializer(const json& Json, Entity* Entity)
+	ComponentDeserializer(const json& Json, Actor* Actor)
 	{
 		if (auto iter = Json.find(GetClass<T>()); iter != Json.end())
 		{
-			auto& Component = Entity->GetOrAddComponent<T>();
+			auto& Component = Actor->GetOrAddComponent<T>();
 
 			ForEachAttribute<T>(
 				[&](auto&& Attribute)
@@ -273,16 +273,16 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 		const auto& JsonWorld = Json["World"];
 		for (const auto& JsonEntity : JsonWorld)
 		{
-			Entity Entity = World->CreateEntity();
+			Actor Actor = World->CreateActor();
 
-			ComponentDeserializer<CoreComponent>(JsonEntity, &Entity);
-			ComponentDeserializer<CameraComponent>(JsonEntity, &Entity);
-			ComponentDeserializer<LightComponent>(JsonEntity, &Entity);
-			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Entity);
+			ComponentDeserializer<CoreComponent>(JsonEntity, &Actor);
+			ComponentDeserializer<CameraComponent>(JsonEntity, &Actor);
+			ComponentDeserializer<LightComponent>(JsonEntity, &Actor);
+			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Actor);
 
-			if (Entity.HasComponent<StaticMeshComponent>())
+			if (Actor.HasComponent<StaticMeshComponent>())
 			{
-				auto& StaticMesh		= Entity.GetComponent<StaticMeshComponent>();
+				auto& StaticMesh		= Actor.GetComponent<StaticMeshComponent>();
 				StaticMesh.Handle.Type	= AssetType::Mesh;
 				StaticMesh.Handle.State = AssetState::Dirty;
 				StaticMesh.Handle.Id	= StaticMesh.HandleId;

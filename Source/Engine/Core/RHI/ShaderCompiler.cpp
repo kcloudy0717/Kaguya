@@ -206,15 +206,9 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		{
 			ComPtr<IDxcBlobUtf8>  Errors;
 			ComPtr<IDxcBlobUtf16> OutputName;
-			if (SUCCEEDED(DxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&Errors), &OutputName)))
-			{
-				OutputDebugStringA(std::bit_cast<char*>(Errors->GetBufferPointer()));
-				throw std::runtime_error("Failed to compile shader");
-			}
-			else
-			{
-				throw std::runtime_error("Failed to obtain error");
-			}
+			VERIFY_DXC_API(DxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&Errors), &OutputName));
+			OutputDebugStringA(std::bit_cast<char*>(Errors->GetBufferPointer()));
+			throw std::runtime_error("Failed to compile shader");
 		}
 	}
 

@@ -3,12 +3,12 @@
 #include <Core/Asset/AssetManager.h>
 
 template<typename T, bool IsCoreComponent, typename UIFunction>
-static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
+static void RenderComponent(std::string_view Name, Actor Actor, UIFunction Func)
 {
-	if (Entity.HasComponent<T>())
+	if (Actor.HasComponent<T>())
 	{
 		bool  IsEdited	= false;
-		auto& Component = Entity.GetComponent<T>();
+		auto& Component = Actor.GetComponent<T>();
 
 		constexpr ImGuiTreeNodeFlags TreeNodeFlags =
 			ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -17,7 +17,7 @@ static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 		float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 2.0f;
 		ImGui::Separator();
-		bool Collapsed = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), TreeNodeFlags, Name);
+		bool Collapsed = ImGui::TreeNodeEx((void*)typeid(T).hash_code(), TreeNodeFlags, Name.data());
 		ImGui::PopStyleVar();
 
 		ImGui::SameLine(ImGui::GetContentRegionAvail().x - lineHeight * 0.5f);
@@ -48,22 +48,22 @@ static void RenderComponent(const char* Name, Entity Entity, UIFunction Func)
 
 		if (RemoveComponent)
 		{
-			Entity.RemoveComponent<T>();
+			Actor.RemoveComponent<T>();
 		}
 
 		if (IsEdited || RemoveComponent)
 		{
-			Entity.OnComponentModified();
+			Actor.OnComponentModified();
 		}
 	}
 }
 
 template<typename T>
-static void AddNewComponent(const char* pName, Entity Entity)
+static void AddNewComponent(std::string_view Name, Actor Actor)
 {
-	if (ImGui::MenuItem(pName))
+	if (ImGui::MenuItem(Name.data()))
 	{
-		if (Entity.HasComponent<T>())
+		if (Actor.HasComponent<T>())
 		{
 			MessageBoxA(
 				nullptr,
@@ -73,7 +73,7 @@ static void AddNewComponent(const char* pName, Entity Entity)
 		}
 		else
 		{
-			Entity.AddComponent<T>();
+			Actor.AddComponent<T>();
 		}
 	}
 }
@@ -134,11 +134,11 @@ static bool EditTransform(const float* ViewMatrix, float* ProjectMatrix, float* 
 
 void InspectorWindow::OnRender()
 {
-	if (SelectedEntity)
+	if (SelectedActor)
 	{
 		RenderComponent<CoreComponent, true>(
 			"Core",
-			SelectedEntity,
+			SelectedActor,
 			[&](CoreComponent& Component)
 			{
 				char Buffer[MAX_PATH] = {};
@@ -181,7 +181,7 @@ void InspectorWindow::OnRender()
 
 		RenderComponent<CameraComponent, false>(
 			"Camera",
-			SelectedEntity,
+			SelectedActor,
 			[&](CameraComponent& Component)
 			{
 				bool IsEdited = false;
@@ -208,7 +208,7 @@ void InspectorWindow::OnRender()
 
 		RenderComponent<LightComponent, false>(
 			"Light",
-			SelectedEntity,
+			SelectedActor,
 			[&](LightComponent& Component)
 			{
 				bool IsEdited = false;
@@ -235,7 +235,7 @@ void InspectorWindow::OnRender()
 
 		RenderComponent<StaticMeshComponent, false>(
 			"Static Mesh",
-			SelectedEntity,
+			SelectedActor,
 			[&](StaticMeshComponent& Component)
 			{
 				bool IsEdited = false;
@@ -357,9 +357,9 @@ void InspectorWindow::OnRender()
 
 		if (ImGui::BeginPopup("Component List"))
 		{
-			AddNewComponent<StaticMeshComponent>("Static Mesh", SelectedEntity);
+			AddNewComponent<StaticMeshComponent>("Static Mesh", SelectedActor);
 
-			AddNewComponent<LightComponent>("Light", SelectedEntity);
+			AddNewComponent<LightComponent>("Light", SelectedActor);
 
 			ImGui::EndPopup();
 		}

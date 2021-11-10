@@ -1,7 +1,7 @@
 #pragma once
 #include "UIWindow.h"
 #include <World/World.h>
-#include <World/Entity.h>
+#include <World/Actor.h>
 
 class InspectorWindow : public UIWindow
 {
@@ -11,12 +11,12 @@ public:
 	{
 	}
 
-	void SetContext(World* pWorld, Entity Entity)
+	void SetContext(World* pWorld, Actor Actor)
 	{
 		this->pWorld = pWorld;
-		if (Entity)
+		if (Actor)
 		{
-			SelectedEntity = Entity;
+			SelectedActor = Actor;
 		}
 	}
 
@@ -25,5 +25,5 @@ protected:
 
 private:
 	World* pWorld		  = nullptr;
-	Entity SelectedEntity = {};
+	Actor  SelectedActor = {};
 };

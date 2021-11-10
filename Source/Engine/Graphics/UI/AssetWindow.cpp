@@ -246,7 +246,7 @@ void AssetWindow::OnRender()
 		MeshCache.EnumerateAsset(
 			[&](AssetHandle Handle, Mesh* Mesh)
 			{
-				auto  Entity	  = pWorld->CreateEntity(Mesh->Name);
+				auto  Entity	  = pWorld->CreateActor(Mesh->Name);
 				auto& StaticMesh  = Entity.AddComponent<StaticMeshComponent>();
 				StaticMesh.Handle = Handle;
 			});

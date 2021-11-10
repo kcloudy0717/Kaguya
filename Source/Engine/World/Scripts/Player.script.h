@@ -1,7 +1,7 @@
 #pragma once
-#include "../Entity.h"
+#include "../Actor.h"
 
-class PlayerScript : public ScriptableEntity
+class PlayerScript : public ScriptableActor
 {
 public:
 	void OnCreate() override;

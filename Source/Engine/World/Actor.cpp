@@ -1,18 +1,18 @@
-﻿#include "Entity.h"
+﻿#include "Actor.h"
 #include "World.h"
 
-void Entity::OnComponentModified()
+void Actor::OnComponentModified()
 {
 	World->WorldState |= EWorldState_Update;
 }
 
-Entity::operator bool() const noexcept
+Actor::operator bool() const noexcept
 {
 	return Handle != entt::null && World->Registry.valid(Handle);
 }
 
 template<typename T>
-static void CopyComponentIfExists(Entity Dst, Entity Src, entt::registry& Registry)
+static void CopyComponentIfExists(Actor Dst, Actor Src, entt::registry& Registry)
 {
 	if (Src.HasComponent<T>())
 	{
@@ -21,9 +21,9 @@ static void CopyComponentIfExists(Entity Dst, Entity Src, entt::registry& Regist
 	}
 }
 
-Entity Entity::Clone()
+Actor Actor::Clone()
 {
-	Entity Clone = World->CreateEntity();
+	Actor Clone = World->CreateActor();
 
 	CopyComponentIfExists<CoreComponent>(Clone, *this, World->Registry);
 	CopyComponentIfExists<CameraComponent>(Clone, *this, World->Registry);

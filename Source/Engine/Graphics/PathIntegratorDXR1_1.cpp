@@ -47,7 +47,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 
 	if (ImGui::Begin("Renderer"))
 	{
-		ImGui::Text("Path Integrator");
+		ImGui::Text("Path Integrator (DXR 1.1)");
 		if (ImGui::Button("Restore Defaults"))
 		{
 			PathIntegratorState = {};

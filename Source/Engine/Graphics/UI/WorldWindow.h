@@ -1,7 +1,7 @@
 #pragma once
 #include "UIWindow.h"
 #include <World/World.h>
-#include <World/Entity.h>
+#include <World/Actor.h>
 
 class WorldWindow : public UIWindow
 {
@@ -17,14 +17,14 @@ public:
 		SelectedIndex = {};
 	}
 
-	[[nodiscard]] Entity GetSelectedEntity() const
+	[[nodiscard]] Actor GetSelectedActor() const
 	{
-		Entity SelectedEntity = {};
+		Actor SelectedActor = {};
 		if (SelectedIndex)
 		{
-			SelectedEntity = pWorld->Entities[SelectedIndex.value()];
+			SelectedActor = pWorld->Actors[SelectedIndex.value()];
 		}
-		return SelectedEntity;
+		return SelectedActor;
 	}
 
 protected:

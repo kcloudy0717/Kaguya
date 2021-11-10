@@ -2,7 +2,7 @@
 #include "UIWindow.h"
 
 #include <World/World.h>
-#include <World/Entity.h>
+#include <World/Actor.h>
 
 class AssetWindow : public UIWindow
 {

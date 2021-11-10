@@ -299,23 +299,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					&RenderPasses::GBufferRenderPass,
 					&Registry.GetRenderTarget(Params.RenderTarget));
 				{
-					/*for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
-					{
-						auto& Mesh = MeshRenderer->pMeshFilter->Mesh;
-
-						Context->SetGraphicsRoot32BitConstant(0, i, 0);
-						Context->SetGraphicsRootShaderResourceView(1, Mesh->VertexResource.GetGpuVirtualAddress());
-						Context->SetGraphicsRootShaderResourceView(2, Mesh->MeshletResource.GetGpuVirtualAddress());
-						Context->SetGraphicsRootShaderResourceView(
-							3,
-							Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress());
-						Context->SetGraphicsRootShaderResourceView(
-							4,
-							Mesh->PrimitiveIndexResource.GetGpuVirtualAddress());
-
-						Context.DispatchMesh(Mesh->Meshlets.size(), 1, 1);
-					}*/
-
 					Context->ExecuteIndirect(
 						CommandSignature,
 						World::MeshLimit,
@@ -402,21 +385,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					&RenderPasses::GBufferRenderPass,
 					&Registry.GetRenderTarget(Params.RenderTarget));
 				{
-					/*for (auto [i, MeshRenderer] : enumerate(MeshRenderers))
-					{
-						Context->SetGraphicsRoot32BitConstant(0, i, 0);
-
-						D3D12Buffer& VertexBuffer = MeshRenderer->pMeshFilter->Mesh->VertexResource;
-						D3D12Buffer& IndexBuffer  = MeshRenderer->pMeshFilter->Mesh->IndexResource;
-
-						D3D12_VERTEX_BUFFER_VIEW VertexBufferView = VertexBuffer.GetVertexBufferView();
-						D3D12_INDEX_BUFFER_VIEW	 IndexBufferView  = IndexBuffer.GetIndexBufferView();
-
-						Context->IASetVertexBuffers(0, 1, &VertexBufferView);
-						Context->IASetIndexBuffer(&IndexBufferView);
-
-						Context->DrawIndexedInstanced(MeshRenderer->pMeshFilter->Mesh->Indices.size(), 1, 0, 0, 0);
-					}*/
 					Context->ExecuteIndirect(
 						CommandSignature,
 						World::MeshLimit,

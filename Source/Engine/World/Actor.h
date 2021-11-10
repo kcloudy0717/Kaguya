@@ -3,11 +3,11 @@
 
 class World;
 
-class Entity
+class Actor
 {
 public:
-	Entity() noexcept = default;
-	Entity(entt::entity Handle, World* World) noexcept
+	Actor() noexcept = default;
+	Actor(entt::entity Handle, World* World) noexcept
 		: Handle(Handle)
 		, World(World)
 	{
@@ -34,30 +34,30 @@ public:
 
 	operator entt::entity() const noexcept { return Handle; }
 
-	auto operator<=>(const Entity&) const = default;
+	auto operator<=>(const Actor&) const = default;
 
-	Entity Clone();
+	Actor Clone();
 
 private:
 	entt::entity Handle = entt::null;
 	World*		 World	= nullptr;
 };
 
-class ScriptableEntity
+class ScriptableActor
 {
 public:
-	virtual ~ScriptableEntity() = default;
+	virtual ~ScriptableActor() = default;
 
 	template<typename T>
 	[[nodiscard]] T& GetComponent()
 	{
-		return Entity.GetComponent<T>();
+		return Actor.GetComponent<T>();
 	}
 
 	template<typename T>
 	[[nodiscard]] bool HasComponent() const
 	{
-		return Entity.HasComponent<T>();
+		return Actor.HasComponent<T>();
 	}
 
 protected:
@@ -68,5 +68,5 @@ protected:
 private:
 	friend class World;
 
-	Entity Entity;
+	Actor Actor;
 };

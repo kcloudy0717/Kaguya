@@ -1,25 +1,25 @@
 #include "World.h"
-#include "Entity.h"
+#include "Actor.h"
 #include "Core/Asset/AssetManager.h"
 
 #include "Scripts/Player.script.h"
 
-static const char* DefaultEntityName = "GameObject";
+static const char* DefaultActorName = "Actor";
 
 World::World()
 {
 	Clear(true);
 }
 
-auto World::CreateEntity(std::string_view Name /*= {}*/) -> Entity
+auto World::CreateActor(std::string_view Name /*= {}*/) -> Actor
 {
-	Entity Entity = Entities.emplace_back(Registry.create(), this);
-	auto&  Core	  = Entity.AddComponent<CoreComponent>();
-	Core.Name	  = Name.empty() ? DefaultEntityName : Name;
-	return Entity;
+	Actor Actor = Actors.emplace_back(Registry.create(), this);
+	auto& Core	= Actor.AddComponent<CoreComponent>();
+	Core.Name	= Name.empty() ? DefaultActorName : Name;
+	return Actor;
 }
 
-auto World::GetMainCamera() -> Entity
+auto World::GetMainCamera() -> Actor
 {
 	auto View = Registry.view<CameraComponent>();
 	for (entt::entity Handle : View)
@@ -27,10 +27,10 @@ auto World::GetMainCamera() -> Entity
 		const auto& Component = View.get<CameraComponent>(Handle);
 		if (Component.Main)
 		{
-			return Entity(Handle, this);
+			return Actor(Handle, this);
 		}
 	}
-	return Entity(entt::null, this);
+	return Actor(entt::null, this);
 }
 
 void World::Clear(bool AddDefaultEntities /*= true*/)
@@ -38,25 +38,25 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 	WorldState = EWorldState_Update;
 	Registry.clear();
 	ActiveCamera = nullptr;
-	Entities.clear();
+	Actors.clear();
 	if (AddDefaultEntities)
 	{
-		Entity MainCamera = CreateEntity("Main Camera");
+		Actor MainCamera = CreateActor("Main Camera");
 		MainCamera.AddComponent<CameraComponent>();
 	}
 }
 
-void World::DestroyEntity(size_t Index)
+void World::DestroyActor(size_t Index)
 {
-	Entity Entity = Entities[Index];
+	Actor Entity = Actors[Index];
 	Registry.destroy(Entity);
-	Entities.erase(Entities.begin() + Index);
+	Actors.erase(Actors.begin() + Index);
 }
 
-void World::CloneEntity(size_t Index)
+void World::CloneActor(size_t Index)
 {
-	Entity Entity = Entities[Index];
-	Entity.Clone();
+	Actor Actor = Actors[Index];
+	Actor.Clone();
 }
 
 void World::Update(float DeltaTime)
@@ -67,7 +67,6 @@ void World::Update(float DeltaTime)
 
 void World::BeginPlay()
 {
-
 }
 
 void World::ResolveComponentDependencies()
@@ -113,8 +112,8 @@ void World::UpdateScripts(float DeltaTime)
 		{
 			if (!NativeScript.Instance)
 			{
-				NativeScript.Instance		  = NativeScript.InstantiateScript();
-				NativeScript.Instance->Entity = Entity{ Handle, this };
+				NativeScript.Instance		 = NativeScript.InstantiateScript();
+				NativeScript.Instance->Actor = Actor{ Handle, this };
 				NativeScript.Instance->OnCreate();
 			}
 
@@ -123,22 +122,22 @@ void World::UpdateScripts(float DeltaTime)
 }
 
 template<typename T>
-void World::OnComponentAdded(Entity Entity, T& Component)
+void World::OnComponentAdded(Actor Actor, T& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<CoreComponent>(Entity Entity, CoreComponent& Component)
+void World::OnComponentAdded<CoreComponent>(Actor Actor, CoreComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<CameraComponent>(Entity Entity, CameraComponent& Component)
+void World::OnComponentAdded<CameraComponent>(Actor Actor, CameraComponent& Component)
 {
 	if (!ActiveCamera)
 	{
 		ActiveCamera = &Component;
-		Entity.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
+		Actor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 	}
 	else
 	{
@@ -147,47 +146,47 @@ void World::OnComponentAdded<CameraComponent>(Entity Entity, CameraComponent& Co
 }
 
 template<>
-void World::OnComponentAdded<LightComponent>(Entity Entity, LightComponent& Component)
+void World::OnComponentAdded<LightComponent>(Actor Actor, LightComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<StaticMeshComponent>(Entity Entity, StaticMeshComponent& Component)
+void World::OnComponentAdded<StaticMeshComponent>(Actor Actor, StaticMeshComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentAdded<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
+void World::OnComponentAdded<NativeScriptComponent>(Actor Actor, NativeScriptComponent& Component)
 {
 }
 
 //===============================================================================================================================
 template<typename T>
-void World::OnComponentRemoved(Entity Entity, T& Component)
+void World::OnComponentRemoved(Actor Actor, T& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<CoreComponent>(Entity Entity, CoreComponent& Component)
+void World::OnComponentRemoved<CoreComponent>(Actor Actor, CoreComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<CameraComponent>(Entity Entity, CameraComponent& Component)
+void World::OnComponentRemoved<CameraComponent>(Actor Actor, CameraComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<LightComponent>(Entity Entity, LightComponent& Component)
+void World::OnComponentRemoved<LightComponent>(Actor Actor, LightComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<StaticMeshComponent>(Entity Entity, StaticMeshComponent& Component)
+void World::OnComponentRemoved<StaticMeshComponent>(Actor Actor, StaticMeshComponent& Component)
 {
 }
 
 template<>
-void World::OnComponentRemoved<NativeScriptComponent>(Entity Entity, NativeScriptComponent& Component)
+void World::OnComponentRemoved<NativeScriptComponent>(Actor Actor, NativeScriptComponent& Component)
 {
 }

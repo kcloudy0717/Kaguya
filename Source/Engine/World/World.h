@@ -1,7 +1,7 @@
 #pragma once
 #include <entt.hpp>
 #include "Components.h"
-#include "Entity.h"
+#include "Actor.h"
 
 enum EWorldState
 {
@@ -19,19 +19,19 @@ public:
 
 	World();
 
-	[[nodiscard]] auto CreateEntity(std::string_view Name = {}) -> Entity;
-	[[nodiscard]] auto GetMainCamera() -> Entity;
+	[[nodiscard]] auto CreateActor(std::string_view Name = {}) -> Actor;
+	[[nodiscard]] auto GetMainCamera() -> Actor;
 
 	void Clear(bool AddDefaultEntities = true);
 
-	void DestroyEntity(size_t Index);
-	void CloneEntity(size_t Index);
+	void DestroyActor(size_t Index);
+	void CloneActor(size_t Index);
 
 	template<typename T>
-	void OnComponentAdded(Entity Entity, T& Component);
+	void OnComponentAdded(Actor Actor, T& Component);
 
 	template<typename T>
-	void OnComponentRemoved(Entity Entity, T& Component);
+	void OnComponentRemoved(Actor Actor, T& Component);
 
 	void Update(float DeltaTime);
 
@@ -42,14 +42,14 @@ private:
 	void UpdateScripts(float DeltaTime);
 
 public:
-	EWorldState			WorldState = EWorldState::EWorldState_Render;
-	entt::registry		Registry;
-	CameraComponent*	ActiveCamera = nullptr;
-	std::vector<Entity> Entities;
+	EWorldState		   WorldState = EWorldState::EWorldState_Render;
+	entt::registry	   Registry;
+	CameraComponent*   ActiveCamera = nullptr;
+	std::vector<Actor> Actors;
 };
 
 template<typename T, typename... TArgs>
-auto Entity::AddComponent(TArgs&&... Args) -> T&
+auto Actor::AddComponent(TArgs&&... Args) -> T&
 {
 	assert(!HasComponent<T>());
 
@@ -59,7 +59,7 @@ auto Entity::AddComponent(TArgs&&... Args) -> T&
 }
 
 template<typename T>
-[[nodiscard]] auto Entity::GetComponent() -> T&
+[[nodiscard]] auto Actor::GetComponent() -> T&
 {
 	assert(HasComponent<T>());
 
@@ -67,7 +67,7 @@ template<typename T>
 }
 
 template<typename T, typename... TArgs>
-[[nodiscard]] auto Entity::GetOrAddComponent(TArgs&&... Args) -> T&
+[[nodiscard]] auto Actor::GetOrAddComponent(TArgs&&... Args) -> T&
 {
 	if (HasComponent<T>())
 	{
@@ -77,13 +77,13 @@ template<typename T, typename... TArgs>
 }
 
 template<typename T>
-[[nodiscard]] auto Entity::HasComponent() -> bool
+[[nodiscard]] auto Actor::HasComponent() -> bool
 {
 	return World->Registry.any_of<T>(Handle);
 }
 
 template<typename T>
-void Entity::RemoveComponent()
+void Actor::RemoveComponent()
 {
 	assert(HasComponent<T>());
 
