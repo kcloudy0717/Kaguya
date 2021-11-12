@@ -24,6 +24,11 @@ private:
 	D3D12Buffer		Materials;
 	Hlsl::Material* pMaterial = nullptr;
 	D3D12Buffer		Lights;
-	Hlsl::Light*	pLights		 = nullptr;
-	UINT			NumMaterials = 0, NumLights = 0;
+	Hlsl::Light*	pLights = nullptr;
+	D3D12Buffer		Meshes;
+	Hlsl::Mesh*		pMeshes = nullptr;
+
+	UINT NumMaterials = 0, NumLights = 0, NumMeshes = 0;
+
+	std::vector<Hlsl::Mesh> HlslMeshes;
 };

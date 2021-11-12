@@ -35,6 +35,17 @@ void PathIntegratorDXR1_1::Initialize()
 		D3D12_RESOURCE_FLAG_NONE);
 	Lights.Initialize();
 	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
+
+	Meshes = D3D12Buffer(
+		RenderCore::Device->GetDevice(),
+		sizeof(Hlsl::Mesh) * World::MeshLimit,
+		sizeof(Hlsl::Mesh),
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_RESOURCE_FLAG_NONE);
+	Meshes.Initialize();
+	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
+
+	HlslMeshes.resize(World::MeshLimit);
 }
 
 void PathIntegratorDXR1_1::Destroy()
@@ -68,15 +79,49 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 	}
 	ImGui::End();
 
-	NumMaterials = NumLights = 0;
+	NumMaterials = NumLights = NumMeshes = 0;
 	AccelerationStructure.Reset();
 	World->Registry.view<CoreComponent, StaticMeshComponent>().each(
-		[&](CoreComponent& Core, StaticMeshComponent& StaticMeshComponent)
+		[&](CoreComponent& Core, StaticMeshComponent& StaticMesh)
 		{
-			if (StaticMeshComponent.Mesh)
+			if (StaticMesh.Mesh)
 			{
-				AccelerationStructure.AddInstance(Core.Transform, &StaticMeshComponent);
-				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(StaticMeshComponent.Material);
+				AccelerationStructure.AddInstance(Core.Transform, &StaticMesh);
+
+				D3D12Buffer& VertexBuffer = StaticMesh.Mesh->VertexResource;
+				D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
+
+				D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
+				DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->IndexCount;
+				DrawIndexedArguments.InstanceCount				  = 1;
+				DrawIndexedArguments.StartIndexLocation			  = 0;
+				DrawIndexedArguments.BaseVertexLocation			  = 0;
+				DrawIndexedArguments.StartInstanceLocation		  = 0;
+
+				pMaterial[NumMaterials] = GetHLSLMaterialDesc(StaticMesh.Material);
+
+				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Core.Transform);
+				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
+
+				Mesh.VertexBuffer		 = VertexBuffer.GetVertexBufferView();
+				Mesh.IndexBuffer		 = IndexBuffer.GetIndexBufferView();
+				Mesh.Meshlets			 = StaticMesh.Mesh->MeshletResource.GetGpuVirtualAddress();
+				Mesh.UniqueVertexIndices = StaticMesh.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
+				Mesh.PrimitiveIndices	 = StaticMesh.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
+
+				Mesh.MaterialIndex = NumMaterials;
+				Mesh.NumMeshlets   = StaticMesh.Mesh->MeshletCount;
+				Mesh.VertexView	   = StaticMesh.Mesh->VertexView.GetIndex();
+				Mesh.IndexView	   = StaticMesh.Mesh->IndexView.GetIndex();
+
+				Mesh.BoundingBox = StaticMesh.Mesh->BoundingBox;
+
+				Mesh.DrawIndexedArguments = DrawIndexedArguments;
+
+				HlslMeshes[NumMeshes] = Mesh;
+
+				++NumMaterials;
+				++NumMeshes;
 			}
 		});
 	World->Registry.view<CoreComponent, LightComponent>().each(
@@ -84,6 +129,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 		{
 			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
 		});
+	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::MeshLimit);
 
 	D3D12SyncHandle ASBuildSyncHandle;
 	if (AccelerationStructure.IsValid())
@@ -181,6 +227,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
+				Context->SetComputeRootShaderResourceView(4, Meshes.GetGpuVirtualAddress());
 
 				Context.Dispatch2D<16, 16>(ViewData.RenderWidth, ViewData.RenderHeight);
 				Context.UAVBarrier(nullptr);

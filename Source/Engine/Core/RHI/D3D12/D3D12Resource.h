@@ -153,6 +153,13 @@ public:
 		memcpy(&CpuVirtualAddress[Index * Stride], &Data, sizeof(T));
 	}
 
+	// If Raw=true, FirstElement and NumElements should be in bytes
+	void CreateShaderResourceView(
+		D3D12ShaderResourceView& ShaderResourceView,
+		bool					 Raw,
+		UINT					 FirstElement,
+		UINT					 NumElements) const;
+
 	void CreateUnorderedAccessView(
 		D3D12UnorderedAccessView& UnorderedAccessView,
 		UINT					  NumElements,
@@ -162,28 +169,6 @@ private:
 	D3D12_HEAP_TYPE HeapType		  = {};
 	UINT			Stride			  = 0;
 	BYTE*			CpuVirtualAddress = nullptr;
-};
-
-template<typename T>
-class StructuredBuffer : public D3D12Buffer
-{
-public:
-	StructuredBuffer() noexcept = default;
-	StructuredBuffer(D3D12LinkedDevice* Parent, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
-		: D3D12Buffer(Parent, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_NONE)
-	{
-	}
-};
-
-template<typename T>
-class RWStructuredBuffer : public D3D12Buffer
-{
-public:
-	RWStructuredBuffer() noexcept = default;
-	RWStructuredBuffer(D3D12LinkedDevice* Parent, UINT64 NumElements, D3D12_HEAP_TYPE HeapType)
-		: D3D12Buffer(Parent, NumElements * sizeof(T), sizeof(T), HeapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
-	{
-	}
 };
 
 class D3D12Texture : public D3D12Resource

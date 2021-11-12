@@ -275,6 +275,34 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12Buffer::GetGpuVirtualAddress(UINT Index) const
 	return Resource->GetGPUVirtualAddress() + Index * Stride;
 }
 
+void D3D12Buffer::CreateShaderResourceView(
+	D3D12ShaderResourceView& ShaderResourceView,
+	bool					 Raw,
+	UINT					 FirstElement,
+	UINT					 NumElements) const
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
+	ShaderResourceViewDesc.Format						   = DXGI_FORMAT_UNKNOWN;
+	ShaderResourceViewDesc.Shader4ComponentMapping		   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	ShaderResourceViewDesc.ViewDimension				   = D3D12_SRV_DIMENSION_BUFFER;
+	ShaderResourceViewDesc.Buffer.FirstElement			   = FirstElement;
+	ShaderResourceViewDesc.Buffer.NumElements			   = NumElements;
+	ShaderResourceViewDesc.Buffer.StructureByteStride	   = Stride;
+	ShaderResourceViewDesc.Buffer.Flags					   = D3D12_BUFFER_SRV_FLAG_NONE;
+
+	if (Raw)
+	{
+		ShaderResourceViewDesc.Format					  = DXGI_FORMAT_R32_TYPELESS;
+		ShaderResourceViewDesc.Buffer.FirstElement		  = FirstElement / 4;
+		ShaderResourceViewDesc.Buffer.NumElements		  = NumElements / 4;
+		ShaderResourceViewDesc.Buffer.StructureByteStride = 0;
+		ShaderResourceViewDesc.Buffer.Flags				  = D3D12_BUFFER_SRV_FLAG_RAW;
+	}
+
+	ShaderResourceView.Desc = ShaderResourceViewDesc;
+	ShaderResourceView.Descriptor.CreateView(ShaderResourceViewDesc, Resource.Get());
+}
+
 void D3D12Buffer::CreateUnorderedAccessView(
 	D3D12UnorderedAccessView& UnorderedAccessView,
 	UINT					  NumElements,

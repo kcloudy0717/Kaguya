@@ -70,8 +70,8 @@ struct Mesh
 	// 20
 	unsigned int MaterialIndex;
 	unsigned int NumMeshlets;
-	unsigned int DEADBEEF0;
-	unsigned int DEADBEEF1;
+	unsigned int VertexView;
+	unsigned int IndexView;
 	unsigned int DEADBEEF2;
 };
 

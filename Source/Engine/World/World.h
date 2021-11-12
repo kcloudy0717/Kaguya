@@ -153,8 +153,8 @@ struct Mesh
 	// 20
 	unsigned int MaterialIndex;
 	unsigned int NumMeshlets;
-	unsigned int DEADBEEF0 = 0xDEADBEEF;
-	unsigned int DEADBEEF1 = 0xDEADBEEF;
+	unsigned int VertexView;
+	unsigned int IndexView;
 	unsigned int DEADBEEF2 = 0xDEADBEEF;
 };
 static_assert(sizeof(Mesh) == 256);

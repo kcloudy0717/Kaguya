@@ -185,7 +185,7 @@ public:
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
-	void AddStaticSampler(
+	void AddSampler(
 		D3D12_FILTER			   Filter,
 		D3D12_TEXTURE_ADDRESS_MODE AddressUVW,
 		UINT					   MaxAnisotropy,

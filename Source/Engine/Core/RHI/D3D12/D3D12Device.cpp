@@ -386,18 +386,19 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 
 void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder)
 {
-	// TODO: Maybe consider this as a fallback options when SM6.6 dynamic resource binding is integrated
+	// TODO: Maybe consider this as a fall back options when SM6.6 dynamic resource binding is integrated
 	/* Descriptor Tables */
 
 	// ShaderResource
-	D3D12DescriptorTable ShaderResourceTable(3);
+	D3D12DescriptorTable ShaderResourceTable(4);
 	{
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
 			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
 
-		ShaderResourceTable.AddSRVRange<0, 100>(UINT_MAX, Flags, 0); // g_Texture2DTable
-		ShaderResourceTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
-		ShaderResourceTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_TextureCubeTable
+		ShaderResourceTable.AddSRVRange<0, 100>(UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
+		ShaderResourceTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DTable
+		ShaderResourceTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
+		ShaderResourceTable.AddSRVRange<0, 103>(UINT_MAX, Flags, 0); // g_TextureCubeTable
 	}
 	RootSignatureBuilder.AddDescriptorTable(ShaderResourceTable);
 
@@ -422,18 +423,15 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddDescriptorTable(SamplerTable);
 
 	// g_SamplerPointWrap
-	RootSignatureBuilder.AddStaticSampler<0, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	RootSignatureBuilder.AddSampler<0, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
 	// g_SamplerPointClamp
-	RootSignatureBuilder.AddStaticSampler<1, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+	RootSignatureBuilder.AddSampler<1, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 	// g_SamplerLinearWrap
-	RootSignatureBuilder.AddStaticSampler<2, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	RootSignatureBuilder.AddSampler<2, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
 	// g_SamplerLinearClamp
-	RootSignatureBuilder.AddStaticSampler<3, 101>(
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-		16);
+	RootSignatureBuilder.AddSampler<3, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 	// g_SamplerAnisotropicWrap
-	RootSignatureBuilder.AddStaticSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
+	RootSignatureBuilder.AddSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
 	// g_SamplerAnisotropicClamp
-	RootSignatureBuilder.AddStaticSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+	RootSignatureBuilder.AddSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
 }

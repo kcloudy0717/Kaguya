@@ -75,6 +75,9 @@ public:
 	UINT64					  BlasIndex		= UINT64_MAX;
 	bool					  BlasValid		= false;
 	bool					  BlasCompacted = false;
+
+	D3D12ShaderResourceView VertexView;
+	D3D12ShaderResourceView IndexView;
 };
 
 template<>

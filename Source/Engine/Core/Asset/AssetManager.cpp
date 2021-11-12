@@ -253,4 +253,10 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader)
 	RaytracingGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 
 	AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
+
+	AssetMesh->VertexView = D3D12ShaderResourceView(RenderCore::Device->GetDevice());
+	AssetMesh->IndexView  = D3D12ShaderResourceView(RenderCore::Device->GetDevice());
+
+	AssetMesh->VertexResource.CreateShaderResourceView(AssetMesh->VertexView, true, 0, VertexBufferSizeInBytes);
+	AssetMesh->IndexResource.CreateShaderResourceView(AssetMesh->IndexView, true, 0, IndexBufferSizeInBytes);
 }
