@@ -21,6 +21,9 @@ struct GlobalConstants
 	uint RenderTarget;
 
 	float SkyIntensity;
+
+	uint2 Dimensions;
+	uint  AntiAliasing;
 };
 
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);

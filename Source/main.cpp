@@ -22,7 +22,7 @@
 #include "Graphics/UI/ConsoleWindow.h"
 
 #include "Graphics/Renderer.h"
-#include "Graphics/PathIntegrator.h"
+#include "Graphics/PathIntegratorDXR1_0.h"
 #include "Graphics/PathIntegratorDXR1_1.h"
 #include "Graphics/DeferredRenderer.h"
 
@@ -252,8 +252,8 @@ int main(int /*argc*/, char* /*argv*/[])
 	RenderCoreInitializer Render(DeviceOptions, DeviceFeatures);
 
 	World World;
-	// PathIntegrator Renderer(MainWindow.GetWindowHandle());
-	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
+	PathIntegratorDXR1_0 Renderer(MainWindow.GetWindowHandle());
+	// PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
 	// DeferredRenderer Renderer(MainWindow.GetWindowHandle());
 
 	Editor.MainWindow = &MainWindow;

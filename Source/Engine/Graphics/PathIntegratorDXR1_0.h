@@ -8,7 +8,7 @@ struct PathIntegratorState
 	static constexpr UINT MaximumDepth = 32;
 
 	float SkyIntensity = 1.0f;
-	UINT  MaxDepth	   = 3;
+	UINT  MaxDepth	   = 16;
 	bool  Antialiasing = true;
 };
 
@@ -34,7 +34,7 @@ struct FSRState
 	float RCASAttenuation = 0.0f;
 };
 
-class PathIntegrator final : public Renderer
+class PathIntegratorDXR1_0 final : public Renderer
 {
 public:
 	using Renderer::Renderer;
@@ -53,7 +53,7 @@ private:
 	UINT FrameCounter		= 0;
 
 	PathIntegratorState PathIntegratorState;
-	FSRState			FSRState;
+	// FSRState			FSRState;
 
 	D3D12Buffer		Materials;
 	Hlsl::Material* pMaterial = nullptr;

@@ -277,29 +277,20 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 	uint2	launchDimensions = g_GlobalConstants.Dimensions;
 	Sampler pcgSampler		 = InitSampler(launchIndex, launchDimensions, g_GlobalConstants.TotalFrameCount);
 
-	// Calculate subpixel camera jitter for anti aliasing
-	float2 jitter = pcgSampler.Get2D() - 0.5f;
-	float2 pixel;
-	if (g_GlobalConstants.AntiAliasing)
-	{
-		pixel = (float2(launchIndex) + jitter) / float2(launchDimensions);
-	}
-	else
-	{
-		pixel = float2(launchIndex) / float2(launchDimensions);
-	}
-
-	float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
-
-	// Initialize ray
-	RayDesc ray = g_GlobalConstants.Camera.GenerateCameraRay(ndc);
-
 	float3 L = float3(0.0f, 0.0f, 0.0f);
 	for (int s = 0; s < SPP; ++s)
 	{
 		// Calculate subpixel camera jitter for anti aliasing
 		float2 jitter = pcgSampler.Get2D() - 0.5f;
-		float2 pixel  = (float2(launchIndex) + jitter) / float2(launchDimensions);
+		float2 pixel;
+		if (g_GlobalConstants.AntiAliasing)
+		{
+			pixel = (float2(launchIndex) + jitter) / float2(launchDimensions);
+		}
+		else
+		{
+			pixel = float2(launchIndex) / float2(launchDimensions);
+		}
 
 		float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 

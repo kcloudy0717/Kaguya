@@ -268,7 +268,15 @@ void RayGeneration()
 	{
 		// Calculate subpixel camera jitter for anti aliasing
 		float2 jitter = pcgSampler.Get2D() - 0.5f;
-		float2 pixel  = (float2(launchIndex) + jitter) / float2(launchDimensions);
+		float2 pixel;
+		if (g_GlobalConstants.AntiAliasing)
+		{
+			pixel = (float2(launchIndex) + jitter) / float2(launchDimensions);
+		}
+		else
+		{
+			pixel = float2(launchIndex) / float2(launchDimensions);
+		}
 
 		float2 ndc = float2(2, -2) * pixel + float2(-1, 1);
 

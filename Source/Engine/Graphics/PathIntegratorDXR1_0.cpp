@@ -1,4 +1,4 @@
-#include "PathIntegrator.h"
+#include "PathIntegratorDXR1_0.h"
 #include "RendererRegistry.h"
 
 // CAS
@@ -15,9 +15,9 @@ _declspec(align(256)) struct FSRConstants
 	DirectX::XMUINT4 Sample;
 };
 
-void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
+void PathIntegratorDXR1_0::SetViewportResolution(uint32_t Width, uint32_t Height)
 {
-	float r = 1.5f;
+	/*float r = 1.5f;
 	switch (FSRState.QualityMode)
 	{
 	case EFSRQualityMode::Ultra:
@@ -32,15 +32,15 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 	case EFSRQualityMode::Performance:
 		r = 2.0f;
 		break;
-	}
+	}*/
 
 	UINT RenderWidth, RenderHeight;
-	if (FSRState.Enable)
-	{
-		RenderWidth	 = static_cast<UINT>(static_cast<float>(Width) / r);
-		RenderHeight = static_cast<UINT>(static_cast<float>(Height) / r);
-	}
-	else
+	// if (FSRState.Enable)
+	// {
+	// 	RenderWidth	 = static_cast<UINT>(static_cast<float>(Width) / r);
+	// 	RenderHeight = static_cast<UINT>(static_cast<float>(Height) / r);
+	// }
+	// else
 	{
 		RenderWidth	 = Width;
 		RenderHeight = Height;
@@ -50,7 +50,7 @@ void PathIntegrator::SetViewportResolution(uint32_t Width, uint32_t Height)
 	Resolution.RefreshRenderResolution(RenderWidth, RenderHeight);
 }
 
-void PathIntegrator::Initialize()
+void PathIntegratorDXR1_0::Initialize()
 {
 	Shaders::Compile();
 	Libraries::Compile();
@@ -92,23 +92,24 @@ void PathIntegrator::Initialize()
 	ShaderBindingTable.Generate(RenderCore::Device->GetDevice());
 }
 
-void PathIntegrator::Destroy()
+void PathIntegratorDXR1_0::Destroy()
 {
 }
 
-void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
+void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 {
 	bool ResetPathIntegrator = false;
 
 	if (ImGui::Begin("Renderer"))
 	{
-		ImGui::Text("Path Integrator");
+		ImGui::Text("Path Integrator (DXR 1.0)");
 		if (ImGui::Button("Restore Defaults"))
 		{
 			PathIntegratorState = {};
 			ResetPathIntegrator = true;
 		}
 
+		ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
 		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
 		ResetPathIntegrator |= ImGui::SliderScalar(
 			"Max Depth",
@@ -122,32 +123,32 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 	}
 	ImGui::End();
 
-	FSRState.RenderWidth	= Resolution.RenderWidth;
-	FSRState.RenderHeight	= Resolution.RenderHeight;
-	FSRState.ViewportWidth	= Resolution.ViewportWidth;
-	FSRState.ViewportHeight = Resolution.ViewportHeight;
-	if (ImGui::Begin("FSR"))
-	{
-		bool Dirty = ImGui::Checkbox("Enable", &FSRState.Enable);
-
-		constexpr const char* QualityModes[] = { "Ultra Quality (1.3x)",
-												 "Quality (1.5x)",
-												 "Balanced (1.7x)",
-												 "Performance (2x)" };
-		Dirty |= ImGui::Combo(
-			"Quality",
-			reinterpret_cast<int*>(&FSRState.QualityMode),
-			QualityModes,
-			static_cast<int>(std::size(QualityModes)));
-
-		Dirty |= ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
-
-		ImGui::Text("Render resolution: %dx%d", Resolution.RenderWidth, Resolution.RenderHeight);
-		ImGui::Text("Viewport resolution: %dx%d", Resolution.ViewportWidth, Resolution.ViewportHeight);
-
-		ResetPathIntegrator |= Dirty;
-	}
-	ImGui::End();
+	// FSRState.RenderWidth	= Resolution.RenderWidth;
+	// FSRState.RenderHeight	= Resolution.RenderHeight;
+	// FSRState.ViewportWidth	= Resolution.ViewportWidth;
+	// FSRState.ViewportHeight = Resolution.ViewportHeight;
+	// if (ImGui::Begin("FSR"))
+	// {
+	// 	bool Dirty = ImGui::Checkbox("Enable", &FSRState.Enable);
+	//
+	// 	constexpr const char* QualityModes[] = { "Ultra Quality (1.3x)",
+	// 											 "Quality (1.5x)",
+	// 											 "Balanced (1.7x)",
+	// 											 "Performance (2x)" };
+	// 	Dirty |= ImGui::Combo(
+	// 		"Quality",
+	// 		reinterpret_cast<int*>(&FSRState.QualityMode),
+	// 		QualityModes,
+	// 		static_cast<int>(std::size(QualityModes)));
+	//
+	// 	Dirty |= ImGui::SliderFloat("Sharpening attenuation", &FSRState.RCASAttenuation, 0.0f, 2.0f);
+	//
+	// 	ImGui::Text("Render resolution: %dx%d", Resolution.RenderWidth, Resolution.RenderHeight);
+	// 	ImGui::Text("Viewport resolution: %dx%d", Resolution.ViewportWidth, Resolution.ViewportHeight);
+	//
+	// 	ResetPathIntegrator |= Dirty;
+	// }
+	// ImGui::End();
 
 	NumMaterials = NumLights = 0;
 	AccelerationStructure.Reset();
@@ -269,6 +270,9 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 					unsigned int RenderTarget;
 
 					float SkyIntensity;
+
+					DirectX::XMUINT2 Dimensions;
+					unsigned int	 AntiAliasing;
 				} g_GlobalConstants						= {};
 				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*World->ActiveCamera);
 				g_GlobalConstants.Resolution			= { static_cast<float>(Resolution.ViewportWidth),
@@ -281,6 +285,8 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
 				g_GlobalConstants.RenderTarget			= Registry.GetRWTextureIndex(Parameter.Output);
 				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
+				g_GlobalConstants.Dimensions			= { ViewData.RenderWidth, ViewData.RenderHeight };
+				g_GlobalConstants.AntiAliasing			= PathIntegratorState.Antialiasing;
 
 				Context.SetPipelineState(RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
 				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
@@ -361,99 +367,99 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 			};
 		});
 
-	struct FSRParameter
-	{
-		RenderResourceHandle EASUOutput;
-		RenderResourceHandle RCASOutput;
-	};
-	RenderPass* FSR = RenderGraph.AddRenderPass(
-		"FSR",
-		[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
-		{
-			auto&		Parameter = Scope.Get<FSRParameter>();
-			const auto& ViewData  = Scope.Get<RenderGraphViewData>();
+	// struct FSRParameter
+	//{
+	//	RenderResourceHandle EASUOutput;
+	//	RenderResourceHandle RCASOutput;
+	//};
+	// RenderPass* FSR = RenderGraph.AddRenderPass(
+	//	"FSR",
+	//	[&](RenderGraphScheduler& Scheduler, RenderScope& Scope)
+	//	{
+	//		auto&		Parameter = Scope.Get<FSRParameter>();
+	//		const auto& ViewData  = Scope.Get<RenderGraphViewData>();
 
-			Parameter.EASUOutput = Scheduler.CreateTexture(
-				"EASU Output",
-				TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
-			Parameter.RCASOutput = Scheduler.CreateTexture(
-				"RCAS Output",
-				TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
+	//		Parameter.EASUOutput = Scheduler.CreateTexture(
+	//			"EASU Output",
+	//			TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
+	//		Parameter.RCASOutput = Scheduler.CreateTexture(
+	//			"RCAS Output",
+	//			TextureDesc::RWTexture2D(ETextureResolution::Viewport, D3D12SwapChain::Format, 1));
 
-			auto TonemapInput = Scheduler.Read(Tonemap->Scope.Get<TonemapParameter>().Output);
-			return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
-			{
-				struct RootConstants
-				{
-					unsigned int InputTID;
-					unsigned int OutputTID;
-				};
+	//		auto TonemapInput = Scheduler.Read(Tonemap->Scope.Get<TonemapParameter>().Output);
+	//		return [=, &Parameter, &ViewData, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+	//		{
+	//			struct RootConstants
+	//			{
+	//				unsigned int InputTID;
+	//				unsigned int OutputTID;
+	//			};
 
-				D3D12ScopedEvent(Context, "FSR");
+	//			D3D12ScopedEvent(Context, "FSR");
 
-				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
+	//			Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::FSR));
 
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.EASUOutput),
-					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//			Context.TransitionBarrier(
+	//				&Registry.GetTexture(Parameter.EASUOutput),
+	//				D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-				{
-					D3D12ScopedEvent(Context, "EASU");
+	//			{
+	//				D3D12ScopedEvent(Context, "EASU");
 
-					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSREASU));
+	//				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSREASU));
 
-					RootConstants RC	  = { Registry.GetTextureIndex(TonemapInput),
-										  Registry.GetRWTextureIndex(Parameter.EASUOutput) };
-					FSRConstants  FsrEasu = {};
-					FsrEasuCon(
-						reinterpret_cast<AU1*>(&FsrEasu.Const0),
-						reinterpret_cast<AU1*>(&FsrEasu.Const1),
-						reinterpret_cast<AU1*>(&FsrEasu.Const2),
-						reinterpret_cast<AU1*>(&FsrEasu.Const3),
-						static_cast<AF1>(FSRState.RenderWidth),
-						static_cast<AF1>(FSRState.RenderHeight),
-						static_cast<AF1>(FSRState.RenderWidth),
-						static_cast<AF1>(FSRState.RenderHeight),
-						static_cast<AF1>(ViewData.ViewportWidth),
-						static_cast<AF1>(ViewData.ViewportHeight));
-					FsrEasu.Sample.x = 0;
+	//				RootConstants RC	  = { Registry.GetTextureIndex(TonemapInput),
+	//									  Registry.GetRWTextureIndex(Parameter.EASUOutput) };
+	//				FSRConstants  FsrEasu = {};
+	//				FsrEasuCon(
+	//					reinterpret_cast<AU1*>(&FsrEasu.Const0),
+	//					reinterpret_cast<AU1*>(&FsrEasu.Const1),
+	//					reinterpret_cast<AU1*>(&FsrEasu.Const2),
+	//					reinterpret_cast<AU1*>(&FsrEasu.Const3),
+	//					static_cast<AF1>(FSRState.RenderWidth),
+	//					static_cast<AF1>(FSRState.RenderHeight),
+	//					static_cast<AF1>(FSRState.RenderWidth),
+	//					static_cast<AF1>(FSRState.RenderHeight),
+	//					static_cast<AF1>(ViewData.ViewportWidth),
+	//					static_cast<AF1>(ViewData.ViewportHeight));
+	//				FsrEasu.Sample.x = 0;
 
-					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
+	//				Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+	//				Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrEasu);
 
-					Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
-				}
+	//				Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
+	//			}
 
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.EASUOutput),
-					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.RCASOutput),
-					D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//			Context.TransitionBarrier(
+	//				&Registry.GetTexture(Parameter.EASUOutput),
+	//				D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	//			Context.TransitionBarrier(
+	//				&Registry.GetTexture(Parameter.RCASOutput),
+	//				D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-				{
-					D3D12ScopedEvent(Context, "RCAS");
+	//			{
+	//				D3D12ScopedEvent(Context, "RCAS");
 
-					Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSRRCAS));
+	//				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::FSRRCAS));
 
-					RootConstants RC	  = { Registry.GetTextureIndex(Parameter.EASUOutput),
-										  Registry.GetRWTextureIndex(Parameter.RCASOutput) };
-					FSRConstants  FsrRcas = {};
-					FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
-					FsrRcas.Sample.x = 0;
+	//				RootConstants RC	  = { Registry.GetTextureIndex(Parameter.EASUOutput),
+	//									  Registry.GetRWTextureIndex(Parameter.RCASOutput) };
+	//				FSRConstants  FsrRcas = {};
+	//				FsrRcasCon(reinterpret_cast<AU1*>(&FsrRcas.Const0), FSRState.RCASAttenuation);
+	//				FsrRcas.Sample.x = 0;
 
-					Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
-					Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
+	//				Context->SetComputeRoot32BitConstants(0, 2, &RC, 0);
+	//				Context.SetComputeConstantBuffer(1, sizeof(FSRConstants), &FsrRcas);
 
-					Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
-				}
+	//				Context.Dispatch2D<16, 16>(ViewData.ViewportWidth, ViewData.ViewportHeight);
+	//			}
 
-				Context.TransitionBarrier(
-					&Registry.GetTexture(Parameter.RCASOutput),
-					D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
-				Context.FlushResourceBarriers();
-			};
-		});
+	//			Context.TransitionBarrier(
+	//				&Registry.GetTexture(Parameter.RCASOutput),
+	//				D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+	//			Context.FlushResourceBarriers();
+	//		};
+	//	});
 
 	RenderGraph.Setup();
 	RenderGraph.Compile();
@@ -461,11 +467,11 @@ void PathIntegrator::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.RenderGui();
 
 	RenderResourceHandle Handle;
-	if (FSRState.Enable)
-	{
-		Handle = FSR->Scope.Get<FSRParameter>().RCASOutput;
-	}
-	else
+	// if (FSRState.Enable)
+	// {
+	// 	Handle = FSR->Scope.Get<FSRParameter>().RCASOutput;
+	// }
+	// else
 	{
 		Handle = Tonemap->Scope.Get<TonemapParameter>().Output;
 	}

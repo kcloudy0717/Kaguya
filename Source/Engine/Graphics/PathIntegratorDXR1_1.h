@@ -1,5 +1,5 @@
 #pragma once
-#include "PathIntegrator.h"
+#include "PathIntegratorDXR1_0.h"
 
 class PathIntegratorDXR1_1 final : public Renderer
 {
