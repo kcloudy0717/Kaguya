@@ -39,12 +39,11 @@ public:
 
 	void Release()
 	{
-		// Physics needs this
-		// std::vector<Vertex>().swap(Vertices);
-		// std::vector<uint32_t>().swap(Indices);
-		std::vector<DirectX::Meshlet>().swap(Meshlets);
-		std::vector<uint8_t>().swap(UniqueVertexIndices);
-		std::vector<DirectX::MeshletTriangle>().swap(PrimitiveIndices);
+		decltype(Vertices)().swap(Vertices);
+		decltype(Indices)().swap(Indices);
+		decltype(Meshlets)().swap(Meshlets);
+		decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
+		decltype(PrimitiveIndices)().swap(PrimitiveIndices);
 	}
 
 	MeshImportOptions Options;

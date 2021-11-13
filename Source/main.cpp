@@ -252,8 +252,8 @@ int main(int /*argc*/, char* /*argv*/[])
 	RenderCoreInitializer Render(DeviceOptions, DeviceFeatures);
 
 	World World;
-	// PathIntegrator Renderer(MainWindow.GetWindowHandle());
-	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
+	PathIntegrator Renderer(MainWindow.GetWindowHandle());
+	// PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
 	// DeferredRenderer Renderer(MainWindow.GetWindowHandle());
 
 	Editor.MainWindow = &MainWindow;
