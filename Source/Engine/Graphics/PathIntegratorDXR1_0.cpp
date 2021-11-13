@@ -203,7 +203,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.OpenCommandList();
 		{
-			D3D12ScopedEvent(AsyncCompute, "TLAS");
+			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
 			AccelerationStructure.Build(AsyncCompute);
 		}
 		AsyncCompute.CloseCommandList();
