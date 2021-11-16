@@ -101,6 +101,10 @@ public:
 	D3D12ASBuffer(D3D12LinkedDevice* Parent, UINT64 SizeInBytes);
 
 	[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const;
+
+	void CreateShaderResourceView(D3D12ShaderResourceView& ShaderResourceView) const;
+
+	static void CreateNullShaderResourceView(D3D12ShaderResourceView& ShaderResourceView);
 };
 
 class D3D12Buffer : public D3D12Resource
@@ -178,7 +182,8 @@ public:
 	D3D12Texture(
 		D3D12LinkedDevice*				 Parent,
 		const D3D12_RESOURCE_DESC&		 Desc,
-		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt);
+		std::optional<D3D12_CLEAR_VALUE> ClearValue = std::nullopt,
+		bool							 IsCubemap = false);
 
 	[[nodiscard]] UINT GetSubresourceIndex(
 		std::optional<UINT> OptArraySlice = std::nullopt,
@@ -207,4 +212,7 @@ public:
 		std::optional<UINT>			OptArraySlice = std::nullopt,
 		std::optional<UINT>			OptMipSlice	  = std::nullopt,
 		std::optional<UINT>			OptArraySize  = std::nullopt) const;
+
+private:
+	bool IsCubemap = false;
 };

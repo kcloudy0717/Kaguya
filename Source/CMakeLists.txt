@@ -104,7 +104,7 @@ target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/json/single_include"
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/spdlog/include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/wil/include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/assimp/include")
-target_link_libraries(${PROJECTNAME} ${DEPDIR}/assimp/lib/Release/assimp-vc142-mt.lib)
+target_link_libraries(${PROJECTNAME} ${DEPDIR}/assimp/lib/Release/assimp-vc143-mt.lib)
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXMesh/include")
 target_link_libraries(${PROJECTNAME} debug ${DEPDIR}/DirectXMesh/lib/Debug/DirectXMesh.lib)
 target_link_libraries(${PROJECTNAME} optimized ${DEPDIR}/DirectXMesh/lib/Release/DirectXMesh.lib)
@@ -127,7 +127,7 @@ target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy 
-		${DEPDIR}/assimp/bin/release/assimp-vc142-mt.dll
+		${DEPDIR}/assimp/bin/release/assimp-vc143-mt.dll
 
 		${DEPDIR}/dxc/dxcompiler.dll
 		${DEPDIR}/dxc/dxil.dll

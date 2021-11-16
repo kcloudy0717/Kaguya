@@ -21,6 +21,7 @@ public:
 
 	[[nodiscard]] auto CreateActor(std::string_view Name = {}) -> Actor;
 	[[nodiscard]] auto GetMainCamera() -> Actor;
+	[[nodiscard]] auto GetMainSkyLight() -> Actor;
 
 	void Clear(bool AddDefaultEntities = true);
 
@@ -44,7 +45,8 @@ private:
 public:
 	EWorldState		   WorldState = EWorldState::EWorldState_Render;
 	entt::registry	   Registry;
-	CameraComponent*   ActiveCamera = nullptr;
+	CameraComponent*   ActiveCamera	  = nullptr;
+	SkyLightComponent* ActiveSkyLight = nullptr;
 	std::vector<Actor> Actors;
 };
 

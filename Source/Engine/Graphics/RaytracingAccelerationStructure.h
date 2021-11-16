@@ -14,7 +14,7 @@ public:
 
 	void Initialize();
 
-	operator auto() const { return TlasResult.GetGpuVirtualAddress(); }
+	const D3D12ShaderResourceView& GetShaderResourceView() const { return IsValid() ? SRV : Null; }
 
 	[[nodiscard]] bool IsValid() const noexcept { return !TopLevelAccelerationStructure.empty(); }
 
@@ -24,7 +24,7 @@ public:
 
 	void Build(D3D12CommandContext& Context);
 
-	// Call this after the command context for build has been executed, this will
+	// Call this after the command context for Build has been executed, this will
 	// update internal BLAS address
 	void PostBuild(D3D12SyncHandle SyncHandle);
 
@@ -42,4 +42,7 @@ public:
 	D3D12Buffer	  TlasScratch;
 	D3D12ASBuffer TlasResult;
 	D3D12Buffer	  InstanceDescs;
+
+	D3D12ShaderResourceView Null;
+	D3D12ShaderResourceView SRV;
 };

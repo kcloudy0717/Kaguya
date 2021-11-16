@@ -206,33 +206,6 @@ void InspectorWindow::OnRender()
 				return IsEdited;
 			});
 
-		RenderComponent<LightComponent, false>(
-			"Light",
-			SelectedActor,
-			[&](LightComponent& Component)
-			{
-				bool IsEdited = false;
-
-				auto Type = (int*)&Component.Type;
-
-				const char* LightTypes[] = { "Point", "Quad" };
-				IsEdited |= ImGui::Combo("Type", Type, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
-
-				switch (Component.Type)
-				{
-				case ELightTypes::Point:
-					IsEdited |= RenderFloat3Control("I", &Component.I.x);
-					break;
-				case ELightTypes::Quad:
-					IsEdited |= RenderFloat3Control("I", &Component.I.x);
-					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
-					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
-					break;
-				}
-
-				return IsEdited;
-			});
-
 		RenderComponent<StaticMeshComponent, false>(
 			"Static Mesh",
 			SelectedActor,
@@ -328,7 +301,6 @@ void InspectorWindow::OnRender()
 							ImGui::Button("<unknown>");
 							Material.TextureIndices[Type] = -1;
 						}
-
 						if (ImGui::BeginDragDropTarget())
 						{
 							if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); Payload)
@@ -336,9 +308,16 @@ void InspectorWindow::OnRender()
 								IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
 								MaterialTexture.Handle = *static_cast<AssetHandle*>(Payload->Data);
 
-								IsEdited = true;
+								IsEdited |= true;
 							}
 							ImGui::EndDragDropTarget();
+						}
+
+						ImGui::SameLine();
+						if (ImGui::Button("Clear"))
+						{
+							IsEdited |= true;
+							MaterialTexture = {};
 						}
 					};
 
@@ -347,6 +326,81 @@ void InspectorWindow::OnRender()
 					ImGui::TreePop();
 				}
 
+				return IsEdited;
+			});
+
+		RenderComponent<LightComponent, false>(
+			"Light",
+			SelectedActor,
+			[&](LightComponent& Component)
+			{
+				bool IsEdited = false;
+
+				auto Type = (int*)&Component.Type;
+
+				const char* LightTypes[] = { "Point", "Quad" };
+				IsEdited |= ImGui::Combo("Type", Type, LightTypes, ARRAYSIZE(LightTypes), ARRAYSIZE(LightTypes));
+
+				switch (Component.Type)
+				{
+				case ELightTypes::Point:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
+					break;
+				case ELightTypes::Quad:
+					IsEdited |= RenderFloat3Control("I", &Component.I.x);
+					IsEdited |= RenderFloatControl("Width", &Component.Width, 1.0f);
+					IsEdited |= RenderFloatControl("Height", &Component.Height, 1.0f);
+					break;
+				}
+
+				return IsEdited;
+			});
+
+		RenderComponent<SkyLightComponent, false>(
+			"Sky Light",
+			SelectedActor,
+			[&](SkyLightComponent& Component)
+			{
+				bool IsEdited = false;
+
+				ImGui::Text("Cubemap: ");
+				ImGui::SameLine();
+				if (Component.Texture)
+				{
+					ImGui::Button(Component.Texture->Name.data());
+				}
+				else
+				{
+					ImGui::Button("<unknown>");
+				}
+				if (ImGui::BeginDragDropTarget())
+				{
+					if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); Payload)
+					{
+						IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
+						auto Handle	 = *static_cast<AssetHandle*>(Payload->Data);
+						auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+						if (Texture)
+						{
+							if (Texture->IsCubemap)
+							{
+								Component.Handle   = Handle;
+								Component.HandleId = Handle.Id;
+								Component.Texture  = Texture;
+							}
+						}
+
+						IsEdited |= true;
+					}
+					ImGui::EndDragDropTarget();
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Clear"))
+				{
+					IsEdited |= true;
+					Component = {};
+				}
 				return IsEdited;
 			});
 
@@ -360,6 +414,7 @@ void InspectorWindow::OnRender()
 			AddNewComponent<StaticMeshComponent>("Static Mesh", SelectedActor);
 
 			AddNewComponent<LightComponent>("Light", SelectedActor);
+			AddNewComponent<SkyLightComponent>("Sky Light", SelectedActor);
 
 			ImGui::EndPopup();
 		}

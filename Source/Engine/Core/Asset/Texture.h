@@ -23,6 +23,7 @@ public:
 	TextureImportOptions Options;
 
 	Vector2i Resolution;
+	bool	 IsCubemap = false;
 
 	std::string			  Name;
 	DirectX::ScratchImage TexImage;

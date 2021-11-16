@@ -57,4 +57,6 @@ REGISTER_CLASS_ATTRIBUTES(
 	CLASS_ATTRIBUTE(CameraComponent, NearZ),
 	CLASS_ATTRIBUTE(CameraComponent, FarZ),
 	CLASS_ATTRIBUTE(CameraComponent, FocalLength),
-	CLASS_ATTRIBUTE(CameraComponent, RelativeAperture))
+	CLASS_ATTRIBUTE(CameraComponent, RelativeAperture),
+	CLASS_ATTRIBUTE(CameraComponent, MovementSpeed), 
+	CLASS_ATTRIBUTE(CameraComponent, StrafeSpeed))

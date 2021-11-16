@@ -47,6 +47,9 @@ public:
 
 	bool ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
 
+	[[nodiscard]] D3D12ShaderResourceView  ReserveShaderResourceView() { return D3D12ShaderResourceView(this); }
+	[[nodiscard]] D3D12UnorderedAccessView ReserveUnorderedAccessView() { return D3D12UnorderedAccessView(this); }
+
 private:
 	D3D12CommandQueue GraphicsQueue;
 	D3D12CommandQueue AsyncComputeQueue;

@@ -170,6 +170,7 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 			ComponentSerializer<CoreComponent>(JsonEntity, Actor);
 			ComponentSerializer<CameraComponent>(JsonEntity, Actor);
 			ComponentSerializer<LightComponent>(JsonEntity, Actor);
+			ComponentSerializer<SkyLightComponent>(JsonEntity, Actor);
 			ComponentSerializer<StaticMeshComponent>(JsonEntity, Actor);
 		}
 	}
@@ -278,7 +279,16 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			ComponentDeserializer<CoreComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<CameraComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<LightComponent>(JsonEntity, &Actor);
+			ComponentDeserializer<SkyLightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Actor);
+
+			if (Actor.HasComponent<SkyLightComponent>())
+			{
+				auto& SkyLight		  = Actor.GetComponent<SkyLightComponent>();
+				SkyLight.Handle.Type  = AssetType::Texture;
+				SkyLight.Handle.State = AssetState::Dirty;
+				SkyLight.Handle.Id	  = SkyLight.HandleId;
+			}
 
 			if (Actor.HasComponent<StaticMeshComponent>())
 			{

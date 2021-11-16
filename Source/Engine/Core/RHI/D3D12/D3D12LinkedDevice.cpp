@@ -11,7 +11,7 @@ static ConsoleVariable CVar_DescriptorAllocatorPageSize(
 static ConsoleVariable CVar_GlobalResourceViewHeapSize(
 	"D3D12.GlobalResourceViewHeapSize",
 	"Global Resource View Heap Size",
-	4096);
+	65535);
 
 static ConsoleVariable CVar_GlobalSamplerHeapSize(
 	"D3D12.GlobalSamplerHeapSize",

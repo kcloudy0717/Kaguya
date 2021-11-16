@@ -116,6 +116,8 @@ public:
 		InspectorWindow.Render();
 
 		const uint32_t ViewportWidth = ViewportWindow.Resolution.x, ViewportHeight = ViewportWindow.Resolution.y;
+		// const uint32_t ViewportWidth = 3840, ViewportHeight = 2160;
+		// const uint32_t ViewportWidth = 1920, ViewportHeight = 1080;
 
 		World->Update(DeltaTime);
 
@@ -166,7 +168,7 @@ public:
 		if (World)
 		{
 			Actor MainCamera = World->GetMainCamera();
-			auto&  Camera	  = MainCamera.GetComponent<CameraComponent>();
+			auto& Camera	 = MainCamera.GetComponent<CameraComponent>();
 
 			if (MainWindow->IsUsingRawInput())
 			{
@@ -240,15 +242,17 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	MainWindow.Show();
 
-	DeviceOptions DeviceOptions			   = {};
+	DeviceOptions DeviceOptions = {};
+#if _DEBUG
 	DeviceOptions.EnableDebugLayer		   = true;
 	DeviceOptions.EnableGpuBasedValidation = false;
 	DeviceOptions.EnableAutoDebugName	   = true;
-	DeviceFeatures DeviceFeatures		   = {};
-	DeviceFeatures.FeatureLevel			   = D3D_FEATURE_LEVEL_12_0;
-	DeviceFeatures.Raytracing			   = true;
-	DeviceFeatures.DynamicResources		   = true;
-	DeviceFeatures.MeshShaders			   = true;
+#endif
+	DeviceFeatures DeviceFeatures	= {};
+	DeviceFeatures.FeatureLevel		= D3D_FEATURE_LEVEL_12_0;
+	DeviceFeatures.Raytracing		= true;
+	DeviceFeatures.DynamicResources = true;
+	DeviceFeatures.MeshShaders		= true;
 	RenderCoreInitializer Render(DeviceOptions, DeviceFeatures);
 
 	World World;

@@ -32,7 +32,7 @@ struct Material
 		}
 	}
 
-	EBSDFTypes		  BSDFType		 = EBSDFTypes::Disney;
+	EBSDFTypes		  BSDFType		 = EBSDFTypes::Lambertian;
 	DirectX::XMFLOAT3 BaseColor		 = { 1, 1, 1 };
 	float			  Metallic		 = 0.0f;
 	float			  Subsurface	 = 0.0f;

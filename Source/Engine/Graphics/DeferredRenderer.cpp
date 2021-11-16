@@ -413,6 +413,13 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.Execute(Context);
 	RenderGraph.RenderGui();
 
+	const D3D12RenderTarget& RT = Registry.GetRenderTarget(GBuffer->Scope.Get<GBufferParams>().RenderTarget);
+	for (UINT i = 0; i < RT.Desc.NumRenderTargets; ++i)
+	{
+		Context.TransitionBarrier(RT.Desc.RenderTargets[i], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+	Context.FlushResourceBarriers();
+
 	ValidViewport = true;
 	Viewport	  = reinterpret_cast<void*>(Registry.GetTextureSRV(Views[ViewMode]).GetGpuHandle().ptr);
 }

@@ -23,4 +23,7 @@ private:
 	World*					 pWorld = nullptr;
 	std::vector<AssetHandle> ValidImageHandles;
 	std::vector<AssetHandle> ValidMeshHandles;
+
+	MeshImportOptions	 MeshOptions	= {};
+	TextureImportOptions TextureOptions = {};
 };

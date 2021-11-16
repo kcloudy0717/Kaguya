@@ -1,8 +1,6 @@
 #pragma once
-#include "D3D12Config.h"
-
 #include "d3dx12.h"
-#include "D3D12Utility.h"
+#include "D3D12Config.h"
 #include "D3D12Profiler.h"
 #include "Aftermath/AftermathCrashTracker.h"
 
@@ -174,4 +172,37 @@ struct D3D12ScopedMap
 	}
 
 	ID3D12Resource* Resource = nullptr;
+};
+
+struct ShaderIdentifier
+{
+	ShaderIdentifier() noexcept = default;
+
+	ShaderIdentifier(void* Data) { std::memcpy(this->Data, Data, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); }
+
+	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
+};
+
+constexpr DXGI_FORMAT GetValidDepthStencilViewFormat(DXGI_FORMAT Format)
+{
+	// TODO: Add more
+	switch (Format)
+	{
+	case DXGI_FORMAT_R32_TYPELESS:
+		return DXGI_FORMAT_D32_FLOAT;
+	default:
+		return Format;
+	};
+}
+
+constexpr DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
+{
+	// TODO: Add more
+	switch (Format)
+	{
+	case DXGI_FORMAT_D32_FLOAT:
+		return DXGI_FORMAT_R32_FLOAT;
+	default:
+		return Format;
+	}
 };

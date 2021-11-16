@@ -220,6 +220,33 @@ D3D12_GPU_VIRTUAL_ADDRESS D3D12ASBuffer::GetGpuVirtualAddress() const
 	return Resource->GetGPUVirtualAddress();
 }
 
+void D3D12ASBuffer::CreateShaderResourceView(D3D12ShaderResourceView& ShaderResourceView) const
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
+	ShaderResourceViewDesc.Format						   = DXGI_FORMAT_UNKNOWN;
+	ShaderResourceViewDesc.Shader4ComponentMapping		   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	ShaderResourceViewDesc.ViewDimension				   = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+	ShaderResourceViewDesc.RaytracingAccelerationStructure.Location = GetGpuVirtualAddress();
+
+	// When creating descriptor heap based acceleration structure SRVs, the resource parameter must be NULL, as the
+	// memory location comes as a GPUVA from the view description (D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV) shown
+	// below. E.g. CreateShaderResourceView(NULL,pViewDesc).
+	ShaderResourceView.Desc = ShaderResourceViewDesc;
+	ShaderResourceView.Descriptor.CreateView(ShaderResourceViewDesc, nullptr);
+}
+
+void D3D12ASBuffer::CreateNullShaderResourceView(D3D12ShaderResourceView& ShaderResourceView)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {};
+	ShaderResourceViewDesc.Format						   = DXGI_FORMAT_UNKNOWN;
+	ShaderResourceViewDesc.Shader4ComponentMapping		   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	ShaderResourceViewDesc.ViewDimension				   = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+	ShaderResourceViewDesc.RaytracingAccelerationStructure.Location = NULL;
+
+	ShaderResourceView.Desc = ShaderResourceViewDesc;
+	ShaderResourceView.Descriptor.CreateView(ShaderResourceViewDesc, nullptr);
+}
+
 D3D12Buffer::D3D12Buffer(
 	D3D12LinkedDevice*	 Parent,
 	UINT64				 SizeInBytes,
@@ -324,8 +351,10 @@ void D3D12Buffer::CreateUnorderedAccessView(
 D3D12Texture::D3D12Texture(
 	D3D12LinkedDevice*				 Parent,
 	const D3D12_RESOURCE_DESC&		 Desc,
-	std::optional<D3D12_CLEAR_VALUE> ClearValue /*= std::nullopt*/)
+	std::optional<D3D12_CLEAR_VALUE> ClearValue /*= std::nullopt*/,
+	bool							 IsCubemap /*= false*/)
 	: D3D12Resource(Parent, Desc, ClearValue, 0)
+	, IsCubemap(IsCubemap)
 {
 	// Textures can only be in device local heap
 	constexpr D3D12_HEAP_TYPE HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -374,6 +403,7 @@ void D3D12Texture::CreateShaderResourceView(
 	switch (Desc.Dimension)
 	{
 	case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+	{
 		if (Desc.DepthOrArraySize > 1)
 		{
 			ShaderResourceViewDesc.ViewDimension					  = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
@@ -391,7 +421,16 @@ void D3D12Texture::CreateShaderResourceView(
 			ShaderResourceViewDesc.Texture2D.PlaneSlice			 = 0;
 			ShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 		}
-		break;
+
+		if (IsCubemap)
+		{
+			ShaderResourceViewDesc.ViewDimension				   = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			ShaderResourceViewDesc.TextureCube.MostDetailedMip	   = MostDetailedMip;
+			ShaderResourceViewDesc.TextureCube.MipLevels		   = MipLevels;
+			ShaderResourceViewDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+		}
+	}
+	break;
 
 	default:
 		break;

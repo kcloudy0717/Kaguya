@@ -248,11 +248,6 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
-				if (!AccelerationStructure.IsValid())
-				{
-					return;
-				}
-
 				_declspec(align(256)) struct GlobalConstants
 				{
 					Hlsl::Camera Camera;
@@ -291,7 +286,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 				Context.SetPipelineState(RenderDevice.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
 				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RaytracingPipelineStates::GlobalRS));
 				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
+				Context->SetComputeRootDescriptorTable(1, AccelerationStructure.GetShaderResourceView().GetGpuHandle());
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
 
@@ -465,6 +460,10 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
 	RenderGraph.RenderGui();
+
+	const D3D12RenderTarget& RT = Registry.GetRenderTarget(Tonemap->Scope.Get<TonemapParameter>().RenderTarget);
+	Context.TransitionBarrier(RT.Desc.RenderTargets[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Context.FlushResourceBarriers();
 
 	RenderResourceHandle Handle;
 	// if (FSRState.Enable)

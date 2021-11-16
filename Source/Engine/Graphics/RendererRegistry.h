@@ -220,10 +220,10 @@ struct RootSignatures
 			{
 				Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
 
-				Builder.AddShaderResourceView<0, 0>(); // g_Scene				t0 | space0
-				Builder.AddShaderResourceView<1, 0>(); // g_Materials			t1 | space0
-				Builder.AddShaderResourceView<2, 0>(); // g_Lights				t2 | space0
-				Builder.AddShaderResourceView<3, 0>(); // g_Meshes				t3 | space0
+				Builder.AddRaytracingAccelerationStructure<0, 0>(); // g_Scene				t0 | space0
+				Builder.AddShaderResourceView<1, 0>();				// g_Materials			t1 | space0
+				Builder.AddShaderResourceView<2, 0>();				// g_Lights				t2 | space0
+				Builder.AddShaderResourceView<3, 0>();				// g_Meshes				t3 | space0
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
@@ -244,10 +244,7 @@ struct RootSignatures
 				Builder.Add32BitConstants<0, 0>(2);
 				Builder.AddConstantBufferView<1, 0>();
 
-				Builder.AddSampler<0, 0>(
-					D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-					D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-					1);
+				Builder.AddSampler<0, 0>(D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 1);
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();
@@ -475,9 +472,9 @@ struct RaytracingPipelineStates
 			{
 				Builder.AddConstantBufferView<0, 0>(); // g_SystemConstants		b0 | space0
 
-				Builder.AddShaderResourceView<0, 0>(); // g_Scene				t0 | space0
-				Builder.AddShaderResourceView<1, 0>(); // g_Materials			t1 | space0
-				Builder.AddShaderResourceView<2, 0>(); // g_Lights				t2 | space0
+				Builder.AddRaytracingAccelerationStructure<0, 0>(); // g_Scene				t0 | space0
+				Builder.AddShaderResourceView<1, 0>();				// g_Materials			t1 | space0
+				Builder.AddShaderResourceView<2, 0>();				// g_Lights				t2 | space0
 
 				Builder.AllowResourceDescriptorHeapIndexing();
 				Builder.AllowSampleDescriptorHeapIndexing();

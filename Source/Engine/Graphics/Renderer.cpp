@@ -1,6 +1,8 @@
 #include "Renderer.h"
 #include "RendererRegistry.h"
 
+using Microsoft::WRL::ComPtr;
+
 Renderer::Renderer(HWND HWnd)
 	: SwapChain(RenderCore::Device, HWnd)
 	, Allocator(64 * 1024)

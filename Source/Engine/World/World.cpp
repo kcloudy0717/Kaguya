@@ -33,6 +33,20 @@ auto World::GetMainCamera() -> Actor
 	return Actor(entt::null, this);
 }
 
+auto World::GetMainSkyLight() -> Actor
+{
+	auto View = Registry.view<SkyLightComponent>();
+	for (entt::entity Handle : View)
+	{
+		const auto& Component = View.get<SkyLightComponent>(Handle);
+		if (Component.Main)
+		{
+			return Actor(Handle, this);
+		}
+	}
+	return Actor(entt::null, this);
+}
+
 void World::Clear(bool AddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
@@ -43,6 +57,9 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 	{
 		Actor MainCamera = CreateActor("Main Camera");
 		MainCamera.AddComponent<CameraComponent>();
+
+		Actor MainSkyLight = CreateActor("Main Sky Light");
+		MainSkyLight.AddComponent<SkyLightComponent>();
 	}
 }
 
@@ -103,6 +120,22 @@ void World::ResolveComponentDependencies()
 				}
 			}
 		});
+
+	Registry.view<SkyLightComponent>().each(
+		[](SkyLightComponent& SkyLight)
+		{
+			auto Handle	 = SkyLight.Handle;
+			auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+			if (Texture)
+			{
+				SkyLight.HandleId = Handle.Id;
+				SkyLight.SRVIndex = Texture->SRV.GetIndex();
+			}
+			else
+			{
+				SkyLight.SRVIndex = -1;
+			}
+		});
 }
 
 void World::UpdateScripts(float DeltaTime)
@@ -151,6 +184,19 @@ void World::OnComponentAdded<LightComponent>(Actor Actor, LightComponent& Compon
 }
 
 template<>
+void World::OnComponentAdded<SkyLightComponent>(Actor Actor, SkyLightComponent& Component)
+{
+	if (!ActiveSkyLight)
+	{
+		ActiveSkyLight = &Component;
+	}
+	else
+	{
+		Component.Main = false;
+	}
+}
+
+template<>
 void World::OnComponentAdded<StaticMeshComponent>(Actor Actor, StaticMeshComponent& Component)
 {
 }
@@ -178,6 +224,11 @@ void World::OnComponentRemoved<CameraComponent>(Actor Actor, CameraComponent& Co
 
 template<>
 void World::OnComponentRemoved<LightComponent>(Actor Actor, LightComponent& Component)
+{
+}
+
+template<>
+void World::OnComponentRemoved<SkyLightComponent>(Actor Actor, SkyLightComponent& Component)
 {
 }
 

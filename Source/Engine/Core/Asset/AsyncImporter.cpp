@@ -98,6 +98,7 @@ void AsyncTextureImporter::Import(const TextureImportOptions& Options)
 	Texture* Texture	= AssetManager::CreateAsset<AssetType::Texture>();
 	Texture->Options	= Options;
 	Texture->Resolution = Vector2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
+	Texture->IsCubemap	= TexMetadata.IsCubemap();
 	Texture->Name		= Path.filename().string();
 	Texture->TexImage	= std::move(OutImage);
 	AssetManager::RequestUpload(Texture);

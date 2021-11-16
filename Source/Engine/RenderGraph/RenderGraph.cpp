@@ -21,17 +21,17 @@ void RenderPass::Write(RenderResourceHandle Resource)
 
 bool RenderPass::HasDependency(RenderResourceHandle Resource) const
 {
-	return ReadWrites.find(Resource) != ReadWrites.end();
+	return ReadWrites.contains(Resource);
 }
 
 bool RenderPass::WritesTo(RenderResourceHandle Resource) const
 {
-	return Writes.find(Resource) != Writes.end();
+	return Writes.contains(Resource);
 }
 
 bool RenderPass::ReadsFrom(RenderResourceHandle Resource) const
 {
-	return Reads.find(Resource) != Reads.end();
+	return Reads.contains(Resource);
 }
 
 bool RenderPass::HasAnyDependencies() const noexcept

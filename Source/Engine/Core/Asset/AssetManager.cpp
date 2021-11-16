@@ -138,8 +138,9 @@ void AssetManager::UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Upl
 		break;
 	}
 
-	AssetTexture->DxTexture = D3D12Texture(RenderCore::Device->GetDevice(), ResourceDesc, {});
-	AssetTexture->SRV		= D3D12ShaderResourceView(RenderCore::Device->GetDevice());
+	AssetTexture->DxTexture =
+		D3D12Texture(RenderCore::Device->GetDevice(), ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
+	AssetTexture->SRV = D3D12ShaderResourceView(RenderCore::Device->GetDevice());
 	AssetTexture->DxTexture.CreateShaderResourceView(AssetTexture->SRV);
 
 	std::vector<D3D12_SUBRESOURCE_DATA> Subresources(AssetTexture->TexImage.GetImageCount());

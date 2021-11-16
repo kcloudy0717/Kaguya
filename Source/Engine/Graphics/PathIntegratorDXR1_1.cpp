@@ -10,7 +10,6 @@ void PathIntegratorDXR1_1::SetViewportResolution(uint32_t Width, uint32_t Height
 void PathIntegratorDXR1_1::Initialize()
 {
 	Shaders::Compile();
-	Libraries::Compile();
 	RenderPasses::Compile();
 	RootSignatures::Compile(RenderDevice);
 	PipelineStates::Compile(RenderDevice);
@@ -181,11 +180,6 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 			{
 				D3D12ScopedEvent(Context, "Path Trace");
 
-				if (!AccelerationStructure.IsValid())
-				{
-					return;
-				}
-
 				_declspec(align(256)) struct GlobalConstants
 				{
 					Hlsl::Camera Camera;
@@ -206,6 +200,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 
 					DirectX::XMUINT2 Dimensions;
 					unsigned int	 AntiAliasing;
+					int				 Sky;
 				} g_GlobalConstants						= {};
 				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*World->ActiveCamera);
 				g_GlobalConstants.Resolution			= { static_cast<float>(Resolution.ViewportWidth),
@@ -220,11 +215,12 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
 				g_GlobalConstants.Dimensions			= { ViewData.RenderWidth, ViewData.RenderHeight };
 				g_GlobalConstants.AntiAliasing			= PathIntegratorState.Antialiasing;
+				g_GlobalConstants.Sky					= World->ActiveSkyLight->SRVIndex;
 
 				Context.SetPipelineState(RenderDevice.GetPipelineState(PipelineStates::RTX::PathTrace));
 				Context.SetComputeRootSignature(RenderDevice.GetRootSignature(RootSignatures::RTX::PathTrace));
 				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-				Context->SetComputeRootShaderResourceView(1, AccelerationStructure);
+				Context->SetComputeRootDescriptorTable(1, AccelerationStructure.GetShaderResourceView().GetGpuHandle());
 				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
 				Context->SetComputeRootShaderResourceView(4, Meshes.GetGpuVirtualAddress());
@@ -300,6 +296,10 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 	RenderGraph.Compile();
 	RenderGraph.Execute(Context);
 	RenderGraph.RenderGui();
+
+	const D3D12RenderTarget& RT = Registry.GetRenderTarget(Tonemap->Scope.Get<TonemapParameter>().RenderTarget);
+	Context.TransitionBarrier(RT.Desc.RenderTargets[0], D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Context.FlushResourceBarriers();
 
 	RenderResourceHandle Handle = Tonemap->Scope.Get<TonemapParameter>().Output;
 	ValidViewport				= true;

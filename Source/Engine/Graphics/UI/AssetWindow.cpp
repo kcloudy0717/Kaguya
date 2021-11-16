@@ -2,12 +2,19 @@
 #include <imgui_internal.h>
 #include "Core/Asset/AssetManager.h"
 
-enum AssetColumnID
+enum AssetTextureColumnID
 {
-	AssetColumnID_Id,
-	AssetColumnID_Name,
-	AssetColumnID_Payload,
-	AssetColumnCount
+	AssetTextureColumnID_Name,
+	AssetTextureColumnID_Payload,
+	AssetTextureColumnID_IsCubemap,
+	AssetTextureColumnCount
+};
+
+enum AssetMeshColumnID
+{
+	AssetMeshColumnID_Name,
+	AssetMeshColumnID_Payload,
+	AssetMeshColumnCount
 };
 
 void AssetWindow::OnRender()
@@ -16,72 +23,6 @@ void AssetWindow::OnRender()
 
 	if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight))
 	{
-		// if (ImGui::Button("Import new asset"))
-		//{
-		//	COMDLG_FILTERSPEC ComDlgFS[] = { { L"All Files (*.*)", L"*.*" } };
-
-		//	auto Path = Application::OpenDialog(ComDlgFS);
-		//	if (!Path.empty())
-		//	{
-		//		AssetType Type = AssetManager::GetAssetTypeFromExtension(Path);
-		//		if (Type != AssetType::Unknown)
-		//		{
-		//			ImGui::OpenPopup("Import Options");
-		//		}
-
-		//		// Always center this window when appearing
-		//		const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-		//		ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-		//		if (ImGui::BeginPopupModal("Import Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-		//		{
-		//			if (Type == AssetType::Mesh)
-		//			{
-		//				MeshImportOptions MeshOptions = {};
-		//				MeshOptions.Path			  = Path;
-		//				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
-		//				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
-		//				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
-		//				float Scale[3] = { MeshOptions.UniformScale,
-		//								   MeshOptions.UniformScale,
-		//								   MeshOptions.UniformScale };
-		//				ImGuizmo::RecomposeMatrixFromComponents(
-		//					MeshOptions.Translation.data(),
-		//					MeshOptions.Rotation.data(),
-		//					Scale,
-		//					reinterpret_cast<float*>(&MeshOptions.Matrix));
-
-		//				if (ImGui::Button("Ok", ImVec2(120, 0)))
-		//				{
-		//					AssetManager::AsyncLoadMesh(MeshOptions);
-
-		//					ImGui::CloseCurrentPopup();
-		//				}
-		//			}
-		//			else if (Type == AssetType::Texture)
-		//			{
-		//				TextureImportOptions TextureOptions = {};
-		//				TextureOptions.Path					= Path;
-		//				ImGui::Checkbox("sRGB", &TextureOptions.sRGB);
-		//				ImGui::Checkbox("Generate Mips", &TextureOptions.GenerateMips);
-		//				if (ImGui::Button("Ok", ImVec2(120, 0)))
-		//				{
-		//					AssetManager::AsyncLoadImage(TextureOptions);
-
-		//					ImGui::CloseCurrentPopup();
-		//				}
-		//			}
-
-		//			ImGui::SetItemDefaultFocus();
-		//			ImGui::SameLine();
-		//			if (ImGui::Button("Cancel", ImVec2(120, 0)))
-		//			{
-		//				ImGui::CloseCurrentPopup();
-		//			}
-		//			ImGui::EndPopup();
-		//		}
-		//	}
-		//}
-
 		{
 			if (ImGui::Button("Import Mesh"))
 			{
@@ -93,8 +34,6 @@ void AssetWindow::OnRender()
 			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 			if (ImGui::BeginPopupModal("Mesh Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				MeshImportOptions MeshOptions = {};
-
 				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
 				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
 				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
@@ -117,6 +56,7 @@ void AssetWindow::OnRender()
 						AssetManager::AsyncLoadMesh(MeshOptions);
 					}
 
+					MeshOptions = {};
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SetItemDefaultFocus();
@@ -139,8 +79,6 @@ void AssetWindow::OnRender()
 			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 			if (ImGui::BeginPopupModal("Texture Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				TextureImportOptions TextureOptions = {};
-
 				ImGui::Checkbox("sRGB", &TextureOptions.sRGB);
 				ImGui::Checkbox("Generate Mips", &TextureOptions.GenerateMips);
 
@@ -156,6 +94,7 @@ void AssetWindow::OnRender()
 						AssetManager::AsyncLoadImage(TextureOptions);
 					}
 
+					TextureOptions = {};
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SetItemDefaultFocus();
@@ -181,11 +120,11 @@ void AssetWindow::OnRender()
 										   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
 
 	ImGui::Text("Textures");
-	if (ImGui::BeginTable("TextureCache", AssetColumnCount, TableFlags))
+	if (ImGui::BeginTable("TextureCache", AssetTextureColumnCount, TableFlags))
 	{
-		ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Id);
-		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
-		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_Name);
+		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_Payload);
+		ImGui::TableSetupColumn("IsCubemap", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_IsCubemap);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
@@ -207,18 +146,14 @@ void AssetWindow::OnRender()
 		{
 			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; ++i)
 			{
+				AssetHandle Handle	= ValidImageHandles[i];
+				Texture*	Texture = AssetManager::GetTextureCache().GetAsset(Handle);
+
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
-					AssetHandle Handle = ValidImageHandles[i];
-
 					ImGui::TableNextColumn();
-					UINT id = Handle.Id;
-					ImGui::Text("%u", id);
-
-					ImGui::TableNextColumn();
-					Texture* Texture = AssetManager::GetTextureCache().GetAsset(Handle);
 					ImGui::TextUnformatted(Texture->Name.data());
 
 					ImGui::TableNextColumn();
@@ -232,6 +167,9 @@ void AssetWindow::OnRender()
 
 						ImGui::EndDragDropSource();
 					}
+
+					ImGui::TableNextColumn();
+					ImGui::Text(Texture->IsCubemap ? "true" : "false");
 				}
 				ImGui::PopID();
 			}
@@ -253,11 +191,10 @@ void AssetWindow::OnRender()
 	}
 
 	ImGui::Text("Meshes");
-	if (ImGui::BeginTable("MeshCache", AssetColumnCount, TableFlags))
+	if (ImGui::BeginTable("MeshCache", AssetMeshColumnCount, TableFlags))
 	{
-		ImGui::TableSetupColumn("Id", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Id);
-		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Name);
-		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthFixed, 5.0f, AssetColumnID_Payload);
+		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetMeshColumnID_Name);
+		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetMeshColumnID_Payload);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
@@ -278,18 +215,14 @@ void AssetWindow::OnRender()
 		{
 			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; i++)
 			{
+				AssetHandle Handle = ValidMeshHandles[i];
+				Mesh*		Mesh   = AssetManager::GetMeshCache().GetAsset(Handle);
+
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
-					AssetHandle Handle = ValidMeshHandles[i];
-
 					ImGui::TableNextColumn();
-					UINT id = Handle.Id;
-					ImGui::Text("%u", id);
-
-					ImGui::TableNextColumn();
-					Mesh* Mesh = AssetManager::GetMeshCache().GetAsset(Handle);
 					ImGui::TextUnformatted(Mesh->Name.data());
 
 					ImGui::TableNextColumn();

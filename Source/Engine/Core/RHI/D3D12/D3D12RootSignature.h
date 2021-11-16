@@ -185,6 +185,14 @@ public:
 	}
 
 	template<UINT ShaderRegister, UINT RegisterSpace>
+	void AddRaytracingAccelerationStructure(D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+	{
+		D3D12DescriptorTable DescriptorTable(1);
+		DescriptorTable.AddSRVRange<ShaderRegister, RegisterSpace>(1, Flags);
+		AddDescriptorTable(DescriptorTable);
+	}
+
+	template<UINT ShaderRegister, UINT RegisterSpace>
 	void AddSampler(
 		D3D12_FILTER			   Filter,
 		D3D12_TEXTURE_ADDRESS_MODE AddressUVW,

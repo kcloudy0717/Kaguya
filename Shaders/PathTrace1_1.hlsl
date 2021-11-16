@@ -44,6 +44,7 @@ struct GlobalConstants
 
 	uint2 Dimensions;
 	uint  AntiAliasing;
+	int	  Sky;
 };
 
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b0, space0);
@@ -178,8 +179,17 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 
 		if (status == COMMITTED_NOTHING)
 		{
-			float t = 0.5f * (q.WorldRayDirection().y + 1.0f);
-			L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_GlobalConstants.SkyIntensity;
+			if (g_GlobalConstants.Sky != -1)
+			{
+				TextureCube Sky = g_TextureCubeTable[g_GlobalConstants.Sky];
+				L += beta * Sky.SampleLevel(g_SamplerLinearWrap, q.WorldRayDirection(), 0.0f).rgb *
+					 g_GlobalConstants.SkyIntensity;
+			}
+			else
+			{
+				float t = 0.5f * (q.WorldRayDirection().y + 1.0f);
+				L += beta * lerp(float3(1.0, 1.0, 1.0), float3(0.5, 0.7, 1.0), t) * g_GlobalConstants.SkyIntensity;
+			}
 			break;
 		}
 

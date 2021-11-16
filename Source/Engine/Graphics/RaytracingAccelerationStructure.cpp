@@ -9,6 +9,10 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 	StaticMeshes.reserve(NumInstances);
 
 	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
+
+	Null = RenderCore::Device->GetDevice()->ReserveShaderResourceView();
+	D3D12ASBuffer::CreateNullShaderResourceView(Null);
+	SRV = RenderCore::Device->GetDevice()->ReserveShaderResourceView();
 }
 
 void RaytracingAccelerationStructure::Initialize()
@@ -41,7 +45,7 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, St
 	RaytracingInstanceDesc.InstanceMask						   = RAYTRACING_INSTANCEMASK_ALL;
 	RaytracingInstanceDesc.InstanceContributionToHitGroupIndex = CurrentInstanceContributionToHitGroupIndex;
 	RaytracingInstanceDesc.Flags							   = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-	RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved later
+	RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved in Build
 
 	TopLevelAccelerationStructure.AddInstance(RaytracingInstanceDesc);
 	StaticMeshes.push_back(StaticMesh);
@@ -52,23 +56,23 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, St
 
 void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 {
-	bool AnyBuild = false;
+	bool AnyBlasBuild = false;
 
+	// Build BLASes (If any)
 	for (auto Geometry : ReferencedGeometries)
 	{
 		if (Geometry->BlasValid)
 		{
 			continue;
 		}
-
 		Geometry->BlasValid = true;
-		AnyBuild |= Geometry->BlasValid;
+		AnyBlasBuild |= Geometry->BlasValid;
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
 		Geometry->BlasIndex = Manager.Build(Context.CommandListHandle.GetGraphicsCommandList4(), Inputs);
 	}
 
-	if (AnyBuild)
+	if (AnyBlasBuild)
 	{
 		Context.UAVBarrier(nullptr);
 		Context.FlushResourceBarriers();
@@ -115,6 +119,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	{
 		// TLAS Result
 		TlasResult = D3D12ASBuffer(RenderCore::Device->GetDevice(), ResultSize);
+		TlasResult.CreateShaderResourceView(SRV);
 	}
 
 	// Create the description for each instance
