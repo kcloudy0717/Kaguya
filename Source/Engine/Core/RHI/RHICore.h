@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-enum class PrimitiveTopology
+enum class RHI_PRIMITIVE_TOPOLOGY
 {
 	Undefined,
 	Point,
@@ -9,7 +9,7 @@ enum class PrimitiveTopology
 	Patch
 };
 
-enum class ComparisonFunc
+enum class RHI_COMPARISON_FUNC
 {
 	Never,		  // Comparison always fails
 	Less,		  // Passes if source is less than the destination
@@ -21,14 +21,14 @@ enum class ComparisonFunc
 	Always		  // Comparison always succeeds
 };
 
-enum class ESamplerFilter
+enum class RHI_SAMPLER_FILTER
 {
 	Point,
 	Linear,
 	Anisotropic
 };
 
-enum class ESamplerAddressMode
+enum class RHI_SAMPLER_ADDRESS_MODE
 {
 	Wrap,
 	Mirror,
@@ -36,35 +36,35 @@ enum class ESamplerAddressMode
 	Border,
 };
 
-constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE ToD3D12PrimitiveTopologyType(PrimitiveTopology Topology)
+constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE ToD3D12PrimitiveTopologyType(RHI_PRIMITIVE_TOPOLOGY Topology)
 {
 	// clang-format off
 	switch (Topology)
 	{
-	case PrimitiveTopology::Undefined:	return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-	case PrimitiveTopology::Point:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-	case PrimitiveTopology::Line:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-	case PrimitiveTopology::Triangle:	return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	case PrimitiveTopology::Patch:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+	case RHI_PRIMITIVE_TOPOLOGY::Undefined:	return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+	case RHI_PRIMITIVE_TOPOLOGY::Point:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	case RHI_PRIMITIVE_TOPOLOGY::Line:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case RHI_PRIMITIVE_TOPOLOGY::Triangle:	return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case RHI_PRIMITIVE_TOPOLOGY::Patch:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
 	default:							return D3D12_PRIMITIVE_TOPOLOGY_TYPE();
 	}
 	// clang-format on
 }
 
-constexpr D3D12_COMPARISON_FUNC ToD3D12ComparisonFunc(ComparisonFunc Func)
+constexpr D3D12_COMPARISON_FUNC ToD3D12ComparisonFunc(RHI_COMPARISON_FUNC Func)
 {
 	// clang-format off
 	switch (Func)
 	{
-	case ComparisonFunc::Never:			return D3D12_COMPARISON_FUNC_NEVER;
-	case ComparisonFunc::Less:			return D3D12_COMPARISON_FUNC_LESS;
-	case ComparisonFunc::Equal:			return D3D12_COMPARISON_FUNC_EQUAL;
-	case ComparisonFunc::LessEqual:		return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	case ComparisonFunc::Greater:		return D3D12_COMPARISON_FUNC_GREATER;
-	case ComparisonFunc::NotEqual:		return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-	case ComparisonFunc::GreaterEqual:	return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-	case ComparisonFunc::Always:		return D3D12_COMPARISON_FUNC_ALWAYS;
-	default:							return D3D12_COMPARISON_FUNC();
+	case RHI_COMPARISON_FUNC::Never:		return D3D12_COMPARISON_FUNC_NEVER;
+	case RHI_COMPARISON_FUNC::Less:			return D3D12_COMPARISON_FUNC_LESS;
+	case RHI_COMPARISON_FUNC::Equal:		return D3D12_COMPARISON_FUNC_EQUAL;
+	case RHI_COMPARISON_FUNC::LessEqual:	return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case RHI_COMPARISON_FUNC::Greater:		return D3D12_COMPARISON_FUNC_GREATER;
+	case RHI_COMPARISON_FUNC::NotEqual:		return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case RHI_COMPARISON_FUNC::GreaterEqual:	return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case RHI_COMPARISON_FUNC::Always:		return D3D12_COMPARISON_FUNC_ALWAYS;
+	default:								return D3D12_COMPARISON_FUNC();
 	}
 	// clang-format on
 }

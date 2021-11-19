@@ -29,7 +29,7 @@ DepthStencilState::DepthStencilState()
 	// Default states https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc#remarks
 	SetDepthEnable(true);
 	SetDepthWrite(true);
-	SetDepthFunc(ComparisonFunc::Less);
+	SetDepthFunc(RHI_COMPARISON_FUNC::Less);
 	SetStencilEnable(false);
 	SetStencilReadMask(0xff);
 	SetStencilWriteMask(0xff);
@@ -45,7 +45,7 @@ void DepthStencilState::SetDepthWrite(bool DepthWrite)
 	this->DepthWrite = DepthWrite;
 }
 
-void DepthStencilState::SetDepthFunc(ComparisonFunc DepthFunc)
+void DepthStencilState::SetDepthFunc(RHI_COMPARISON_FUNC DepthFunc)
 {
 	this->DepthFunc = DepthFunc;
 }
@@ -66,29 +66,29 @@ void DepthStencilState::SetStencilWriteMask(UINT8 StencilWriteMask)
 }
 
 void DepthStencilState::SetStencilOp(
-	EFace	   Face,
-	EStencilOp StencilFailOp,
-	EStencilOp StencilDepthFailOp,
-	EStencilOp StencilPassOp)
+	FACE	   Face,
+	STENCIL_OP StencilFailOp,
+	STENCIL_OP StencilDepthFailOp,
+	STENCIL_OP StencilPassOp)
 {
-	if (Face == EFace::FrontAndBack)
+	if (Face == FACE::FrontAndBack)
 	{
-		SetStencilOp(EFace::Front, StencilFailOp, StencilDepthFailOp, StencilPassOp);
-		SetStencilOp(EFace::Back, StencilFailOp, StencilDepthFailOp, StencilPassOp);
+		SetStencilOp(FACE::Front, StencilFailOp, StencilDepthFailOp, StencilPassOp);
+		SetStencilOp(FACE::Back, StencilFailOp, StencilDepthFailOp, StencilPassOp);
 	}
-	Stencil& Stencil	= Face == EFace::Front ? FrontFace : BackFace;
+	Stencil& Stencil	= Face == FACE::Front ? FrontFace : BackFace;
 	Stencil.FailOp		= StencilFailOp;
 	Stencil.DepthFailOp = StencilDepthFailOp;
 	Stencil.PassOp		= StencilPassOp;
 }
 
-void DepthStencilState::SetStencilFunc(EFace Face, ComparisonFunc StencilFunc)
+void DepthStencilState::SetStencilFunc(FACE Face, RHI_COMPARISON_FUNC StencilFunc)
 {
-	if (Face == EFace::FrontAndBack)
+	if (Face == FACE::FrontAndBack)
 	{
-		SetStencilFunc(EFace::Front, StencilFunc);
-		SetStencilFunc(EFace::Back, StencilFunc);
+		SetStencilFunc(FACE::Front, StencilFunc);
+		SetStencilFunc(FACE::Back, StencilFunc);
 	}
-	Stencil& Stencil = Face == EFace::Front ? FrontFace : BackFace;
+	Stencil& Stencil = Face == FACE::Front ? FrontFace : BackFace;
 	Stencil.Func	 = StencilFunc;
 }

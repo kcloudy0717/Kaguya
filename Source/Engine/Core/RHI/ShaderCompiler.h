@@ -28,13 +28,13 @@ private:
 		}                                                                                                              \
 	}
 
-enum class EShaderModel
+enum class SHADER_MODEL
 {
 	ShaderModel_6_5,
 	ShaderModel_6_6
 };
 
-enum class EShaderType
+enum class SHADER_TYPE
 {
 	Vertex,
 	Hull,
@@ -74,7 +74,7 @@ class Shader
 {
 public:
 	Shader() noexcept = default;
-	Shader(EShaderType ShaderType, const ShaderCompilationResult& Result) noexcept
+	Shader(SHADER_TYPE ShaderType, const ShaderCompilationResult& Result) noexcept
 		: ShaderType(ShaderType)
 		, Binary(Result.Binary)
 		, PdbName(Result.PdbName)
@@ -93,7 +93,7 @@ public:
 	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
 
 private:
-	EShaderType						 ShaderType;
+	SHADER_TYPE						 ShaderType;
 	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
 	std::wstring					 PdbName;
 	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
@@ -140,16 +140,16 @@ class ShaderCompiler
 {
 public:
 	ShaderCompiler()
-		: ShaderModel(EShaderModel::ShaderModel_6_5)
+		: ShaderModel(SHADER_MODEL::ShaderModel_6_5)
 	{
 	}
 
 	void Initialize();
 
-	void SetShaderModel(EShaderModel ShaderModel) noexcept;
+	void SetShaderModel(SHADER_MODEL ShaderModel) noexcept;
 
 	[[nodiscard]] Shader CompileShader(
-		EShaderType					 ShaderType,
+		SHADER_TYPE					 ShaderType,
 		const std::filesystem::path& Path,
 		const ShaderCompileOptions&	 Options) const;
 
@@ -165,7 +165,7 @@ public:
 private:
 	[[nodiscard]] std::wstring GetShaderModelString() const;
 
-	[[nodiscard]] std::wstring ShaderProfileString(EShaderType ShaderType) const;
+	[[nodiscard]] std::wstring ShaderProfileString(SHADER_TYPE ShaderType) const;
 
 	[[nodiscard]] std::wstring LibraryProfileString() const;
 
@@ -179,5 +179,5 @@ private:
 	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
 	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
 	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
-	EShaderModel							   ShaderModel;
+	SHADER_MODEL							   ShaderModel;
 };

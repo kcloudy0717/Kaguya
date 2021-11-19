@@ -41,13 +41,13 @@ void ShaderCompiler::Initialize()
 	VERIFY_DXC_API(Utils->CreateDefaultIncludeHandler(&DefaultIncludeHandler));
 }
 
-void ShaderCompiler::SetShaderModel(EShaderModel ShaderModel) noexcept
+void ShaderCompiler::SetShaderModel(SHADER_MODEL ShaderModel) noexcept
 {
 	this->ShaderModel = ShaderModel;
 }
 
 Shader ShaderCompiler::CompileShader(
-	EShaderType					 ShaderType,
+	SHADER_TYPE					 ShaderType,
 	const std::filesystem::path& Path,
 	const ShaderCompileOptions&	 Options) const
 {
@@ -97,10 +97,10 @@ std::wstring ShaderCompiler::GetShaderModelString() const
 	std::wstring ShaderModelString;
 	switch (ShaderModel)
 	{
-	case EShaderModel::ShaderModel_6_5:
+	case SHADER_MODEL::ShaderModel_6_5:
 		ShaderModelString = L"6_5";
 		break;
-	case EShaderModel::ShaderModel_6_6:
+	case SHADER_MODEL::ShaderModel_6_6:
 		ShaderModelString = L"6_6";
 		break;
 	}
@@ -108,33 +108,34 @@ std::wstring ShaderCompiler::GetShaderModelString() const
 	return ShaderModelString;
 }
 
-std::wstring ShaderCompiler::ShaderProfileString(EShaderType ShaderType) const
+std::wstring ShaderCompiler::ShaderProfileString(SHADER_TYPE ShaderType) const
 {
 	std::wstring ProfileString;
 	switch (ShaderType)
 	{
-	case EShaderType::Vertex:
+		using enum SHADER_TYPE;
+	case Vertex:
 		ProfileString = L"vs_";
 		break;
-	case EShaderType::Hull:
+	case Hull:
 		ProfileString = L"hs_";
 		break;
-	case EShaderType::Domain:
+	case Domain:
 		ProfileString = L"ds_";
 		break;
-	case EShaderType::Geometry:
+	case Geometry:
 		ProfileString = L"gs_";
 		break;
-	case EShaderType::Pixel:
+	case Pixel:
 		ProfileString = L"ps_";
 		break;
-	case EShaderType::Compute:
+	case Compute:
 		ProfileString = L"cs_";
 		break;
-	case EShaderType::Amplification:
+	case Amplification:
 		ProfileString = L"as_";
 		break;
-	case EShaderType::Mesh:
+	case Mesh:
 		ProfileString = L"ms_";
 		break;
 	}
@@ -155,17 +156,21 @@ ShaderCompilationResult ShaderCompiler::Compile(
 {
 	ShaderCompilationResult Result = {};
 
+	std::filesystem::path PdbPath = Path;
+	PdbPath.replace_extension(L"pdb");
+
 	// https://developer.nvidia.com/dx12-dos-and-donts
-	LPCWSTR DefaultArguments[] = {
+	LPCWSTR Arguments[] = {
 		// Use the /all_resources_bound / D3DCOMPILE_ALL_RESOURCES_BOUND compile flag if possible
 		// This allows for the compiler to do a better job at optimizing texture accesses. We have
 		// seen frame rate improvements of > 1 % when toggling this flag on.
 		L"-all_resources_bound",
+		L"-WX", // Warnings as errors
+		L"-Zi", // Debug info
+		L"-Fd",
+		PdbPath.c_str(), // Shader Pdb
 #ifdef _DEBUG
-		L"-WX",			  // Warnings as errors
-		L"-Zi",			  // Debug info
-		L"-Qembed_debug", // Embed debug info into the shader
-		L"-Od",			  // Disable optimization
+		L"-Od", // Disable optimization
 #else
 		L"-O3", // Optimization level 3
 #endif
@@ -178,8 +183,8 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		Path.c_str(),
 		EntryPoint.data(),
 		Profile.data(),
-		DefaultArguments,
-		ARRAYSIZE(DefaultArguments),
+		Arguments,
+		ARRAYSIZE(Arguments),
 		ShaderDefines.data(),
 		static_cast<UINT32>(ShaderDefines.size()),
 		&DxcCompilerArgs));
@@ -222,6 +227,11 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		{
 			Result.PdbName = Name->GetStringPointer();
 		}
+
+		// Save pdb
+		FileStream	 Stream(PdbPath / Result.PdbName, FileMode::Create, FileAccess::Write);
+		BinaryWriter Writer(Stream);
+		Writer.Write(Result.Pdb->GetBufferPointer(), Result.Pdb->GetBufferSize());
 	}
 
 	if (DxcResult->HasOutput(DXC_OUT_SHADER_HASH))

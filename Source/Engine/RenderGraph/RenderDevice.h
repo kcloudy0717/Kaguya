@@ -13,14 +13,8 @@ public:
 		Handle.Id	   = 0;
 	}
 
-	// static TDerived& Get()
-	//{
-	//	static TDerived Instance;
-	//	return Instance;
-	//}
-
 	template<typename... TArgs>
-	[[nodiscard]] auto Construct(TArgs&&... Args) -> RenderResourceHandle
+	[[nodiscard]] auto Add(TArgs&&... Args) -> RenderResourceHandle
 	{
 		RenderResourceHandle NewHandle = Handle;
 		Registry.emplace_back(std::forward<TArgs>(Args)...);

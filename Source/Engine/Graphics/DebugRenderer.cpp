@@ -6,14 +6,14 @@ void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 	{
 		ShaderCompileOptions Options(L"VSMain");
 		VS = RenderCore::Compiler->CompileShader(
-			EShaderType::Vertex,
+			SHADER_TYPE::Vertex,
 			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
 			Options);
 	}
 	{
 		ShaderCompileOptions Options(L"PSMain");
 		PS = RenderCore::Compiler->CompileShader(
-			EShaderType::Pixel,
+			SHADER_TYPE::Pixel,
 			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
 			Options);
 	}
@@ -45,7 +45,7 @@ void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 	} Stream;
 	Stream.RootSignature		 = Rs.get();
 	Stream.InputLayout			 = InputLayout;
-	Stream.PrimitiveTopologyType = PrimitiveTopology::Line;
+	Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Line;
 	Stream.VS					 = &VS;
 	Stream.PS					 = &PS;
 	Stream.DepthStencilState	 = DepthStencilState;

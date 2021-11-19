@@ -39,14 +39,14 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 		return;
 	}
 
-	bool SubobjectSeen[static_cast<UINT>(PipelineStateSubobjectType::NumTypes)] = {};
+	bool SubobjectSeen[static_cast<UINT>(RHI_PIPELINE_STATE_SUBOBJECT_TYPE::NumTypes)] = {};
 	for (SIZE_T CurOffset = 0, SizeOfSubobject = 0; CurOffset < Desc.SizeInBytes; CurOffset += SizeOfSubobject)
 	{
 		BYTE* Stream		= static_cast<BYTE*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
-		auto  SubobjectType = *reinterpret_cast<PipelineStateSubobjectType*>(Stream);
+		auto  SubobjectType = *reinterpret_cast<RHI_PIPELINE_STATE_SUBOBJECT_TYPE*>(Stream);
 		UINT  Index			= static_cast<UINT>(SubobjectType);
 
-		if (Index < 0 || Index >= static_cast<UINT>(PipelineStateSubobjectType::NumTypes))
+		if (Index < 0 || Index >= static_cast<UINT>(RHI_PIPELINE_STATE_SUBOBJECT_TYPE::NumTypes))
 		{
 			Callbacks->ErrorUnknownSubobject(Index);
 			return;
@@ -60,59 +60,59 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 
 		switch (SubobjectType)
 		{
-		case PipelineStateSubobjectType::RootSignature:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature:
 			Callbacks->RootSignatureCb(*reinterpret_cast<PipelineStateStreamRootSignature*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamRootSignature);
 			break;
-		case PipelineStateSubobjectType::VS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS:
 			Callbacks->VSCb(*reinterpret_cast<PipelineStateStreamVS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamVS);
 			break;
-		case PipelineStateSubobjectType::PS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS:
 			Callbacks->PSCb(*reinterpret_cast<PipelineStateStreamPS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamPS);
 			break;
-		case PipelineStateSubobjectType::DS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DS:
 			Callbacks->DSCb(*reinterpret_cast<PipelineStateStreamDS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamPS);
 			break;
-		case PipelineStateSubobjectType::HS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::HS:
 			Callbacks->HSCb(*reinterpret_cast<PipelineStateStreamHS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamHS);
 			break;
-		case PipelineStateSubobjectType::GS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::GS:
 			Callbacks->GSCb(*reinterpret_cast<PipelineStateStreamGS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamGS);
 			break;
-		case PipelineStateSubobjectType::CS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS:
 			Callbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamCS);
 			break;
-		case PipelineStateSubobjectType::MS:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS:
 			Callbacks->MSCb(*reinterpret_cast<PipelineStateStreamMS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamMS);
 			break;
-		case PipelineStateSubobjectType::BlendState:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState:
 			Callbacks->BlendStateCb(*reinterpret_cast<PipelineStateStreamBlendState*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamBlendState);
 			break;
-		case PipelineStateSubobjectType::RasterizerState:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState:
 			Callbacks->RasterizerStateCb(*reinterpret_cast<PipelineStateStreamRasterizerState*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamRasterizerState);
 			break;
-		case PipelineStateSubobjectType::DepthStencilState:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState:
 			Callbacks->DepthStencilStateCb(*reinterpret_cast<PipelineStateStreamDepthStencilState*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamDepthStencilState);
 			break;
-		case PipelineStateSubobjectType::InputLayout:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout:
 			Callbacks->InputLayoutCb(*reinterpret_cast<PipelineStateStreamInputLayout*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamInputLayout);
 			break;
-		case PipelineStateSubobjectType::PrimitiveTopology:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology:
 			Callbacks->PrimitiveTopologyTypeCb(*reinterpret_cast<PipelineStateStreamPrimitiveTopology*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamPrimitiveTopology);
 			break;
-		case PipelineStateSubobjectType::RenderPass:
+		case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderPass:
 			Callbacks->RenderPassCb(*reinterpret_cast<PipelineStateStreamRenderPass*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamRenderPass);
 			break;

@@ -52,7 +52,7 @@ struct Shaders
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			RTX::PathTrace = RenderCore::Compiler->CompileShader(
-				EShaderType::Compute,
+				SHADER_TYPE::Compute,
 				ExecutableDirectory / L"Shaders/PathTrace1_1.hlsl",
 				Options);
 		}
@@ -61,14 +61,14 @@ struct Shaders
 		{
 			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::FullScreenTriangle = RenderCore::Compiler->CompileShader(
-				EShaderType::Vertex,
+				SHADER_TYPE::Vertex,
 				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::GBuffer = RenderCore::Compiler->CompileShader(
-				EShaderType::Vertex,
+				SHADER_TYPE::Vertex,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
 				Options);
 		}
@@ -77,7 +77,7 @@ struct Shaders
 		{
 			ShaderCompileOptions Options(g_MSEntryPoint);
 			MS::Meshlet = RenderCore::Compiler->CompileShader(
-				EShaderType::Mesh,
+				SHADER_TYPE::Mesh,
 				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
 				Options);
 		}
@@ -86,21 +86,21 @@ struct Shaders
 		{
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::ToneMap = RenderCore::Compiler->CompileShader(
-				EShaderType::Pixel,
+				SHADER_TYPE::Pixel,
 				ExecutableDirectory / L"Shaders/ToneMap.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::GBuffer = RenderCore::Compiler->CompileShader(
-				EShaderType::Pixel,
+				SHADER_TYPE::Pixel,
 				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::Meshlet = RenderCore::Compiler->CompileShader(
-				EShaderType::Pixel,
+				SHADER_TYPE::Pixel,
 				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
 				Options);
 		}
@@ -113,7 +113,7 @@ struct Shaders
 			Options.SetDefine(L"SAMPLE_EASU", L"1");
 			Options.SetDefine(L"SAMPLE_RCAS", L"0");
 			CS::EASU = RenderCore::Compiler->CompileShader(
-				EShaderType::Compute,
+				SHADER_TYPE::Compute,
 				ExecutableDirectory / L"Shaders/FSR.hlsl",
 				Options);
 		}
@@ -124,21 +124,21 @@ struct Shaders
 			Options.SetDefine(L"SAMPLE_EASU", L"0");
 			Options.SetDefine(L"SAMPLE_RCAS", L"1");
 			CS::RCAS = RenderCore::Compiler->CompileShader(
-				EShaderType::Compute,
+				SHADER_TYPE::Compute,
 				ExecutableDirectory / L"Shaders/FSR.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCull = RenderCore::Compiler->CompileShader(
-				EShaderType::Compute,
+				SHADER_TYPE::Compute,
 				ExecutableDirectory / L"Shaders/IndirectCull.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCullMeshShaders = RenderCore::Compiler->CompileShader(
-				EShaderType::Compute,
+				SHADER_TYPE::Compute,
 				ExecutableDirectory / L"Shaders/IndirectCullMeshShader.hlsl",
 				Options);
 		}
@@ -169,8 +169,8 @@ struct RenderPasses
 			RenderPassDesc Desc		= {};
 			FLOAT		   Color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			Desc.AddRenderTarget({ .Format	   = D3D12SwapChain::Format_sRGB,
-								   .LoadOp	   = ELoadOp::Clear,
-								   .StoreOp	   = EStoreOp::Store,
+								   .LoadOp	   = RHI_LOAD_OP::Clear,
+								   .StoreOp	   = RHI_STORE_OP::Store,
 								   .ClearValue = CD3DX12_CLEAR_VALUE(D3D12SwapChain::Format, Color) });
 			TonemapRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
 		}
@@ -178,20 +178,20 @@ struct RenderPasses
 			RenderPassDesc Desc		= {};
 			FLOAT		   Color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R32G32B32A32_FLOAT,
-								   .LoadOp	   = ELoadOp::Clear,
-								   .StoreOp	   = EStoreOp::Store,
+								   .LoadOp	   = RHI_LOAD_OP::Clear,
+								   .StoreOp	   = RHI_STORE_OP::Store,
 								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color) });
 			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R32G32B32A32_FLOAT,
-								   .LoadOp	   = ELoadOp::Clear,
-								   .StoreOp	   = EStoreOp::Store,
+								   .LoadOp	   = RHI_LOAD_OP::Clear,
+								   .StoreOp	   = RHI_STORE_OP::Store,
 								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color) });
 			Desc.AddRenderTarget({ .Format	   = DXGI_FORMAT_R16G16_FLOAT,
-								   .LoadOp	   = ELoadOp::Clear,
-								   .StoreOp	   = EStoreOp::Store,
+								   .LoadOp	   = RHI_LOAD_OP::Clear,
+								   .StoreOp	   = RHI_STORE_OP::Store,
 								   .ClearValue = CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color) });
 			Desc.SetDepthStencil({ .Format	   = RenderCore::DepthFormat,
-								   .LoadOp	   = ELoadOp::Clear,
-								   .StoreOp	   = EStoreOp::Store,
+								   .LoadOp	   = RHI_LOAD_OP::Clear,
+								   .StoreOp	   = RHI_STORE_OP::Store,
 								   .ClearValue = CD3DX12_CLEAR_VALUE(RenderCore::DepthFormat, 1.0f, 0xFF) });
 			GBufferRenderPass = D3D12RenderPass(RenderCore::Device, Desc);
 		}
@@ -340,7 +340,7 @@ struct PipelineStates
 				PipelineStateStreamRenderPass		 RenderPass;
 			} Stream;
 			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::Tonemap);
-			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
 			Stream.VS					 = &Shaders::VS::FullScreenTriangle;
 			Stream.PS					 = &Shaders::PS::ToneMap;
 			Stream.DepthStencilState	 = DepthStencilState;
@@ -391,7 +391,7 @@ struct PipelineStates
 			} Stream;
 			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::GBuffer);
 			Stream.InputLayout			 = InputLayout;
-			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
 			Stream.VS					 = &Shaders::VS::GBuffer;
 			Stream.PS					 = &Shaders::PS::GBuffer;
 			Stream.DepthStencilState	 = DepthStencilState;
@@ -435,7 +435,7 @@ struct PipelineStates
 				PipelineStateStreamRenderPass		 RenderPass;
 			} Stream;
 			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::Meshlet);
-			Stream.PrimitiveTopologyType = PrimitiveTopology::Triangle;
+			Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
 			Stream.MS					 = &Shaders::MS::Meshlet;
 			Stream.PS					 = &Shaders::PS::Meshlet;
 			Stream.DepthStencilState	 = DepthStencilState;

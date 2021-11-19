@@ -31,7 +31,7 @@ RenderCoreInitializer::RenderCoreInitializer(const DeviceOptions& Options, const
 
 	Compiler = std::make_unique<ShaderCompiler>();
 	Compiler->Initialize();
-	Compiler->SetShaderModel(EShaderModel::ShaderModel_6_6);
+	Compiler->SetShaderModel(SHADER_MODEL::ShaderModel_6_6);
 
 	RenderCore::Device	 = Device.get();
 	RenderCore::Compiler = Compiler.get();

@@ -48,13 +48,13 @@ void BlendState::SetIndependentBlendEnable(bool IndependentBlendEnable)
 }
 
 void BlendState::SetRenderTargetBlendDesc(
-	UINT	Index,
-	Factor	SrcBlendRgb,
-	Factor	DstBlendRgb,
-	BlendOp BlendOpRgb,
-	Factor	SrcBlendAlpha,
-	Factor	DstBlendAlpha,
-	BlendOp BlendOpAlpha)
+	UINT	 Index,
+	FACTOR	 SrcBlendRgb,
+	FACTOR	 DstBlendRgb,
+	BLEND_OP BlendOpRgb,
+	FACTOR	 SrcBlendAlpha,
+	FACTOR	 DstBlendAlpha,
+	BLEND_OP BlendOpAlpha)
 {
 	RenderTarget RenderTarget  = {};
 	RenderTarget.BlendEnable   = true;

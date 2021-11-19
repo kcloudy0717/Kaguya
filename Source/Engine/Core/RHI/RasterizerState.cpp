@@ -20,8 +20,8 @@ RasterizerState::operator D3D12_RASTERIZER_DESC() const noexcept
 
 RasterizerState::RasterizerState()
 {
-	SetFillMode(EFillMode::Solid);
-	SetCullMode(ECullMode::Back);
+	SetFillMode(FILL_MODE::Solid);
+	SetCullMode(CULL_MODE::Back);
 	SetFrontCounterClockwise(false);
 	SetDepthBias(0);
 	SetDepthBiasClamp(0.0f);
@@ -33,12 +33,12 @@ RasterizerState::RasterizerState()
 	SetConservativeRaster(false);
 }
 
-void RasterizerState::SetFillMode(EFillMode FillMode)
+void RasterizerState::SetFillMode(FILL_MODE FillMode)
 {
 	this->FillMode = FillMode;
 }
 
-void RasterizerState::SetCullMode(ECullMode CullMode)
+void RasterizerState::SetCullMode(CULL_MODE CullMode)
 {
 	this->CullMode = CullMode;
 }

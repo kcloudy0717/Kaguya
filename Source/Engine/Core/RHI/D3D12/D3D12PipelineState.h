@@ -73,7 +73,7 @@ public:
 		this->InputLayout = InputLayout;
 	}
 
-	void PrimitiveTopologyTypeCb(PrimitiveTopology PrimitiveTopology) override
+	void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY PrimitiveTopology) override
 	{
 		Type					= ED3D12PipelineStateType::Graphics;
 		this->PrimitiveTopology = PrimitiveTopology;
@@ -90,7 +90,7 @@ public:
 		throw std::logic_error("The method or operation is not implemented.");
 	}
 
-	void ErrorDuplicateSubobject(PipelineStateSubobjectType) override
+	void ErrorDuplicateSubobject(RHI_PIPELINE_STATE_SUBOBJECT_TYPE) override
 	{
 		throw std::logic_error("The method or operation is not implemented.");
 	}
@@ -110,7 +110,7 @@ public:
 	RasterizerState			RasterizerState;
 	DepthStencilState		DepthStencilState;
 	D3D12InputLayout		InputLayout;
-	PrimitiveTopology		PrimitiveTopology;
+	RHI_PRIMITIVE_TOPOLOGY	PrimitiveTopology;
 	D3D12RenderPass*		RenderPass;
 };
 

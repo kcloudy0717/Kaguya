@@ -8,7 +8,7 @@ public:
 	/// <summary>
 	/// Defines triangle filling mode.
 	/// </summary>
-	enum class EFillMode
+	enum class FILL_MODE
 	{
 		Wireframe, // Draw lines connecting the vertices.
 		Solid	   // Fill the triangles formed by the vertices
@@ -17,7 +17,7 @@ public:
 	/// <summary>
 	/// Defines which face would be culled
 	/// </summary>
-	enum class ECullMode
+	enum class CULL_MODE
 	{
 		None,  // Always draw all triangles
 		Front, // Do not draw triangles that are front-facing
@@ -26,9 +26,9 @@ public:
 
 	RasterizerState();
 
-	void SetFillMode(EFillMode FillMode);
+	void SetFillMode(FILL_MODE FillMode);
 
-	void SetCullMode(ECullMode CullMode);
+	void SetCullMode(CULL_MODE CullMode);
 
 	// Determines how to interpret triangle direction
 	void SetFrontCounterClockwise(bool FrontCounterClockwise);
@@ -49,8 +49,8 @@ public:
 
 	void SetConservativeRaster(bool ConservativeRaster);
 
-	EFillMode	 FillMode;
-	ECullMode	 CullMode;
+	FILL_MODE	 FillMode;
+	CULL_MODE	 CullMode;
 	bool		 FrontCounterClockwise;
 	int			 DepthBias;
 	float		 DepthBiasClamp;
@@ -62,26 +62,26 @@ public:
 	bool		 ConservativeRaster;
 };
 
-constexpr D3D12_FILL_MODE ToD3D12FillMode(RasterizerState::EFillMode FillMode)
+constexpr D3D12_FILL_MODE ToD3D12FillMode(RasterizerState::FILL_MODE FillMode)
 {
 	// clang-format off
 	switch (FillMode)
 	{
-	case RasterizerState::EFillMode::Wireframe:	return D3D12_FILL_MODE_WIREFRAME;
-	case RasterizerState::EFillMode::Solid:		return D3D12_FILL_MODE_SOLID;
+	case RasterizerState::FILL_MODE::Wireframe:	return D3D12_FILL_MODE_WIREFRAME;
+	case RasterizerState::FILL_MODE::Solid:		return D3D12_FILL_MODE_SOLID;
 	}
 	return D3D12_FILL_MODE();
 	// clang-format on
 }
 
-constexpr D3D12_CULL_MODE ToD3D12CullMode(RasterizerState::ECullMode CullMode)
+constexpr D3D12_CULL_MODE ToD3D12CullMode(RasterizerState::CULL_MODE CullMode)
 {
 	// clang-format off
 	switch (CullMode)
 	{
-	case RasterizerState::ECullMode::None:	return D3D12_CULL_MODE_NONE;
-	case RasterizerState::ECullMode::Front:	return D3D12_CULL_MODE_FRONT;
-	case RasterizerState::ECullMode::Back:	return D3D12_CULL_MODE_BACK;
+	case RasterizerState::CULL_MODE::None:	return D3D12_CULL_MODE_NONE;
+	case RasterizerState::CULL_MODE::Front:	return D3D12_CULL_MODE_FRONT;
+	case RasterizerState::CULL_MODE::Back:	return D3D12_CULL_MODE_BACK;
 	}
 	return D3D12_CULL_MODE();
 	// clang-format on

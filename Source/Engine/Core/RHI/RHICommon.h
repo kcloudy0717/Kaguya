@@ -69,14 +69,14 @@ struct RHIRect
 	LONG Bottom;
 };
 
-enum class ELoadOp
+enum class RHI_LOAD_OP
 {
 	Load,
 	Clear,
 	Noop
 };
 
-enum class EStoreOp
+enum class RHI_STORE_OP
 {
 	Store,
 	Noop
@@ -87,8 +87,8 @@ struct RenderPassAttachment
 	[[nodiscard]] bool IsValid() const noexcept { return Format != DXGI_FORMAT_UNKNOWN; }
 
 	DXGI_FORMAT		  Format = DXGI_FORMAT_UNKNOWN;
-	ELoadOp			  LoadOp;
-	EStoreOp		  StoreOp;
+	RHI_LOAD_OP		  LoadOp;
+	RHI_STORE_OP	  StoreOp;
 	D3D12_CLEAR_VALUE ClearValue;
 };
 
@@ -117,7 +117,7 @@ private:
 	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 };
 
-enum class PipelineStateSubobjectType
+enum class RHI_PIPELINE_STATE_SUBOBJECT_TYPE
 {
 	RootSignature,
 	VS,
@@ -139,7 +139,7 @@ enum class PipelineStateSubobjectType
 
 // PSO desc is inspired by D3D12' PSO stream
 
-template<typename TDesc, PipelineStateSubobjectType TType>
+template<typename TDesc, RHI_PIPELINE_STATE_SUBOBJECT_TYPE TType>
 class alignas(void*) PipelineStateStreamSubobject
 {
 public:
@@ -167,25 +167,25 @@ public:
 	TDesc& operator->() noexcept { return Desc; }
 
 private:
-	PipelineStateSubobjectType Type;
-	TDesc					   Desc;
+	RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type;
+	TDesc							  Desc;
 };
 
 // clang-format off
-using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<D3D12RootSignature*, PipelineStateSubobjectType::RootSignature>;
-using PipelineStateStreamVS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::VS>;
-using PipelineStateStreamPS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::PS>;
-using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::DS>;
-using PipelineStateStreamHS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::HS>;
-using PipelineStateStreamGS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::GS>;
-using PipelineStateStreamCS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::CS>;
-using PipelineStateStreamMS					= PipelineStateStreamSubobject<Shader*, PipelineStateSubobjectType::MS>;
-using PipelineStateStreamBlendState			= PipelineStateStreamSubobject<BlendState, PipelineStateSubobjectType::BlendState>;
-using PipelineStateStreamRasterizerState	= PipelineStateStreamSubobject<RasterizerState, PipelineStateSubobjectType::RasterizerState>;
-using PipelineStateStreamDepthStencilState	= PipelineStateStreamSubobject<DepthStencilState, PipelineStateSubobjectType::DepthStencilState>;
-using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<D3D12InputLayout, PipelineStateSubobjectType::InputLayout>;
-using PipelineStateStreamPrimitiveTopology	= PipelineStateStreamSubobject<PrimitiveTopology, PipelineStateSubobjectType::PrimitiveTopology>;
-using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<D3D12RenderPass*, PipelineStateSubobjectType::RenderPass>;
+using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<D3D12RootSignature*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature>;
+using PipelineStateStreamVS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS>;
+using PipelineStateStreamPS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS>;
+using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DS>;
+using PipelineStateStreamHS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::HS>;
+using PipelineStateStreamGS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::GS>;
+using PipelineStateStreamCS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS>;
+using PipelineStateStreamMS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS>;
+using PipelineStateStreamBlendState			= PipelineStateStreamSubobject<BlendState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState>;
+using PipelineStateStreamRasterizerState	= PipelineStateStreamSubobject<RasterizerState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState>;
+using PipelineStateStreamDepthStencilState	= PipelineStateStreamSubobject<DepthStencilState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState>;
+using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<D3D12InputLayout, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout>;
+using PipelineStateStreamPrimitiveTopology	= PipelineStateStreamSubobject<RHI_PRIMITIVE_TOPOLOGY, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology>;
+using PipelineStateStreamRenderPass			= PipelineStateStreamSubobject<D3D12RenderPass*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderPass>;
 // clang-format on
 
 class IPipelineParserCallbacks
@@ -206,12 +206,12 @@ public:
 	virtual void RasterizerStateCb(const RasterizerState&) {}
 	virtual void DepthStencilStateCb(const DepthStencilState&) {}
 	virtual void InputLayoutCb(const D3D12InputLayout&) {}
-	virtual void PrimitiveTopologyTypeCb(PrimitiveTopology) {}
+	virtual void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY) {}
 	virtual void RenderPassCb(D3D12RenderPass*) {}
 
 	// Error Callbacks
 	virtual void ErrorBadInputParameter(UINT /*ParameterIndex*/) {}
-	virtual void ErrorDuplicateSubobject(PipelineStateSubobjectType /*DuplicateType*/) {}
+	virtual void ErrorDuplicateSubobject(RHI_PIPELINE_STATE_SUBOBJECT_TYPE /*DuplicateType*/) {}
 	virtual void ErrorUnknownSubobject(UINT /*UnknownTypeValue*/) {}
 };
 
@@ -268,27 +268,27 @@ struct DescriptorIndexPool
 	size_t				NumActiveElements = 0;
 };
 
-constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12BeginAccessType(ELoadOp Op)
+constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12BeginAccessType(RHI_LOAD_OP Op)
 {
 	// clang-format off
 	switch (Op)
 	{
-	case ELoadOp::Load:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-	case ELoadOp::Clear:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-	case ELoadOp::Noop:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-	default:				return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+	case RHI_LOAD_OP::Load:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+	case RHI_LOAD_OP::Clear:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+	case RHI_LOAD_OP::Noop:		return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+	default:					return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
 	}
 	// clang-format on
 }
 
-constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12EndAccessType(EStoreOp Op)
+constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE ToD3D12EndAccessType(RHI_STORE_OP Op)
 {
 	// clang-format off
 	switch (Op)
 	{
-	case EStoreOp::Store:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
-	case EStoreOp::Noop:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
-	default:				return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+	case RHI_STORE_OP::Store:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+	case RHI_STORE_OP::Noop:	return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+	default:					return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
 	}
 	// clang-format on
 }

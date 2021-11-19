@@ -6,14 +6,14 @@ class DepthStencilState
 public:
 	[[nodiscard]] explicit operator D3D12_DEPTH_STENCIL_DESC() const noexcept;
 
-	enum class EFace
+	enum class FACE
 	{
 		Front,
 		Back,
 		FrontAndBack
 	};
 
-	enum class EStencilOp
+	enum class STENCIL_OP
 	{
 		Keep,			  // Keep the stencil value
 		Zero,			  // Set the stencil value to zero
@@ -29,10 +29,10 @@ public:
 	{
 		[[nodiscard]] operator D3D12_DEPTH_STENCILOP_DESC() const noexcept;
 
-		EStencilOp FailOp	   = EStencilOp::Keep; // Stencil operation in case stencil test fails
-		EStencilOp DepthFailOp = EStencilOp::Keep; // Stencil operation in case stencil test passes but depth test fails
-		EStencilOp PassOp	   = EStencilOp::Keep; // Stencil operation in case stencil and depth tests pass
-		ComparisonFunc Func	   = ComparisonFunc::Always; // Stencil comparison function
+		STENCIL_OP FailOp	   = STENCIL_OP::Keep; // Stencil operation in case stencil test fails
+		STENCIL_OP DepthFailOp = STENCIL_OP::Keep; // Stencil operation in case stencil test passes but depth test fails
+		STENCIL_OP PassOp	   = STENCIL_OP::Keep; // Stencil operation in case stencil and depth tests pass
+		RHI_COMPARISON_FUNC Func	   = RHI_COMPARISON_FUNC::Always; // Stencil comparison function
 	};
 
 	DepthStencilState();
@@ -41,7 +41,7 @@ public:
 
 	void SetDepthWrite(bool DepthWrite);
 
-	void SetDepthFunc(ComparisonFunc DepthFunc);
+	void SetDepthFunc(RHI_COMPARISON_FUNC DepthFunc);
 
 	void SetStencilEnable(bool StencilEnable);
 
@@ -49,13 +49,13 @@ public:
 
 	void SetStencilWriteMask(UINT8 StencilWriteMask);
 
-	void SetStencilOp(EFace Face, EStencilOp StencilFailOp, EStencilOp StencilDepthFailOp, EStencilOp StencilPassOp);
+	void SetStencilOp(FACE Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp);
 
-	void SetStencilFunc(EFace Face, ComparisonFunc StencilFunc);
+	void SetStencilFunc(FACE Face, RHI_COMPARISON_FUNC StencilFunc);
 
 	bool		   DepthEnable;
 	bool		   DepthWrite;
-	ComparisonFunc DepthFunc;
+	RHI_COMPARISON_FUNC DepthFunc;
 	bool		   StencilEnable;
 	UINT8		   StencilReadMask;
 	UINT8		   StencilWriteMask;
@@ -63,19 +63,19 @@ public:
 	Stencil		   BackFace;
 };
 
-constexpr D3D12_STENCIL_OP ToD3D12StencilOp(DepthStencilState::EStencilOp Op)
+constexpr D3D12_STENCIL_OP ToD3D12StencilOp(DepthStencilState::STENCIL_OP Op)
 {
 	// clang-format off
 	switch (Op)
 	{
-	case DepthStencilState::EStencilOp::Keep:				return D3D12_STENCIL_OP_KEEP;
-	case DepthStencilState::EStencilOp::Zero:				return D3D12_STENCIL_OP_ZERO;
-	case DepthStencilState::EStencilOp::Replace:			return D3D12_STENCIL_OP_REPLACE;
-	case DepthStencilState::EStencilOp::IncreaseSaturate:	return D3D12_STENCIL_OP_INCR_SAT;
-	case DepthStencilState::EStencilOp::DecreaseSaturate:	return D3D12_STENCIL_OP_DECR_SAT;
-	case DepthStencilState::EStencilOp::Invert:				return D3D12_STENCIL_OP_INVERT;
-	case DepthStencilState::EStencilOp::Increase:			return D3D12_STENCIL_OP_INCR;
-	case DepthStencilState::EStencilOp::Decrease:			return D3D12_STENCIL_OP_DECR;
+	case DepthStencilState::STENCIL_OP::Keep:				return D3D12_STENCIL_OP_KEEP;
+	case DepthStencilState::STENCIL_OP::Zero:				return D3D12_STENCIL_OP_ZERO;
+	case DepthStencilState::STENCIL_OP::Replace:			return D3D12_STENCIL_OP_REPLACE;
+	case DepthStencilState::STENCIL_OP::IncreaseSaturate:	return D3D12_STENCIL_OP_INCR_SAT;
+	case DepthStencilState::STENCIL_OP::DecreaseSaturate:	return D3D12_STENCIL_OP_DECR_SAT;
+	case DepthStencilState::STENCIL_OP::Invert:				return D3D12_STENCIL_OP_INVERT;
+	case DepthStencilState::STENCIL_OP::Increase:			return D3D12_STENCIL_OP_INCR;
+	case DepthStencilState::STENCIL_OP::Decrease:			return D3D12_STENCIL_OP_DECR;
 	}
 	return D3D12_STENCIL_OP();
 	// clang-format on

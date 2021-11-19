@@ -23,7 +23,7 @@ void D3D12DescriptorHeap::Allocate(
 	D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
 	UINT&						 Index)
 {
-	std::scoped_lock _(Mutex);
+	std::scoped_lock Lock(Mutex);
 
 	Index				= static_cast<UINT>(IndexPool.Allocate());
 	CpuDescriptorHandle = this->GetCpuDescriptorHandle(Index);
@@ -32,7 +32,7 @@ void D3D12DescriptorHeap::Allocate(
 
 void D3D12DescriptorHeap::Release(UINT Index)
 {
-	std::scoped_lock _(Mutex);
+	std::scoped_lock Lock(Mutex);
 
 	IndexPool.Release(static_cast<size_t>(Index));
 }
