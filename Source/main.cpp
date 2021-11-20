@@ -115,9 +115,9 @@ public:
 		ConsoleWindow.Render();
 		InspectorWindow.Render();
 
-		// const uint32_t ViewportWidth = ViewportWindow.Resolution.x, ViewportHeight = ViewportWindow.Resolution.y;
+		const uint32_t ViewportWidth = ViewportWindow.Resolution.x, ViewportHeight = ViewportWindow.Resolution.y;
 		// const uint32_t ViewportWidth = 3840, ViewportHeight = 2160;
-		const uint32_t ViewportWidth = 1920, ViewportHeight = 1080;
+		// const uint32_t ViewportWidth = 1920, ViewportHeight = 1080;
 
 		World->Update(DeltaTime);
 
