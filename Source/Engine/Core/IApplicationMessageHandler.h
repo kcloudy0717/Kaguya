@@ -47,6 +47,4 @@ public:
 	virtual void OnWindowClose(Window* Window);
 
 	virtual void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height);
-
-	float DeltaTime;
 };

@@ -58,6 +58,8 @@ protected:
 
 	bool RequestExit = false;
 
+	float DeltaTime;
+
 private:
 	bool Initialized = false;
 

@@ -70,7 +70,8 @@ void Application::Run()
 		Stopwatch.Signal();
 		if (!Minimized)
 		{
-			Update(static_cast<float>(Stopwatch.GetDeltaTime()));
+			DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
+			Update(DeltaTime);
 		}
 	}
 
@@ -149,8 +150,6 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		return DefWindowProc(hWnd, uMsg, wParam, lParam);
 	}
 	Window* CurrentWindow = *WindowIter;
-
-	MessageHandler->DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
 
 	switch (uMsg)
 	{
