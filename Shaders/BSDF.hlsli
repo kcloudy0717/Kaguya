@@ -1,7 +1,5 @@
 #pragma once
-
 #include "BxDF.hlsli"
-#include "Disney.hlsli"
 #include "SharedTypes.hlsli"
 
 #define BSDFType_Lambertian (0)
@@ -322,10 +320,10 @@ float3 SampleLi(
 	{
 		float3			   ex	 = light.Points[1] - light.Points[0];
 		float3			   ey	 = light.Points[3] - light.Points[0];
-		SphericalRectangle squad = InitSphericalRectangle(light.Points[0], ex, ey, si.p);
+		SphericalRectangle squad = SphericalRectangle(light.Points[0], ex, ey, si.p);
 
 		// Pick a random point on the light
-		float3 Y = SampleSphericalRectangle(squad, Xi);
+		float3 Y = squad.Sample(Xi);
 
 		pWi	 = normalize(Y - si.p);
 		pPdf = 1.0f / squad.SolidAngle;

@@ -18,7 +18,7 @@ static ConsoleVariable CVar_Dred(
 static ConsoleVariable CVar_AsyncPsoCompilation(
 	"D3D12.AsyncPsoCompile",
 	"Enables asynchronous pipeline state object compilation",
-	true);
+	false);
 
 const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
 {
@@ -135,6 +135,7 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	AftermathCrashTracker.RegisterDevice(Device.Get());
 #endif
 
+	VERIFY_D3D12_API(Device.As(&Device1));
 	VERIFY_D3D12_API(Device.As(&Device5));
 	Device.As(&InfoQueue1);
 
@@ -160,17 +161,23 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
 
 		// Suppress messages based on their severity level
-		// D3D12_MESSAGE_SEVERITY Severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
+		D3D12_MESSAGE_SEVERITY Severities[] = { D3D12_MESSAGE_SEVERITY_INFO };
 
 		// Suppress individual messages by their ID
-		// D3D12_MESSAGE_ID IDs[] = {};
+		D3D12_MESSAGE_ID IDs[] = {
+			D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND, // Could happen when we are trying to load a PSO but is not
+														// present, then we will use this warning to create the PSO
+			D3D12_MESSAGE_ID_LOADPIPELINE_INVALIDDESC,	// Could happen when shader is modified and the resulting
+														// serialized PSO is not valid
+			D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME
+		};
 
-		// D3D12_INFO_QUEUE_FILTER InfoQueueFilter = {};
-		// InfoQueueFilter.DenyList.NumSeverities	= ARRAYSIZE(Severities);
-		// InfoQueueFilter.DenyList.pSeverityList	= Severities;
-		// InfoQueueFilter.DenyList.NumIDs			= ARRAYSIZE(IDs);
-		// InfoQueueFilter.DenyList.pIDList		= IDs;
-		// VERIFY_D3D12_API(InfoQueue->PushStorageFilter(&InfoQueueFilter));
+		D3D12_INFO_QUEUE_FILTER InfoQueueFilter = {};
+		InfoQueueFilter.DenyList.NumSeverities	= ARRAYSIZE(Severities);
+		InfoQueueFilter.DenyList.pSeverityList	= Severities;
+		InfoQueueFilter.DenyList.NumIDs			= ARRAYSIZE(IDs);
+		InfoQueueFilter.DenyList.pIDList		= IDs;
+		VERIFY_D3D12_API(InfoQueue->PushStorageFilter(&InfoQueueFilter));
 	}
 
 	if (InfoQueue1)
@@ -249,14 +256,13 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 	LinkedDevice.Initialize();
 
 	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
+
+	Library = std::make_unique<D3D12PipelineLibrary>(this, Application::ExecutableDirectory / L"PipelineLibrary.cache");
 }
 
 void D3D12Device::WaitIdle()
 {
-	LinkedDevice.GetGraphicsQueue()->WaitIdle();
-	LinkedDevice.GetAsyncComputeQueue()->WaitIdle();
-	LinkedDevice.GetCopyQueue1()->WaitIdle();
-	LinkedDevice.GetCopyQueue2()->WaitIdle();
+	LinkedDevice.WaitIdle();
 }
 
 bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
@@ -434,4 +440,111 @@ void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder&
 	RootSignatureBuilder.AddSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
 	// g_SamplerAnisotropicClamp
 	RootSignatureBuilder.AddSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+}
+
+D3D12PipelineLibrary::D3D12PipelineLibrary(D3D12Device* Parent, const std::filesystem::path& Path)
+	: D3D12DeviceChild(Parent)
+	, Path(Path)
+	, Stream(Path, FileMode::OpenOrCreate, FileAccess::ReadWrite)
+	, MappedFile(Stream)
+	, MappedView(MappedFile.CreateView())
+{
+	ID3D12Device1* Device1 = Parent->GetD3D12Device1();
+	if (Device1)
+	{
+		SIZE_T BlobLength  = MappedView.Read<SIZE_T>(0);
+		BYTE*  LibraryBlob = MappedView.GetView(sizeof(SIZE_T));
+
+		// Create a Pipeline Library from the serialized blob.
+		// Note: The provided Library Blob must remain valid for the lifetime of the object returned - for efficiency,
+		// the data is not copied.
+		HRESULT Result = Device1->CreatePipelineLibrary(LibraryBlob, BlobLength, IID_PPV_ARGS(&PipelineLibrary1));
+		switch (Result)
+		{
+		case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
+			break;
+
+		case E_INVALIDARG:					// The provided Library is corrupted or unrecognized.
+		case D3D12_ERROR_ADAPTER_NOT_FOUND: // The provided Library contains data for different hardware (Don't really
+											// need to clear the cache, could have a cache per adapter).
+		case D3D12_ERROR_DRIVER_VERSION_MISMATCH: // The provided Library contains data from an old driver or runtime.
+												  // We need to re-create it.
+			VERIFY_D3D12_API(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&PipelineLibrary1)));
+			break;
+
+		default:
+			VERIFY_D3D12_API(Result);
+		}
+	}
+}
+
+D3D12PipelineLibrary::~D3D12PipelineLibrary()
+{
+	// If we're not going to invalidate disk cache file, serialize the library to disk.
+	if (!ShouldInvalidateDiskCache)
+	{
+		if (PipelineLibrary1)
+		{
+			// Important: An ID3D12PipelineLibrary object becomes undefined when the underlying memory, that was used to
+			// initalize it, changes.
+
+			assert(PipelineLibrary1->GetSerializedSize() <= UINT64_MAX); // Code below casts to UINT64.
+			const UINT64 SerializedSize = static_cast<UINT64>(PipelineLibrary1->GetSerializedSize());
+			if (SerializedSize > 0)
+			{
+				// Grow the file if needed.
+				const size_t FileSize = sizeof(SIZE_T) + SerializedSize;
+				if (FileSize > MappedFile.GetCurrentFileSize())
+				{
+					// The file mapping is going to change thus it will invalidate the ID3D12PipelineLibrary object.
+					// Serialize the library contents to temporary memory first.
+					std::unique_ptr<BYTE[]> pSerializedData = std::make_unique<BYTE[]>(SerializedSize);
+					if (pSerializedData)
+					{
+						if (SUCCEEDED(PipelineLibrary1->Serialize(pSerializedData.get(), SerializedSize)))
+						{
+							MappedView.Flush();
+
+							// Now it's safe to grow the mapping.
+							MappedFile.GrowMapping(FileSize);
+							// Update view
+							MappedView = MappedFile.CreateView();
+
+							// Update serialized size and write the serialized blob
+							MappedView.Write<SIZE_T>(0, SerializedSize);
+							memcpy(MappedView.GetView(sizeof(SIZE_T)), pSerializedData.get(), SerializedSize);
+						}
+						else
+						{
+							LOG_WARN("Failed to serialize pipeline library");
+						}
+					}
+				}
+				else
+				{
+					// The mapping didn't change, we can serialize directly to the mapped file.
+					// Save the size of the library and the library itself.
+					assert(FileSize <= MappedFile.GetCurrentFileSize());
+
+					MappedView.Write<SIZE_T>(0, SerializedSize);
+					HRESULT OpResult = PipelineLibrary1->Serialize(MappedView.GetView(sizeof(SIZE_T)), SerializedSize);
+					if (FAILED(OpResult))
+					{
+						LOG_WARN("Failed to serialize pipeline library");
+					}
+				}
+
+				// PipelineLibrary1 is now undefined because we just wrote to the mapped file, don't use it again.
+			}
+		}
+
+		MappedView.Flush();
+	}
+	else
+	{
+		LOG_WARN("Pipeline library disk cache invalidated");
+		Stream.Reset();
+		BOOL OpResult = DeleteFile(Path.c_str());
+		assert(OpResult);
+	}
 }

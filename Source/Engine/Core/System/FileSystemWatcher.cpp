@@ -3,7 +3,7 @@
 FileSystemWatcher::FileSystemWatcher(std::filesystem::path Path)
 	: Path(std::move(Path))
 	, FileHandle(CreateFile(
-		  this->Path.wstring().data(),
+		  this->Path.c_str(),
 		  FILE_GENERIC_READ,
 		  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
 		  nullptr,

@@ -120,6 +120,14 @@ D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(cons
 	return Info;
 }
 
+void D3D12LinkedDevice::WaitIdle()
+{
+	GraphicsQueue.WaitIdle();
+	AsyncComputeQueue.WaitIdle();
+	CopyQueue1.WaitIdle();
+	CopyQueue2.WaitIdle();
+}
+
 bool D3D12LinkedDevice::ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc)
 {
 	// Refer to MSDN and samples

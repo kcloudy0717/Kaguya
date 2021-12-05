@@ -15,7 +15,5 @@ float4 PSMain(VertexAttributes IN) : SV_TARGET
 	// Texture2D Input = ResourceDescriptorHeap[2];
 
 	float3 color = Input.Sample(g_SamplerPointClamp, IN.Texture).rgb;
-
-	color = ACESFitted(color);
-	return float4(color, 1.0f);
+	return float4(ACESFitted(color), 1.0f);
 }

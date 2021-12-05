@@ -9,6 +9,6 @@ struct Plane
 
 	void Normalize() noexcept;
 
-	Vector3f Normal; // (a,b,c)
-	float	 Offset; // d
+	Vector3f Normal;		// (a,b,c)
+	float	 Offset = 0.0f; // d
 };

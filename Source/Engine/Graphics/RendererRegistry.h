@@ -323,7 +323,8 @@ struct PipelineStates
 			Stream.RootSignature = Device.GetRootSignature(RootSignatures::RTX::PathTrace);
 			Stream.CS			 = &Shaders::RTX::PathTrace;
 
-			RTX::PathTrace = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			RTX::PathTrace =
+				Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"RTX::PathTrace", Stream));
 		}
 
 		{
@@ -346,7 +347,7 @@ struct PipelineStates
 			Stream.DepthStencilState	 = DepthStencilState;
 			Stream.RenderPass			 = &RenderPasses::TonemapRenderPass;
 
-			Tonemap = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			Tonemap = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"Tonemap", Stream));
 		}
 		{
 			struct PsoStream
@@ -357,7 +358,7 @@ struct PipelineStates
 			Stream.RootSignature = Device.GetRootSignature(RootSignatures::FSR);
 			Stream.CS			 = &Shaders::CS::EASU;
 
-			FSREASU = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			FSREASU = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"FSREASU", Stream));
 		}
 		{
 			struct PsoStream
@@ -368,7 +369,7 @@ struct PipelineStates
 			Stream.RootSignature = Device.GetRootSignature(RootSignatures::FSR);
 			Stream.CS			 = &Shaders::CS::RCAS;
 
-			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			FSRRCAS = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"FSRRCAS", Stream));
 		}
 		{
 			D3D12InputLayout InputLayout(3);
@@ -397,7 +398,7 @@ struct PipelineStates
 			Stream.DepthStencilState	 = DepthStencilState;
 			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
 
-			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"GBuffer", Stream));
 		}
 		{
 			struct PsoStream
@@ -408,7 +409,7 @@ struct PipelineStates
 			Stream.RootSignature = Device.GetRootSignature(RootSignatures::IndirectCull);
 			Stream.CS			 = &Shaders::CS::IndirectCull;
 
-			IndirectCull = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			IndirectCull = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"IndirectCull", Stream));
 		}
 		{
 			struct PsoStream
@@ -419,7 +420,8 @@ struct PipelineStates
 			Stream.RootSignature = Device.GetRootSignature(RootSignatures::IndirectCull);
 			Stream.CS			 = &Shaders::CS::IndirectCullMeshShaders;
 
-			IndirectCullMeshShader = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			IndirectCullMeshShader =
+				Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"IndirectCullMeshShader", Stream));
 		}
 		{
 			DepthStencilState DepthStencilState;
@@ -441,7 +443,7 @@ struct PipelineStates
 			Stream.DepthStencilState	 = DepthStencilState;
 			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
 
-			Meshlet = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(Stream));
+			Meshlet = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"Meshlet", Stream));
 		}
 	}
 };

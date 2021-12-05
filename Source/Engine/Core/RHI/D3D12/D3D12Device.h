@@ -1,5 +1,7 @@
 #pragma once
 #include <Core/RHI/RHICommon.h>
+#include <Core/System/FileStream.h>
+#include <Core/System/MemoryMappedFile.h>
 #include "D3D12Common.h"
 #include "D3D12Fence.h"
 #include "D3D12LinkedDevice.h"
@@ -35,6 +37,25 @@ struct RootParameters
 	};
 };
 
+class D3D12PipelineLibrary : public D3D12DeviceChild
+{
+public:
+	explicit D3D12PipelineLibrary(D3D12Device* Parent, const std::filesystem::path& Path);
+	~D3D12PipelineLibrary();
+
+	ID3D12PipelineLibrary1* GetLibrary1() const noexcept { return PipelineLibrary1.Get(); }
+
+	void InvalidateDiskCache() { ShouldInvalidateDiskCache = TRUE; }
+
+private:
+	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> PipelineLibrary1;
+	BOOL										   ShouldInvalidateDiskCache = FALSE;
+	std::filesystem::path						   Path;
+	FileStream									   Stream;
+	MemoryMappedFile							   MappedFile;
+	MemoryMappedView							   MappedView;
+};
+
 class D3D12Device
 {
 public:
@@ -54,6 +75,7 @@ public:
 	[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
 	[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
 	[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
+	[[nodiscard]] auto GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
 	[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
 
 	[[nodiscard]] UINT GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
@@ -65,17 +87,20 @@ public:
 
 	[[nodiscard]] bool		  AllowAsyncPsoCompilation() const noexcept;
 	[[nodiscard]] ThreadPool* GetPsoCompilationThreadPool() const noexcept { return PsoCompilationThreadPool.get(); }
+	[[nodiscard]] D3D12PipelineLibrary* GetPipelineLibrary() const noexcept { return Library.get(); }
 
 	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(
 		Delegate<void(RootSignatureBuilder&)> Configurator);
 
 	template<typename PipelineStateStream>
-	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(PipelineStateStream& Stream)
+	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(
+		std::wstring		 Name,
+		PipelineStateStream& Stream)
 	{
 		PipelineStateStreamDesc Desc;
 		Desc.SizeInBytes				   = sizeof(Stream);
 		Desc.pPipelineStateSubobjectStream = &Stream;
-		return std::make_unique<D3D12PipelineState>(this, Desc);
+		return std::make_unique<D3D12PipelineState>(this, Name, Desc);
 	}
 
 	[[nodiscard]] D3D12RaytracingPipelineState CreateRaytracingPipelineState(
@@ -96,6 +121,7 @@ private:
 	DXGI_ADAPTER_DESC3					  AdapterDesc = {};
 
 	Microsoft::WRL::ComPtr<ID3D12Device>  Device;
+	Microsoft::WRL::ComPtr<ID3D12Device1> Device1;
 	Microsoft::WRL::ComPtr<ID3D12Device5> Device5;
 
 	CD3DX12FeatureSupport FeatureSupport;
@@ -118,4 +144,6 @@ private:
 	AftermathCrashTracker AftermathCrashTracker;
 
 	std::unique_ptr<ThreadPool> PsoCompilationThreadPool;
+
+	std::unique_ptr<D3D12PipelineLibrary> Library;
 };

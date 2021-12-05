@@ -51,7 +51,7 @@ void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 	Stream.DepthStencilState	 = DepthStencilState;
 	Stream.RenderPass			 = RenderPass;
 
-	Pso = RenderCore::Device->CreatePipelineState(Stream);
+	Pso = RenderCore::Device->CreatePipelineState(L"Debug Renderer", Stream);
 }
 
 void DebugRenderer::Shutdown()

@@ -61,7 +61,7 @@ Shader ShaderCompiler::CompileShader(
 	}
 
 	ShaderCompilationResult Result = Compile(Path, Options.EntryPoint, ProfileString.data(), Defines);
-	return Shader(ShaderType, Result);
+	return { ShaderType, Result };
 }
 
 Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
@@ -69,7 +69,7 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	std::wstring ProfileString = LibraryProfileString();
 
 	ShaderCompilationResult Result = Compile(Path, L"", ProfileString.data(), {});
-	return Library(Result);
+	return { Result };
 }
 
 // Shader ShaderCompiler::SpirVCodeGen(
@@ -160,15 +160,15 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	PdbPath.replace_extension(L"pdb");
 
 	// https://developer.nvidia.com/dx12-dos-and-donts
-	LPCWSTR Arguments[] = {
+	LPCWSTR Arguments[] =
+	{
 		// Use the /all_resources_bound / D3DCOMPILE_ALL_RESOURCES_BOUND compile flag if possible
 		// This allows for the compiler to do a better job at optimizing texture accesses. We have
 		// seen frame rate improvements of > 1 % when toggling this flag on.
 		L"-all_resources_bound",
 		L"-WX", // Warnings as errors
 		L"-Zi", // Debug info
-		L"-Fd",
-		PdbPath.c_str(), // Shader Pdb
+		L"-Fd", PdbPath.c_str(), // Shader Pdb
 #ifdef _DEBUG
 		L"-Od", // Disable optimization
 #else

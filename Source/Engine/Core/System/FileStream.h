@@ -6,8 +6,16 @@
 class FileStream
 {
 public:
+	NONCOPYABLE(FileStream);
+	DEFAULTMOVABLE(FileStream);
+
+	FileStream() noexcept = default;
 	explicit FileStream(const std::filesystem::path& Path, FileMode Mode);
 	explicit FileStream(const std::filesystem::path& Path, FileMode Mode, FileAccess Access);
+
+	HANDLE GetHandle() const noexcept { return Handle.get(); }
+
+	void Reset();
 
 	[[nodiscard]] UINT64 GetSizeInBytes() const;
 

@@ -45,6 +45,8 @@ public:
 
 	D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& ResourceDesc);
 
+	void WaitIdle();
+
 	bool ResourceSupport4KbAlignment(D3D12_RESOURCE_DESC& ResourceDesc);
 
 	[[nodiscard]] D3D12ShaderResourceView  ReserveShaderResourceView() { return D3D12ShaderResourceView(this); }

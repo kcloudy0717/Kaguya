@@ -162,10 +162,9 @@ void AsyncFileStream::InternalCreate(
 	DWORD						 dwCreationDisposition)
 {
 	VerifyArguments();
-	std::wstring FileName			  = Path.wstring();
-	DWORD		 dwFlagsAndAttributes = FILE_FLAG_OVERLAPPED;
+	DWORD dwFlagsAndAttributes = FILE_FLAG_OVERLAPPED;
 	Handle.reset(
-		CreateFile(FileName.data(), dwDesiredAccess, 0, nullptr, dwCreationDisposition, dwFlagsAndAttributes, nullptr));
+		CreateFile(Path.c_str(), dwDesiredAccess, 0, nullptr, dwCreationDisposition, dwFlagsAndAttributes, nullptr));
 	if (!Handle)
 	{
 		DWORD Error = GetLastError();

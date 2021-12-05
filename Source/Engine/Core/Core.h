@@ -44,6 +44,7 @@
 #include "System/FileSystemWatcher.h"
 #include "System/AsyncFileStream.h"
 #include "System/FileStream.h"
+#include "System/MemoryMappedFile.h"
 #include "System/BinaryReader.h"
 #include "System/BinaryWriter.h"
 

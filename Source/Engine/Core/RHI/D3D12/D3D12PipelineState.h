@@ -117,17 +117,18 @@ public:
 class D3D12PipelineState : public D3D12DeviceChild
 {
 public:
-	D3D12PipelineState(D3D12Device* Parent, const PipelineStateStreamDesc& Desc);
+	D3D12PipelineState(D3D12Device* Parent, std::wstring Name, const PipelineStateStreamDesc& Desc);
 
 	[[nodiscard]] ID3D12PipelineState*	  GetApiHandle() const noexcept;
 	[[nodiscard]] ED3D12PipelineStateType GetType() const noexcept { return Type; }
 
 private:
-	AsyncAction Create(ED3D12PipelineStateType Type, D3D12PipelineParserCallbacks Parser);
+	AsyncAction Create(std::wstring Name, ED3D12PipelineStateType Type, D3D12PipelineParserCallbacks Parser);
 
-	void CompileGraphicsPipeline(const D3D12PipelineParserCallbacks& Parser);
-	void CompileMeshShaderPipeline(const D3D12PipelineParserCallbacks& Parser);
-	void CompileComputePipline(const D3D12PipelineParserCallbacks& Parser);
+	void CompileGraphicsPipeline(const std::wstring& Name, const D3D12PipelineParserCallbacks& Parser);
+	void CompileMeshShaderPipeline(const std::wstring& Name, const D3D12PipelineParserCallbacks& Parser);
+	void CompileComputePipline(const std::wstring& Name, const D3D12PipelineParserCallbacks& Parser);
+	void StorePipeline(const std::wstring& Name, ID3D12PipelineLibrary* Library);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;

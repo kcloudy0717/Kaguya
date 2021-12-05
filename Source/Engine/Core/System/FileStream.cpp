@@ -14,6 +14,11 @@ FileStream::FileStream(const std::filesystem::path& Path, FileMode Mode, FileAcc
 	InternalCreate(Path, GetDesiredAccess(Access), GetCreationDisposition(Mode));
 }
 
+void FileStream::Reset()
+{
+	Handle.reset();
+}
+
 UINT64 FileStream::GetSizeInBytes() const
 {
 	LARGE_INTEGER FileSize = {};
@@ -151,7 +156,7 @@ void FileStream::VerifyArguments() const
 void FileStream::InternalCreate(const std::filesystem::path& Path, DWORD dwDesiredAccess, DWORD dwCreationDisposition)
 {
 	VerifyArguments();
-	Handle.reset(CreateFile(Path.wstring().data(), dwDesiredAccess, 0, nullptr, dwCreationDisposition, 0, nullptr));
+	Handle.reset(CreateFile(Path.c_str(), dwDesiredAccess, 0, nullptr, dwCreationDisposition, 0, nullptr));
 	if (!Handle)
 	{
 		DWORD Error = GetLastError();
@@ -172,4 +177,5 @@ void FileStream::InternalCreate(const std::filesystem::path& Path, DWORD dwDesir
 			// File exists
 		}
 	}
+	assert(Handle);
 }

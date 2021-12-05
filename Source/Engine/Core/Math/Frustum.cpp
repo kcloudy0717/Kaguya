@@ -53,13 +53,14 @@ Frustum::Frustum(const DirectX::XMFLOAT4X4& Matrix) noexcept
 
 ContainmentType Frustum::Contains(const BoundingBox& Box) const noexcept
 {
-	PlaneIntersection P0		 = Box.Intersects(Left);
-	PlaneIntersection P1		 = Box.Intersects(Right);
-	PlaneIntersection P2		 = Box.Intersects(Bottom);
-	PlaneIntersection P3		 = Box.Intersects(Top);
-	PlaneIntersection P4		 = Box.Intersects(Near);
-	PlaneIntersection P5		 = Box.Intersects(Far);
-	bool			  AnyOutside = P0 == PlaneIntersection::NegativeHalfspace;
+	PlaneIntersection P0 = Box.Intersects(Left);
+	PlaneIntersection P1 = Box.Intersects(Right);
+	PlaneIntersection P2 = Box.Intersects(Bottom);
+	PlaneIntersection P3 = Box.Intersects(Top);
+	PlaneIntersection P4 = Box.Intersects(Near);
+	PlaneIntersection P5 = Box.Intersects(Far);
+
+	bool AnyOutside = P0 == PlaneIntersection::NegativeHalfspace;
 	AnyOutside |= P1 == PlaneIntersection::NegativeHalfspace;
 	AnyOutside |= P2 == PlaneIntersection::NegativeHalfspace;
 	AnyOutside |= P3 == PlaneIntersection::NegativeHalfspace;
