@@ -2,6 +2,14 @@
 
 This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This project is inspired by Peter Shirley and his ray tracing book series: [In One Weekend, The Next Week, The Rest of Your Life](https://github.com/RayTracing/raytracing.github.io), Alan Wolfe's blog post series on [causual shadertoy path tracing](https://blog.demofox.org/2020/05/25/casual-shadertoy-path-tracing-1-basic-camera-diffuse-emissive/) and lastly [Physically Based Rendering: From Theory to Implementation](http://www.pbr-book.org/) by Matt Pharr, Wenzel Jakob, and Greg Humphreys. For those of you who haven't read any of these and would like to explore ray tracing, I highly recommend them!
 
+# Showcase
+
+![0](/Gallery/hyperion_viewport.png?raw=true "hyperion_viewport")
+![1](/Gallery/bedroom_viewport.png?raw=true "bedroom_viewport")
+![2](/Gallery/classroom_viewport.png?raw=true "classroom_viewport")
+![3](/Gallery/livingroom_viewport.png?raw=true "livingroom_viewport")
+![4](/Gallery/glass-of-water_viewport.png?raw=true "glass-of-water_viewport")
+
 # Features
 
 ## Graphics
@@ -110,11 +118,3 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
     - http://simon-kallweit.me/rendercompo2015/report/#disneybrdf
 - ## Light Sampling
   - Solid angle quadrilateral light sampling: https://www.arnoldrenderer.com/research/egsr2013_spherical_rectangle.pdf
-
-# Showcase
-
-![0](/Gallery/hyperion_viewport.png?raw=true "hyperion_viewport")
-![1](/Gallery/bedroom_viewport.png?raw=true "bedroom_viewport")
-![2](/Gallery/classroom_viewport.png?raw=true "classroom_viewport")
-![3](/Gallery/livingroom_viewport.png?raw=true "livingroom_viewport")
-![4](/Gallery/glass-of-water_viewport.png?raw=true "glass-of-water_viewport")
