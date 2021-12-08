@@ -214,6 +214,9 @@ void JsonGetIfExists(const json::value_type& Json, const char* Key, T& RefValue)
 
 void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 {
+	AssetManager::GetTextureCache().DestroyAll();
+	AssetManager::GetMeshCache().DestroyAll();
+
 	std::ifstream ifs(Path);
 	json		  Json;
 	ifs >> Json;
@@ -228,8 +231,6 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 
 	if (Json.contains("Textures"))
 	{
-		AssetManager::GetTextureCache().DestroyAll();
-
 		const auto& JsonTextures = Json["Textures"];
 		for (auto iter = JsonTextures.begin(); iter != JsonTextures.end(); ++iter)
 		{
@@ -249,8 +250,6 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 
 	if (Json.contains("Meshes"))
 	{
-		AssetManager::GetMeshCache().DestroyAll();
-
 		const auto& JsonMeshes = Json["Meshes"];
 		for (auto iter = JsonMeshes.begin(); iter != JsonMeshes.end(); ++iter)
 		{

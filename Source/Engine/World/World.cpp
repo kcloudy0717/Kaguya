@@ -55,17 +55,21 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 	Actors.clear();
 	if (AddDefaultEntities)
 	{
-		Actor MainCamera = CreateActor("Main Camera");
-		MainCamera.AddComponent<CameraComponent>();
+		ActiveCameraActor = CreateActor("Main Camera");
+		ActiveCameraActor.AddComponent<CameraComponent>();
 
-		Actor MainSkyLight = CreateActor("Main Sky Light");
-		MainSkyLight.AddComponent<SkyLightComponent>();
+		ActiveSkyLightActor = CreateActor("Main Sky Light");
+		ActiveSkyLightActor.AddComponent<SkyLightComponent>();
 	}
 }
 
 void World::DestroyActor(size_t Index)
 {
 	Actor Entity = Actors[Index];
+	if (Entity == ActiveCameraActor || Entity == ActiveSkyLightActor)
+	{
+		return;
+	}
 	Registry.destroy(Entity);
 	Actors.erase(Actors.begin() + Index);
 }

@@ -21,11 +21,13 @@ public:
 
 	void DestroyAll()
 	{
+		// Destroy in opposite order
 		ScopedWriteLock Swl(Mutex);
-		CachedHandles.clear();
-		CachedHandles.resize(NumAssets);
 		Assets.clear();
 		Assets.resize(NumAssets);
+		CachedHandles.clear();
+		CachedHandles.resize(NumAssets);
+		Cache = ObjectPool<T>(NumAssets);
 	}
 
 	auto begin() noexcept { return CachedHandles.begin(); }
