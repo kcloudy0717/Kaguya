@@ -224,7 +224,7 @@ auto RenderGraphRegistry::GetBuffer(RgResourceHandle Handle) -> D3D12Buffer&
 {
 	assert(Handle.IsValid());
 	assert(Handle.Type == RgResourceType::Buffer);
-	assert(Handle.Id < Textures.size());
+	assert(Handle.Id < Buffers.size());
 	return Buffers[Handle.Id];
 }
 

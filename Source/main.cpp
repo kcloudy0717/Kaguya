@@ -252,7 +252,6 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	// PathIntegratorDXR1_0 Renderer(MainWindow.GetWindowHandle());
 	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
-	// DeferredRenderer Renderer(MainWindow.GetWindowHandle());
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

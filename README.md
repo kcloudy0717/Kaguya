@@ -18,6 +18,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Importance sampling of BSDFs and multiple importance sampling of lights
 - Lambertian, Mirror, Glass, and Disney BSDFs
 - Point and quad lights
+- Real-time path tracing using both DXR 1.0 and DXR 1.1
 
 ## D3D12
 
@@ -56,7 +57,6 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - Implement volumetric scattering and sub-surface scattering
 - Implement temporal anti-aliasing
 - Implement denoising
-- Implement DXR 1.1 (inline raytracing) and compare against 1.0
 
 # Work in progress
 
@@ -66,10 +66,10 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 # Build
 
-- Visual Studio 2019
+- Visual Studio 2019 (I am using VS 2022, but 2019 should still work)
 - GPU that supports DXR
 - Windows SDK Version 10.0.19041.0
-- Windows 10 Version: 20H2
+- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build)
 - CMake Version 3.16
 - C++ 20
 
@@ -91,11 +91,9 @@ Let me know if you have any trouble setting up the project and getting it up and
 - [ImGuizmo](https://github.com/CedricGuillemet/ImGuizmo)
 - [json](https://github.com/nlohmann/json.git)
 - [D3D12 Agility SDK](https://devblogs.microsoft.com/directx/directx12agility/)
-- [Nsight Aftermath](https://developer.nvidia.com/nsight-aftermath)
 - [spdlog](https://github.com/gabime/spdlog)
 - [wil](https://github.com/microsoft/wil)
 - [WinPixEventRuntime](https://devblogs.microsoft.com/pix/winpixeventruntime)
-- [FidelityFX-FSR](https://github.com/GPUOpen-Effects/FidelityFX-FSR)
 
 Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.me/resources/)!
 
