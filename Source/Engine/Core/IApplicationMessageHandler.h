@@ -32,19 +32,19 @@ class IApplicationMessageHandler
 public:
 	virtual ~IApplicationMessageHandler() = default;
 
-	virtual void OnKeyDown(unsigned char KeyCode, bool IsRepeat);
-	virtual void OnKeyUp(unsigned char KeyCode);
-	virtual void OnKeyChar(unsigned char Character, bool IsRepeat);
+	virtual void OnKeyDown(unsigned char KeyCode, bool IsRepeat)   = 0;
+	virtual void OnKeyUp(unsigned char KeyCode)					   = 0;
+	virtual void OnKeyChar(unsigned char Character, bool IsRepeat) = 0;
 
-	virtual void OnMouseMove(Vector2i Position);
-	virtual void OnMouseDown(const Window* Window, EMouseButton Button, Vector2i Position);
-	virtual void OnMouseUp(EMouseButton Button, Vector2i Position);
-	virtual void OnMouseDoubleClick(const Window* Window, EMouseButton Button, Vector2i Position);
-	virtual void OnMouseWheel(float Delta, Vector2i Position);
+	virtual void OnMouseMove(int X, int Y)													 = 0;
+	virtual void OnMouseDown(const Window* Window, EMouseButton Button, int X, int Y)		 = 0;
+	virtual void OnMouseUp(EMouseButton Button, int X, int Y)								 = 0;
+	virtual void OnMouseDoubleClick(const Window* Window, EMouseButton Button, int X, int Y) = 0;
+	virtual void OnMouseWheel(float Delta, int X, int Y)									 = 0;
 
-	virtual void OnRawMouseMove(Vector2i Position);
+	virtual void OnRawMouseMove(int X, int Y) = 0;
 
-	virtual void OnWindowClose(Window* Window);
+	virtual void OnWindowClose(Window* Window) = 0;
 
-	virtual void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height);
+	virtual void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height) = 0;
 };

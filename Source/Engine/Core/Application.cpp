@@ -207,7 +207,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 		if (x >= 0 && x < Width && y >= 0 && y < Height)
 		{
-			MessageHandler->OnMouseMove(Vector2i(x, y));
+			MessageHandler->OnMouseMove(x, y);
 		}
 	}
 	break;
@@ -231,7 +231,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 
 		auto [x, y] = MAKEPOINTS(lParam);
-		MessageHandler->OnMouseDown(CurrentWindow, Button, Vector2i(x, y));
+		MessageHandler->OnMouseDown(CurrentWindow, Button, x, y);
 	}
 	break;
 
@@ -254,7 +254,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 
 		auto [x, y] = MAKEPOINTS(lParam);
-		MessageHandler->OnMouseUp(Button, Vector2i(x, y));
+		MessageHandler->OnMouseUp(Button, x, y);
 	}
 	break;
 
@@ -277,7 +277,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 
 		auto [x, y] = MAKEPOINTS(lParam);
-		MessageHandler->OnMouseDoubleClick(CurrentWindow, Button, Vector2i(x, y));
+		MessageHandler->OnMouseDoubleClick(CurrentWindow, Button, x, y);
 	}
 	break;
 
@@ -287,7 +287,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		int					   WheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
 		auto [x, y] = MAKEPOINTS(lParam);
-		MessageHandler->OnMouseWheel(static_cast<float>(WheelDelta) * WheelScale, Vector2i(x, y));
+		MessageHandler->OnMouseWheel(static_cast<float>(WheelDelta) * WheelScale, x, y);
 	}
 	break;
 
@@ -330,7 +330,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 			// }
 			int RelativeX = RawMouse.lLastX;
 			int RelativeY = RawMouse.lLastY;
-			MessageHandler->OnRawMouseMove(Vector2i(RelativeX, RelativeY));
+			MessageHandler->OnRawMouseMove(RelativeX, RelativeY);
 		}
 		break;
 
@@ -340,15 +340,30 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	break;
 
+		// WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
+	case WM_ENTERSIZEMOVE:
+	{
+		Resizing = true;
+	}
+	break;
+
+	// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
+	// Here we reset everything based on the new window dimensions.
+	case WM_EXITSIZEMOVE:
+	{
+		Resizing = false;
+		if (Initialized)
+		{
+			MessageHandler->OnWindowResize(CurrentWindow, CurrentWindow->GetWidth(), CurrentWindow->GetHeight());
+		}
+	}
+	break;
+
 	case WM_SIZE:
 	{
-		if (wParam == SIZE_MINIMIZED)
-		{
-			break;
-		}
-
 		int WindowWidth	 = LOWORD(lParam);
 		int WindowHeight = HIWORD(lParam);
+		CurrentWindow->Resize(WindowWidth, WindowHeight);
 
 		bool ShouldResize = false;
 
@@ -377,8 +392,19 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 				Maximized	 = false;
 				ShouldResize = true;
 			}
+			else if (Resizing)
+			{
+				// If user is dragging the resize bars, we do not resize
+				// the buffers here because as the user continuously
+				// drags the resize bars, a stream of WM_SIZE messages are
+				// sent to the window, and it would be pointless (and slow)
+				// to resize for each WM_SIZE message received from dragging
+				// the resize bars.  So instead, we reset after the user is
+				// done resizing the window and releases the resize bars, which
+				// sends a WM_EXITSIZEMOVE message.
+			}
 			// API call such as SetWindowPos or IDXGISwapChain::SetFullscreenState
-			else if (!Resizing)
+			else
 			{
 				ShouldResize = true;
 			}

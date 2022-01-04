@@ -1,6 +1,6 @@
 ﻿#include "Plane.h"
 
-Plane::Plane(Vector3f a, Vector3f b, Vector3f c) noexcept
+Plane::Plane(Vec3f a, Vec3f b, Vec3f c) noexcept
 {
 	Normal = normalize(cross(b - a, c - a));
 	Offset = dot(Normal, a);

@@ -2,6 +2,16 @@
 
 using Microsoft::WRL::ComPtr;
 
+#define VERIFY_DXC_API(expr)                            \
+	do                                                  \
+	{                                                   \
+		HRESULT hr = expr;                              \
+		if (FAILED(hr))                                 \
+		{                                               \
+			throw DxcException(__FILE__, __LINE__, hr); \
+		}                                               \
+	} while (false)
+
 const char* DxcException::GetErrorType() const noexcept
 {
 	return "[Dxc]";
@@ -9,9 +19,9 @@ const char* DxcException::GetErrorType() const noexcept
 
 std::string DxcException::GetError() const
 {
-#define DXCERR(x)                                                                                                      \
-	case x:                                                                                                            \
-		Error = #x;                                                                                                    \
+#define DXCERR(x)   \
+	case x:         \
+		Error = #x; \
 		break
 
 	std::string Error;
@@ -34,20 +44,22 @@ std::string DxcException::GetError() const
 	return Error;
 }
 
-void ShaderCompiler::Initialize()
+ShaderCompiler::ShaderCompiler()
+	: ShaderModel(RHI_SHADER_MODEL::ShaderModel_6_5)
 {
 	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&Compiler3)));
 	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&Utils)));
 	VERIFY_DXC_API(Utils->CreateDefaultIncludeHandler(&DefaultIncludeHandler));
 }
 
-void ShaderCompiler::SetShaderModel(SHADER_MODEL ShaderModel) noexcept
+void ShaderCompiler::SetShaderModel(
+	RHI_SHADER_MODEL ShaderModel) noexcept
 {
 	this->ShaderModel = ShaderModel;
 }
 
 Shader ShaderCompiler::CompileShader(
-	SHADER_TYPE					 ShaderType,
+	RHI_SHADER_TYPE				 ShaderType,
 	const std::filesystem::path& Path,
 	const ShaderCompileOptions&	 Options) const
 {
@@ -64,7 +76,8 @@ Shader ShaderCompiler::CompileShader(
 	return { ShaderType, Result };
 }
 
-Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
+Library ShaderCompiler::CompileLibrary(
+	const std::filesystem::path& Path) const
 {
 	std::wstring ProfileString = LibraryProfileString();
 
@@ -72,35 +85,15 @@ Library ShaderCompiler::CompileLibrary(const std::filesystem::path& Path) const
 	return { Result };
 }
 
-// Shader ShaderCompiler::SpirVCodeGen(
-//	VkDevice					  Device,
-//	EShaderType					  ShaderType,
-//	const std::filesystem::path&  Path,
-//	std::wstring_view			  EntryPoint,
-//	const std::vector<DxcDefine>& ShaderDefines) const
-//{
-//	std::wstring ProfileString = ShaderProfileString(ShaderType);
-//
-//	IDxcBlob* Blob = nullptr;
-//	SpirV(Path, EntryPoint, ProfileString.data(), ShaderDefines, &Blob);
-//
-//	Shader Shader(ShaderType, Blob, nullptr, std::wstring());
-//	auto   ShaderModuleCreateInfo	= VkStruct<VkShaderModuleCreateInfo>();
-//	ShaderModuleCreateInfo.codeSize = Shader.GetBufferSize();
-//	ShaderModuleCreateInfo.pCode	= static_cast<uint32_t*>(Shader.GetBufferPointer());
-//	VERIFY_VULKAN_API(vkCreateShaderModule(Device, &ShaderModuleCreateInfo, nullptr, &Shader.ShaderModule));
-//	return Shader;
-//}
-
 std::wstring ShaderCompiler::GetShaderModelString() const
 {
 	std::wstring ShaderModelString;
 	switch (ShaderModel)
 	{
-	case SHADER_MODEL::ShaderModel_6_5:
+	case RHI_SHADER_MODEL::ShaderModel_6_5:
 		ShaderModelString = L"6_5";
 		break;
-	case SHADER_MODEL::ShaderModel_6_6:
+	case RHI_SHADER_MODEL::ShaderModel_6_6:
 		ShaderModelString = L"6_6";
 		break;
 	}
@@ -108,12 +101,12 @@ std::wstring ShaderCompiler::GetShaderModelString() const
 	return ShaderModelString;
 }
 
-std::wstring ShaderCompiler::ShaderProfileString(SHADER_TYPE ShaderType) const
+std::wstring ShaderCompiler::ShaderProfileString(RHI_SHADER_TYPE ShaderType) const
 {
 	std::wstring ProfileString;
 	switch (ShaderType)
 	{
-		using enum SHADER_TYPE;
+		using enum RHI_SHADER_TYPE;
 	case Vertex:
 		ProfileString = L"vs_";
 		break;
@@ -160,15 +153,15 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	PdbPath.replace_extension(L"pdb");
 
 	// https://developer.nvidia.com/dx12-dos-and-donts
-	LPCWSTR Arguments[] =
-	{
+	LPCWSTR Arguments[] = {
 		// Use the /all_resources_bound / D3DCOMPILE_ALL_RESOURCES_BOUND compile flag if possible
 		// This allows for the compiler to do a better job at optimizing texture accesses. We have
 		// seen frame rate improvements of > 1 % when toggling this flag on.
 		L"-all_resources_bound",
 		L"-WX", // Warnings as errors
 		L"-Zi", // Debug info
-		L"-Fd", PdbPath.c_str(), // Shader Pdb
+		L"-Fd",
+		PdbPath.c_str(), // Shader Pdb
 #ifdef _DEBUG
 		L"-Od", // Disable optimization
 #else
@@ -242,9 +235,6 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		{
 			assert(ShaderHash->GetBufferSize() == sizeof(DxcShaderHash));
 			Result.ShaderHash = *static_cast<DxcShaderHash*>(ShaderHash->GetBufferPointer());
-			LOG_INFO(
-				"Shader Hash: {:spn}",
-				spdlog::to_hex(std::begin(Result.ShaderHash.HashDigest), std::end(Result.ShaderHash.HashDigest)));
 		}
 	}
 

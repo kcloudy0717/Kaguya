@@ -49,8 +49,7 @@ public:
 	{
 		std::wstring Extension = Path.extension().wstring();
 		return std::ranges::find_if(
-				   SupportedExtensions.begin(),
-				   SupportedExtensions.end(),
+				   SupportedExtensions,
 				   [&](const std::wstring& SupportedExtension)
 				   {
 					   return SupportedExtension == Extension;

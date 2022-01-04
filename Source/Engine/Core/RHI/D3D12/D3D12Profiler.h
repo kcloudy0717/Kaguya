@@ -1,10 +1,19 @@
 #pragma once
 #include "D3D12Common.h"
 
+//=================================================================================================
+//
+//  MJP's DX12 Sample Framework
+//  http://mynameismjp.wordpress.com/
+//
+//  All code licensed under the MIT license
+//
+//=================================================================================================
+// https://github.com/TheRealMJP/DXRPathTracer/blob/master/SampleFramework12/v1.02/Graphics/Profiler.h
+// Modified MJP's Profiler to my own use
+
 struct ProfileData
 {
-	void Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData);
-
 	static constexpr UINT64 FilterSize = 64;
 
 	const char* Name = nullptr;
@@ -84,9 +93,8 @@ public:
 	}
 
 private:
-	inline static D3D12EventNode RootNode = D3D12EventNode(-1, "", nullptr);
-
-	inline static D3D12EventNode* CurrentNode = &RootNode;
+	static D3D12EventNode  RootNode;
+	static D3D12EventNode* CurrentNode;
 };
 
 class D3D12Profiler
@@ -94,27 +102,32 @@ class D3D12Profiler
 public:
 	static constexpr UINT MaxProfiles = 128;
 
-	explicit D3D12Profiler(UINT FrameLatency);
-
-	void Initialize(ID3D12Device* Device, UINT64 Frequency);
+	explicit D3D12Profiler(
+		UINT		  FrameLatency,
+		ID3D12Device* Device,
+		UINT64		  Frequency);
 
 	void OnBeginFrame();
 	void OnEndFrame();
 
-	UINT StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth);
-	void EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index);
+	UINT StartProfile(
+		ID3D12GraphicsCommandList* CommandList,
+		const char*				   Name,
+		INT						   Depth);
+
+	void EndProfile(
+		ID3D12GraphicsCommandList* CommandList,
+		UINT					   Index);
 
 public:
 	// Read only
-	inline static std::span<ProfileData> Data;
+	static std::span<ProfileData> Data;
 
 private:
-	const UINT FrameLatency;
-	UINT64	   Frequency;
-
-	std::vector<ProfileData> Profiles;
-	UINT					 NumProfiles = 0;
-
+	const UINT								FrameLatency;
+	UINT64									Frequency = 0;
+	std::vector<ProfileData>				Profiles;
+	UINT									NumProfiles;
 	UINT									FrameIndex;
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> QueryHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource>	QueryReadback;

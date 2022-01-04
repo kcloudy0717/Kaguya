@@ -9,15 +9,13 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 
 	// Create window
 	DWORD	ExStyle	   = 0;
-	LPCWSTR WindowName = Desc.Name.data();
+	LPCWSTR WindowName = Desc.Name;
 	DWORD	Style	   = WS_OVERLAPPEDWINDOW;
-	Style |= Desc.Maximize ? WS_MAXIMIZE : 0;
+	Style |= Desc.InitialSize == WindowInitialSize::Maximize ? WS_MAXIMIZE : 0;
 
 	RECT WindowRect = { 0, 0, static_cast<LONG>(Desc.Width), static_cast<LONG>(Desc.Height) };
 	AdjustWindowRect(&WindowRect, Style, FALSE);
 
-	int x		 = Desc.x.value_or(CW_USEDEFAULT);
-	int y		 = Desc.y.value_or(CW_USEDEFAULT);
 	WindowWidth	 = WindowRect.right - WindowRect.left;
 	WindowHeight = WindowRect.bottom - WindowRect.top;
 	AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
@@ -27,8 +25,8 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 		Application::WindowClass,
 		WindowName,
 		Style,
-		x,
-		y,
+		Desc.x,
+		Desc.y,
 		WindowWidth,
 		WindowHeight,
 		Parent ? Parent->GetWindowHandle() : nullptr,
@@ -37,8 +35,12 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 		Application));
 	if (!WindowHandle)
 	{
-		ErrorExit(TEXT("CreateWindowExW"));
+		ErrorExit(L"CreateWindowExW");
 	}
+
+	RECT ClientRect = {};
+	::GetClientRect(WindowHandle.get(), &ClientRect);
+	Resize(ClientRect.right - ClientRect.left, ClientRect.bottom - ClientRect.top);
 
 	RAWINPUTDEVICE RawInputDevice = {};
 	RawInputDevice.usUsagePage	  = HID_USAGE_PAGE_GENERIC;
@@ -47,7 +49,7 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 	RawInputDevice.hwndTarget	  = WindowHandle.get();
 	if (!RegisterRawInputDevices(&RawInputDevice, 1, sizeof(RAWINPUTDEVICE)))
 	{
-		ErrorExit(TEXT("RegisterRawInputDevices"));
+		ErrorExit(L"RegisterRawInputDevices");
 	}
 }
 
@@ -59,6 +61,16 @@ const WINDOW_DESC& Window::GetDesc() const noexcept
 HWND Window::GetWindowHandle() const noexcept
 {
 	return WindowHandle.get();
+}
+
+std::int32_t Window::GetWidth() const noexcept
+{
+	return WindowWidth;
+}
+
+std::int32_t Window::GetHeight() const noexcept
+{
+	return WindowHeight;
 }
 
 void Window::Show()

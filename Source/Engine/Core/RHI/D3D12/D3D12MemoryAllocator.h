@@ -15,16 +15,10 @@ struct D3D12Allocation
 class D3D12LinearAllocatorPage
 {
 public:
-	D3D12LinearAllocatorPage(Microsoft::WRL::ComPtr<ID3D12Resource> Resource, UINT64 PageSize)
-		: Resource(Resource)
-		, Offset(0)
-		, PageSize(PageSize)
-	{
-		Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress));
-		GpuVirtualAddress = Resource->GetGPUVirtualAddress();
-	}
-
-	~D3D12LinearAllocatorPage() { Resource->Unmap(0, nullptr); }
+	explicit D3D12LinearAllocatorPage(
+		Microsoft::WRL::ComPtr<ID3D12Resource> Resource,
+		UINT64								   PageSize);
+	~D3D12LinearAllocatorPage();
 
 	std::optional<D3D12Allocation> Suballocate(UINT64 Size, UINT Alignment);
 
@@ -41,7 +35,7 @@ private:
 class D3D12LinearAllocator : public D3D12LinkedDeviceChild
 {
 public:
-	static constexpr UINT64 CpuAllocatorPageSize = 64 * 1024;
+	static constexpr UINT64 CpuAllocatorPageSize = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 
 	explicit D3D12LinearAllocator(D3D12LinkedDevice* Parent)
 		: D3D12LinkedDeviceChild(Parent)
@@ -68,7 +62,7 @@ public:
 private:
 	[[nodiscard]] D3D12LinearAllocatorPage* RequestPage();
 
-	[[nodiscard]] D3D12LinearAllocatorPage* CreateNewPage(UINT64 PageSize) const;
+	[[nodiscard]] std::unique_ptr<D3D12LinearAllocatorPage> CreateNewPage(UINT64 PageSize) const;
 
 	void DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages);
 
@@ -76,7 +70,6 @@ private:
 	std::vector<std::unique_ptr<D3D12LinearAllocatorPage>>	 PagePool;
 	std::queue<std::pair<UINT64, D3D12LinearAllocatorPage*>> RetiredPages;
 	std::queue<D3D12LinearAllocatorPage*>					 AvailablePages;
-	CriticalSection											 CriticalSection;
 
 	D3D12SyncHandle						   SyncHandle;
 	D3D12LinearAllocatorPage*			   CurrentPage = nullptr;

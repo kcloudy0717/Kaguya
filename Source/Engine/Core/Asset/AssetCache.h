@@ -46,7 +46,7 @@ public:
 
 		AssetHandle Handle;
 		Handle.Type	   = Type;
-		Handle.State   = AssetState::Dirty;
+		Handle.State   = false;
 		Handle.Version = 0;
 		Handle.Id	   = Index;
 
@@ -66,8 +66,8 @@ public:
 		{
 			ScopedReadLock Srl(Mutex);
 
-			AssetState State = CachedHandles[Handle.Id].State;
-			if (State == AssetState::Ready)
+			bool State = CachedHandles[Handle.Id].State;
+			if (State)
 			{
 				Handle.State = State;
 				return Assets[Handle.Id].get();

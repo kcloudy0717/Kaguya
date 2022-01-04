@@ -2,19 +2,20 @@
 
 class Application;
 
+enum class WindowInitialSize
+{
+	Default,
+	Maximize
+};
+
 struct WINDOW_DESC
 {
-	std::wstring	   Name;
-	int				   Width  = CW_USEDEFAULT;
-	int				   Height = CW_USEDEFAULT;
-	std::optional<int> x;
-	std::optional<int> y;
-
-	// These values are mutually exclusive
-	// Should this window be maximized initially
-	bool Maximize = false;
-	// Should this window be minimized initially
-	bool Minimize = false;
+	LPCWSTR			  Name		  = nullptr;
+	int				  Width		  = CW_USEDEFAULT;
+	int				  Height	  = CW_USEDEFAULT;
+	int				  x			  = CW_USEDEFAULT;
+	int				  y			  = CW_USEDEFAULT;
+	WindowInitialSize InitialSize = WindowInitialSize::Default;
 };
 
 class Window
@@ -24,6 +25,8 @@ public:
 
 	[[nodiscard]] const WINDOW_DESC& GetDesc() const noexcept;
 	[[nodiscard]] HWND				 GetWindowHandle() const noexcept;
+	[[nodiscard]] std::int32_t		 GetWidth() const noexcept;
+	[[nodiscard]] std::int32_t		 GetHeight() const noexcept;
 
 	void Show();
 	void Hide();

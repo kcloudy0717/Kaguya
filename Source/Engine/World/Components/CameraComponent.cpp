@@ -60,23 +60,23 @@ Frustum CameraComponent::CreateFrustum() const
 	float NearWidth	 = NearHeight * AspectRatio;
 	float FarWidth	 = FarHeight * AspectRatio;
 
-	Vector3f XAxis(InverseView(0, 0), InverseView(0, 1), InverseView(0, 2));
-	Vector3f YAxis(InverseView(1, 0), InverseView(1, 1), InverseView(1, 2));
-	Vector3f ZAxis(InverseView(2, 0), InverseView(2, 1), InverseView(2, 2));
-	Vector3f Translation(InverseView(3, 0), InverseView(3, 1), InverseView(3, 2));
+	Vec3f XAxis(InverseView(0, 0), InverseView(0, 1), InverseView(0, 2));
+	Vec3f YAxis(InverseView(1, 0), InverseView(1, 1), InverseView(1, 2));
+	Vec3f ZAxis(InverseView(2, 0), InverseView(2, 1), InverseView(2, 2));
+	Vec3f Translation(InverseView(3, 0), InverseView(3, 1), InverseView(3, 2));
 
-	Vector3f NearCenter = Translation + (ZAxis * NearZ);
-	Vector3f FarCenter	= Translation + (ZAxis * FarZ);
+	Vec3f NearCenter = Translation + (ZAxis * NearZ);
+	Vec3f FarCenter	 = Translation + (ZAxis * FarZ);
 
-	Vector3f Ntl = NearCenter + (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
-	Vector3f Ntr = NearCenter + (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
-	Vector3f Nbl = NearCenter - (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
-	Vector3f Nbr = NearCenter - (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
+	Vec3f Ntl = NearCenter + (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
+	Vec3f Ntr = NearCenter + (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
+	Vec3f Nbl = NearCenter - (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
+	Vec3f Nbr = NearCenter - (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
 
-	Vector3f Ftl = FarCenter + (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
-	Vector3f Ftr = FarCenter + (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
-	Vector3f Fbl = FarCenter - (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
-	Vector3f Fbr = FarCenter - (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
+	Vec3f Ftl = FarCenter + (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
+	Vec3f Ftr = FarCenter + (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
+	Vec3f Fbl = FarCenter - (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
+	Vec3f Fbr = FarCenter - (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
 
 	Frustum Frustum;
 	Frustum.Left   = Plane(Ntl, Ftl, Nbl);

@@ -1,6 +1,7 @@
 #pragma once
 #include "RenderGraph/RenderGraph.h"
 #include "World/World.h"
+#include "View.h"
 
 class RendererPresent : public IPresent
 {
@@ -10,9 +11,15 @@ public:
 	{
 	}
 
-	void PrePresent() override { SyncHandle = Context.Execute(false); }
+	void PrePresent() override
+	{
+		SyncHandle = Context.Execute(false);
+	}
 
-	void PostPresent() override { SyncHandle.WaitForCompletion(); }
+	void PostPresent() override
+	{
+		SyncHandle.WaitForCompletion();
+	}
 
 	D3D12CommandContext& Context;
 	D3D12SyncHandle		 SyncHandle;
@@ -45,11 +52,10 @@ protected:
 protected:
 	D3D12SwapChain SwapChain;
 
-	RenderDevice		  RenderDevice;
-	RenderGraphAllocator  Allocator;
-	RenderGraphScheduler  Scheduler;
-	RenderGraphRegistry	  Registry;
-	RenderGraphResolution Resolution = {};
+	RenderGraphAllocator Allocator;
+	RenderGraphRegistry	 Registry;
+
+	View View;
 
 	size_t FrameIndex = 0;
 

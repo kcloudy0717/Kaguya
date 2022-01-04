@@ -225,3 +225,68 @@ auto D3D12SyncHandle::WaitForCompletion() const -> void
 	assert(static_cast<bool>(*this));
 	Fence->HostWaitForValue(Value);
 }
+
+D3D12InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
+{
+	for (size_t i = 0; i < InputElements.size(); ++i)
+	{
+		InputElements[i].SemanticName = SemanticNames[i].data();
+	}
+
+	D3D12_INPUT_LAYOUT_DESC Desc = {};
+	Desc.pInputElementDescs		 = InputElements.data();
+	Desc.NumElements			 = static_cast<UINT>(InputElements.size());
+	return Desc;
+}
+
+void D3D12InputLayout::AddVertexLayoutElement(
+	std::string_view SemanticName,
+	UINT			 SemanticIndex,
+	DXGI_FORMAT		 Format,
+	UINT			 InputSlot)
+{
+	SemanticNames.emplace_back(SemanticName);
+
+	D3D12_INPUT_ELEMENT_DESC& Desc = InputElements.emplace_back();
+	Desc.SemanticName			   = nullptr; // Will be resolved later
+	Desc.SemanticIndex			   = SemanticIndex;
+	Desc.Format					   = Format;
+	Desc.InputSlot				   = InputSlot;
+	Desc.AlignedByteOffset		   = D3D12_APPEND_ALIGNED_ELEMENT;
+	Desc.InputSlotClass			   = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+	Desc.InstanceDataStepRate	   = 0;
+}
+
+D3D12_RESOURCE_STATES CResourceState::GetSubresourceState(UINT Subresource) const
+{
+	if (TrackingMode == ETrackingMode::PerResource)
+	{
+		return ResourceState;
+	}
+
+	return SubresourceStates[Subresource];
+}
+
+void CResourceState::SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State)
+{
+	// If setting all subresources, or the resource only has a single subresource, set the per-resource state
+	if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceStates.size() == 1)
+	{
+		TrackingMode  = ETrackingMode::PerResource;
+		ResourceState = State;
+	}
+	else
+	{
+		// If we previous tracked resource per resource level, we need to update all
+		// all subresource states before proceeding
+		if (TrackingMode == ETrackingMode::PerResource)
+		{
+			TrackingMode = ETrackingMode::PerSubresource;
+			for (auto& SubresourceState : SubresourceStates)
+			{
+				SubresourceState = ResourceState;
+			}
+		}
+		SubresourceStates[Subresource] = State;
+	}
+}

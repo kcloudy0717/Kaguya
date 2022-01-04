@@ -5,7 +5,7 @@ using Microsoft::WRL::ComPtr;
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
-	_declspec(dllexport) extern const UINT D3D12SDKVersion = 4;
+	_declspec(dllexport) extern const UINT D3D12SDKVersion = 700;
 	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
 }
 
@@ -20,141 +20,20 @@ static ConsoleVariable CVar_AsyncPsoCompilation(
 	"Enables asynchronous pipeline state object compilation",
 	false);
 
-const char* GetD3D12MessageSeverity(D3D12_MESSAGE_SEVERITY Severity)
+D3D12Device::D3D12Device(const DeviceOptions& Options)
+	: Device(InitializeDevice(Options))
+	, Device1(DeviceQueryInterface<ID3D12Device1>())
+	, Device5(DeviceQueryInterface<ID3D12Device5>())
+	, FeatureSupport(InitializeFeatureSupport(Options))
+	, DescriptorSizeCache(InitializeDescriptorSizeCache())
+	, Dred(Device.Get())
+	, LinkedDevice(this)
+	, Profiler(1, Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency())
+	, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
+	, Library(!Options.CachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.CachePath) : nullptr)
 {
-	// clang-format off
-	switch (Severity)
-	{
-	case D3D12_MESSAGE_SEVERITY_CORRUPTION: return "[Corruption]";
-	case D3D12_MESSAGE_SEVERITY_ERROR:		return "[Error]";
-	case D3D12_MESSAGE_SEVERITY_WARNING:	return "[Warning]";
-	case D3D12_MESSAGE_SEVERITY_INFO:		return "[Info]";
-	case D3D12_MESSAGE_SEVERITY_MESSAGE:	return "[Message]";
-	default:								return "<unknown>";
-	}
-	// clang-format on
-}
-
-void D3D12Device::ReportLiveObjects()
-{
-#ifdef _DEBUG
-	ComPtr<IDXGIDebug> Debug;
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(Debug.GetAddressOf()))))
-	{
-		Debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-	}
-#endif
-}
-
-D3D12Device::D3D12Device()
-	: LinkedDevice(this)
-	, Profiler(1)
-{
-	PsoCompilationThreadPool = std::make_unique<ThreadPool>();
-}
-
-D3D12Device::~D3D12Device()
-{
-	if (InfoQueue1)
-	{
-		InfoQueue1->UnregisterMessageCallback(std::exchange(CallbackCookie, 0));
-	}
-
-	if (CVar_Dred && DeviceRemovedFence)
-	{
-		// Need to gracefully exit the event
-		DeviceRemovedFence->Signal(UINT64_MAX);
-		BOOL b = UnregisterWaitEx(DeviceRemovedWaitHandle, INVALID_HANDLE_VALUE);
-		assert(b);
-	}
-}
-
-void D3D12Device::Initialize(const DeviceOptions& Options)
-{
-#ifdef _DEBUG
-	InitializeDxgiObjects(true);
-#else
-	InitializeDxgiObjects(false);
-#endif
-
-	// The D3D debug layer (as well as Microsoft PIX and other graphics debugger
-	// tools using an injection library) is not compatible with Nsight Aftermath!
-	// If Aftermath detects that any of these tools are present it will fail
-	// initialization.
-	DeviceOptions OverrideOptions = Options;
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	OverrideOptions.EnableDebugLayer		 = false;
-	OverrideOptions.EnableGpuBasedValidation = false;
-	AftermathCrashTracker.Initialize();
-#endif
-
-	// Enable the D3D12 debug layer
-	if (OverrideOptions.EnableDebugLayer || OverrideOptions.EnableGpuBasedValidation)
-	{
-		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the
-		// device.
-		ComPtr<ID3D12Debug> Debug;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.ReleaseAndGetAddressOf()))))
-		{
-			if (OverrideOptions.EnableDebugLayer)
-			{
-				Debug->EnableDebugLayer();
-			}
-		}
-
-		ComPtr<ID3D12Debug3> Debug3;
-		if (SUCCEEDED(Debug.As(&Debug3)))
-		{
-			Debug3->SetEnableGPUBasedValidation(OverrideOptions.EnableGpuBasedValidation);
-		}
-
-		ComPtr<ID3D12Debug5> Debug5;
-		if (SUCCEEDED(Debug.As(&Debug5)))
-		{
-			Debug5->SetEnableAutoName(OverrideOptions.EnableAutoDebugName);
-		}
-	}
-
-	if (CVar_Dred)
-	{
-		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DredSettings;
-		VERIFY_D3D12_API(D3D12GetDebugInterface(IID_PPV_ARGS(DredSettings.GetAddressOf())));
-
-		// Turn on auto-breadcrumbs and page fault reporting.
-		DredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-		DredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-	}
-}
-
-void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
-{
-	VERIFY_D3D12_API(
-		D3D12CreateDevice(Adapter3.Get(), Features.FeatureLevel, IID_PPV_ARGS(Device.ReleaseAndGetAddressOf())));
-
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	AftermathCrashTracker.RegisterDevice(Device.Get());
-#endif
-
-	VERIFY_D3D12_API(Device.As(&Device1));
-	VERIFY_D3D12_API(Device.As(&Device5));
-	Device.As(&InfoQueue1);
-
-	if (FAILED(FeatureSupport.Init(Device.Get())))
-	{
-		LOG_WARN("Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
-	}
-
-	constexpr D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-													 D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-													 D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-													 D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
-	for (size_t i = 0; i < std::size(Types); ++i)
-	{
-		DescriptorSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
-	}
-
 	ComPtr<ID3D12InfoQueue> InfoQueue;
-	if (SUCCEEDED(Device.As(&InfoQueue)))
+	if (SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(&InfoQueue))))
 	{
 		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
 		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
@@ -169,7 +48,9 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 														// present, then we will use this warning to create the PSO
 			D3D12_MESSAGE_ID_LOADPIPELINE_INVALIDDESC,	// Could happen when shader is modified and the resulting
 														// serialized PSO is not valid
-			D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME
+			D3D12_MESSAGE_ID_STOREPIPELINE_DUPLICATENAME,
+			D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH,
+			D3D12_MESSAGE_ID_CREATERESOURCE_STATE_IGNORED
 		};
 
 		D3D12_INFO_QUEUE_FILTER InfoQueueFilter = {};
@@ -179,90 +60,6 @@ void D3D12Device::InitializeDevice(const DeviceFeatures& Features)
 		InfoQueueFilter.DenyList.pIDList		= IDs;
 		VERIFY_D3D12_API(InfoQueue->PushStorageFilter(&InfoQueueFilter));
 	}
-
-	if (InfoQueue1)
-	{
-		VERIFY_D3D12_API(InfoQueue1->RegisterMessageCallback(
-			[](D3D12_MESSAGE_CATEGORY Category,
-			   D3D12_MESSAGE_SEVERITY Severity,
-			   D3D12_MESSAGE_ID		  ID,
-			   LPCSTR				  pDescription,
-			   void*				  pContext)
-			{
-				LOG_ERROR("Severity: {}\n{}", GetD3D12MessageSeverity(Severity), pDescription);
-			},
-			D3D12_MESSAGE_CALLBACK_FLAG_NONE,
-			nullptr,
-			&CallbackCookie));
-	}
-
-	DeviceRemovedWaitHandle = INVALID_HANDLE_VALUE;
-	if (CVar_Dred)
-	{
-		// Dred
-		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
-		VERIFY_D3D12_API(
-			Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(DeviceRemovedFence.ReleaseAndGetAddressOf())));
-
-		DeviceRemovedEvent.create();
-		// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior to
-		// what happened.
-		VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
-
-		RegisterWaitForSingleObject(
-			&DeviceRemovedWaitHandle,
-			DeviceRemovedEvent.get(),
-			OnDeviceRemoved,
-			Device.Get(),
-			INFINITE,
-			0);
-	}
-
-	if (Features.WaveOperation)
-	{
-		if (!FeatureSupport.WaveOps())
-		{
-			throw std::runtime_error("Wave operation not supported on device");
-		}
-	}
-
-	if (Features.Raytracing)
-	{
-		if (FeatureSupport.RaytracingTier() < D3D12_RAYTRACING_TIER_1_0)
-		{
-			throw std::runtime_error("Raytracing not supported on device");
-		}
-	}
-
-	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html
-	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
-	if (Features.DynamicResources)
-	{
-		if (FeatureSupport.HighestShaderModel() < D3D_SHADER_MODEL_6_6 ||
-			FeatureSupport.ResourceBindingTier() < D3D12_RESOURCE_BINDING_TIER_3)
-		{
-			throw std::runtime_error("Dynamic resources not supported on device");
-		}
-	}
-
-	if (Features.MeshShaders)
-	{
-		if (FeatureSupport.MeshShaderTier() < D3D12_MESH_SHADER_TIER_1)
-		{
-			throw std::runtime_error("Mesh shaders not supported on device");
-		}
-	}
-
-	LinkedDevice.Initialize();
-
-	Profiler.Initialize(Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency());
-
-	Library = std::make_unique<D3D12PipelineLibrary>(this, Application::ExecutableDirectory / L"PipelineLibrary.cache");
-}
-
-void D3D12Device::WaitIdle()
-{
-	LinkedDevice.WaitIdle();
 }
 
 bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
@@ -270,33 +67,52 @@ bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
 	return CVar_AsyncPsoCompilation;
 }
 
-std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(Delegate<void(RootSignatureBuilder&)> Configurator)
+void D3D12Device::OnBeginFrame()
 {
-	RootSignatureBuilder Builder = {};
-	Configurator(Builder);
-	if (!Builder.IsLocal())
+	Profiler.OnBeginFrame();
+}
+
+void D3D12Device::OnEndFrame()
+{
+	Profiler.OnEndFrame();
+}
+
+void D3D12Device::WaitIdle()
+{
+	LinkedDevice.WaitIdle();
+}
+
+std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(RootSignatureDesc& Desc)
+{
+	if (!Desc.IsLocal())
 	{
 		// If a root signature is local we don't add bindless descriptor table because it will conflict with global root
 		// signature
-		AddDescriptorTableRootParameterToBuilder(Builder);
+		AddBindlessParameterToDesc(Desc);
 	}
 
-	return std::make_unique<D3D12RootSignature>(this, Builder);
+	return std::make_unique<D3D12RootSignature>(this, Desc);
 }
 
-D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(
-	Delegate<void(RaytracingPipelineStateBuilder&)> Configurator)
+std::unique_ptr<D3D12RaytracingPipelineState> D3D12Device::CreateRaytracingPipelineState(
+	RaytracingPipelineStateDesc& Desc)
 {
-	RaytracingPipelineStateBuilder Builder = {};
-	Configurator(Builder);
+	return std::make_unique<D3D12RaytracingPipelineState>(this, Desc);
+}
 
-	return D3D12RaytracingPipelineState(GetD3D12Device5(), Builder);
+void D3D12Device::ReportLiveObjects()
+{
+#ifdef _DEBUG
+	ComPtr<IDXGIDebug> Debug;
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&Debug))))
+	{
+		Debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+	}
+#endif
 }
 
 void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 {
-	// TODO: Fix formatting for any loggings
-
 	auto	D3D12Device	  = static_cast<ID3D12Device*>(Context);
 	HRESULT RemovedReason = D3D12Device->GetDeviceRemovedReason();
 	if (FAILED(RemovedReason))
@@ -369,7 +185,7 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 {
 	UINT FactoryFlags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
 	// Create DXGIFactory
-	VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(Factory6.ReleaseAndGetAddressOf())));
+	VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(&Factory6)));
 
 	// Enumerate hardware for an adapter that supports D3D12
 	ComPtr<IDXGIAdapter3> AdapterIterator;
@@ -379,10 +195,19 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 		DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
 		IID_PPV_ARGS(AdapterIterator.ReleaseAndGetAddressOf()))))
 	{
-		if (SUCCEEDED(
-				D3D12CreateDevice(AdapterIterator.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(D3D12CreateDevice(
+				AdapterIterator.Get(),
+				D3D_FEATURE_LEVEL_12_0,
+				__uuidof(ID3D12Device),
+				nullptr)))
 		{
 			Adapter3 = std::move(AdapterIterator);
+			if (SUCCEEDED(Adapter3->GetDesc2(&AdapterDesc)))
+			{
+				LOG_INFO("Adapter Vendor: {}", GetRHIVendorString(static_cast<RHI_VENDOR>(AdapterDesc.VendorId)));
+				LOG_INFO(L"Adapter: {}", AdapterDesc.Description);
+				LOG_INFO(L"\tDedicated Video Memory: {}", AdapterDesc.DedicatedVideoMemory);
+			}
 			break;
 		}
 
@@ -390,161 +215,194 @@ void D3D12Device::InitializeDxgiObjects(bool Debug)
 	}
 }
 
-void D3D12Device::AddDescriptorTableRootParameterToBuilder(RootSignatureBuilder& RootSignatureBuilder)
+ComPtr<ID3D12Device> D3D12Device::InitializeDevice(const DeviceOptions& Options)
+{
+#ifdef _DEBUG
+	InitializeDxgiObjects(true);
+#else
+	InitializeDxgiObjects(false);
+#endif
+
+	// Enable the D3D12 debug layer
+	if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
+	{
+		// NOTE: Enabling the debug layer after creating the ID3D12Device will cause the DX runtime to remove the
+		// device.
+		ComPtr<ID3D12Debug> Debug;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug))))
+		{
+			if (Options.EnableDebugLayer)
+			{
+				Debug->EnableDebugLayer();
+			}
+		}
+
+		ComPtr<ID3D12Debug3> Debug3;
+		if (SUCCEEDED(Debug->QueryInterface(IID_PPV_ARGS(&Debug3))))
+		{
+			Debug3->SetEnableGPUBasedValidation(Options.EnableGpuBasedValidation);
+		}
+
+		ComPtr<ID3D12Debug5> Debug5;
+		if (SUCCEEDED(Debug->QueryInterface(IID_PPV_ARGS(&Debug5))))
+		{
+			Debug5->SetEnableAutoName(Options.EnableAutoDebugName);
+		}
+	}
+
+	if (CVar_Dred)
+	{
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> DredSettings;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&DredSettings))))
+		{
+			LOG_INFO("DRED Enabled");
+			// Turn on auto-breadcrumbs and page fault reporting.
+			DredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			DredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		}
+	}
+	else
+	{
+		LOG_INFO("DRED Disabled");
+	}
+
+	ComPtr<ID3D12Device> Device;
+	VERIFY_D3D12_API(D3D12CreateDevice(Adapter3.Get(), Options.FeatureLevel, IID_PPV_ARGS(&Device)));
+	return Device;
+}
+
+CD3DX12FeatureSupport D3D12Device::InitializeFeatureSupport(const DeviceOptions& Options)
+{
+	CD3DX12FeatureSupport FeatureSupport;
+	if (FAILED(FeatureSupport.Init(Device.Get())))
+	{
+		LOG_WARN("Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
+	}
+
+	if (Options.WaveOperation)
+	{
+		if (!FeatureSupport.WaveOps())
+		{
+			LOG_ERROR("Wave operation not supported on device");
+		}
+	}
+
+	if (Options.Raytracing)
+	{
+		if (FeatureSupport.RaytracingTier() < D3D12_RAYTRACING_TIER_1_0)
+		{
+			LOG_ERROR("Raytracing not supported on device");
+		}
+	}
+
+	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html
+	// https://microsoft.github.io/DirectX-Specs/d3d/HLSL_ShaderModel6_6.html#dynamic-resource
+	if (Options.DynamicResources)
+	{
+		if (FeatureSupport.HighestShaderModel() < D3D_SHADER_MODEL_6_6 ||
+			FeatureSupport.ResourceBindingTier() < D3D12_RESOURCE_BINDING_TIER_3)
+		{
+			LOG_ERROR("Dynamic resources not supported on device");
+		}
+	}
+
+	if (Options.MeshShaders)
+	{
+		if (FeatureSupport.MeshShaderTier() < D3D12_MESH_SHADER_TIER_1)
+		{
+			LOG_ERROR("Mesh shaders not supported on device");
+		}
+	}
+
+	return FeatureSupport;
+}
+
+D3D12Device::TDescriptorSizeCache D3D12Device::InitializeDescriptorSizeCache()
+{
+	TDescriptorSizeCache				 DescriptorSizeCache;
+	constexpr D3D12_DESCRIPTOR_HEAP_TYPE Types[] = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+													 D3D12_DESCRIPTOR_HEAP_TYPE_DSV };
+	for (size_t i = 0; i < std::size(Types); ++i)
+	{
+		DescriptorSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
+	}
+	return DescriptorSizeCache;
+}
+
+void D3D12Device::AddBindlessParameterToDesc(RootSignatureDesc& Desc)
 {
 	// TODO: Maybe consider this as a fall back options when SM6.6 dynamic resource binding is integrated
 	/* Descriptor Tables */
 
-	// ShaderResource
-	D3D12DescriptorTable ShaderResourceTable(4);
-	{
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
-			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+	constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorDataVolatile = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+	constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorVolatile	  = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
+	Desc.AddDescriptorTable(
+			// ShaderResource
+			D3D12DescriptorTable(4)
+				.AddSRVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_ByteAddressBufferTable
+				.AddSRVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DTable
+				.AddSRVRange<0, 102>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DArrayTable
+				.AddSRVRange<0, 103>(UINT_MAX, DescriptorDataVolatile, 0)) // g_TextureCubeTable
+		.AddDescriptorTable(
+			// UnorderedAccess
+			D3D12DescriptorTable(2)
+				.AddUAVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_RWTexture2DTable
+				.AddUAVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)) // g_RWTexture2DArrayTable
+		.AddDescriptorTable(
+			// Sampler
+			D3D12DescriptorTable(1)
+				.AddSamplerRange<0, 100>(UINT_MAX, DescriptorVolatile, 0)); // g_SamplerTable
 
-		ShaderResourceTable.AddSRVRange<0, 100>(UINT_MAX, Flags, 0); // g_ByteAddressBufferTable
-		ShaderResourceTable.AddSRVRange<0, 101>(UINT_MAX, Flags, 0); // g_Texture2DTable
-		ShaderResourceTable.AddSRVRange<0, 102>(UINT_MAX, Flags, 0); // g_Texture2DArrayTable
-		ShaderResourceTable.AddSRVRange<0, 103>(UINT_MAX, Flags, 0); // g_TextureCubeTable
-	}
-	RootSignatureBuilder.AddDescriptorTable(ShaderResourceTable);
+	constexpr D3D12_FILTER				 PointFilter  = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	constexpr D3D12_FILTER				 LinearFilter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	constexpr D3D12_FILTER				 Anisotropic  = D3D12_FILTER_ANISOTROPIC;
+	constexpr D3D12_TEXTURE_ADDRESS_MODE Wrap		  = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	constexpr D3D12_TEXTURE_ADDRESS_MODE Clamp		  = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	constexpr D3D12_TEXTURE_ADDRESS_MODE Border		  = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	Desc.AddSampler<0, 101>(PointFilter, Wrap, 16)	// g_SamplerPointWrap
+		.AddSampler<1, 101>(PointFilter, Clamp, 16) // g_SamplerPointClamp
 
-	// UnorderedAccess
-	D3D12DescriptorTable UnorderedAccessTable(2);
-	{
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags =
-			D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+		.AddSampler<2, 101>(LinearFilter, Wrap, 16)																					 // g_SamplerLinearWrap
+		.AddSampler<3, 101>(LinearFilter, Clamp, 16)																				 // g_SamplerLinearClamp
+		.AddSampler<4, 101>(LinearFilter, Border, 16, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK) // g_SamplerLinearBorder
 
-		UnorderedAccessTable.AddUAVRange<0, 100>(UINT_MAX, Flags, 0); // g_RWTexture2DTable
-		UnorderedAccessTable.AddUAVRange<0, 101>(UINT_MAX, Flags, 0); // g_RWTexture2DArrayTable
-	}
-	RootSignatureBuilder.AddDescriptorTable(UnorderedAccessTable);
-
-	// Sampler
-	D3D12DescriptorTable SamplerTable(1);
-	{
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-
-		SamplerTable.AddSamplerRange<0, 100>(UINT_MAX, Flags, 0); // g_SamplerTable
-	}
-	RootSignatureBuilder.AddDescriptorTable(SamplerTable);
-
-	// g_SamplerPointWrap
-	RootSignatureBuilder.AddSampler<0, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
-	// g_SamplerPointClamp
-	RootSignatureBuilder.AddSampler<1, 101>(D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
-	// g_SamplerLinearWrap
-	RootSignatureBuilder.AddSampler<2, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
-	// g_SamplerLinearClamp
-	RootSignatureBuilder.AddSampler<3, 101>(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
-	// g_SamplerAnisotropicWrap
-	RootSignatureBuilder.AddSampler<4, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16);
-	// g_SamplerAnisotropicClamp
-	RootSignatureBuilder.AddSampler<5, 101>(D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16);
+		.AddSampler<5, 101>(Anisotropic, Wrap, 16)	 // g_SamplerAnisotropicWrap
+		.AddSampler<6, 101>(Anisotropic, Clamp, 16); // g_SamplerAnisotropicClamp
 }
 
-D3D12PipelineLibrary::D3D12PipelineLibrary(D3D12Device* Parent, const std::filesystem::path& Path)
-	: D3D12DeviceChild(Parent)
-	, Path(Path)
-	, Stream(Path, FileMode::OpenOrCreate, FileAccess::ReadWrite)
-	, MappedFile(Stream)
-	, MappedView(MappedFile.CreateView())
+D3D12Device::Dred::Dred(ID3D12Device* Device)
+	: DeviceRemovedWaitHandle(INVALID_HANDLE_VALUE)
 {
-	ID3D12Device1* Device1 = Parent->GetD3D12Device1();
-	if (Device1)
+	if (CVar_Dred)
 	{
-		SIZE_T BlobLength  = MappedView.Read<SIZE_T>(0);
-		BYTE*  LibraryBlob = MappedView.GetView(sizeof(SIZE_T));
+		// Dred
+		// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
+		VERIFY_D3D12_API(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&DeviceRemovedFence)));
 
-		// Create a Pipeline Library from the serialized blob.
-		// Note: The provided Library Blob must remain valid for the lifetime of the object returned - for efficiency,
-		// the data is not copied.
-		HRESULT Result = Device1->CreatePipelineLibrary(LibraryBlob, BlobLength, IID_PPV_ARGS(&PipelineLibrary1));
-		switch (Result)
-		{
-		case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
-			break;
+		DeviceRemovedEvent.create();
+		// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior
+		// to what happened.
+		VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
 
-		case E_INVALIDARG:					// The provided Library is corrupted or unrecognized.
-		case D3D12_ERROR_ADAPTER_NOT_FOUND: // The provided Library contains data for different hardware (Don't really
-											// need to clear the cache, could have a cache per adapter).
-		case D3D12_ERROR_DRIVER_VERSION_MISMATCH: // The provided Library contains data from an old driver or runtime.
-												  // We need to re-create it.
-			VERIFY_D3D12_API(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&PipelineLibrary1)));
-			break;
-
-		default:
-			VERIFY_D3D12_API(Result);
-		}
+		RegisterWaitForSingleObject(
+			&DeviceRemovedWaitHandle,
+			DeviceRemovedEvent.get(),
+			OnDeviceRemoved,
+			Device,
+			INFINITE,
+			0);
 	}
 }
 
-D3D12PipelineLibrary::~D3D12PipelineLibrary()
+D3D12Device::Dred::~Dred()
 {
-	// If we're not going to invalidate disk cache file, serialize the library to disk.
-	if (!ShouldInvalidateDiskCache)
+	if (DeviceRemovedFence)
 	{
-		if (PipelineLibrary1)
-		{
-			// Important: An ID3D12PipelineLibrary object becomes undefined when the underlying memory, that was used to
-			// initalize it, changes.
-
-			assert(PipelineLibrary1->GetSerializedSize() <= UINT64_MAX); // Code below casts to UINT64.
-			const UINT64 SerializedSize = static_cast<UINT64>(PipelineLibrary1->GetSerializedSize());
-			if (SerializedSize > 0)
-			{
-				// Grow the file if needed.
-				const size_t FileSize = sizeof(SIZE_T) + SerializedSize;
-				if (FileSize > MappedFile.GetCurrentFileSize())
-				{
-					// The file mapping is going to change thus it will invalidate the ID3D12PipelineLibrary object.
-					// Serialize the library contents to temporary memory first.
-					std::unique_ptr<BYTE[]> pSerializedData = std::make_unique<BYTE[]>(SerializedSize);
-					if (pSerializedData)
-					{
-						if (SUCCEEDED(PipelineLibrary1->Serialize(pSerializedData.get(), SerializedSize)))
-						{
-							MappedView.Flush();
-
-							// Now it's safe to grow the mapping.
-							MappedFile.GrowMapping(FileSize);
-							// Update view
-							MappedView = MappedFile.CreateView();
-
-							// Update serialized size and write the serialized blob
-							MappedView.Write<SIZE_T>(0, SerializedSize);
-							memcpy(MappedView.GetView(sizeof(SIZE_T)), pSerializedData.get(), SerializedSize);
-						}
-						else
-						{
-							LOG_WARN("Failed to serialize pipeline library");
-						}
-					}
-				}
-				else
-				{
-					// The mapping didn't change, we can serialize directly to the mapped file.
-					// Save the size of the library and the library itself.
-					assert(FileSize <= MappedFile.GetCurrentFileSize());
-
-					MappedView.Write<SIZE_T>(0, SerializedSize);
-					HRESULT OpResult = PipelineLibrary1->Serialize(MappedView.GetView(sizeof(SIZE_T)), SerializedSize);
-					if (FAILED(OpResult))
-					{
-						LOG_WARN("Failed to serialize pipeline library");
-					}
-				}
-
-				// PipelineLibrary1 is now undefined because we just wrote to the mapped file, don't use it again.
-			}
-		}
-
-		MappedView.Flush();
-	}
-	else
-	{
-		LOG_WARN("Pipeline library disk cache invalidated");
-		Stream.Reset();
-		BOOL OpResult = DeleteFile(Path.c_str());
-		assert(OpResult);
+		// Need to gracefully exit the event
+		DeviceRemovedFence->Signal(UINT64_MAX);
+		BOOL b = UnregisterWaitEx(DeviceRemovedWaitHandle, INVALID_HANDLE_VALUE);
+		assert(b);
 	}
 }

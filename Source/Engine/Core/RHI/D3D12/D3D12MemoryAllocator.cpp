@@ -1,12 +1,28 @@
 #include "D3D12MemoryAllocator.h"
 #include "D3D12LinkedDevice.h"
 
+D3D12LinearAllocatorPage::D3D12LinearAllocatorPage(
+	Microsoft::WRL::ComPtr<ID3D12Resource> Resource,
+	UINT64								   PageSize)
+	: Resource(Resource)
+	, Offset(0)
+	, PageSize(PageSize)
+{
+	Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress));
+	GpuVirtualAddress = Resource->GetGPUVirtualAddress();
+}
+
+D3D12LinearAllocatorPage::~D3D12LinearAllocatorPage()
+{
+	Resource->Unmap(0, nullptr);
+}
+
 std::optional<D3D12Allocation> D3D12LinearAllocatorPage::Suballocate(UINT64 Size, UINT Alignment)
 {
 	UINT64 AlignedSize = AlignUp(Size, static_cast<UINT64>(Alignment));
 	if (Offset + AlignedSize > this->PageSize)
 	{
-		return {};
+		return std::nullopt;
 	}
 
 	D3D12Allocation Allocation = { .Resource		  = Resource.Get(),
@@ -14,9 +30,7 @@ std::optional<D3D12Allocation> D3D12LinearAllocatorPage::Suballocate(UINT64 Size
 								   .Size			  = Size,
 								   .CpuVirtualAddress = CpuVirtualAddress + Offset,
 								   .GpuVirtualAddress = GpuVirtualAddress + Offset };
-
 	Offset += AlignedSize;
-
 	return Allocation;
 }
 
@@ -34,9 +48,7 @@ void D3D12LinearAllocator::Version(D3D12SyncHandle SyncHandle)
 
 	this->SyncHandle = SyncHandle;
 
-	RetiredPageList.push_back(CurrentPage);
-	CurrentPage = nullptr;
-
+	RetiredPageList.push_back(std::exchange(CurrentPage, nullptr));
 	DiscardPages(SyncHandle.GetValue(), RetiredPageList);
 	RetiredPageList.clear();
 }
@@ -66,8 +78,6 @@ D3D12Allocation D3D12LinearAllocator::Allocate(
 
 D3D12LinearAllocatorPage* D3D12LinearAllocator::RequestPage()
 {
-	std::scoped_lock Lock(CriticalSection);
-
 	while (SyncHandle && !RetiredPages.empty() && RetiredPages.front().first <= SyncHandle.GetValue())
 	{
 		AvailablePages.push(RetiredPages.front().second);
@@ -84,14 +94,13 @@ D3D12LinearAllocatorPage* D3D12LinearAllocator::RequestPage()
 	}
 	else
 	{
-		Page = CreateNewPage(CpuAllocatorPageSize);
-		PagePool.emplace_back(Page);
+		Page = PagePool.emplace_back(CreateNewPage(CpuAllocatorPageSize)).get();
 	}
 
 	return Page;
 }
 
-D3D12LinearAllocatorPage* D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) const
+std::unique_ptr<D3D12LinearAllocatorPage> D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) const
 {
 	auto HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 	auto ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
@@ -103,18 +112,17 @@ D3D12LinearAllocatorPage* D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) c
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
+		IID_PPV_ARGS(&Resource)));
 
 #ifdef _DEBUG
 	Resource->SetName(L"Linear Allocator Page");
 #endif
 
-	return new D3D12LinearAllocatorPage(Resource, PageSize);
+	return std::make_unique<D3D12LinearAllocatorPage>(Resource, PageSize);
 }
 
 void D3D12LinearAllocator::DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages)
 {
-	std::scoped_lock Lock(CriticalSection);
 	for (const auto& Page : Pages)
 	{
 		RetiredPages.push(std::make_pair(FenceValue, Page));

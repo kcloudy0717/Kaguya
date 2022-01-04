@@ -6,18 +6,18 @@
 
 struct DebugVertex
 {
-	Vector3f Position;
-	Vector3f Color;
+	Vec3f Position;
+	Vec3f Color;
 };
 
 class DebugRenderer
 {
 public:
-	static void Initialize(D3D12RenderPass* RenderPass);
+	static void Initialize();
 	static void Shutdown();
 
-	static void AddLine(Vector3f V0, Vector3f V1, Vector3f Color = Vector3f(1.0f));
-	static void AddBoundingBox(const Transform& Transform, const BoundingBox& Box, Vector3f Color = Vector3f(1.0f));
+	static void AddLine(Vec3f V0, Vec3f V1, Vec3f Color = Vec3f(1.0f));
+	static void AddBoundingBox(const Transform& Transform, const BoundingBox& Box, Vec3f Color = Vec3f(1.0f));
 
 	static void Render(const DirectX::XMFLOAT4X4& ViewProjection, D3D12CommandContext& Context);
 

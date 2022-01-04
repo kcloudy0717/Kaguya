@@ -6,13 +6,11 @@ D3D12Device*	Device	 = nullptr;
 ShaderCompiler* Compiler = nullptr;
 } // namespace RenderCore
 
-RenderCoreInitializer::RenderCoreInitializer(const DeviceOptions& Options, const DeviceFeatures& Features)
+RenderCoreInitializer::RenderCoreInitializer(const DeviceOptions& Options)
 {
 	assert(!Device && !Compiler);
 
-	Device = std::make_unique<D3D12Device>();
-	Device->Initialize(Options);
-	Device->InitializeDevice(Features);
+	Device = std::make_unique<D3D12Device>(Options);
 
 	// First descriptor always reserved for imgui
 	UINT						ImGuiIndex		   = 0;
@@ -30,8 +28,7 @@ RenderCoreInitializer::RenderCoreInitializer(const DeviceOptions& Options, const
 		ImGuiGpuDescriptor);
 
 	Compiler = std::make_unique<ShaderCompiler>();
-	Compiler->Initialize();
-	Compiler->SetShaderModel(SHADER_MODEL::ShaderModel_6_6);
+	Compiler->SetShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6);
 
 	RenderCore::Device	 = Device.get();
 	RenderCore::Compiler = Compiler.get();
@@ -39,14 +36,7 @@ RenderCoreInitializer::RenderCoreInitializer(const DeviceOptions& Options, const
 
 RenderCoreInitializer::~RenderCoreInitializer()
 {
-	if (Device)
-	{
-		Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
-		Device->GetDevice()->GetAsyncComputeQueue()->WaitIdle();
-		Device->GetDevice()->GetCopyQueue1()->WaitIdle();
-		Device->GetDevice()->GetCopyQueue2()->WaitIdle();
-	}
-
+	Device->WaitIdle();
 	if (ImGuiD3D12Initialized)
 	{
 		ImGui_ImplDX12_Shutdown();

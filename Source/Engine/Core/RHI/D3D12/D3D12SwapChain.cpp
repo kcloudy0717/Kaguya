@@ -2,11 +2,18 @@
 
 using Microsoft::WRL::ComPtr;
 
-D3D12SwapChain::D3D12SwapChain(D3D12Device* Parent, HWND HWnd)
+D3D12SwapChain::D3D12SwapChain(
+	D3D12Device* Parent,
+	HWND		 HWnd)
 	: D3D12DeviceChild(Parent)
 	, WindowHandle(HWnd)
-	, Fence(Parent)
+	, SwapChain4(InitializeSwapChain())
+	, RenderTargetViews(Parent->GetDevice()->GetRtvAllocator().Allocate(BackBufferCount))
+	, Fence(Parent, 0, D3D12_FENCE_FLAG_NONE)
 {
+	DXGI_SWAP_CHAIN_DESC1 Desc = {};
+	SwapChain4->GetDesc1(&Desc);
+	Resize(Desc.Width, Desc.Height);
 }
 
 D3D12SwapChain::~D3D12SwapChain()
@@ -17,51 +24,12 @@ D3D12SwapChain::~D3D12SwapChain()
 	}
 }
 
-void D3D12SwapChain::Initialize()
-{
-	Fence.Initialize(0, D3D12_FENCE_FLAG_NONE);
-
-	IDXGIFactory6*		Factory		 = GetParentDevice()->GetDxgiFactory6();
-	ID3D12CommandQueue* CommandQueue = GetParentDevice()->GetDevice()->GetGraphicsQueue()->GetCommandQueue();
-
-	// Check tearing support
-	BOOL AllowTearing = FALSE;
-	if (FAILED(Factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
-	{
-		AllowTearing = FALSE;
-	}
-	TearingSupport = AllowTearing == TRUE;
-
-	// Width/Height can be set to 0
-	DXGI_SWAP_CHAIN_DESC1 Desc = {};
-	Desc.Format				   = Format;
-	Desc.Stereo				   = FALSE;
-	Desc.SampleDesc			   = DefaultSampleDesc();
-	Desc.BufferUsage		   = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	Desc.BufferCount		   = BackBufferCount;
-	Desc.Scaling			   = DXGI_SCALING_NONE;
-	Desc.SwapEffect			   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	Desc.AlphaMode			   = DXGI_ALPHA_MODE_UNSPECIFIED;
-	Desc.Flags = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-
-	ComPtr<IDXGISwapChain1> SwapChain1;
-	VERIFY_D3D12_API(Factory->CreateSwapChainForHwnd(CommandQueue, WindowHandle, &Desc, nullptr, nullptr, &SwapChain1));
-	// No full screen via alt + enter
-	VERIFY_D3D12_API(Factory->MakeWindowAssociation(WindowHandle, DXGI_MWA_NO_ALT_ENTER));
-	SwapChain1.As(&SwapChain4);
-	SwapChain1->GetDesc1(&Desc);
-
-	RenderTargetViews = GetParentDevice()->GetDevice()->GetRtvAllocator().Allocate(BackBufferCount);
-
-	Resize(Desc.Width, Desc.Height);
-}
-
 ID3D12Resource* D3D12SwapChain::GetBackBuffer(UINT Index) const
 {
 	return BackBuffers[Index].Get();
 }
 
-std::pair<ID3D12Resource*, D3D12_CPU_DESCRIPTOR_HANDLE> D3D12SwapChain::GetCurrentBackBufferResource() const
+D3D12SwapChainResource D3D12SwapChain::GetCurrentBackBufferResource() const
 {
 	UINT			BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
 	ID3D12Resource* BackBuffer		= GetBackBuffer(BackBufferIndex);
@@ -105,7 +73,7 @@ void D3D12SwapChain::Resize(UINT Width, UINT Height)
 
 	for (UINT i = 0; i < BackBufferCount; ++i)
 	{
-		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&BackBuffers[i])));
+		VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(BackBuffers[i].ReleaseAndGetAddressOf())));
 	}
 
 	CreateRenderTargetViews();
@@ -114,14 +82,50 @@ void D3D12SwapChain::Resize(UINT Width, UINT Height)
 void D3D12SwapChain::Present(bool VSync, IPresent& Present)
 {
 	Present.PrePresent();
-
-	UINT	SyncInterval = VSync ? 1u : 0u;
-	UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-	HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
+	{
+		UINT	SyncInterval = VSync ? 1u : 0u;
+		UINT	PresentFlags = (TearingSupport && !VSync) ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+		HRESULT Result		 = SwapChain4->Present(SyncInterval, PresentFlags);
+	}
 	Present.PostPresent();
 
 	UINT64 ValueToWaitFor = Fence.Signal(GetParentDevice()->GetDevice()->GetGraphicsQueue());
 	SyncHandle			  = D3D12SyncHandle(&Fence, ValueToWaitFor);
+}
+
+Microsoft::WRL::ComPtr<IDXGISwapChain4> D3D12SwapChain::InitializeSwapChain()
+{
+	IDXGIFactory6*		Factory		 = GetParentDevice()->GetDxgiFactory6();
+	ID3D12CommandQueue* CommandQueue = GetParentDevice()->GetDevice()->GetGraphicsQueue()->GetCommandQueue();
+
+	// Check tearing support
+	BOOL AllowTearing = FALSE;
+	if (FAILED(Factory->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &AllowTearing, sizeof(AllowTearing))))
+	{
+		AllowTearing = FALSE;
+	}
+	TearingSupport = AllowTearing == TRUE;
+
+	// Width/Height can be set to 0
+	DXGI_SWAP_CHAIN_DESC1 Desc = {};
+	Desc.Format				   = Format;
+	Desc.Stereo				   = FALSE;
+	Desc.SampleDesc			   = DefaultSampleDesc();
+	Desc.BufferUsage		   = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	Desc.BufferCount		   = BackBufferCount;
+	Desc.Scaling			   = DXGI_SCALING_NONE;
+	Desc.SwapEffect			   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	Desc.AlphaMode			   = DXGI_ALPHA_MODE_UNSPECIFIED;
+	Desc.Flags				   = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+	Microsoft::WRL::ComPtr<IDXGISwapChain1> SwapChain1;
+	Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain4;
+	VERIFY_D3D12_API(Factory->CreateSwapChainForHwnd(CommandQueue, WindowHandle, &Desc, nullptr, nullptr, SwapChain1.GetAddressOf()));
+	// No full screen via alt + enter
+	VERIFY_D3D12_API(Factory->MakeWindowAssociation(WindowHandle, DXGI_MWA_NO_ALT_ENTER));
+	VERIFY_D3D12_API(SwapChain1->QueryInterface(IID_PPV_ARGS(SwapChain4.ReleaseAndGetAddressOf())));
+
+	return SwapChain4;
 }
 
 void D3D12SwapChain::CreateRenderTargetViews()

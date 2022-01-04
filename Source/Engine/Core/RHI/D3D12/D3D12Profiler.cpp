@@ -1,39 +1,39 @@
 #include "D3D12Profiler.h"
 
+D3D12EventNode	D3D12EventGraph::RootNode	 = D3D12EventNode(-1, "", nullptr);
+D3D12EventNode* D3D12EventGraph::CurrentNode = &D3D12EventGraph::RootNode;
+
 static D3D12Profiler* g_Profiler = nullptr;
 
-void ProfileData::Update(UINT Index, UINT64 GpuFrequency, const UINT64* FrameQueryData)
+void UpdateProfileData(ProfileData& Data, UINT64 GpuFrequency, UINT64 StartTime, UINT64 EndTime)
 {
-	QueryFinished = false;
+	Data.QueryFinished = false;
 
-	double Time		 = 0.0;
-	UINT64 StartTime = FrameQueryData[Index * 2 + 0];
-	UINT64 EndTime	 = FrameQueryData[Index * 2 + 1];
-
+	double Time = 0.0;
 	if (EndTime > StartTime)
 	{
 		UINT64 Delta = EndTime - StartTime;
 		Time		 = (static_cast<double>(Delta) / static_cast<double>(GpuFrequency)) * 1000.0;
 	}
 
-	TimeSamples[Sample] = Time;
-	Sample				= (Sample + 1) % FilterSize;
+	Data.TimeSamples[Data.Sample] = Time;
+	Data.Sample					  = (Data.Sample + 1) % Data.FilterSize;
 
 	UINT64 AvgTimeSamples = 0;
-	for (double TimeSample : TimeSamples)
+	for (double TimeSample : Data.TimeSamples)
 	{
 		if (TimeSample <= 0.0)
 		{
 			continue;
 		}
-		MaxTime = std::max(TimeSample, MaxTime);
-		AverageTime += TimeSample;
+		Data.MaxTime = std::max(TimeSample, Data.MaxTime);
+		Data.AverageTime += TimeSample;
 		++AvgTimeSamples;
 	}
 
 	if (AvgTimeSamples > 0)
 	{
-		AverageTime /= static_cast<double>(AvgTimeSamples);
+		Data.AverageTime /= static_cast<double>(AvgTimeSamples);
 	}
 }
 
@@ -53,18 +53,20 @@ void D3D12EventNode::EndTiming(ID3D12GraphicsCommandList* CommandList)
 	}
 }
 
-D3D12Profiler::D3D12Profiler(UINT FrameLatency)
+std::span<ProfileData> D3D12Profiler::Data = {};
+
+D3D12Profiler::D3D12Profiler(
+	UINT		  FrameLatency,
+	ID3D12Device* Device,
+	UINT64		  Frequency)
 	: FrameLatency(FrameLatency)
+	, Frequency(Frequency)
 	, Profiles(MaxProfiles)
+	, NumProfiles(0)
+	, FrameIndex(0)
 {
 	assert(!g_Profiler);
 	g_Profiler = this;
-}
-
-void D3D12Profiler::Initialize(ID3D12Device* Device, UINT64 Frequency)
-{
-	this->Frequency = Frequency;
-	FrameIndex		= 0;
 
 	D3D12_QUERY_HEAP_DESC QueryHeapDesc = { .Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
 											.Count	  = MaxProfiles * 2,
@@ -73,14 +75,14 @@ void D3D12Profiler::Initialize(ID3D12Device* Device, UINT64 Frequency)
 	QueryHeap->SetName(L"Timestamp Query Heap");
 
 	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-	D3D12_RESOURCE_DESC	  ResourceDesc = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
+	D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
 	VERIFY_D3D12_API(Device->CreateCommittedResource(
 		&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
-		IID_PPV_ARGS(QueryReadback.ReleaseAndGetAddressOf())));
+		IID_PPV_ARGS(&QueryReadback)));
 	QueryReadback->SetName(L"Timestamp Query Readback");
 }
 
@@ -93,7 +95,9 @@ void D3D12Profiler::OnBeginFrame()
 
 		for (UINT i = 0; i < NumProfiles; ++i)
 		{
-			Profiles[i].Update(i, Frequency, FrameQueryData);
+			UINT64 StartTime = FrameQueryData[i * 2 + 0];
+			UINT64 EndTime	 = FrameQueryData[i * 2 + 1];
+			UpdateProfileData(Profiles[i], Frequency, StartTime, EndTime);
 		}
 
 		Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
@@ -110,7 +114,10 @@ void D3D12Profiler::OnEndFrame()
 	Data	   = {};
 }
 
-UINT D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const char* Name, INT Depth)
+UINT D3D12Profiler::StartProfile(
+	ID3D12GraphicsCommandList* CommandList,
+	const char*				   Name,
+	INT						   Depth)
 {
 	assert(NumProfiles < MaxProfiles);
 	UINT ProfileIdx			  = NumProfiles++;
@@ -131,7 +138,9 @@ UINT D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, const c
 	return ProfileIdx;
 }
 
-void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index)
+void D3D12Profiler::EndProfile(
+	ID3D12GraphicsCommandList* CommandList,
+	UINT					   Index)
 {
 	assert(Index < NumProfiles);
 

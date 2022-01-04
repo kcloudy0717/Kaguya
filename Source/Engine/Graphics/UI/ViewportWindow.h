@@ -21,8 +21,8 @@ protected:
 	void OnRender() override;
 
 public:
-	Vector2i Resolution = {};
-	RECT	 Rect		= {};
+	Vec2i Resolution = {};
+	RECT  Rect		 = {};
 
 private:
 	ImTextureID pImage	= nullptr;

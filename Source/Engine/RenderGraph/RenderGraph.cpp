@@ -1,35 +1,40 @@
 #include "RenderGraph.h"
-#include <iostream>
 
-RenderPass::RenderPass(RenderGraph* Parent, const std::string& Name)
-	: RenderGraphChild(Parent)
-	, Name(Name)
+RenderPass::RenderPass(std::string_view Name)
+	: Name(Name)
 {
 }
 
-void RenderPass::Read(RenderResourceHandle Resource)
+RenderPass& RenderPass::Read(RgResourceHandle Resource)
 {
+	// Only allow buffers/textures
+	assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
 	Reads.insert(Resource);
 	ReadWrites.insert(Resource);
+	return *this;
 }
 
-void RenderPass::Write(RenderResourceHandle Resource)
+RenderPass& RenderPass::Write(RgResourceHandle* Resource)
 {
-	Writes.insert(Resource);
-	ReadWrites.insert(Resource);
+	// Only allow buffers/textures
+	assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
+	Resource->Version++;
+	Writes.insert(*Resource);
+	ReadWrites.insert(*Resource);
+	return *this;
 }
 
-bool RenderPass::HasDependency(RenderResourceHandle Resource) const
+bool RenderPass::HasDependency(RgResourceHandle Resource) const
 {
 	return ReadWrites.contains(Resource);
 }
 
-bool RenderPass::WritesTo(RenderResourceHandle Resource) const
+bool RenderPass::WritesTo(RgResourceHandle Resource) const
 {
 	return Writes.contains(Resource);
 }
 
-bool RenderPass::ReadsFrom(RenderResourceHandle Resource) const
+bool RenderPass::ReadsFrom(RgResourceHandle Resource) const
 {
 	return Reads.contains(Resource);
 }
@@ -46,74 +51,40 @@ void RenderGraphDependencyLevel::AddRenderPass(RenderPass* RenderPass)
 	Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
 }
 
-void RenderGraphDependencyLevel::PostInitialize()
+void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandContext& Context)
 {
-	for (auto Read : Reads)
-	{
-		D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-		if (Parent->GetScheduler().AllowUnorderedAccess(Read))
-		{
-			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		}
-
-		ReadStates.push_back(ReadState);
-	}
-
-	for (auto Write : Writes)
-	{
-		D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
-
-		if (Parent->GetScheduler().AllowRenderTarget(Write))
-		{
-			WriteState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
-		}
-		if (Parent->GetScheduler().AllowDepthStencil(Write))
-		{
-			WriteState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		}
-		if (Parent->GetScheduler().AllowUnorderedAccess(Write))
-		{
-			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		}
-
-		WriteStates.push_back(WriteState);
-	}
-}
-
-void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
-{
+	// Figure out all the barriers needed for each level
 	// Handle resource transitions for all registered resources
 	for (auto Read : Reads)
 	{
 		D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-		if (Parent->GetScheduler().AllowUnorderedAccess(Read))
+		if (RenderGraph->AllowUnorderedAccess(Read))
 		{
 			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		}
 
-		D3D12Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Read);
+		D3D12Texture& Texture = RenderGraph->GetRegistry().GetTexture(Read);
 		Context.TransitionBarrier(&Texture, ReadState);
 	}
 	for (auto Write : Writes)
 	{
 		D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
 
-		if (Parent->GetScheduler().AllowRenderTarget(Write))
+		if (RenderGraph->AllowRenderTarget(Write))
 		{
 			WriteState |= D3D12_RESOURCE_STATE_RENDER_TARGET;
 		}
-		if (Parent->GetScheduler().AllowDepthStencil(Write))
+		if (RenderGraph->AllowDepthStencil(Write))
 		{
 			WriteState |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		}
-		if (Parent->GetScheduler().AllowUnorderedAccess(Write))
+		if (RenderGraph->AllowUnorderedAccess(Write))
 		{
 			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		}
 
-		D3D12Texture& Texture = GetParentRenderGraph()->GetRegistry().GetTexture(Write);
+		D3D12Texture& Texture = RenderGraph->GetRegistry().GetTexture(Write);
 		Context.TransitionBarrier(&Texture, WriteState);
 	}
 
@@ -121,49 +92,85 @@ void RenderGraphDependencyLevel::Execute(D3D12CommandContext& Context)
 
 	for (auto& RenderPass : RenderPasses)
 	{
-		RenderPass->Callback(GetParentRenderGraph()->GetRegistry(), Context);
+		if (RenderPass->Callback)
+		{
+			RenderPass->Callback(RenderGraph->GetRegistry(), Context);
+		}
 	}
 }
 
-RenderPass* RenderGraph::AddRenderPass(const std::string& Name, RenderPassCallback Callback)
+RenderGraph::RenderGraph(RenderGraphAllocator& Allocator, RenderGraphRegistry& Registry)
+	: Allocator(Allocator)
+	, Registry(Registry)
 {
-	GraphDirty = true;
+	Allocator.Reset();
 
-	RenderPass* NewRenderPass = Allocator.Construct<RenderPass>(this, Name);
-	Scheduler.SetCurrentRenderPass(NewRenderPass);
-	NewRenderPass->Callback = Callback(Scheduler, NewRenderPass->Scope);
-	Scheduler.SetCurrentRenderPass(nullptr);
-
-	RenderPasses.emplace_back(NewRenderPass);
-	Lut[Name] = NewRenderPass;
-	return NewRenderPass;
+	// Allocate epilogue pass after allocator reset
+	EpiloguePass = Allocator.Construct<RenderPass>("Epilogue");
 }
 
-RenderPass* RenderGraph::GetRenderPass(const std::string& Name) const
+RenderGraph::~RenderGraph()
 {
-	if (auto iter = Lut.find(Name); iter != Lut.end())
+	for (auto RenderPass : RenderPasses)
 	{
-		return iter->second;
+		Allocator.Destruct(RenderPass);
 	}
-	return nullptr;
+	RenderPasses.clear();
 }
 
-RenderScope& RenderGraph::GetScope(const std::string& Name) const
+RenderPass& RenderGraph::AddRenderPass(std::string_view Name)
 {
-	return GetRenderPass(Name)->Scope;
+	RenderPass* NewRenderPass = Allocator.Construct<RenderPass>(Name);
+	RenderPasses.emplace_back(NewRenderPass);
+	return *NewRenderPass;
+}
+
+RenderPass& RenderGraph::GetEpiloguePass()
+{
+	return *EpiloguePass;
+}
+
+RenderGraphRegistry& RenderGraph::GetRegistry()
+{
+	return Registry;
+}
+
+void RenderGraph::Execute(D3D12CommandContext& Context)
+{
+	RenderPasses.push_back(EpiloguePass);
+	Setup();
+	Registry.RealizeResources(this);
+
+	D3D12ScopedEvent(Context, "Render Graph");
+	for (auto& DependencyLevel : DependencyLevels)
+	{
+		DependencyLevel.Execute(this, Context);
+	}
+}
+
+bool RenderGraph::AllowRenderTarget(RgResourceHandle Resource) const noexcept
+{
+	assert(Resource.Type == RgResourceType::Texture);
+	assert(Resource.Id < Textures.size());
+	return Textures[Resource.Id].Desc.RenderTarget;
+}
+
+bool RenderGraph::AllowDepthStencil(RgResourceHandle Resource) const noexcept
+{
+	assert(Resource.Type == RgResourceType::Texture);
+	assert(Resource.Id < Textures.size());
+	return Textures[Resource.Id].Desc.DepthStencil;
+}
+
+bool RenderGraph::AllowUnorderedAccess(RgResourceHandle Resource) const noexcept
+{
+	assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
+	// TODO: Buffer
+	return Textures[Resource.Id].Desc.UnorderedAccess;
 }
 
 void RenderGraph::Setup()
 {
-#define RENDER_GRAPH_DEBUG_LOG 0
-
-	if (!GraphDirty)
-	{
-		return;
-	}
-
-	GraphDirty = false;
-
 	// https://levelup.gitconnected.com/organizing-gpu-work-with-directed-acyclic-graphs-f3fd5f2c2af3
 	// https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/
 	// https://andrewcjp.wordpress.com/2019/09/28/the-render-graph-architecture/
@@ -183,7 +190,11 @@ void RenderGraph::Setup()
 
 		std::vector<UINT64>& Indices = AdjacencyLists[i];
 
-		for (size_t j = 0; j < RenderPasses.size(); ++j)
+		// Reverse iterate the render passes here, because often or not, the adjacency list should be built upon
+		// the latest changes to the render passes since those pass are more likely to change the resource we are writing to from other passes
+		// if we were to iterate from 0 to RenderPasses.size(), it'd often break the algorithm and
+		// creates an valid, but incorrect adjacency list
+		for (size_t j = RenderPasses.size(); j-- != 0;)
 		{
 			if (i == j)
 			{
@@ -191,11 +202,10 @@ void RenderGraph::Setup()
 			}
 
 			RenderPass* Neighbor = RenderPasses[j];
-			for (auto ReadResource : Neighbor->Reads)
+			for (auto Resource : Node->Writes)
 			{
-				// If other pass reads a subresource written by the current node, then it depends on current node and is
-				// an adjacent dependency
-				if (Node->WritesTo(ReadResource))
+				// If the neighbor reads from a resource written to by the current pass, then it is a dependency, add it to the adjacency list
+				if (Neighbor->ReadsFrom(Resource))
 				{
 					Indices.push_back(j);
 					break;
@@ -210,29 +220,20 @@ void RenderGraph::Setup()
 
 	for (size_t i = 0; i < RenderPasses.size(); i++)
 	{
-		if (Visited[i] == false)
+		if (!Visited[i])
 		{
 			DepthFirstSearch(i, Visited, Stack);
 		}
 	}
 
-#if RENDER_GRAPH_DEBUG_LOG
-	std::cout << "Topological Indices" << std::endl;
-#endif
+	TopologicalSortedPasses.reserve(Stack.size());
 	while (!Stack.empty())
 	{
 		size_t i						  = Stack.top();
 		RenderPasses[i]->TopologicalIndex = i;
 		TopologicalSortedPasses.push_back(RenderPasses[i]);
-		// Debug
-#if RENDER_GRAPH_DEBUG_LOG
-		std::cout << Stack.top() << " ";
-#endif
 		Stack.pop();
 	}
-#if RENDER_GRAPH_DEBUG_LOG
-	std::cout << std::endl;
-#endif
 
 	// Longest path search
 	// Render passes in a dependency level share the same recursion depth,
@@ -251,107 +252,25 @@ void RenderGraph::Setup()
 		}
 	}
 
-	DependencyLevels.resize(
-		*std::max_element(Distances.begin(), Distances.end()) + 1,
-		RenderGraphDependencyLevel(this));
+	DependencyLevels.resize(*std::ranges::max_element(Distances) + 1);
 	for (size_t i = 0; i < TopologicalSortedPasses.size(); ++i)
 	{
 		int level = Distances[i];
 		DependencyLevels[level].AddRenderPass(TopologicalSortedPasses[i]);
 	}
-
-	for (auto& DependencyLevel : DependencyLevels)
-	{
-		DependencyLevel.PostInitialize();
-	}
-
-#if RENDER_GRAPH_DEBUG_LOG
-	std::cout << "Longest Path" << std::endl;
-	for (auto d : Distances)
-	{
-		std::cout << d << " ";
-	}
-	std::cout << std::endl;
-#endif
 }
 
-void RenderGraph::Compile()
+void RenderGraph::DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack)
 {
-	Registry.Initialize();
-}
+	Visited[n] = true;
 
-void RenderGraph::Execute(D3D12CommandContext& Context)
-{
-	for (RGTexture& Texture : Scheduler.Textures)
+	for (auto i : AdjacencyLists[n])
 	{
-		if ((Resolution.RenderResolutionResized && Texture.Desc.Resolution == ETextureResolution::Render) ||
-			(Resolution.ViewportResolutionResized && Texture.Desc.Resolution == ETextureResolution::Viewport))
+		if (!Visited[i])
 		{
-			Texture.Handle.State = ERGHandleState::Dirty;
+			DepthFirstSearch(i, Visited, Stack);
 		}
 	}
-	Resolution.RenderResolutionResized = Resolution.ViewportResolutionResized = false;
 
-	Registry.RealizeResources(*this);
-	for (auto& RenderPass : RenderPasses)
-	{
-		auto& ViewData			= RenderPass->Scope.Get<RenderGraphViewData>();
-		ViewData.RenderWidth	= Resolution.RenderWidth;
-		ViewData.RenderHeight	= Resolution.RenderHeight;
-		ViewData.ViewportWidth	= Resolution.ViewportWidth;
-		ViewData.ViewportHeight = Resolution.ViewportHeight;
-	}
-
-	D3D12ScopedEvent(Context, "Render Graph");
-	for (auto& DependencyLevel : DependencyLevels)
-	{
-		DependencyLevel.Execute(Context);
-	}
-}
-
-void RenderGraph::RenderGui()
-{
-	if (ImGui::Begin("Render Graph"))
-	{
-		for (const auto& RenderPass : RenderPasses)
-		{
-			char Label[MAX_PATH] = {};
-			sprintf_s(Label, "Pass: %s", RenderPass->Name.data());
-			if (ImGui::TreeNode(Label))
-			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable |
-													   ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg |
-													   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
-
-				ImGui::Text("Inputs");
-				if (ImGui::BeginTable("Inputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Reads)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", Scheduler.GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::Text("Outputs");
-				if (ImGui::BeginTable("Outputs", 1, TableFlags))
-				{
-					for (auto Handle : RenderPass->Writes)
-					{
-						ImGui::TableNextRow();
-						ImGui::TableSetColumnIndex(0);
-
-						ImGui::Text("%s", Scheduler.GetTextureName(Handle).data());
-					}
-					ImGui::EndTable();
-				}
-
-				ImGui::TreePop();
-			}
-		}
-	}
-	ImGui::End();
+	Stack.push(n);
 }

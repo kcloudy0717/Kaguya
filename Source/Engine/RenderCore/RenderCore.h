@@ -13,15 +13,10 @@ static constexpr DXGI_FORMAT DepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 class RenderCoreInitializer
 {
 public:
-	RenderCoreInitializer(const DeviceOptions& Options, const DeviceFeatures& Features);
+	RenderCoreInitializer(const DeviceOptions& Options);
 	~RenderCoreInitializer();
 
 private:
-	struct ReportLiveObjectGuard
-	{
-		~ReportLiveObjectGuard() { D3D12Device::ReportLiveObjects(); }
-	} Guard;
-
 	std::unique_ptr<D3D12Device>	Device;
 	std::unique_ptr<ShaderCompiler> Compiler;
 

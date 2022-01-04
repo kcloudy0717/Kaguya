@@ -20,7 +20,10 @@ SamplerState g_SamplerTable[] : register(s0, space100);
 // Defines global static samplers
 SamplerState g_SamplerPointWrap : register(s0, space101);
 SamplerState g_SamplerPointClamp : register(s1, space101);
+
 SamplerState g_SamplerLinearWrap : register(s2, space101);
 SamplerState g_SamplerLinearClamp : register(s3, space101);
-SamplerState g_SamplerAnisotropicWrap : register(s4, space101);
-SamplerState g_SamplerAnisotropicClamp : register(s5, space101);
+SamplerState g_SamplerLinearBorder : register(s4, space101);
+
+SamplerState g_SamplerAnisotropicWrap : register(s5, space101);
+SamplerState g_SamplerAnisotropicClamp : register(s6, space101);

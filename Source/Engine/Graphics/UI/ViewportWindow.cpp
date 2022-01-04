@@ -28,7 +28,7 @@ void ViewportWindow::OnRender()
 	Rect.right	= static_cast<LONG>(Rect.left + windowSize.x);
 	Rect.bottom = static_cast<LONG>(Rect.top + windowSize.y);
 
-	Resolution = Vector2i(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
+	Resolution = Vec2i(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
 
 	if (pImage)
 	{

@@ -10,9 +10,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(UINT NumHitGrou
 
 	Manager = D3D12RaytracingAccelerationStructureManager(RenderCore::Device->GetDevice(), 6_MiB);
 
-	Null = RenderCore::Device->GetDevice()->ReserveShaderResourceView();
-	D3D12ASBuffer::CreateNullShaderResourceView(Null);
-	SRV = RenderCore::Device->GetDevice()->ReserveShaderResourceView();
+	Null = D3D12ShaderResourceView(RenderCore::Device->GetDevice(), nullptr);
 }
 
 void RaytracingAccelerationStructure::Initialize()
@@ -69,21 +67,21 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		AnyBlasBuild |= Geometry->BlasValid;
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->Blas.GetInputsDesc();
-		Geometry->BlasIndex = Manager.Build(Context.CommandListHandle.GetGraphicsCommandList4(), Inputs);
+		Geometry->BlasIndex											= Manager.Build(Context.GetGraphicsCommandList4(), Inputs);
 	}
 
 	if (AnyBlasBuild)
 	{
 		Context.UAVBarrier(nullptr);
 		Context.FlushResourceBarriers();
-		Manager.Copy(Context.CommandListHandle.GetGraphicsCommandList4());
+		Manager.Copy(Context.GetGraphicsCommandList4());
 	}
 
 	{
 		D3D12ScopedEvent(Context, "BLAS Compact");
 		for (auto Geometry : ReferencedGeometries)
 		{
-			Manager.Compact(Context.CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+			Manager.Compact(Context.GetGraphicsCommandList4(), Geometry->BlasIndex);
 		}
 	}
 
@@ -104,7 +102,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		&ScratchSize,
 		&ResultSize);
 
-	if (!TlasScratch || TlasScratch.GetDesc().Width < ScratchSize)
+	if (!TlasScratch.GetResource() || TlasScratch.GetDesc().Width < ScratchSize)
 	{
 		// TLAS Scratch
 		TlasScratch = D3D12Buffer(
@@ -115,11 +113,11 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
-	if (!TlasResult || TlasResult.GetDesc().Width < ResultSize)
+	if (!TlasResult.GetResource() || TlasResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
 		TlasResult = D3D12ASBuffer(RenderCore::Device->GetDevice(), ResultSize);
-		TlasResult.CreateShaderResourceView(SRV);
+		SRV		   = D3D12ShaderResourceView(RenderCore::Device->GetDevice(), &TlasResult);
 	}
 
 	// Create the description for each instance
@@ -130,9 +128,9 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	}
 
 	TopLevelAccelerationStructure.Generate(
-		Context.CommandListHandle.GetGraphicsCommandList6(),
-		TlasScratch,
-		TlasResult,
+		Context.GetGraphicsCommandList6(),
+		TlasScratch.GetResource(),
+		TlasResult.GetResource(),
 		InstanceDescs.GetGpuVirtualAddress());
 }
 

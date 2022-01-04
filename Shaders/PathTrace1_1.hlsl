@@ -84,14 +84,7 @@ VertexAttributes GetVertexAttributes(Mesh Mesh, RaytracingAttributes Attributes)
 	float3 n  = normalize(cross(e0, e1));
 	n		  = normalize(mul(n, transpose((float3x3)Attributes.ObjectToWorld3x4)));
 
-	Vertex vertex = BarycentricInterpolation(
-		vtx0,
-		vtx1,
-		vtx2,
-		float3(
-			1.f - Attributes.Barycentrics.x - Attributes.Barycentrics.y,
-			Attributes.Barycentrics.x,
-			Attributes.Barycentrics.y));
+	Vertex vertex = BarycentricInterpolation(vtx0, vtx1, vtx2, float3(1.f - Attributes.Barycentrics.x - Attributes.Barycentrics.y, Attributes.Barycentrics.x, Attributes.Barycentrics.y));
 	vertex.Normal = normalize(mul(vertex.Normal, transpose((float3x3)Attributes.ObjectToWorld3x4)));
 
 	VertexAttributes vertexAttributes;

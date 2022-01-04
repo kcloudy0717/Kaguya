@@ -1,6 +1,105 @@
 #include "D3D12RootSignature.h"
 
-D3D12_ROOT_SIGNATURE_DESC1 RootSignatureBuilder::Build() noexcept
+RootSignatureDesc::RootSignatureDesc()
+{
+	// Worst case number of root parameters is 64
+	// Preallocate all possible parameters to avoid cost for push back
+	Parameters.reserve(D3D12_MAX_ROOT_COST);
+	DescriptorTableIndices.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+	DescriptorTables.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+}
+
+RootSignatureDesc& RootSignatureDesc::AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable)
+{
+	// The descriptor table descriptor ranges require a pointer to the descriptor ranges. Since new
+	// ranges can be dynamically added in the vector, we separately store the index of the range set.
+	// The actual address will be solved when generating the actual root signature
+	CD3DX12_ROOT_PARAMETER1& Parameter = Parameters.emplace_back();
+	Parameter.InitAsDescriptorTable(DescriptorTable.size(), nullptr);
+	DescriptorTableIndices.push_back(static_cast<UINT>(DescriptorTables.size()));
+	DescriptorTables.push_back(DescriptorTable);
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::AllowInputLayout() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyVSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyHSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyDSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyTessellationShaderAccess() noexcept
+{
+	DenyHSAccess();
+	DenyDSAccess();
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyGSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyPSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::AsLocalRootSignature() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyASAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::DenyMSAccess() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::AllowResourceDescriptorHeapIndexing() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+	return *this;
+}
+
+RootSignatureDesc& RootSignatureDesc::AllowSampleDescriptorHeapIndexing() noexcept
+{
+	Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+	return *this;
+}
+
+bool RootSignatureDesc::IsLocal() const noexcept
+{
+	return Flags & D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+}
+
+D3D12_ROOT_SIGNATURE_DESC1 RootSignatureDesc::Build() noexcept
 {
 	// Go through all the parameters, and set the actual addresses of the heap range descriptors based
 	// on their indices in the range indices vector
@@ -8,7 +107,8 @@ D3D12_ROOT_SIGNATURE_DESC1 RootSignatureBuilder::Build() noexcept
 	{
 		if (Parameters[i].ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
 		{
-			Parameters[i].DescriptorTable = DescriptorTables[DescriptorTableIndices[i]];
+			Parameters[i].DescriptorTable.NumDescriptorRanges = DescriptorTables[DescriptorTableIndices[i]].size();
+			Parameters[i].DescriptorTable.pDescriptorRanges	  = DescriptorTables[DescriptorTableIndices[i]].data();
 		}
 	}
 
@@ -21,82 +121,30 @@ D3D12_ROOT_SIGNATURE_DESC1 RootSignatureBuilder::Build() noexcept
 	return Desc;
 }
 
-void RootSignatureBuilder::AllowInputLayout() noexcept
+RootSignatureDesc& RootSignatureDesc::AddParameter(D3D12_ROOT_PARAMETER1 Parameter)
 {
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	Parameters.emplace_back(Parameter);
+	DescriptorTableIndices.emplace_back(0xDEADBEEF);
+	return *this;
 }
 
-void RootSignatureBuilder::DenyVSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::DenyHSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::DenyDSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::DenyTessellationShaderAccess() noexcept
-{
-	DenyHSAccess();
-	DenyDSAccess();
-}
-
-void RootSignatureBuilder::DenyGSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::DenyPSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::AllowStreamOutput() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT;
-}
-
-void RootSignatureBuilder::SetAsLocalRootSignature() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-}
-
-void RootSignatureBuilder::DenyASAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::DenyMSAccess() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;
-}
-
-void RootSignatureBuilder::AllowResourceDescriptorHeapIndexing() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
-}
-
-void RootSignatureBuilder::AllowSampleDescriptorHeapIndexing() noexcept
-{
-	Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
-}
-
-D3D12RootSignature::D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder& Builder)
+D3D12RootSignature::D3D12RootSignature(
+	D3D12Device*	   Parent,
+	RootSignatureDesc& Desc)
 	: D3D12DeviceChild(Parent)
 {
-	Desc.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1;
-	Desc.Desc_1_1 = Builder.Build();
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {};
+	ApiDesc.Version								= D3D_ROOT_SIGNATURE_VERSION_1_1;
+	ApiDesc.Desc_1_1							= Desc.Build();
+	NumParameters								= ApiDesc.Desc_1_1.NumParameters;
 
 	// Serialize the root signature
 	Microsoft::WRL::ComPtr<ID3DBlob> SerializedRootSignatureBlob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	HRESULT Result = D3D12SerializeVersionedRootSignature(&Desc, &SerializedRootSignatureBlob, &ErrorBlob);
+	HRESULT							 Result = D3D12SerializeVersionedRootSignature(
+		 &ApiDesc,
+		 &SerializedRootSignatureBlob,
+		 &ErrorBlob);
 	if (FAILED(Result))
 	{
 		assert(ErrorBlob);
@@ -110,53 +158,4 @@ D3D12RootSignature::D3D12RootSignature(D3D12Device* Parent, RootSignatureBuilder
 		SerializedRootSignatureBlob->GetBufferPointer(),
 		SerializedRootSignatureBlob->GetBufferSize(),
 		IID_PPV_ARGS(&RootSignature)));
-
-	for (UINT i = 0; i < Desc.Desc_1_1.NumParameters; ++i)
-	{
-		const D3D12_ROOT_PARAMETER1& RootParameter = Desc.Desc_1_1.pParameters[i];
-
-		if (RootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
-		{
-			const D3D12_ROOT_DESCRIPTOR_TABLE1& DescriptorTable1 = RootParameter.DescriptorTable;
-
-			// Don't care about the rest, just the first range is enough
-			switch (DescriptorTable1.pDescriptorRanges[0].RangeType)
-			{
-			case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-			case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-			case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-				ResourceDescriptorTableBitMask.set(i, true);
-				break;
-			case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
-				SamplerTableBitMask.set(i, true);
-				break;
-			}
-
-			// Calculate total number of descriptors in the descriptor table.
-			for (UINT j = 0; j < DescriptorTable1.NumDescriptorRanges; ++j)
-			{
-				NumDescriptorsPerTable[i] += DescriptorTable1.pDescriptorRanges[j].NumDescriptors;
-			}
-		}
-	}
-}
-
-std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> D3D12RootSignature::GetDescriptorTableBitMask(
-	D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
-{
-	switch (Type)
-	{
-	case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-		return ResourceDescriptorTableBitMask;
-	case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
-		return SamplerTableBitMask;
-	default:
-		return {};
-	}
-}
-
-UINT D3D12RootSignature::GetNumDescriptors(UINT RootParameterIndex) const noexcept
-{
-	assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
-	return NumDescriptorsPerTable[RootParameterIndex];
 }

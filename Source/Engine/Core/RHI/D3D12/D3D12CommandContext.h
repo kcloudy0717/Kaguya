@@ -1,24 +1,29 @@
 #pragma once
 #include <Core/CoreDefines.h>
 #include "D3D12Common.h"
-#include "D3D12CommandQueue.h"
+#include "D3D12CommandList.h"
 #include "D3D12MemoryAllocator.h"
-#include "D3D12PipelineState.h"
-#include "D3D12RaytracingPipelineState.h"
-#include "D3D12RenderPass.h"
-#include "D3D12RenderTarget.h"
+#include "D3D12Profiler.h"
+
+class D3D12CommandQueue;
+class D3D12PipelineState;
+class D3D12RaytracingPipelineState;
+class D3D12RootSignature;
+class D3D12RenderTarget;
 
 class D3D12CommandContext : public D3D12LinkedDeviceChild
 {
 public:
 	D3D12CommandContext(
-		D3D12LinkedDevice*		Parent,
-		ED3D12CommandQueueType	Type,
-		D3D12_COMMAND_LIST_TYPE CommandListType);
+		D3D12LinkedDevice*		 Parent,
+		RHID3D12CommandQueueType Type,
+		D3D12_COMMAND_LIST_TYPE	 CommandListType);
 
-	D3D12CommandQueue* GetCommandQueue();
-
-	D3D12CommandListHandle& operator->() { return CommandListHandle; }
+	[[nodiscard]] D3D12CommandQueue*		  GetCommandQueue();
+	[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const noexcept;
+	[[nodiscard]] ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const noexcept;
+	[[nodiscard]] ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const noexcept;
+	D3D12CommandListHandle&					  operator->() { return CommandListHandle; }
 
 	void OpenCommandList();
 	void CloseCommandList();
@@ -30,30 +35,80 @@ public:
 		D3D12Resource*		  Resource,
 		D3D12_RESOURCE_STATES State,
 		UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-	void AliasingBarrier(D3D12Resource* BeforeResource, D3D12Resource* AfterResource);
-	void UAVBarrier(D3D12Resource* Resource);
+
+	void AliasingBarrier(
+		D3D12Resource* BeforeResource,
+		D3D12Resource* AfterResource);
+
+	void UAVBarrier(
+		D3D12Resource* Resource);
+
 	void FlushResourceBarriers();
 
-	void SetViewport(const RHIViewport& Viewport);
-	void SetViewports(UINT NumViewports, RHIViewport* Viewports);
-	void SetScissorRect(const RHIRect& ScissorRect);
-	void SetScissorRects(UINT NumScissorRects, RHIRect* ScissorRects);
+	void SetPipelineState(
+		D3D12PipelineState* PipelineState);
 
-	void SetPipelineState(D3D12PipelineState* PipelineState);
-	void SetPipelineState(D3D12RaytracingPipelineState* RaytracingPipelineState);
+	void SetPipelineState(
+		D3D12RaytracingPipelineState* RaytracingPipelineState);
 
-	void SetGraphicsRootSignature(D3D12RootSignature* RootSignature);
-	void SetComputeRootSignature(D3D12RootSignature* RootSignature);
+	void SetGraphicsRootSignature(
+		D3D12RootSignature* RootSignature);
 
-	void SetGraphicsConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data);
-	void SetComputeConstantBuffer(UINT RootParameterIndex, UINT64 Size, const void* Data);
+	void SetComputeRootSignature(
+		D3D12RootSignature* RootSignature);
 
-	void BeginRenderPass(D3D12RenderPass* RenderPass, D3D12RenderTarget* RenderTarget);
+	void ClearRenderTarget(
+		D3D12RenderTarget* RenderTarget);
 
-	void EndRenderPass();
+	void SetRenderTarget(
+		D3D12RenderTarget* RenderTarget);
+
+	void SetViewport(
+		const RHIViewport& Viewport);
+
+	void SetViewports(
+		std::span<RHIViewport> Viewports);
+
+	void SetScissorRect(
+		const RHIRect& ScissorRect);
+
+	void SetScissorRects(
+		std::span<RHIRect> ScissorRects);
+
+	void SetGraphicsConstantBuffer(
+		UINT		RootParameterIndex,
+		UINT64		Size,
+		const void* Data);
+
+	void SetComputeConstantBuffer(
+		UINT		RootParameterIndex,
+		UINT64		Size,
+		const void* Data);
+
+	template<typename T>
+	void SetGraphicsConstantBuffer(
+		UINT	 RootParameterIndex,
+		const T& Data)
+	{
+		static_assert(std::is_trivial_v<T>);
+		SetGraphicsConstantBuffer(RootParameterIndex, sizeof(T), &Data);
+	}
+
+	template<typename T>
+	void SetComputeConstantBuffer(
+		UINT	 RootParameterIndex,
+		const T& Data)
+	{
+		static_assert(std::is_trivial_v<T>);
+		SetComputeConstantBuffer(RootParameterIndex, sizeof(T), &Data);
+	}
 
 	// These version of the API calls should be used as it needs to flush resource barriers before any work
-	void DrawInstanced(UINT VertexCount, UINT InstanceCount, UINT StartVertexLocation, UINT StartInstanceLocation);
+	void DrawInstanced(
+		UINT VertexCount,
+		UINT InstanceCount,
+		UINT StartVertexLocation,
+		UINT StartInstanceLocation);
 
 	void DrawIndexedInstanced(
 		UINT IndexCount,
@@ -62,57 +117,68 @@ public:
 		UINT BaseVertexLocation,
 		UINT StartInstanceLocation);
 
-	void Dispatch(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
+	void Dispatch(
+		UINT ThreadGroupCountX,
+		UINT ThreadGroupCountY,
+		UINT ThreadGroupCountZ);
 
 	template<UINT ThreadSizeX>
-	void Dispatch1D(UINT ThreadGroupCountX)
+	void Dispatch1D(
+		UINT ThreadGroupCountX)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
-
 		Dispatch(ThreadGroupCountX, 1, 1);
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY>
-	void Dispatch2D(UINT ThreadGroupCountX, UINT ThreadGroupCountY)
+	void Dispatch2D(
+		UINT ThreadGroupCountX,
+		UINT ThreadGroupCountY)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
-
 		Dispatch(ThreadGroupCountX, ThreadGroupCountY, 1);
 	}
 
 	template<UINT ThreadSizeX, UINT ThreadSizeY, UINT ThreadSizeZ>
-	void Dispatch3D(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
+	void Dispatch3D(
+		UINT ThreadGroupCountX,
+		UINT ThreadGroupCountY,
+		UINT ThreadGroupCountZ)
 	{
 		ThreadGroupCountX = RoundUpAndDivide(ThreadGroupCountX, ThreadSizeX);
 		ThreadGroupCountY = RoundUpAndDivide(ThreadGroupCountY, ThreadSizeY);
 		ThreadGroupCountZ = RoundUpAndDivide(ThreadGroupCountZ, ThreadSizeZ);
-
 		Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 	}
 
-	void DispatchRays(const D3D12_DISPATCH_RAYS_DESC* pDesc);
+	void DispatchRays(
+		const D3D12_DISPATCH_RAYS_DESC* pDesc);
 
-	void DispatchMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ);
+	void DispatchMesh(
+		UINT ThreadGroupCountX,
+		UINT ThreadGroupCountY,
+		UINT ThreadGroupCountZ);
 
-	void ResetCounter(D3D12Resource* CounterResource, UINT64 CounterOffset, UINT Value = 0);
+	void ResetCounter(
+		D3D12Resource* CounterResource,
+		UINT64		   CounterOffset,
+		UINT		   Value = 0);
 
-	ED3D12CommandQueueType Type;
-
-	D3D12CommandListHandle	  CommandListHandle;
-	D3D12CommandAllocator*	  CommandAllocator;
-	D3D12CommandAllocatorPool CommandAllocatorPool;
-
-	D3D12LinearAllocator CpuConstantAllocator;
+private:
+	RHID3D12CommandQueueType					   Type;
+	D3D12CommandListHandle						   CommandListHandle;
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+	D3D12CommandAllocatorPool					   CommandAllocatorPool;
+	D3D12LinearAllocator						   CpuConstantAllocator;
 
 	// TODO: Finish cache
 	// State Cache
+	UINT64 DirtyStates;
 	struct StateCache
 	{
-		D3D12PipelineState*			  PipelineState			  = nullptr;
-		D3D12RaytracingPipelineState* RaytracingPipelineState = nullptr;
-
-		D3D12RootSignature* RootSignature = nullptr;
+		D3D12RootSignature* RootSignature;
+		D3D12PipelineState* PipelineState;
 
 		struct
 		{
@@ -124,8 +190,7 @@ public:
 			UINT	   NumScissorRects														  = 0;
 			D3D12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
 
-			D3D12RenderPass*   RenderPass	= nullptr;
-			D3D12RenderTarget* RenderTarget = nullptr;
+			D3D12RenderTarget* RenderTarget;
 		} Graphics;
 
 		struct
@@ -134,6 +199,7 @@ public:
 
 		struct
 		{
+			D3D12RaytracingPipelineState* RaytracingPipelineState;
 		} Raytracing;
 	} Cache;
 };
@@ -141,19 +207,15 @@ public:
 class D3D12ScopedEventObject
 {
 public:
-	D3D12ScopedEventObject(D3D12CommandContext& CommandContext, std::string_view Name)
+	D3D12ScopedEventObject(
+		D3D12CommandContext& CommandContext,
+		std::string_view	 Name)
 		: CommandContext(CommandContext)
 #ifdef _DEBUG
-		, PixEvent(CommandContext.CommandListHandle.GetGraphicsCommandList(), 0, Name.data())
+		, PixEvent(CommandContext.GetGraphicsCommandList(), 0, Name.data())
 #endif
-		, ProfileBlock(CommandContext.CommandListHandle.GetGraphicsCommandList(), Name.data())
+		, ProfileBlock(CommandContext.GetGraphicsCommandList(), Name.data())
 	{
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-		AFTERMATH_CHECK_ERROR(GFSDK_Aftermath_SetEventMarker(
-			CommandContext.CommandListHandle.GetAftermathContextHandle(),
-			Name.data(),
-			static_cast<uint32_t>(Name.size())));
-#endif
 	}
 
 private:
@@ -166,5 +228,4 @@ private:
 
 #define D3D12Concatenate(a, b)				  a##b
 #define D3D12GetScopedEventVariableName(a, b) D3D12Concatenate(a, b)
-#define D3D12ScopedEvent(context, name)                                                                                \
-	D3D12ScopedEventObject D3D12GetScopedEventVariableName(d3d12Event, __LINE__)(context, name)
+#define D3D12ScopedEvent(context, name)		  D3D12ScopedEventObject D3D12GetScopedEventVariableName(D3D12Event, __LINE__)(context, name)

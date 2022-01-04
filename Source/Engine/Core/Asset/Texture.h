@@ -1,7 +1,8 @@
 #pragma once
 #include "Asset.h"
 #include <DirectXTex.h>
-#include "Core/Math/Vector2.h"
+#include "Core/Math/Math.h"
+#include "Core/RHI/D3D12/D3D12Descriptor.h"
 #include "Core/RHI/D3D12/D3D12Device.h"
 
 struct TextureImportOptions
@@ -22,8 +23,8 @@ public:
 
 	TextureImportOptions Options;
 
-	Vector2i Resolution;
-	bool	 IsCubemap = false;
+	Vec2i Resolution;
+	bool  IsCubemap = false;
 
 	std::string			  Name;
 	DirectX::ScratchImage TexImage;

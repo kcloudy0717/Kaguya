@@ -1,152 +1,74 @@
 #pragma once
 #include <compare>
-#include <typeindex>
-#include <unordered_map>
 
-class RenderGraph;
-
-struct RenderGraphViewData
-{
-	UINT RenderWidth, RenderHeight;
-	UINT ViewportWidth, ViewportHeight;
-
-	template<typename T>
-	T GetRenderWidth() const noexcept
-	{
-		return static_cast<T>(RenderWidth);
-	}
-	template<typename T>
-	T GetRenderHeight() const noexcept
-	{
-		return static_cast<T>(RenderHeight);
-	}
-	template<typename T>
-	T GetViewportWidth() const noexcept
-	{
-		return static_cast<T>(ViewportWidth);
-	}
-	template<typename T>
-	T GetViewportHeight() const noexcept
-	{
-		return static_cast<T>(ViewportHeight);
-	}
-};
-
-class RenderGraphChild
-{
-public:
-	RenderGraphChild() noexcept
-		: Parent(nullptr)
-	{
-	}
-
-	RenderGraphChild(RenderGraph* Parent) noexcept
-		: Parent(Parent)
-	{
-	}
-
-	RenderGraph* GetParentRenderGraph() const { return Parent; }
-
-	void SetParentRenderGraph(RenderGraph* Parent)
-	{
-		assert(this->Parent == nullptr);
-		this->Parent = Parent;
-	}
-
-protected:
-	RenderGraph* Parent;
-};
-
-enum class ERGResourceType : UINT64
+enum class RgResourceType : UINT64
 {
 	Unknown,
-
 	Buffer,
 	Texture,
-
-	RenderPass,
 	RenderTarget,
-
+	ShaderResourceView,
+	UnorderedAccessView,
 	RootSignature,
 	PipelineState,
-	RaytracingPipelineState
-};
-
-enum class ERGHandleState : UINT64
-{
-	Dirty,
-	Ready
+	RaytracingPipelineState,
 };
 
 // A virtual resource handle, the underlying realization of the
 // resource type is done in RenderGraphRegistry, refer to RenderGraph/FrameGraph in Halcyon/Frostbite
-struct RenderResourceHandle
+struct RgResourceHandle
 {
-	auto operator<=>(const RenderResourceHandle&) const = default;
+	auto operator<=>(const RgResourceHandle&) const = default;
 
-	[[nodiscard]] bool IsValid() const noexcept { return Type != ERGResourceType::Unknown && Id != UINT_MAX; }
+	[[nodiscard]] bool IsValid() const noexcept { return Type != RgResourceType::Unknown && Id != UINT_MAX; }
 
 	void Invalidate()
 	{
-		Type	= ERGResourceType::Unknown;
-		State	= ERGHandleState::Dirty;
+		Type	= RgResourceType::Unknown;
+		State	= 0;
 		Version = 0;
 		Id		= UINT_MAX;
 	}
 
-	ERGResourceType Type	: 16;
-	ERGHandleState	State	: 2;
-	UINT64			Version : 14;
-	UINT64			Id		: 32;
+	RgResourceType Type	   : 16;
+	UINT64		   State   : 1;
+	UINT64		   Version : 15;
+	UINT64		   Id	   : 32;
 };
 
-static_assert(sizeof(RenderResourceHandle) == sizeof(UINT64));
+static_assert(sizeof(RgResourceHandle) == sizeof(UINT64));
 
 namespace std
 {
 template<>
-struct hash<RenderResourceHandle>
+struct hash<RgResourceHandle>
 {
-	size_t operator()(const RenderResourceHandle& RenderResourceHandle) const noexcept
+	size_t operator()(const RgResourceHandle& RenderResourceHandle) const noexcept
 	{
 		return CityHash64((char*)&RenderResourceHandle, sizeof(RenderResourceHandle));
 	}
 };
 } // namespace std
 
-enum EBufferFlags
+struct RgBufferDesc
 {
-	BufferFlag_None					= 0,
-	BufferFlag_AllowUnorderedAccess = 1 << 0
-};
-
-struct BufferDesc
-{
-	template<typename T>
-	static BufferDesc StructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
+	RgBufferDesc& SetSize(UINT64 SizeInBytes)
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T), .Flags = Flags };
+		this->SizeInBytes = SizeInBytes;
+		return *this;
 	}
 
-	template<typename T>
-	static BufferDesc RWStructuredBuffer(UINT NumElements, EBufferFlags Flags = BufferFlag_None)
+	RgBufferDesc& AllowUnorderedAccess()
 	{
-		return { .SizeInBytes = static_cast<UINT64>(NumElements) * sizeof(T),
-				 .Flags		  = Flags | EBufferFlags::BufferFlag_AllowUnorderedAccess };
+		UnorderedAccess = true;
+		return *this;
 	}
 
-	UINT64		 SizeInBytes = 0;
-	EBufferFlags Flags		 = EBufferFlags::BufferFlag_None;
+	UINT64 SizeInBytes	   = 0;
+	bool   UnorderedAccess = false;
 };
 
-enum class ETextureResolution
-{
-	Static,	 // Texture resolution is fixed
-	Render,	 // Texture resolution is based on render resolution
-	Viewport // Texture resolution is based on viewport resolution
-};
-
-enum class ETextureType
+enum class RgTextureType
 {
 	Texture2D,
 	Texture2DArray,
@@ -154,63 +76,258 @@ enum class ETextureType
 	TextureCube
 };
 
-enum ETextureFlags
+struct RgTextureDesc
 {
-	TextureFlag_None				 = 0,
-	TextureFlag_AllowRenderTarget	 = 1 << 0,
-	TextureFlag_AllowDepthStencil	 = 1 << 1,
-	TextureFlag_AllowUnorderedAccess = 1 << 2
-};
-DEFINE_ENUM_FLAG_OPERATORS(ETextureFlags);
-
-struct TextureDesc
-{
-	[[nodiscard]] static auto RWTexture2D(
-		DXGI_FORMAT	  Format,
-		UINT		  Width,
-		UINT		  Height,
-		UINT16		  MipLevels = 1,
-		ETextureFlags Flags		= TextureFlag_None) -> TextureDesc;
-	[[nodiscard]] static auto RWTexture2D(
-		ETextureResolution Resolution,
-		DXGI_FORMAT		   Format,
-		UINT16			   MipLevels = 1,
-		ETextureFlags	   Flags	 = TextureFlag_None) -> TextureDesc;
-
-	[[nodiscard]] static auto Texture2D(
-		DXGI_FORMAT						 Format,
-		UINT							 Width,
-		UINT							 Height,
-		UINT16							 MipLevels			 = 1,
-		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> TextureDesc;
-	[[nodiscard]] static auto Texture2D(
-		ETextureResolution				 Resolution,
-		DXGI_FORMAT						 Format,
-		UINT16							 MipLevels			 = 1,
-		ETextureFlags					 Flags				 = TextureFlag_None,
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt) -> TextureDesc;
-
-	[[nodiscard]] bool AllowRenderTarget() const noexcept
+	RgTextureDesc& SetFormat(DXGI_FORMAT Format)
 	{
-		return Flags & ETextureFlags::TextureFlag_AllowRenderTarget;
-	}
-	[[nodiscard]] bool AllowDepthStencil() const noexcept
-	{
-		return Flags & ETextureFlags::TextureFlag_AllowDepthStencil;
-	}
-	[[nodiscard]] bool AllowUnorderedAccess() const noexcept
-	{
-		return Flags & ETextureFlags::TextureFlag_AllowUnorderedAccess;
+		this->Format = Format;
+		return *this;
 	}
 
-	ETextureResolution				 Resolution			 = ETextureResolution::Static;
+	RgTextureDesc& SetType(RgTextureType Type)
+	{
+		this->Type = Type;
+		return *this;
+	}
+
+	RgTextureDesc& SetExtent(UINT Width, UINT Height, UINT DepthOrArraySize)
+	{
+		this->Width			   = Width;
+		this->Height		   = Height;
+		this->DepthOrArraySize = DepthOrArraySize;
+		return *this;
+	}
+
+	RgTextureDesc& SetMipLevels(UINT16 MipLevels)
+	{
+		this->MipLevels = MipLevels;
+		return *this;
+	}
+
+	RgTextureDesc& AllowRenderTarget()
+	{
+		RenderTarget = true;
+		return *this;
+	}
+
+	RgTextureDesc& AllowDepthStencil()
+	{
+		DepthStencil = true;
+		return *this;
+	}
+
+	RgTextureDesc& AllowUnorderedAccess()
+	{
+		UnorderedAccess = true;
+		return *this;
+	}
+
+	RgTextureDesc& SetClearValue(D3D12_CLEAR_VALUE ClearValue)
+	{
+		this->OptimizedClearValue = ClearValue;
+		return *this;
+	}
+
 	DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
-	ETextureType					 Type				 = ETextureType::Texture2D;
+	RgTextureType					 Type				 = RgTextureType::Texture2D;
 	UINT							 Width				 = 1;
 	UINT							 Height				 = 1;
-	UINT16							 DepthOrArraySize	 = 1;
+	UINT							 DepthOrArraySize	 = 1;
 	UINT16							 MipLevels			 = 1;
-	ETextureFlags					 Flags				 = ETextureFlags::TextureFlag_None;
+	bool							 RenderTarget		 = false;
+	bool							 DepthStencil		 = false;
+	bool							 UnorderedAccess	 = false;
 	std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
+};
+
+struct RgRenderTargetDesc
+{
+	RgRenderTargetDesc& AddRenderTarget(RgResourceHandle RenderTarget, bool sRGB)
+	{
+		RenderTargets[NumRenderTargets] = RenderTarget;
+		this->sRGB[NumRenderTargets]	= sRGB;
+		NumRenderTargets++;
+		return *this;
+	}
+	RgRenderTargetDesc& SetDepthStencil(RgResourceHandle DepthStencil)
+	{
+		this->DepthStencil = DepthStencil;
+		return *this;
+	}
+
+	UINT			 NumRenderTargets = 0;
+	RgResourceHandle RenderTargets[8] = {};
+	bool			 sRGB[8]		  = {};
+	RgResourceHandle DepthStencil;
+};
+
+enum class RgViewType
+{
+	BufferSrv,
+	BufferUav,
+	TextureSrv,
+	TextureUav
+};
+
+struct RgBufferSrv
+{
+	bool Raw;
+	UINT FirstElement;
+	UINT NumElements;
+};
+
+struct RgBufferUav
+{
+	UINT   NumElements;
+	UINT64 CounterOffsetInBytes;
+};
+
+struct RgTextureSrv
+{
+	bool sRGB;
+	UINT MostDetailedMip;
+	UINT MipLevels;
+};
+
+struct RgTextureUav
+{
+	UINT ArraySlice;
+	UINT MipSlice;
+};
+
+struct RgViewDesc
+{
+	RgViewDesc& SetResource(RgResourceHandle Resource)
+	{
+		this->Resource = Resource;
+		return *this;
+	}
+
+	RgViewDesc& AsBufferSrv(
+		bool Raw,
+		UINT FirstElement,
+		UINT NumElements)
+	{
+		Type				   = RgViewType::BufferSrv;
+		BufferSrv.Raw		   = Raw;
+		BufferSrv.FirstElement = FirstElement;
+		BufferSrv.NumElements  = NumElements;
+		return *this;
+	}
+
+	RgViewDesc& AsBufferUav(
+		UINT   NumElements,
+		UINT64 CounterOffsetInBytes)
+	{
+		Type						   = RgViewType::BufferUav;
+		BufferUav.NumElements		   = NumElements;
+		BufferUav.CounterOffsetInBytes = CounterOffsetInBytes;
+		return *this;
+	}
+
+	RgViewDesc& AsTextureSrv(
+		bool				sRGB			= false,
+		std::optional<UINT> MostDetailedMip = std::nullopt,
+		std::optional<UINT> MipLevels		= std::nullopt)
+	{
+		Type					   = RgViewType::TextureSrv;
+		TextureSrv.sRGB			   = sRGB;
+		TextureSrv.MostDetailedMip = MostDetailedMip.value_or(-1);
+		TextureSrv.MipLevels	   = MipLevels.value_or(-1);
+		return *this;
+	}
+
+	RgViewDesc& AsTextureUav(
+		std::optional<UINT> ArraySlice = std::nullopt,
+		std::optional<UINT> MipSlice   = std::nullopt)
+	{
+		Type				  = RgViewType::TextureUav;
+		TextureUav.ArraySlice = ArraySlice.value_or(-1);
+		TextureUav.MipSlice	  = MipSlice.value_or(-1);
+		return *this;
+	}
+
+	RgResourceHandle Resource;
+	RgViewType		 Type;
+	union
+	{
+		RgBufferSrv	 BufferSrv;
+		RgBufferUav	 BufferUav;
+		RgTextureSrv TextureSrv;
+		RgTextureUav TextureUav;
+	};
+};
+
+struct RgResource
+{
+	std::string_view Name;
+	RgResourceHandle Handle;
+};
+
+struct RgBuffer : RgResource
+{
+	RgBufferDesc Desc;
+};
+
+struct RgTexture : RgResource
+{
+	RgTextureDesc Desc;
+};
+
+struct RgRenderTarget : RgResource
+{
+	RgRenderTargetDesc Desc;
+};
+
+struct RgView : RgResource
+{
+	RgViewDesc Desc;
+};
+
+template<typename T>
+struct RgResourceTraits
+{
+	static constexpr auto Enum = RgResourceType::Unknown;
+	using Desc				   = void;
+	using Type				   = void;
+};
+
+template<>
+struct RgResourceTraits<D3D12Buffer>
+{
+	static constexpr auto Enum = RgResourceType::Buffer;
+	using Desc				   = RgBufferDesc;
+	using Type				   = RgBuffer;
+};
+
+template<>
+struct RgResourceTraits<D3D12Texture>
+{
+	static constexpr auto Enum = RgResourceType::Texture;
+	using Desc				   = RgTextureDesc;
+	using Type				   = RgTexture;
+};
+
+template<>
+struct RgResourceTraits<D3D12RenderTarget>
+{
+	static constexpr auto Enum = RgResourceType::RenderTarget;
+	using Desc				   = RgRenderTargetDesc;
+	using Type				   = RgRenderTarget;
+};
+
+template<>
+struct RgResourceTraits<D3D12ShaderResourceView>
+{
+	static constexpr auto Enum = RgResourceType::ShaderResourceView;
+	using Desc				   = RgViewDesc;
+	using Type				   = RgView;
+};
+
+template<>
+struct RgResourceTraits<D3D12UnorderedAccessView>
+{
+	static constexpr auto Enum = RgResourceType::UnorderedAccessView;
+	using Desc				   = RgViewDesc;
+	using Type				   = RgView;
 };

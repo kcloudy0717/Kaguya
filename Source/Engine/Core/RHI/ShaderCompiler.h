@@ -1,7 +1,6 @@
 #pragma once
 #include "dxcapi.h"
 #include "d3d12shader.h"
-#include "D3D12/Aftermath/AftermathShaderDatabase.h"
 
 class DxcException : public Exception
 {
@@ -19,22 +18,13 @@ private:
 	const HRESULT ErrorCode;
 };
 
-#define VERIFY_DXC_API(expr)                                                                                           \
-	{                                                                                                                  \
-		HRESULT hr = expr;                                                                                             \
-		if (FAILED(hr))                                                                                                \
-		{                                                                                                              \
-			throw DxcException(__FILE__, __LINE__, hr);                                                                \
-		}                                                                                                              \
-	}
-
-enum class SHADER_MODEL
+enum class RHI_SHADER_MODEL
 {
 	ShaderModel_6_5,
 	ShaderModel_6_6
 };
 
-enum class SHADER_TYPE
+enum class RHI_SHADER_TYPE
 {
 	Vertex,
 	Hull,
@@ -74,26 +64,23 @@ class Shader
 {
 public:
 	Shader() noexcept = default;
-	Shader(SHADER_TYPE ShaderType, const ShaderCompilationResult& Result) noexcept
+	Shader(
+		RHI_SHADER_TYPE				   ShaderType,
+		const ShaderCompilationResult& Result) noexcept
 		: ShaderType(ShaderType)
 		, Binary(Result.Binary)
 		, PdbName(Result.PdbName)
 		, Pdb(Result.Pdb)
 		, ShaderHash(Result.ShaderHash)
 	{
-		AftermathShaderDatabase::AddShader(Binary, Pdb);
-	}
-
-	operator D3D12_SHADER_BYTECODE() const
-	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Binary->GetBufferPointer(),
-									  .BytecodeLength  = Binary->GetBufferSize() };
 	}
 
 	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
+	[[nodiscard]] void*			GetPointer() const noexcept { return Binary->GetBufferPointer(); }
+	[[nodiscard]] size_t		GetSize() const noexcept { return Binary->GetBufferSize(); }
 
 private:
-	SHADER_TYPE						 ShaderType;
+	RHI_SHADER_TYPE					 ShaderType;
 	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
 	std::wstring					 PdbName;
 	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
@@ -111,22 +98,18 @@ class Library
 {
 public:
 	Library() noexcept = default;
-	Library(const ShaderCompilationResult& Result) noexcept
+	Library(
+		const ShaderCompilationResult& Result) noexcept
 		: Binary(Result.Binary)
 		, PdbName(std::move(Result.PdbName))
 		, Pdb(Result.Pdb)
 		, ShaderHash(Result.ShaderHash)
 	{
-		AftermathShaderDatabase::AddShader(Binary, Pdb);
-	}
-
-	operator D3D12_SHADER_BYTECODE() const
-	{
-		return D3D12_SHADER_BYTECODE{ .pShaderBytecode = Binary->GetBufferPointer(),
-									  .BytecodeLength  = Binary->GetBufferSize() };
 	}
 
 	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
+	[[nodiscard]] void*			GetPointer() const noexcept { return Binary->GetBufferPointer(); }
+	[[nodiscard]] size_t		GetSize() const noexcept { return Binary->GetBufferSize(); }
 
 private:
 	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
@@ -139,33 +122,23 @@ private:
 class ShaderCompiler
 {
 public:
-	ShaderCompiler()
-		: ShaderModel(SHADER_MODEL::ShaderModel_6_5)
-	{
-	}
+	ShaderCompiler();
 
-	void Initialize();
-
-	void SetShaderModel(SHADER_MODEL ShaderModel) noexcept;
+	void SetShaderModel(
+		RHI_SHADER_MODEL ShaderModel) noexcept;
 
 	[[nodiscard]] Shader CompileShader(
-		SHADER_TYPE					 ShaderType,
+		RHI_SHADER_TYPE				 ShaderType,
 		const std::filesystem::path& Path,
 		const ShaderCompileOptions&	 Options) const;
 
-	[[nodiscard]] Library CompileLibrary(const std::filesystem::path& Path) const;
-
-	//[[nodiscard]] Shader SpirVCodeGen(
-	//	VkDevice					  Device,
-	//	EShaderType					  ShaderType,
-	//	const std::filesystem::path& Path,
-	//	std::wstring_view			  EntryPoint,
-	//	const std::vector<DxcDefine>& ShaderDefines) const;
+	[[nodiscard]] Library CompileLibrary(
+		const std::filesystem::path& Path) const;
 
 private:
 	[[nodiscard]] std::wstring GetShaderModelString() const;
 
-	[[nodiscard]] std::wstring ShaderProfileString(SHADER_TYPE ShaderType) const;
+	[[nodiscard]] std::wstring ShaderProfileString(RHI_SHADER_TYPE ShaderType) const;
 
 	[[nodiscard]] std::wstring LibraryProfileString() const;
 
@@ -179,5 +152,5 @@ private:
 	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
 	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
 	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
-	SHADER_MODEL							   ShaderModel;
+	RHI_SHADER_MODEL						   ShaderModel;
 };

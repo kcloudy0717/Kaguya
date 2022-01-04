@@ -1,26 +1,20 @@
 ﻿#include "BoundingBox.h"
 
-BoundingBox::BoundingBox(Vector3f Center, Vector3f Extents) noexcept
-	: Center(Center)
-	, Extents(Extents)
+std::array<Vec3f, 8> BoundingBox::GetCorners() const noexcept
 {
-}
-
-std::array<Vector3f, 8> BoundingBox::GetCorners() const noexcept
-{
-	static constexpr size_t	  NumCorners			 = 8;
-	static constexpr Vector3f BoxOffsets[NumCorners] = {
-		Vector3f(-1.0f, -1.0f, +1.0f), // Far bottom left
-		Vector3f(+1.0f, -1.0f, +1.0f), // Far bottom right
-		Vector3f(+1.0f, +1.0f, +1.0f), // Far top right
-		Vector3f(-1.0f, +1.0f, +1.0f), // Far top left
-		Vector3f(-1.0f, -1.0f, -1.0f), // Near bottom left
-		Vector3f(+1.0f, -1.0f, -1.0f), // Near bottom right
-		Vector3f(+1.0f, +1.0f, -1.0f), // Near top right
-		Vector3f(-1.0f, +1.0f, -1.0f)  // Near top left
+	static constexpr size_t NumCorners			   = 8;
+	static constexpr Vec3f	BoxOffsets[NumCorners] = {
+		 Vec3f(-1.0f, -1.0f, +1.0f), // Far bottom left
+		 Vec3f(+1.0f, -1.0f, +1.0f), // Far bottom right
+		 Vec3f(+1.0f, +1.0f, +1.0f), // Far top right
+		 Vec3f(-1.0f, +1.0f, +1.0f), // Far top left
+		 Vec3f(-1.0f, -1.0f, -1.0f), // Near bottom left
+		 Vec3f(+1.0f, -1.0f, -1.0f), // Near bottom right
+		 Vec3f(+1.0f, +1.0f, -1.0f), // Near top right
+		 Vec3f(-1.0f, +1.0f, -1.0f)	 // Near top left
 	};
 
-	std::array<Vector3f, 8> Corners = {};
+	std::array<Vec3f, 8> Corners = {};
 	for (size_t i = 0; i < NumCorners; ++i)
 	{
 		Corners[i] = Extents * BoxOffsets[i] + Center;
@@ -59,11 +53,11 @@ bool BoundingBox::Intersects(const BoundingBox& Other) const noexcept
 	//
 	// Test this for each axis and you'll get intersection
 
-	Vector3f MinA = Center - Extents;
-	Vector3f MaxA = Center + Extents;
+	Vec3f MinA = Center - Extents;
+	Vec3f MaxA = Center + Extents;
 
-	Vector3f MinB = Other.Center - Other.Extents;
-	Vector3f MaxB = Other.Center + Other.Extents;
+	Vec3f MinB = Other.Center - Other.Extents;
+	Vec3f MaxB = Other.Center + Other.Extents;
 
 	bool x = MaxA.x >= MinB.x && MinA.x <= MaxB.x; // Overlap on x-axis?
 	bool y = MaxA.y >= MinB.y && MinA.y <= MaxB.y; // Overlap on y-axis?
@@ -103,8 +97,8 @@ PlaneIntersection BoundingBox::Intersects(const Plane& Plane) const noexcept
 
 void BoundingBox::Transform(DirectX::XMFLOAT4X4 Matrix, BoundingBox& BoundingBox) const noexcept
 {
-	BoundingBox.Center	= Vector3f(Matrix(3, 0), Matrix(3, 1), Matrix(3, 2));
-	BoundingBox.Extents = Vector3f(0.0f, 0.0f, 0.0f);
+	BoundingBox.Center	= Vec3f(Matrix(3, 0), Matrix(3, 1), Matrix(3, 2));
+	BoundingBox.Extents = Vec3f(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < 3; ++i)
 	{
 		for (int j = 0; j < 3; ++j)

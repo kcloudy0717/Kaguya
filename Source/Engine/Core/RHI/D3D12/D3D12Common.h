@@ -1,8 +1,20 @@
 #pragma once
+#include "Core/RHI/RHICore.h"
 #include "d3dx12.h"
 #include "D3D12Config.h"
 #include "D3D12Profiler.h"
-#include "Aftermath/AftermathCrashTracker.h"
+
+// Custom resource states
+constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_UNKNOWN	   = static_cast<D3D12_RESOURCE_STATES>(-1);
+constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_UNINITIALIZED = static_cast<D3D12_RESOURCE_STATES>(-2);
+
+enum class RHID3D12CommandQueueType
+{
+	Direct,
+	AsyncCompute,
+	Copy1, // High frequency copies from upload to default heap
+	Copy2, // Data initialization during resource creation
+};
 
 #define D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES (8)
 
@@ -43,14 +55,15 @@ private:
 	const HRESULT ErrorCode;
 };
 
-#define VERIFY_D3D12_API(expr)                                                                                         \
-	{                                                                                                                  \
-		HRESULT hr = expr;                                                                                             \
-		if (FAILED(hr))                                                                                                \
-		{                                                                                                              \
-			throw D3D12Exception(__FILE__, __LINE__, hr);                                                              \
-		}                                                                                                              \
-	}
+#define VERIFY_D3D12_API(expr)                            \
+	do                                                    \
+	{                                                     \
+		HRESULT hr = expr;                                \
+		if (FAILED(hr))                                   \
+		{                                                 \
+			throw D3D12Exception(__FILE__, __LINE__, hr); \
+		}                                                 \
+	} while (false)
 
 class D3D12Device;
 
@@ -174,35 +187,123 @@ struct D3D12ScopedMap
 	ID3D12Resource* Resource = nullptr;
 };
 
-struct ShaderIdentifier
+class D3D12InputLayout
 {
-	ShaderIdentifier() noexcept = default;
+public:
+	[[nodiscard]] explicit operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
 
-	ShaderIdentifier(void* Data) { std::memcpy(this->Data, Data, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); }
+	D3D12InputLayout() noexcept = default;
+	D3D12InputLayout(size_t NumElements) { InputElements.reserve(NumElements); }
 
-	BYTE Data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
+	void AddVertexLayoutElement(std::string_view SemanticName, UINT SemanticIndex, DXGI_FORMAT Format, UINT InputSlot);
+
+private:
+	std::vector<std::string>					  SemanticNames;
+	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 };
 
-constexpr DXGI_FORMAT GetValidDepthStencilViewFormat(DXGI_FORMAT Format)
+// https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking
+class CResourceState
 {
-	// TODO: Add more
-	switch (Format)
+public:
+	enum class ETrackingMode
 	{
-	case DXGI_FORMAT_R32_TYPELESS:
-		return DXGI_FORMAT_D32_FLOAT;
-	default:
-		return Format;
+		PerResource,
+		PerSubresource
 	};
-}
 
-constexpr DXGI_FORMAT GetValidSRVFormat(DXGI_FORMAT Format)
-{
-	// TODO: Add more
-	switch (Format)
+	CResourceState() noexcept
+		: TrackingMode(ETrackingMode::PerResource)
+		, ResourceState(D3D12_RESOURCE_STATE_UNINITIALIZED)
 	{
-	case DXGI_FORMAT_D32_FLOAT:
-		return DXGI_FORMAT_R32_FLOAT;
-	default:
-		return Format;
 	}
+	explicit CResourceState(UINT NumSubresources)
+		: CResourceState()
+	{
+		SubresourceStates.resize(NumSubresources);
+	}
+
+	[[nodiscard]] auto begin() const noexcept { return SubresourceStates.begin(); }
+	[[nodiscard]] auto end() const noexcept { return SubresourceStates.end(); }
+
+	[[nodiscard]] bool IsUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
+	[[nodiscard]] bool IsUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
+
+	// Returns true if all subresources have the same state
+	[[nodiscard]] bool IsUniform() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
+
+	[[nodiscard]] D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const;
+
+	void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State);
+
+private:
+	ETrackingMode					   TrackingMode;
+	D3D12_RESOURCE_STATES			   ResourceState;
+	std::vector<D3D12_RESOURCE_STATES> SubresourceStates;
+};
+
+template<typename TResourceType>
+class CFencePool
+{
+public:
+	CFencePool(bool ThreadSafe = false) noexcept
+		: Mutex(ThreadSafe ? std::make_unique<std::mutex>() : nullptr)
+	{
+	}
+	CFencePool(CFencePool&& CFencePool) noexcept
+		: Pool(std::exchange(CFencePool.Pool, {}))
+		, Mutex(std::exchange(CFencePool.Mutex, {}))
+	{
+	}
+	CFencePool& operator=(CFencePool&& CFencePool) noexcept
+	{
+		if (this == &CFencePool)
+		{
+			return *this;
+		}
+
+		Pool  = std::exchange(CFencePool.Pool, {});
+		Mutex = std::exchange(CFencePool.Mutex, {});
+		return *this;
+	}
+
+	CFencePool(const CFencePool&) = delete;
+	CFencePool& operator=(const CFencePool&) = delete;
+
+	void ReturnToPool(TResourceType&& Resource, D3D12SyncHandle SyncHandle) noexcept
+	{
+		try
+		{
+			auto Lock = Mutex ? std::unique_lock(*Mutex) : std::unique_lock<std::mutex>();
+			Pool.emplace_back(SyncHandle, std::move(Resource)); // throw( bad_alloc )
+		}
+		catch (std::bad_alloc&)
+		{
+			// Just drop the error
+			// All uses of this pool use Arc, which will release the resource
+		}
+	}
+
+	template<typename PFNCreateNew, typename... TArgs>
+	TResourceType RetrieveFromPool(PFNCreateNew CreateNew, TArgs&&... Args) noexcept(false)
+	{
+		auto Lock = Mutex ? std::unique_lock(*Mutex) : std::unique_lock<std::mutex>();
+		auto Head = Pool.begin();
+		if (Head == Pool.end() || !Head->first.IsComplete())
+		{
+			return std::move(CreateNew(std::forward<TArgs>(Args)...));
+		}
+
+		assert(Head->second);
+		TResourceType Resource = std::move(Head->second);
+		Pool.erase(Head);
+		return std::move(Resource);
+	}
+
+protected:
+	using TPoolEntry = std::pair<D3D12SyncHandle, TResourceType>;
+	using TPool		 = std::list<TPoolEntry>;
+
+	TPool						Pool;
+	std::unique_ptr<std::mutex> Mutex;
 };

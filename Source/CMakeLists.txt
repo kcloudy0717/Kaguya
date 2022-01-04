@@ -95,32 +95,28 @@ add_dependencies(${PROJECTNAME} Shaders)
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
-target_include_directories(${PROJECTNAME} PUBLIC ${PROJECTDIR})
+target_include_directories(${PROJECTNAME} PRIVATE ${PROJECTDIR})
 
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/entt/single_include/entt")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/imgui")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/ImGuizmo")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/json/single_include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/spdlog/include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/wil/include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/assimp/include")
-target_link_libraries(${PROJECTNAME} ${DEPDIR}/assimp/lib/Release/assimp-vc143-mt.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXMesh/include")
-target_link_libraries(${PROJECTNAME} debug ${DEPDIR}/DirectXMesh/lib/Debug/DirectXMesh.lib)
-target_link_libraries(${PROJECTNAME} optimized ${DEPDIR}/DirectXMesh/lib/Release/DirectXMesh.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXTex/include")
-target_link_libraries(${PROJECTNAME} debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
-target_link_libraries(${PROJECTNAME} optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
-target_link_libraries(${PROJECTNAME} ${DEPDIR}/dxc/dxcompiler.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/google/cityhash")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/include")
-target_link_libraries(${PROJECTNAME} ${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.lib)
-
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/winpixeventruntime.1.0.210818001/Include/WinPixEventRuntime")
-target_link_libraries(${PROJECTNAME} ${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.lib)
-
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/entt/single_include/entt")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/imgui")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/ImGuizmo")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/json/single_include")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/spdlog/include")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/wil/include")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/assimp/include")
+target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/assimp/lib/Release/assimp-vc143-mt.lib)
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/DirectXMesh/include")
+target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXMesh/lib/Debug/DirectXMesh.lib)
+target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXMesh/lib/Release/DirectXMesh.lib)
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/DirectXTex/include")
+target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
+target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/dxc")
+target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/dxc/dxcompiler.lib)
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/google/cityhash")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/AgilitySDK/Include")
+target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/WinPixEventRuntime/Include")
+target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.lib)
 # Linking
 
 # DLL
@@ -132,10 +128,7 @@ add_custom_command(
 		${DEPDIR}/dxc/dxcompiler.dll
 		${DEPDIR}/dxc/dxil.dll
 
-		${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/GFSDK_Aftermath_Lib.x64.dll
-		${DEPDIR}/NVIDIA_Nsight_Aftermath_SDK_2021.1.0.21090/lib/x64/llvm_7_0_1.dll
-
-		${DEPDIR}/winpixeventruntime.1.0.210818001/bin/x64/WinPixEventRuntime.dll
+		${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.dll
 
 		${CMAKE_SOURCE_DIR}/imgui.ini
 
@@ -146,7 +139,7 @@ add_custom_command(
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${DEPDIR}/microsoft.direct3d.d3d12.1.4.10/build/native/bin/x64
+		${DEPDIR}/AgilitySDK/Bin/x64
 
 		$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
 	DEPENDS ${PROJECTNAME})

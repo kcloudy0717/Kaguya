@@ -6,9 +6,7 @@ using Microsoft::WRL::ComPtr;
 Renderer::Renderer(HWND HWnd)
 	: SwapChain(RenderCore::Device, HWnd)
 	, Allocator(64 * 1024)
-	, Registry(Scheduler)
 {
-	SwapChain.Initialize();
 }
 
 void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
@@ -32,16 +30,19 @@ void Renderer::OnInitialize()
 
 void Renderer::OnDestroy()
 {
-	RenderCore::Device->GetDevice()->GetGraphicsQueue()->WaitIdle();
-	RenderCore::Device->GetDevice()->GetAsyncComputeQueue()->WaitIdle();
-	RenderCore::Device->GetDevice()->GetCopyQueue1()->WaitIdle();
-	RenderCore::Device->GetDevice()->GetCopyQueue2()->WaitIdle();
+	RenderCore::Device->WaitIdle();
 	Destroy();
 }
 
 void Renderer::OnRender(World* World)
 {
-	World->ActiveCamera->AspectRatio = float(Resolution.RenderWidth) / float(Resolution.RenderHeight);
+	/*static bool CaptureOnce = false;
+	if (!CaptureOnce)
+	{
+		RenderCore::Device->BeginCapture(Application::ExecutableDirectory / "GPU 0.wpix");
+	}*/
+
+	World->ActiveCamera->AspectRatio = float(View.Width) / float(View.Height);
 
 	RenderCore::Device->OnBeginFrame();
 
@@ -64,8 +65,7 @@ void Renderer::OnRender(World* World)
 
 		// track highest frame rate and determine the max value of the graph based on the measured highest value
 		static float	Recent	 = 0.0f;
-		constexpr float MaxFps[] = { 800.0f, 240.0f, 120.0f, 90.0f, 60.0f, 45.0f, 30.0f,
-									 15.0f,	 10.0f,	 5.0f,	 4.0f,	3.0f,  2.0f,  1.0f };
+		constexpr float MaxFps[] = { 800.0f, 240.0f, 120.0f, 90.0f, 60.0f, 45.0f, 30.0f, 15.0f, 10.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f };
 
 		static float MaxFpsScale[std::size(MaxFps)] = { 0 }; // ms
 		for (size_t i = 0; i < std::size(MaxFps); ++i)
@@ -129,7 +129,7 @@ void Renderer::OnRender(World* World)
 				D3D12ScopedEvent(Context, "ImGui Render");
 
 				ImGui::Render();
-				ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.CommandListHandle.GetGraphicsCommandList());
+				ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.GetGraphicsCommandList());
 			}
 		}
 		Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -145,6 +145,11 @@ void Renderer::OnRender(World* World)
 
 	RenderCore::Device->OnEndFrame();
 	++FrameIndex;
+	/*if (!CaptureOnce)
+	{
+		CaptureOnce = true;
+		RenderCore::Device->EndCapture();
+	}*/
 }
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)

@@ -24,7 +24,7 @@
 #include "Graphics/Renderer.h"
 #include "Graphics/PathIntegratorDXR1_0.h"
 #include "Graphics/PathIntegratorDXR1_1.h"
-#include "Graphics/DeferredRenderer.h"
+#include "World/WorldArchive.h"
 
 class ImGuiContextManager
 {
@@ -70,6 +70,8 @@ public:
 	bool Initialize() override
 	{
 		AssetManager::Initialize();
+
+		//WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
 
 		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
@@ -129,42 +131,38 @@ public:
 
 	void OnKeyDown(unsigned char KeyCode, bool IsRepeat) override
 	{
-		IApplicationMessageHandler::OnKeyDown(KeyCode, IsRepeat);
 	}
 
-	void OnKeyUp(unsigned char KeyCode) override { IApplicationMessageHandler::OnKeyUp(KeyCode); }
+	void OnKeyUp(unsigned char KeyCode) override
+	{
+	}
 
 	void OnKeyChar(unsigned char Character, bool IsRepeat) override
 	{
-		IApplicationMessageHandler::OnKeyChar(Character, IsRepeat);
 	}
 
-	void OnMouseMove(Vector2i Position) override { IApplicationMessageHandler::OnMouseMove(Position); }
-
-	void OnMouseDown(const Window* Window, EMouseButton Button, Vector2i Position) override
+	void OnMouseMove(int X, int Y) override
 	{
-		IApplicationMessageHandler::OnMouseDown(Window, Button, Position);
 	}
 
-	void OnMouseUp(EMouseButton Button, Vector2i Position) override
+	void OnMouseDown(const Window* Window, EMouseButton Button, int X, int Y) override
 	{
-		IApplicationMessageHandler::OnMouseUp(Button, Position);
 	}
 
-	void OnMouseDoubleClick(const Window* Window, EMouseButton Button, Vector2i Position) override
+	void OnMouseUp(EMouseButton Button, int X, int Y) override
 	{
-		IApplicationMessageHandler::OnMouseDoubleClick(Window, Button, Position);
 	}
 
-	void OnMouseWheel(float Delta, Vector2i Position) override
+	void OnMouseDoubleClick(const Window* Window, EMouseButton Button, int X, int Y) override
 	{
-		IApplicationMessageHandler::OnMouseWheel(Delta, Position);
 	}
 
-	void OnRawMouseMove(Vector2i Position) override
+	void OnMouseWheel(float Delta, int X, int Y) override
 	{
-		IApplicationMessageHandler::OnRawMouseMove(Position);
+	}
 
+	void OnRawMouseMove(int X, int Y) override
+	{
 		if (World)
 		{
 			Actor MainCamera = World->GetMainCamera();
@@ -173,8 +171,8 @@ public:
 			if (MainWindow->IsUsingRawInput())
 			{
 				Camera.Rotate(
-					Position.y * DeltaTime * Camera.MouseSensitivityY,
-					Position.x * DeltaTime * Camera.MouseSensitivityX,
+					Y * DeltaTime * Camera.MouseSensitivityY,
+					X * DeltaTime * Camera.MouseSensitivityX,
 					0.0f);
 			}
 		}
@@ -182,8 +180,6 @@ public:
 
 	void OnWindowClose(Window* Window) override
 	{
-		IApplicationMessageHandler::OnWindowClose(Window);
-
 		Window->Destroy();
 		if (Window == MainWindow)
 		{
@@ -193,8 +189,6 @@ public:
 
 	void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height) override
 	{
-		IApplicationMessageHandler::OnWindowResize(Window, Width, Height);
-
 		Window->Resize(Width, Height);
 		if (Window == MainWindow)
 		{
@@ -235,7 +229,7 @@ int main(int /*argc*/, char* /*argv*/[])
 		WindowDesc.Name		   = L"Kaguya";
 		WindowDesc.Width	   = 1280;
 		WindowDesc.Height	   = 720;
-		WindowDesc.Maximize	   = true;
+		WindowDesc.InitialSize = WindowInitialSize::Maximize;
 		Editor.AddWindow(nullptr, &MainWindow, WindowDesc);
 	}
 	ImGui.InitializeWin32(MainWindow.GetWindowHandle());
@@ -248,14 +242,14 @@ int main(int /*argc*/, char* /*argv*/[])
 	DeviceOptions.EnableGpuBasedValidation = false;
 	DeviceOptions.EnableAutoDebugName	   = true;
 #endif
-	DeviceFeatures DeviceFeatures	= {};
-	DeviceFeatures.FeatureLevel		= D3D_FEATURE_LEVEL_12_0;
-	DeviceFeatures.Raytracing		= true;
-	DeviceFeatures.DynamicResources = true;
-	DeviceFeatures.MeshShaders		= true;
-	RenderCoreInitializer Render(DeviceOptions, DeviceFeatures);
+	DeviceOptions.FeatureLevel	   = D3D_FEATURE_LEVEL_12_0;
+	DeviceOptions.Raytracing	   = true;
+	DeviceOptions.DynamicResources = true;
+	DeviceOptions.MeshShaders	   = true;
+	RenderCoreInitializer Render(DeviceOptions);
 
 	World World;
+
 	// PathIntegratorDXR1_0 Renderer(MainWindow.GetWindowHandle());
 	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
 	// DeferredRenderer Renderer(MainWindow.GetWindowHandle());

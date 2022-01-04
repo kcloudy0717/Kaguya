@@ -1,10 +1,10 @@
 ﻿#pragma once
-#include "Vector3.h"
+#include "Math.h"
 
 struct Ray
 {
-	Vector3f Origin;
-	float	 TMin = 0.0f;
-	Vector3f Direction;
-	float	 TMax = 8.0f;
+	Vec3f Origin;
+	float TMin = 0.0f;
+	Vec3f Direction;
+	float TMax = 8.0f;
 };

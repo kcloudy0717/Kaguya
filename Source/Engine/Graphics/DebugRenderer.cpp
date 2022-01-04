@@ -1,30 +1,27 @@
 ﻿#include "DebugRenderer.h"
 #include <RenderCore/RenderCore.h>
 
-void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
+void DebugRenderer::Initialize()
 {
 	{
 		ShaderCompileOptions Options(L"VSMain");
 		VS = RenderCore::Compiler->CompileShader(
-			SHADER_TYPE::Vertex,
+			RHI_SHADER_TYPE::Vertex,
 			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
 			Options);
 	}
 	{
 		ShaderCompileOptions Options(L"PSMain");
 		PS = RenderCore::Compiler->CompileShader(
-			SHADER_TYPE::Pixel,
+			RHI_SHADER_TYPE::Pixel,
 			Application::ExecutableDirectory / L"Shaders/DebugRender.hlsl",
 			Options);
 	}
 
 	Rs = RenderCore::Device->CreateRootSignature(
-		[](RootSignatureBuilder& Builder)
-		{
-			Builder.Add32BitConstants<0, 0>(16); // register(b0, space0)
-
-			Builder.AllowInputLayout();
-		});
+		RootSignatureDesc()
+			.Add32BitConstants<0, 0>(16)
+			.AllowInputLayout());
 
 	D3D12InputLayout InputLayout(2);
 	InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
@@ -33,7 +30,7 @@ void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 	DepthStencilState DepthStencilState;
 	DepthStencilState.DepthEnable = false;
 
-	struct PsoStream
+	/*struct PsoStream
 	{
 		PipelineStateStreamRootSignature	 RootSignature;
 		PipelineStateStreamInputLayout		 InputLayout;
@@ -51,7 +48,7 @@ void DebugRenderer::Initialize(D3D12RenderPass* RenderPass)
 	Stream.DepthStencilState	 = DepthStencilState;
 	Stream.RenderPass			 = RenderPass;
 
-	Pso = RenderCore::Device->CreatePipelineState(L"Debug Renderer", Stream);
+	Pso = RenderCore::Device->CreatePipelineState(L"Debug Renderer", Stream);*/
 }
 
 void DebugRenderer::Shutdown()
@@ -61,7 +58,7 @@ void DebugRenderer::Shutdown()
 	Rs.reset();
 }
 
-void DebugRenderer::AddLine(Vector3f V0, Vector3f V1, Vector3f Color /*= Vector3f(1.0f)*/)
+void DebugRenderer::AddLine(Vec3f V0, Vec3f V1, Vec3f Color /*= Vector3f(1.0f)*/)
 {
 	if (!Enable)
 	{
@@ -74,7 +71,7 @@ void DebugRenderer::AddLine(Vector3f V0, Vector3f V1, Vector3f Color /*= Vector3
 void DebugRenderer::AddBoundingBox(
 	const Transform&   Transform,
 	const BoundingBox& Box,
-	Vector3f		   Color /*= Vector3f(1.0f)*/)
+	Vec3f			   Color /*= Vector3f(1.0f)*/)
 {
 	if (!Enable)
 	{
@@ -86,15 +83,15 @@ void DebugRenderer::AddBoundingBox(
 	BoundingBox TransformedBox;
 	Box.Transform(Matrix, TransformedBox);
 
-	auto	 Corners		 = TransformedBox.GetCorners();
-	Vector3f FarBottomLeft	 = Corners[0];
-	Vector3f FarBottomRight	 = Corners[1];
-	Vector3f FarTopRight	 = Corners[2];
-	Vector3f FarTopLeft		 = Corners[3];
-	Vector3f NearBottomLeft	 = Corners[4];
-	Vector3f NearBottomRight = Corners[5];
-	Vector3f NearTopRight	 = Corners[6];
-	Vector3f NearTopLeft	 = Corners[7];
+	auto  Corners		  = TransformedBox.GetCorners();
+	Vec3f FarBottomLeft	  = Corners[0];
+	Vec3f FarBottomRight  = Corners[1];
+	Vec3f FarTopRight	  = Corners[2];
+	Vec3f FarTopLeft	  = Corners[3];
+	Vec3f NearBottomLeft  = Corners[4];
+	Vec3f NearBottomRight = Corners[5];
+	Vec3f NearTopRight	  = Corners[6];
+	Vec3f NearTopLeft	  = Corners[7];
 
 	// Far face
 	AddLine(FarTopLeft, FarTopRight, Color);

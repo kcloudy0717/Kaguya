@@ -7,12 +7,6 @@ enum class AssetType : UINT64
 	Texture
 };
 
-enum class AssetState : UINT64
-{
-	Dirty,
-	Ready
-};
-
 template<AssetType Enum>
 struct AssetTypeTraits
 {
@@ -30,15 +24,15 @@ struct AssetHandle
 	void Invalidate()
 	{
 		Type	= AssetType::Unknown;
-		State	= AssetState::Dirty;
+		State	= false;
 		Version = 0;
 		Id		= UINT_MAX;
 	}
 
-	AssetType  Type	   : 16;
-	AssetState State   : 2;
-	UINT64	   Version : 14;
-	UINT64	   Id	   : 32;
+	AssetType Type	  : 16;
+	UINT64	  State	  : 1;
+	UINT64	  Version : 15;
+	UINT64	  Id	  : 32;
 };
 
 static_assert(sizeof(AssetHandle) == sizeof(UINT64));

@@ -12,28 +12,6 @@ struct PathIntegratorState
 	bool  Antialiasing = true;
 };
 
-enum class EFSRQualityMode
-{
-	Ultra,
-	Standard,
-	Balanced,
-	Performance
-};
-
-struct FSRState
-{
-	bool Enable = true;
-
-	EFSRQualityMode QualityMode = EFSRQualityMode::Ultra;
-
-	UINT ViewportWidth;
-	UINT ViewportHeight;
-
-	UINT  RenderWidth;
-	UINT  RenderHeight;
-	float RCASAttenuation = 0.0f;
-};
-
 class PathIntegratorDXR1_0 final : public Renderer
 {
 public:

@@ -3,54 +3,126 @@
 
 using Microsoft::WRL::ComPtr;
 
-D3D12CommandAllocator::D3D12CommandAllocator(ID3D12Device* Device, D3D12_COMMAND_LIST_TYPE Type)
+D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(
+	D3D12LinkedDevice*		Parent,
+	D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
+	: D3D12LinkedDeviceChild(Parent)
+	, CommandListType(CommandListType)
 {
-	VERIFY_D3D12_API(Device->CreateCommandAllocator(Type, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
 }
 
-D3D12CommandListHandle::D3D12CommandListHandle(D3D12LinkedDevice* Parent, D3D12_COMMAND_LIST_TYPE Type)
+Microsoft::WRL::ComPtr<ID3D12CommandAllocator> D3D12CommandAllocatorPool::RequestCommandAllocator()
+{
+	auto CreateCommandAllocator = [this]()
+	{
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+		VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(
+			CommandListType,
+			IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
+		return CommandAllocator;
+	};
+	auto CommandAllocator = CommandAllocatorPool.RetrieveFromPool(CreateCommandAllocator);
+	CommandAllocator->Reset();
+	return CommandAllocator;
+}
+
+void D3D12CommandAllocatorPool::DiscardCommandAllocator(
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator,
+	D3D12SyncHandle								   SyncHandle)
+{
+	CommandAllocatorPool.ReturnToPool(std::move(CommandAllocator), SyncHandle);
+}
+
+void ResourceBarrierBatch::Reset()
+{
+	NumResourceBarriers = 0;
+}
+
+UINT ResourceBarrierBatch::Flush(
+	ID3D12GraphicsCommandList* GraphicsCommandList)
+{
+	if (NumResourceBarriers > 0)
+	{
+		GraphicsCommandList->ResourceBarrier(NumResourceBarriers, ResourceBarriers);
+		Reset();
+	}
+	return NumResourceBarriers;
+}
+
+void ResourceBarrierBatch::Add(
+	const D3D12_RESOURCE_BARRIER& ResourceBarrier)
+{
+	assert(NumResourceBarriers < NumBatches);
+	ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
+}
+
+void ResourceBarrierBatch::AddTransition(
+	D3D12Resource*		  Resource,
+	D3D12_RESOURCE_STATES StateBefore,
+	D3D12_RESOURCE_STATES StateAfter,
+	UINT				  Subresource /*= D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES*/)
+{
+	Add(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
+}
+
+void ResourceBarrierBatch::AddAliasing(
+	D3D12Resource* BeforeResource,
+	D3D12Resource* AfterResource)
+{
+	Add(CD3DX12_RESOURCE_BARRIER::Aliasing(BeforeResource->GetResource(), AfterResource->GetResource()));
+}
+
+void ResourceBarrierBatch::AddUAV(
+	D3D12Resource* Resource)
+{
+	Add(CD3DX12_RESOURCE_BARRIER::UAV(Resource ? Resource->GetResource() : nullptr));
+}
+
+std::vector<PendingResourceBarrier>& D3D12ResourceStateTracker::GetPendingResourceBarriers()
+{
+	return PendingResourceBarriers;
+}
+
+CResourceState& D3D12ResourceStateTracker::GetResourceState(D3D12Resource* Resource)
+{
+	CResourceState& ResourceState = ResourceStates[Resource];
+	// If ResourceState was just created, its state is uninitialized
+	if (ResourceState.IsUninitialized())
+	{
+		ResourceState = CResourceState(Resource->GetNumSubresources());
+		ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_UNKNOWN);
+	}
+	return ResourceState;
+}
+
+void D3D12ResourceStateTracker::Reset()
+{
+	ResourceStates.clear();
+	PendingResourceBarriers.clear();
+}
+
+void D3D12ResourceStateTracker::Add(const PendingResourceBarrier& PendingResourceBarrier)
+{
+	PendingResourceBarriers.push_back(PendingResourceBarrier);
+}
+
+D3D12CommandListHandle::D3D12CommandListHandle(
+	D3D12LinkedDevice*		Parent,
+	D3D12_COMMAND_LIST_TYPE Type)
 	: D3D12LinkedDeviceChild(Parent)
 	, Type(Type)
-	, CommandAllocator(nullptr)
 {
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	ComPtr<ID3D12CommandAllocator> temp;
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandAllocator(Type, IID_PPV_ARGS(temp.ReleaseAndGetAddressOf())));
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandList(
-		1,
-		Type,
-		temp.Get(),
-		nullptr,
-		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-#else
 	VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(
 		1,
 		Type,
 		D3D12_COMMAND_LIST_FLAG_NONE,
 		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-#endif
 
-	GraphicsCommandList.As(&GraphicsCommandList4);
-	GraphicsCommandList.As(&GraphicsCommandList6);
+	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList4.ReleaseAndGetAddressOf()));
+	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList6.ReleaseAndGetAddressOf()));
 
-#ifdef D3D12_DEBUG_RESOURCE_STATES
-	GraphicsCommandList.As(&DebugCommandList);
-#endif
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	// Create an Nsight Aftermath context handle for setting Aftermath event markers in this command list.
-	GFSDK_Aftermath_DX12_CreateContextHandle(GraphicsCommandList.Get(), &AftermathContextHandle);
-	// GFSDK_Aftermath_DX12_CreateContextHandle needs the CommandList to be open prior to calling the function
-	VERIFY_D3D12_API(GraphicsCommandList->Close());
-#endif
-}
-
-D3D12CommandListHandle::~D3D12CommandListHandle()
-{
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	if (AftermathContextHandle)
-	{
-		GFSDK_Aftermath_ReleaseContextHandle(std::exchange(AftermathContextHandle, {}));
-	}
+#ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
+	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(DebugCommandList.ReleaseAndGetAddressOf()));
 #endif
 }
 
@@ -63,10 +135,6 @@ D3D12CommandListHandle::D3D12CommandListHandle(D3D12CommandListHandle&& D3D12Com
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 	, DebugCommandList(std::exchange(D3D12CommandListHandle.DebugCommandList, {}))
 #endif
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	, AftermathContextHandle(std::exchange(D3D12CommandListHandle.AftermathContextHandle, {}))
-#endif
-	, CommandAllocator(std::exchange(D3D12CommandListHandle.CommandAllocator, {}))
 	, ResourceStateTracker(std::move(D3D12CommandListHandle.ResourceStateTracker))
 	, ResourceBarrierBatch(std::move(D3D12CommandListHandle.ResourceBarrierBatch))
 {
@@ -87,75 +155,25 @@ D3D12CommandListHandle& D3D12CommandListHandle::operator=(D3D12CommandListHandle
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 	DebugCommandList = std::exchange(D3D12CommandListHandle.DebugCommandList, {});
 #endif
-#ifdef NVIDIA_NSIGHT_AFTERMATH
-	AftermathContextHandle = std::exchange(D3D12CommandListHandle.AftermathContextHandle, {});
-#endif
-	CommandAllocator	 = std::exchange(D3D12CommandListHandle.CommandAllocator, {});
 	ResourceStateTracker = std::move(D3D12CommandListHandle.ResourceStateTracker);
 	ResourceBarrierBatch = std::move(D3D12CommandListHandle.ResourceBarrierBatch);
 
 	return *this;
 }
 
-void D3D12CommandListHandle::Close()
+void D3D12CommandListHandle::Open(ID3D12CommandAllocator* CommandAllocator)
 {
-	FlushResourceBarriers();
-	VERIFY_D3D12_API(GraphicsCommandList->Close());
-}
-
-void D3D12CommandListHandle::Reset(D3D12CommandAllocator* CommandAllocator)
-{
-	this->CommandAllocator = CommandAllocator;
-
-	VERIFY_D3D12_API(GraphicsCommandList->Reset(*CommandAllocator, nullptr));
+	VERIFY_D3D12_API(GraphicsCommandList->Reset(CommandAllocator, nullptr));
 
 	// Reset resource state tracking and resource barriers
 	ResourceStateTracker.Reset();
 	ResourceBarrierBatch.Reset();
 }
 
-CResourceState& D3D12CommandListHandle::GetResourceState(D3D12Resource* Resource)
+void D3D12CommandListHandle::Close()
 {
-	return ResourceStateTracker.GetResourceState(Resource);
-}
-
-std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()
-{
-	const auto& PendingResourceBarriers = ResourceStateTracker.GetPendingResourceBarriers();
-
-	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
-	ResourceBarriers.reserve(PendingResourceBarriers.size());
-
-	D3D12_RESOURCE_BARRIER Desc = {};
-	Desc.Type					= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	for (const auto& [Resource, State, Subresource] : PendingResourceBarriers)
-	{
-		CResourceState& ResourceState = Resource->GetResourceState();
-
-		D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Subresource);
-		D3D12_RESOURCE_STATES StateAfter  = State != D3D12_RESOURCE_STATE_UNKNOWN ? State : StateBefore;
-
-		if (StateBefore != StateAfter)
-		{
-			Desc.Transition.pResource	= Resource->GetResource();
-			Desc.Transition.Subresource = Subresource;
-			Desc.Transition.StateBefore = StateBefore;
-			Desc.Transition.StateAfter	= StateAfter;
-
-			ResourceBarriers.push_back(Desc);
-		}
-
-		D3D12_RESOURCE_STATES StateCommandList = this->GetResourceState(Resource).GetSubresourceState(Subresource);
-		D3D12_RESOURCE_STATES StatePrevious =
-			StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN ? StateCommandList : StateAfter;
-
-		if (StateBefore != StatePrevious)
-		{
-			ResourceState.SetSubresourceState(Subresource, StatePrevious);
-		}
-	}
-
-	return ResourceBarriers;
+	FlushResourceBarriers();
+	VERIFY_D3D12_API(GraphicsCommandList->Close());
 }
 
 void D3D12CommandListHandle::TransitionBarrier(
@@ -208,12 +226,15 @@ void D3D12CommandListHandle::TransitionBarrier(
 	ResourceState.SetSubresourceState(Subresource, State);
 }
 
-void D3D12CommandListHandle::AliasingBarrier(D3D12Resource* BeforeResource, D3D12Resource* AfterResource)
+void D3D12CommandListHandle::AliasingBarrier(
+	D3D12Resource* BeforeResource,
+	D3D12Resource* AfterResource)
 {
 	ResourceBarrierBatch.AddAliasing(BeforeResource, AfterResource);
 }
 
-void D3D12CommandListHandle::UAVBarrier(D3D12Resource* Resource)
+void D3D12CommandListHandle::UAVBarrier(
+	D3D12Resource* Resource)
 {
 	ResourceBarrierBatch.AddUAV(Resource);
 }
@@ -223,16 +244,55 @@ void D3D12CommandListHandle::FlushResourceBarriers()
 	ResourceBarrierBatch.Flush(GraphicsCommandList.Get());
 }
 
-bool D3D12CommandListHandle::AssertResourceState(D3D12Resource* Resource, D3D12_RESOURCE_STATES State, UINT Subresource)
+bool D3D12CommandListHandle::AssertResourceState(
+	D3D12Resource*		  Resource,
+	D3D12_RESOURCE_STATES State,
+	UINT				  Subresource)
 {
 #ifdef D3D12_DEBUG_RESOURCE_STATES
 	if (DebugCommandList)
 	{
-		if (!DebugCommandList->AssertResourceState(Resource->GetResource(), Subresource, State))
-		{
-			return false;
-		}
+		return DebugCommandList->AssertResourceState(Resource->GetResource(), Subresource, State);
 	}
 #endif
 	return true;
+}
+
+std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarriers()
+{
+	const auto& PendingResourceBarriers = ResourceStateTracker.GetPendingResourceBarriers();
+
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
+	ResourceBarriers.reserve(PendingResourceBarriers.size());
+
+	D3D12_RESOURCE_BARRIER Desc = {};
+	Desc.Type					= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	for (const auto& [Resource, State, Subresource] : PendingResourceBarriers)
+	{
+		CResourceState& ResourceState = Resource->GetResourceState();
+
+		D3D12_RESOURCE_STATES StateBefore = ResourceState.GetSubresourceState(Subresource);
+		D3D12_RESOURCE_STATES StateAfter  = State != D3D12_RESOURCE_STATE_UNKNOWN ? State : StateBefore;
+
+		if (StateBefore != StateAfter)
+		{
+			Desc.Transition.pResource	= Resource->GetResource();
+			Desc.Transition.Subresource = Subresource;
+			Desc.Transition.StateBefore = StateBefore;
+			Desc.Transition.StateAfter	= StateAfter;
+
+			ResourceBarriers.push_back(Desc);
+		}
+
+		// Get the command list resource state associate with this resource
+		D3D12_RESOURCE_STATES StateCommandList = ResourceStateTracker.GetResourceState(Resource).GetSubresourceState(Subresource);
+		D3D12_RESOURCE_STATES StatePrevious	   = StateCommandList != D3D12_RESOURCE_STATE_UNKNOWN ? StateCommandList : StateAfter;
+
+		if (StateBefore != StatePrevious)
+		{
+			ResourceState.SetSubresourceState(Subresource, StatePrevious);
+		}
+	}
+
+	return ResourceBarriers;
 }

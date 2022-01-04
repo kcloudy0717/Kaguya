@@ -35,25 +35,13 @@ public:
 
 	static void AsyncLoadMesh(const MeshImportOptions& Options);
 
-	static void RequestUpload(Texture* Texture)
-	{
-		std::scoped_lock Lock(Mutex);
+	static void RequestUpload(Texture* Texture);
 
-		TextureUploadQueue.push(std::move(Texture));
-		ConditionVariable.notify_all();
-	}
-
-	static void RequestUpload(Mesh* Mesh)
-	{
-		std::scoped_lock Lock(Mutex);
-
-		MeshUploadQueue.push(std::move(Mesh));
-		ConditionVariable.notify_all();
-	}
+	static void RequestUpload(Mesh* Mesh);
 
 private:
-	static void UploadImage(Texture* AssetTexture, D3D12ResourceUploader& Uploader);
-	static void UploadMesh(Mesh* AssetMesh, D3D12ResourceUploader& Uploader);
+	static void UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Device);
+	static void UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device);
 
 	inline static AsyncMeshImporter	   MeshImporter;
 	inline static AsyncTextureImporter TextureImporter;

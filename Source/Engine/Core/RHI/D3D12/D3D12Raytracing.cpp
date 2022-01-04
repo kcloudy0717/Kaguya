@@ -1,5 +1,4 @@
 #include "D3D12Raytracing.h"
-#include "D3D12LinkedDevice.h"
 
 void D3D12RaytracingGeometry::AddGeometry(const D3D12_RAYTRACING_GEOMETRY_DESC& Desc)
 {
@@ -24,9 +23,9 @@ void D3D12RaytracingScene::ComputeMemoryRequirements(
 	UINT64*		   pResultSizeInBytes)
 {
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {};
-	Inputs.Type		= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	Inputs.Flags	= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
-	Inputs.NumDescs = static_cast<UINT>(RaytracingInstanceDescs.size());
+	Inputs.Type													= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	Inputs.Flags												= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
+	Inputs.NumDescs												= static_cast<UINT>(RaytracingInstanceDescs.size());
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
 	Device->GetRaytracingAccelerationStructurePrebuildInfo(&Inputs, &PrebuildInfo);
@@ -41,7 +40,7 @@ void D3D12RaytracingScene::ComputeMemoryRequirements(
 }
 
 void D3D12RaytracingScene::Generate(
-	ID3D12GraphicsCommandList6* CommandList,
+	ID3D12GraphicsCommandList4* CommandList,
 	ID3D12Resource*				Scratch,
 	ID3D12Resource*				Result,
 	D3D12_GPU_VIRTUAL_ADDRESS	InstanceDescs)
@@ -52,11 +51,11 @@ void D3D12RaytracingScene::Generate(
 	assert(Result && Scratch && "Invalid Result, Scratch buffers");
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {};
-	Inputs.Type			 = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	Inputs.Flags		 = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
-	Inputs.NumDescs		 = static_cast<UINT>(RaytracingInstanceDescs.size());
-	Inputs.DescsLayout	 = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	Inputs.InstanceDescs = InstanceDescs;
+	Inputs.Type													= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	Inputs.Flags												= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
+	Inputs.NumDescs												= static_cast<UINT>(RaytracingInstanceDescs.size());
+	Inputs.DescsLayout											= D3D12_ELEMENTS_LAYOUT_ARRAY;
+	Inputs.InstanceDescs										= InstanceDescs;
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {};
 	Desc.DestAccelerationStructureData						= Result->GetGPUVirtualAddress();
@@ -68,10 +67,23 @@ void D3D12RaytracingScene::Generate(
 	CommandList->BuildRaytracingAccelerationStructure(&Desc, 0, nullptr);
 }
 
-void D3D12RaytracingMemoryPage::Initialize(D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState)
+D3D12RaytracingMemoryPage::D3D12RaytracingMemoryPage(
+	D3D12LinkedDevice*	  Parent,
+	UINT64				  PageSize,
+	D3D12_HEAP_TYPE		  HeapType,
+	D3D12_RESOURCE_STATES InitialResourceState)
+	: D3D12LinkedDeviceChild(Parent)
+	, Resource(InitializeResource(PageSize, HeapType, InitialResourceState))
+	, PageSize(PageSize)
+	, VirtualAddress(Resource->GetGPUVirtualAddress())
 {
-	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
-	D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
+}
+
+Microsoft::WRL::ComPtr<ID3D12Resource> D3D12RaytracingMemoryPage::InitializeResource(UINT64 PageSize, D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState)
+{
+	Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+	D3D12_HEAP_PROPERTIES				   HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
+	D3D12_RESOURCE_DESC					   ResourceDesc	  = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 	if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
 	{
@@ -85,8 +97,7 @@ void D3D12RaytracingMemoryPage::Initialize(D3D12_HEAP_TYPE HeapType, D3D12_RESOU
 		InitialResourceState,
 		nullptr,
 		IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
-
-	VirtualAddress = Resource->GetGPUVirtualAddress();
+	return Resource;
 }
 
 D3D12RaytracingMemoryAllocator::D3D12RaytracingMemoryAllocator(
@@ -224,16 +235,14 @@ UINT64 D3D12RaytracingMemoryAllocator::GetSize()
 	UINT64 Size = 0;
 	for (const auto& Page : Pages)
 	{
-		Size += Page->PageSize;
+		Size += Page->GetPageSize();
 	}
 	return Size;
 }
 
 void D3D12RaytracingMemoryAllocator::CreatePage(UINT64 PageSize)
 {
-	auto Page = std::make_unique<D3D12RaytracingMemoryPage>(GetParentLinkedDevice(), PageSize);
-	Page->Initialize(HeapType, InitialResourceState);
-	Pages.push_back(std::move(Page));
+	Pages.emplace_back(std::make_unique<D3D12RaytracingMemoryPage>(GetParentLinkedDevice(), PageSize, HeapType, InitialResourceState));
 }
 
 bool D3D12RaytracingMemoryAllocator::FindFreeSubBlock(
@@ -304,7 +313,7 @@ D3D12RaytracingAccelerationStructureManager::D3D12RaytracingAccelerationStructur
 	, ScratchPool(
 		  Parent,
 		  D3D12_HEAP_TYPE_DEFAULT,
-		  D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		  D3D12_RESOURCE_STATE_COMMON,
 		  PageSize,
 		  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
 	, ResultPool(
@@ -322,7 +331,7 @@ D3D12RaytracingAccelerationStructureManager::D3D12RaytracingAccelerationStructur
 	, CompactedSizeGpuPool(
 		  Parent,
 		  D3D12_HEAP_TYPE_DEFAULT,
-		  D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		  D3D12_RESOURCE_STATE_COMMON,
 		  65536,
 		  sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC))
 	, CompactedSizeCpuPool(
@@ -344,37 +353,37 @@ UINT64 D3D12RaytracingAccelerationStructureManager::Build(
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
 	GetParentLinkedDevice()->GetDevice5()->GetRaytracingAccelerationStructurePrebuildInfo(&Inputs, &PrebuildInfo);
 
-	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[Index].get();
+	D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[Index];
 
-	AccelerationStructure->ScratchMemory = ScratchPool.Allocate(PrebuildInfo.ScratchDataSizeInBytes);
-	AccelerationStructure->ResultMemory	 = ResultPool.Allocate(PrebuildInfo.ResultDataMaxSizeInBytes);
+	AccelerationStructure.ScratchMemory = ScratchPool.Allocate(PrebuildInfo.ScratchDataSizeInBytes);
+	AccelerationStructure.ResultMemory	= ResultPool.Allocate(PrebuildInfo.ResultDataMaxSizeInBytes);
 
-	TotalUncompactedMemory += AccelerationStructure->ResultMemory.Size;
-	AccelerationStructure->ResultSize = AccelerationStructure->ResultMemory.Size;
+	TotalUncompactedMemory += AccelerationStructure.ResultMemory.Size;
+	AccelerationStructure.ResultSize = AccelerationStructure.ResultMemory.Size;
 
 	// Setup build desc and allocator scratch and result buffers
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {};
-	Desc.DestAccelerationStructureData						= AccelerationStructure->ResultMemory.VirtualAddress;
+	Desc.DestAccelerationStructureData						= AccelerationStructure.ResultMemory.VirtualAddress;
 	Desc.Inputs												= Inputs;
 	Desc.SourceAccelerationStructureData					= NULL;
-	Desc.ScratchAccelerationStructureData					= AccelerationStructure->ScratchMemory.VirtualAddress;
+	Desc.ScratchAccelerationStructureData					= AccelerationStructure.ScratchMemory.VirtualAddress;
 
 	if (Inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION)
 	{
 		// Tag as not yet compacted
-		AccelerationStructure->IsCompacted		   = false;
-		AccelerationStructure->RequestedCompaction = true;
+		AccelerationStructure.IsCompacted		  = false;
+		AccelerationStructure.RequestedCompaction = true;
 
 		// Suballocate the gpu memory that the builder will use to write the compaction size post build
-		AccelerationStructure->CompactedSizeGpuMemory = CompactedSizeGpuPool.Allocate(
+		AccelerationStructure.CompactedSizeGpuMemory = CompactedSizeGpuPool.Allocate(
 			sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC));
 		// Suballocate the readback memory
-		AccelerationStructure->CompactedSizeCpuMemory = CompactedSizeCpuPool.Allocate(
+		AccelerationStructure.CompactedSizeCpuMemory = CompactedSizeCpuPool.Allocate(
 			sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC));
 
 		// Request to get compaction size post build
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC PostbuildInfoDesc = {
-			AccelerationStructure->CompactedSizeGpuMemory.VirtualAddress,
+			AccelerationStructure.CompactedSizeGpuMemory.VirtualAddress,
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE
 		};
 
@@ -382,15 +391,16 @@ UINT64 D3D12RaytracingAccelerationStructureManager::Build(
 	}
 	else
 	{
-		AccelerationStructure->IsCompacted		   = false;
-		AccelerationStructure->RequestedCompaction = false;
+		AccelerationStructure.IsCompacted		  = false;
+		AccelerationStructure.RequestedCompaction = false;
 		CommandList->BuildRaytracingAccelerationStructure(&Desc, 0, nullptr);
 	}
 
 	return Index;
 }
 
-void D3D12RaytracingAccelerationStructureManager::Copy(ID3D12GraphicsCommandList4* CommandList)
+void D3D12RaytracingAccelerationStructureManager::Copy(
+	ID3D12GraphicsCommandList4* CommandList)
 {
 	const auto& GpuPages = CompactedSizeGpuPool.GetPages();
 	const auto& CpuPages = CompactedSizeCpuPool.GetPages();
@@ -402,7 +412,7 @@ void D3D12RaytracingAccelerationStructureManager::Copy(ID3D12GraphicsCommandList
 	for (const auto& Page : GpuPages)
 	{
 		Barriers[NumBarriers++] = CD3DX12_RESOURCE_BARRIER::Transition(
-			Page->Resource.Get(),
+			Page->GetResource(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			D3D12_RESOURCE_STATE_COPY_SOURCE);
 	}
@@ -410,14 +420,14 @@ void D3D12RaytracingAccelerationStructureManager::Copy(ID3D12GraphicsCommandList
 
 	for (size_t i = 0; i < GpuPages.size(); ++i)
 	{
-		CommandList->CopyResource(CpuPages[i]->Resource.Get(), GpuPages[i]->Resource.Get());
+		CommandList->CopyResource(CpuPages[i]->GetResource(), GpuPages[i]->GetResource());
 	}
 
 	NumBarriers = 0;
 	for (const auto& Page : GpuPages)
 	{
 		Barriers[NumBarriers++] = CD3DX12_RESOURCE_BARRIER::Transition(
-			Page->Resource.Get(),
+			Page->GetResource(),
 			D3D12_RESOURCE_STATE_COPY_SOURCE,
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	}
@@ -428,31 +438,31 @@ void D3D12RaytracingAccelerationStructureManager::Compact(
 	ID3D12GraphicsCommandList4* CommandList,
 	UINT64						AccelerationStructureIndex)
 {
-	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
+	D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[AccelerationStructureIndex];
 
-	if (!AccelerationStructure->SyncHandle)
+	if (!AccelerationStructure.SyncHandle)
 	{
 		return;
 	}
 
 	// Readback data not available yet
-	if (!AccelerationStructure->SyncHandle.IsComplete())
+	if (!AccelerationStructure.SyncHandle.IsComplete())
 	{
 		return;
 	}
 
 	// Only do compaction on the confirmed completion of the original build execution.
-	if (AccelerationStructure->RequestedCompaction)
+	if (AccelerationStructure.RequestedCompaction)
 	{
 		// Don't compact if not requested or already complete
-		if (AccelerationStructure->IsCompacted == false && AccelerationStructure->RequestedCompaction == true)
+		if (!AccelerationStructure.IsCompacted)
 		{
-			ID3D12Resource* CompactedResource = AccelerationStructure->CompactedSizeCpuMemory.Parent->Resource.Get();
-			UINT64			Offset			  = AccelerationStructure->CompactedSizeCpuMemory.Offset;
+			ID3D12Resource* CompactedResource = AccelerationStructure.CompactedSizeCpuMemory.Parent->GetResource();
+			UINT64			Offset			  = AccelerationStructure.CompactedSizeCpuMemory.Offset;
 
 			D3D12_RANGE Range = {};
 			Range.Begin		  = Offset;
-			Range.End = Offset + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
+			Range.End		  = Offset + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
 			D3D12ScopedMap(
 				CompactedResource,
 				0,
@@ -465,20 +475,20 @@ void D3D12RaytracingAccelerationStructureManager::Compact(
 					memcpy(&Desc, &ByteData[Offset], sizeof(Desc));
 
 					// Suballocate the gpu memory needed for compaction copy
-					AccelerationStructure->ResultCompactedMemory =
+					AccelerationStructure.ResultCompactedMemory =
 						ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
 
-					AccelerationStructure->CompactedSizeInBytes = AccelerationStructure->ResultCompactedMemory.Size;
-					TotalCompactedMemory += AccelerationStructure->ResultCompactedMemory.Size;
+					AccelerationStructure.CompactedSizeInBytes = AccelerationStructure.ResultCompactedMemory.Size;
+					TotalCompactedMemory += AccelerationStructure.ResultCompactedMemory.Size;
 
 					// Copy the result buffer into the compacted buffer
 					CommandList->CopyRaytracingAccelerationStructure(
-						AccelerationStructure->ResultCompactedMemory.VirtualAddress,
-						AccelerationStructure->ResultMemory.VirtualAddress,
+						AccelerationStructure.ResultCompactedMemory.VirtualAddress,
+						AccelerationStructure.ResultMemory.VirtualAddress,
 						D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
 
 					// Tag as compaction complete
-					AccelerationStructure->IsCompacted = true;
+					AccelerationStructure.IsCompacted = true;
 				});
 		}
 	}
@@ -488,16 +498,16 @@ void D3D12RaytracingAccelerationStructureManager::SetSyncHandle(
 	UINT64			AccelerationStructureIndex,
 	D3D12SyncHandle SyncHandle)
 {
-	AccelerationStructures[AccelerationStructureIndex]->SyncHandle = SyncHandle;
+	AccelerationStructures[AccelerationStructureIndex].SyncHandle = SyncHandle;
 }
 
 D3D12_GPU_VIRTUAL_ADDRESS D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureAddress(
 	UINT64 AccelerationStructureIndex)
 {
-	D3D12AccelerationStructure* AccelerationStructure = AccelerationStructures[AccelerationStructureIndex].get();
+	const D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[AccelerationStructureIndex];
 
-	return AccelerationStructure->IsCompacted ? AccelerationStructure->ResultCompactedMemory.VirtualAddress
-											  : AccelerationStructure->ResultMemory.VirtualAddress;
+	return AccelerationStructure.IsCompacted ? AccelerationStructure.ResultCompactedMemory.VirtualAddress
+											 : AccelerationStructure.ResultMemory.VirtualAddress;
 }
 
 UINT64 D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureIndex()
@@ -505,13 +515,12 @@ UINT64 D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureInde
 	UINT64 NewIndex;
 	if (!IndexQueue.empty())
 	{
-		NewIndex						 = IndexQueue.front();
-		AccelerationStructures[NewIndex] = std::make_unique<D3D12AccelerationStructure>();
+		NewIndex = IndexQueue.front();
 		IndexQueue.pop();
 	}
 	else
 	{
-		AccelerationStructures.push_back(std::make_unique<D3D12AccelerationStructure>());
+		AccelerationStructures.emplace_back();
 		NewIndex = Index++;
 	}
 	return NewIndex;
@@ -520,5 +529,66 @@ UINT64 D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureInde
 void D3D12RaytracingAccelerationStructureManager::ReleaseAccelerationStructure(UINT64 Index)
 {
 	IndexQueue.push(Index);
-	AccelerationStructures[Index] = nullptr;
+	AccelerationStructures[Index] = {};
+}
+
+void D3D12RaytracingShaderBindingTable::Generate(D3D12LinkedDevice* Device)
+{
+	RayGenerationShaderTableOffset = SizeInBytes;
+	SizeInBytes += RayGenerationShaderTable->GetTotalSizeInBytes();
+	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+
+	MissShaderTableOffset = SizeInBytes;
+	SizeInBytes += MissShaderTable->GetTotalSizeInBytes();
+	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+
+	HitGroupShaderTableOffset = SizeInBytes;
+	SizeInBytes += HitGroupShaderTable->GetTotalSizeInBytes();
+	SizeInBytes = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+
+	SBTBuffer		= D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	SBTUploadBuffer = D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
+	SBTUploadBuffer.Initialize();
+	CpuData = std::make_unique<BYTE[]>(SizeInBytes);
+}
+
+void D3D12RaytracingShaderBindingTable::WriteToGpu(ID3D12GraphicsCommandList* CommandList) const
+{
+	{
+		BYTE* BaseAddress = CpuData.get();
+
+		RayGenerationShaderTable->Write(BaseAddress + RayGenerationShaderTableOffset);
+		MissShaderTable->Write(BaseAddress + MissShaderTableOffset);
+		HitGroupShaderTable->Write(BaseAddress + HitGroupShaderTableOffset);
+	}
+
+	BYTE* Address = SBTUploadBuffer.GetCpuVirtualAddress<BYTE>();
+	std::memcpy(Address, CpuData.get(), SizeInBytes);
+	CommandList->CopyBufferRegion(SBTBuffer.GetResource(), 0, SBTUploadBuffer.GetResource(), 0, SizeInBytes);
+}
+
+D3D12_DISPATCH_RAYS_DESC D3D12RaytracingShaderBindingTable::GetDesc(
+	UINT RayGenerationShaderIndex,
+	UINT BaseMissShaderIndex) const
+{
+	UINT64 RayGenerationShaderTableSizeInBytes = RayGenerationShaderTable->GetSizeInBytes();
+	UINT64 MissShaderTableSizeInBytes		   = MissShaderTable->GetSizeInBytes();
+	UINT64 HitGroupShaderTableSizeInBytes	   = HitGroupShaderTable->GetSizeInBytes();
+
+	UINT64 RayGenerationShaderRecordStride = RayGenerationShaderTable->GetStrideInBytes();
+	UINT64 MissShaderRecordStride		   = MissShaderTable->GetStrideInBytes();
+	UINT64 HitGroupShaderRecordStride	   = HitGroupShaderTable->GetStrideInBytes();
+
+	D3D12_GPU_VIRTUAL_ADDRESS BaseAddress = SBTBuffer.GetGpuVirtualAddress();
+
+	D3D12_DISPATCH_RAYS_DESC Desc  = {};
+	Desc.RayGenerationShaderRecord = { .StartAddress = BaseAddress + RayGenerationShaderTableOffset + RayGenerationShaderIndex * RayGenerationShaderRecordStride,
+									   .SizeInBytes	 = RayGenerationShaderTableSizeInBytes };
+	Desc.MissShaderTable		   = { .StartAddress  = BaseAddress + MissShaderTableOffset + BaseMissShaderIndex * MissShaderRecordStride,
+							   .SizeInBytes	  = MissShaderTableSizeInBytes,
+							   .StrideInBytes = MissShaderRecordStride };
+	Desc.HitGroupTable			   = { .StartAddress  = BaseAddress + HitGroupShaderTableOffset,
+						   .SizeInBytes	  = HitGroupShaderTableSizeInBytes,
+						   .StrideInBytes = HitGroupShaderRecordStride };
+	return Desc;
 }

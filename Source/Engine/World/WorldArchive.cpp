@@ -1,11 +1,7 @@
 #include "WorldArchive.h"
 #include "World.h"
 #include <Core/Asset/AssetManager.h>
-
-#include <fstream>
-#include <nlohmann/json.hpp>
-// using json = nlohmann::json;
-using json = nlohmann::ordered_json;
+#include "WorldJson.h"
 
 namespace Version
 {
@@ -14,109 +10,6 @@ constexpr int	  Minor	   = 0;
 constexpr int	  Revision = 0;
 const std::string String   = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
 } // namespace Version
-
-#define NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(Type, ...)                                                          \
-	inline void to_json(nlohmann::ordered_json& nlohmann_json_j, const Type& nlohmann_json_t)                          \
-	{                                                                                                                  \
-		NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__))                                       \
-	}                                                                                                                  \
-	inline void from_json(const nlohmann::ordered_json& nlohmann_json_j, Type& nlohmann_json_t)                        \
-	{                                                                                                                  \
-		NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, __VA_ARGS__))                                     \
-	}
-
-namespace DirectX
-{
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT2, x, y);
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT3, x, y, z);
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT4, x, y, z, w);
-} // namespace DirectX
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-	ELightTypes,
-	{
-		{ ELightTypes::Point, "Point" },
-		{ ELightTypes::Quad, "Quad" },
-	});
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-	EBSDFTypes,
-	{
-		{ EBSDFTypes::Lambertian, "Lambertian" },
-		{ EBSDFTypes::Mirror, "Mirror" },
-		{ EBSDFTypes::Glass, "Glass" },
-		{ EBSDFTypes::Disney, "Disney" },
-	});
-
-void to_json(json& Json, const Transform& InTransform)
-{
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InTransform);
-		});
-}
-void from_json(const json& Json, Transform& OutTransform)
-{
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutTransform, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-}
-
-void to_json(json& Json, const MaterialTexture& InMaterialTexture)
-{
-	ForEachAttribute<MaterialTexture>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InMaterialTexture);
-		});
-}
-void from_json(const json& Json, MaterialTexture& OutMaterialTexture)
-{
-	ForEachAttribute<MaterialTexture>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutMaterialTexture, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-
-	OutMaterialTexture.Handle.Type	= AssetType::Texture;
-	OutMaterialTexture.Handle.State = AssetState::Dirty;
-	OutMaterialTexture.Handle.Id	= OutMaterialTexture.HandleId;
-}
-
-void to_json(json& Json, const Material& InMaterial)
-{
-	ForEachAttribute<Material>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InMaterial);
-		});
-}
-void from_json(const json& Json, Material& OutMaterial)
-{
-	ForEachAttribute<Material>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutMaterial, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-}
 
 template<typename T>
 struct ComponentSerializer
@@ -148,9 +41,9 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 		AssetManager::GetTextureCache().EnumerateAsset(
 			[&](AssetHandle Handle, Texture* Resource)
 			{
-				std::filesystem::path AssetPath	  = relative(Resource->Options.Path, Application::ExecutableDirectory);
-				auto&				  JsonTexture = JsonTextures[AssetPath.string()];
-				JsonTexture["Options"]["sRGB"]	  = Resource->Options.sRGB;
+				std::filesystem::path AssetPath		   = relative(Resource->Options.Path, Application::ExecutableDirectory);
+				auto&				  JsonTexture	   = JsonTextures[AssetPath.string()];
+				JsonTexture["Options"]["sRGB"]		   = Resource->Options.sRGB;
 				JsonTexture["Options"]["GenerateMips"] = Resource->Options.GenerateMips;
 			});
 
@@ -285,7 +178,7 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			{
 				auto& SkyLight		  = Actor.GetComponent<SkyLightComponent>();
 				SkyLight.Handle.Type  = AssetType::Texture;
-				SkyLight.Handle.State = AssetState::Dirty;
+				SkyLight.Handle.State = false;
 				SkyLight.Handle.Id	  = SkyLight.HandleId;
 			}
 
@@ -293,7 +186,7 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			{
 				auto& StaticMesh		= Actor.GetComponent<StaticMeshComponent>();
 				StaticMesh.Handle.Type	= AssetType::Mesh;
-				StaticMesh.Handle.State = AssetState::Dirty;
+				StaticMesh.Handle.State = false;
 				StaticMesh.Handle.Id	= StaticMesh.HandleId;
 			}
 		}
