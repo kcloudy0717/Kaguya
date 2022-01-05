@@ -14,7 +14,6 @@ public:
 	void SetContext(World* pWorld)
 	{
 		this->pWorld  = pWorld;
-		SelectedIndex = {};
 	}
 
 	[[nodiscard]] Actor GetSelectedActor() const
@@ -32,5 +31,5 @@ protected:
 
 private:
 	World*				  pWorld = nullptr;
-	std::optional<size_t> SelectedIndex;
+	std::optional<size_t> SelectedIndex = {};
 };

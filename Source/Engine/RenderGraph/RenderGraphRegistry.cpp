@@ -141,11 +141,11 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 
 		for (UINT j = 0; j < RgRt.Desc.NumRenderTargets; ++j)
 		{
-			ApiDesc.AddRenderTarget(&GetTexture(RgRt.Desc.RenderTargets[j]), RgRt.Desc.sRGB[j]);
+			ApiDesc.AddRenderTarget(Get<D3D12Texture>(RgRt.Desc.RenderTargets[j]), RgRt.Desc.sRGB[j]);
 		}
 		if (RgRt.Desc.DepthStencil.IsValid())
 		{
-			ApiDesc.SetDepthStencil(&GetTexture(RgRt.Desc.DepthStencil));
+			ApiDesc.SetDepthStencil(Get<D3D12Texture>(RgRt.Desc.DepthStencil));
 		}
 
 		RenderTargets[i] = D3D12RenderTarget(RenderCore::Device->GetDevice(), ApiDesc);
@@ -161,7 +161,7 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 		{
 			ShaderResourceViews[i] = D3D12ShaderResourceView(
 				RenderCore::Device->GetDevice(),
-				&GetBuffer(RgSrv.Desc.Resource),
+				Get<D3D12Buffer>(RgSrv.Desc.Resource),
 				RgSrv.Desc.BufferSrv.Raw,
 				RgSrv.Desc.BufferSrv.FirstElement,
 				RgSrv.Desc.BufferSrv.NumElements);
@@ -174,7 +174,7 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 			std::optional<UINT> MipLevels		= RgSrv.Desc.TextureSrv.MipLevels != -1 ? RgSrv.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
 			ShaderResourceViews[i]				= D3D12ShaderResourceView(
 				 RenderCore::Device->GetDevice(),
-				 &GetTexture(RgSrv.Desc.Resource),
+				 Get<D3D12Texture>(RgSrv.Desc.Resource),
 				 RgSrv.Desc.TextureSrv.sRGB,
 				 MostDetailedMip,
 				 MipLevels);
@@ -196,7 +196,7 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 		{
 			UnorderedAccessViews[i] = D3D12UnorderedAccessView(
 				RenderCore::Device->GetDevice(),
-				&GetBuffer(RgUav.Desc.Resource),
+				Get<D3D12Buffer>(RgUav.Desc.Resource),
 				RgUav.Desc.BufferUav.NumElements,
 				RgUav.Desc.BufferUav.CounterOffsetInBytes);
 		}
@@ -208,7 +208,7 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 			std::optional<UINT> MipSlice   = RgUav.Desc.TextureUav.MipSlice != -1 ? RgUav.Desc.TextureUav.MipSlice : std::optional<UINT>{};
 			UnorderedAccessViews[i]		   = D3D12UnorderedAccessView(
 				   RenderCore::Device->GetDevice(),
-				   &GetTexture(RgUav.Desc.Resource),
+				   Get<D3D12Texture>(RgUav.Desc.Resource),
 				   ArraySlice,
 				   MipSlice);
 		}
@@ -218,44 +218,4 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph)
 			assert(false && "Invalid Uav");
 		}
 	}
-}
-
-auto RenderGraphRegistry::GetBuffer(RgResourceHandle Handle) -> D3D12Buffer&
-{
-	assert(Handle.IsValid());
-	assert(Handle.Type == RgResourceType::Buffer);
-	assert(Handle.Id < Buffers.size());
-	return Buffers[Handle.Id];
-}
-
-auto RenderGraphRegistry::GetTexture(RgResourceHandle Handle) -> D3D12Texture&
-{
-	assert(Handle.IsValid());
-	assert(Handle.Type == RgResourceType::Texture);
-	assert(Handle.Id < Textures.size());
-	return Textures[Handle.Id];
-}
-
-auto RenderGraphRegistry::GetRenderTarget(RgResourceHandle Handle) -> D3D12RenderTarget&
-{
-	assert(Handle.IsValid());
-	assert(Handle.Type == RgResourceType::RenderTarget);
-	assert(Handle.Id < RenderTargets.size());
-	return RenderTargets[Handle.Id];
-}
-
-auto RenderGraphRegistry::GetShaderResourceView(RgResourceHandle Handle) -> D3D12ShaderResourceView&
-{
-	assert(Handle.IsValid());
-	assert(Handle.Type == RgResourceType::ShaderResourceView);
-	assert(Handle.Id < ShaderResourceViews.size());
-	return ShaderResourceViews[Handle.Id];
-}
-
-auto RenderGraphRegistry::GetUnorderedAccessView(RgResourceHandle Handle) -> D3D12UnorderedAccessView&
-{
-	assert(Handle.IsValid());
-	assert(Handle.Type == RgResourceType::UnorderedAccessView);
-	assert(Handle.Id < UnorderedAccessViews.size());
-	return UnorderedAccessViews[Handle.Id];
 }

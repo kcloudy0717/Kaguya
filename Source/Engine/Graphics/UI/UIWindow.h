@@ -3,7 +3,7 @@
 class UIWindow
 {
 public:
-	UIWindow(const std::string& Name, ImGuiWindowFlags Flags)
+	explicit UIWindow(std::string_view Name, ImGuiWindowFlags Flags)
 		: Name(Name)
 		, Flags(Flags)
 	{
@@ -55,6 +55,6 @@ protected:
 	bool IsHovered;
 
 private:
-	std::string		 Name  = "<unknown>";
+	std::string_view Name;
 	ImGuiWindowFlags Flags = 0;
 };

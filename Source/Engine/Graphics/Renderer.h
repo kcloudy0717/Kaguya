@@ -3,6 +3,11 @@
 #include "World/World.h"
 #include "View.h"
 
+#include "Graphics/UI/WorldWindow.h"
+#include "Graphics/UI/InspectorWindow.h"
+#include "Graphics/UI/AssetWindow.h"
+#include "Graphics/UI/ConsoleWindow.h"
+
 class RendererPresent : public IPresent
 {
 public:
@@ -28,10 +33,8 @@ public:
 class Renderer
 {
 public:
-	Renderer(HWND HWnd);
+	Renderer(Window* MainWindow);
 	virtual ~Renderer() = default;
-
-	void OnSetViewportResolution(uint32_t Width, uint32_t Height);
 
 	void OnInitialize();
 
@@ -41,15 +44,13 @@ public:
 
 	void OnResize(uint32_t Width, uint32_t Height);
 
-	[[nodiscard]] void* GetViewportDescriptor() const noexcept;
+protected:
+	virtual void Initialize()										= 0;
+	virtual void Destroy()											= 0;
+	virtual void Render(World* World, D3D12CommandContext& Context) = 0;
 
 protected:
-	virtual void SetViewportResolution(uint32_t Width, uint32_t Height) = 0;
-	virtual void Initialize()											= 0;
-	virtual void Destroy()												= 0;
-	virtual void Render(World* World, D3D12CommandContext& Context)		= 0;
-
-protected:
+	Window*		   MainWindow = nullptr;
 	D3D12SwapChain SwapChain;
 
 	RenderGraphAllocator Allocator;
@@ -59,6 +60,10 @@ protected:
 
 	size_t FrameIndex = 0;
 
-	bool  ValidViewport = false;
-	void* Viewport		= nullptr;
+	void* Viewport = nullptr;
+
+	WorldWindow		WorldWindow;
+	InspectorWindow InspectorWindow;
+	AssetWindow		AssetWindow;
+	ConsoleWindow	ConsoleWindow;
 };

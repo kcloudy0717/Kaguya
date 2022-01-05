@@ -35,6 +35,5 @@ float3 LinearTosRGB(float3 x)
 	// Convert linear to sRGB
 	Color.rgb = LinearTosRGB(Color.rgb);
 
-	// Tonemap
 	Output[Params.DispatchThreadID.xy] = float4(Color.rgb, 1.0f);
 }

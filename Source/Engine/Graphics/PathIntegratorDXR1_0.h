@@ -18,7 +18,6 @@ public:
 	using Renderer::Renderer;
 
 private:
-	void SetViewportResolution(uint32_t Width, uint32_t Height) override;
 	void Initialize() override;
 	void Destroy() override;
 	void Render(World* World, D3D12CommandContext& Context) override;

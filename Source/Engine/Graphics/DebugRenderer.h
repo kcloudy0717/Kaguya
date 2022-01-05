@@ -2,6 +2,8 @@
 #include <DirectXMath.h>
 #include "World/Components.h"
 
+// CURRENTLY UNSTABLE
+
 #define ENABLE_DEBUG_RENDERER 1
 
 struct DebugVertex

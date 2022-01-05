@@ -64,8 +64,8 @@ void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandC
 			ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		}
 
-		D3D12Texture& Texture = RenderGraph->GetRegistry().GetTexture(Read);
-		Context.TransitionBarrier(&Texture, ReadState);
+		D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Read);
+		Context.TransitionBarrier(Texture, ReadState);
 	}
 	for (auto Write : Writes)
 	{
@@ -84,8 +84,8 @@ void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandC
 			WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		}
 
-		D3D12Texture& Texture = RenderGraph->GetRegistry().GetTexture(Write);
-		Context.TransitionBarrier(&Texture, WriteState);
+		D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Write);
+		Context.TransitionBarrier(Texture, WriteState);
 	}
 
 	Context.FlushResourceBarriers();
@@ -273,4 +273,25 @@ void RenderGraph::DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::st
 	}
 
 	Stack.push(n);
+}
+
+void RenderGraph::ExportDgml(DgmlBuilder& Builder)
+{
+	for (size_t i = 0; i < AdjacencyLists.size(); ++i)
+	{
+		RenderPass* Node = RenderPasses[i];
+		std::ignore		 = Builder.AddNode(Node->Name, Node->Name);
+
+		for (size_t j = 0; j < AdjacencyLists[i].size(); ++j)
+		{
+			RenderPass* Neighbor = RenderPasses[AdjacencyLists[i][j]];
+			for (auto Resource : Node->Writes)
+			{
+				if (Neighbor->ReadsFrom(Resource))
+				{
+					std::ignore = Builder.AddLink(Node->Name.data(), Neighbor->Name.data(), GetResourceName(Resource));
+				}
+			}
+		}
+	}
 }

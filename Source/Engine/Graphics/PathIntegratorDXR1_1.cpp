@@ -4,12 +4,6 @@
 #include "Tonemap.h"
 #include "Bloom.h"
 
-void PathIntegratorDXR1_1::SetViewportResolution(uint32_t Width, uint32_t Height)
-{
-	View.Width	= Width;
-	View.Height = Height;
-}
-
 void PathIntegratorDXR1_1::Initialize()
 {
 	Shaders::Compile();
@@ -169,24 +163,9 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 		RgResourceHandle Srv;
 		RgResourceHandle Uav;
 	} PathTraceArgs;
-	{
-		PathTraceArgs.Output = Graph.Create<D3D12Texture>(
-			"Path Trace Output",
-			RgTextureDesc()
-				.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
-				.SetExtent(View.Width, View.Height, 1)
-				.AllowUnorderedAccess());
-		PathTraceArgs.Srv = Graph.Create<D3D12ShaderResourceView>(
-			"Path Trace Output Srv",
-			RgViewDesc()
-				.SetResource(PathTraceArgs.Output)
-				.AsTextureSrv());
-		PathTraceArgs.Uav = Graph.Create<D3D12UnorderedAccessView>(
-			"Path Trace Output Uav",
-			RgViewDesc()
-				.SetResource(PathTraceArgs.Output)
-				.AsTextureUav());
-	}
+	PathTraceArgs.Output = Graph.Create<D3D12Texture>("Path Trace Output", RgTextureDesc().SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	PathTraceArgs.Srv	 = Graph.Create<D3D12ShaderResourceView>("Path Trace Output Srv", RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
+	PathTraceArgs.Uav	 = Graph.Create<D3D12UnorderedAccessView>("Path Trace Output Uav", RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Path Trace")
 		.Write(&PathTraceArgs.Output)
@@ -222,7 +201,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
 					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-					 g_GlobalConstants.RenderTarget			 = Registry.GetUnorderedAccessView(PathTraceArgs.Uav).GetIndex();
+					 g_GlobalConstants.RenderTarget			 = Registry.Get<D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
 					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
 					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
 					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
@@ -259,6 +238,14 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 
 	Graph.Execute(Context);
 
-	ValidViewport = true;
-	Viewport	  = reinterpret_cast<void*>(Registry.GetShaderResourceView(TonemapArgs.Srv).GetGpuHandle().ptr);
+	static bool ExportDgml = true;
+	if (ExportDgml)
+	{
+		ExportDgml = false;
+		DgmlBuilder Builder;
+		Graph.ExportDgml(Builder);
+		Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
+	}
+
+	Viewport = reinterpret_cast<void*>(Registry.Get<D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }

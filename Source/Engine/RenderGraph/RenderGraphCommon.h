@@ -30,10 +30,10 @@ struct RgResourceHandle
 		Id		= UINT_MAX;
 	}
 
-	RgResourceType Type	   : 16;
-	UINT64		   State   : 1;
-	UINT64		   Version : 15;
-	UINT64		   Id	   : 32;
+	RgResourceType Type	   : 16; // 16 bit to represent type, might remove some bits from this and give it to version
+	UINT64		   State   : 1;  // 1 bit to represent state of the handle, true = ready to use, vice versa
+	UINT64		   Version : 15; // 15 bits to represent version should be more than enough, we can always just increase bit used if is not enough
+	UINT64		   Id	   : 32; // 32 bit unsigned int
 };
 
 static_assert(sizeof(RgResourceHandle) == sizeof(UINT64));
@@ -296,6 +296,7 @@ template<>
 struct RgResourceTraits<D3D12Buffer>
 {
 	static constexpr auto Enum = RgResourceType::Buffer;
+	using ApiType			   = D3D12Buffer;
 	using Desc				   = RgBufferDesc;
 	using Type				   = RgBuffer;
 };
@@ -304,6 +305,7 @@ template<>
 struct RgResourceTraits<D3D12Texture>
 {
 	static constexpr auto Enum = RgResourceType::Texture;
+	using ApiType			   = D3D12Texture;
 	using Desc				   = RgTextureDesc;
 	using Type				   = RgTexture;
 };
@@ -312,6 +314,7 @@ template<>
 struct RgResourceTraits<D3D12RenderTarget>
 {
 	static constexpr auto Enum = RgResourceType::RenderTarget;
+	using ApiType			   = D3D12RenderTarget;
 	using Desc				   = RgRenderTargetDesc;
 	using Type				   = RgRenderTarget;
 };
@@ -320,6 +323,7 @@ template<>
 struct RgResourceTraits<D3D12ShaderResourceView>
 {
 	static constexpr auto Enum = RgResourceType::ShaderResourceView;
+	using ApiType			   = D3D12ShaderResourceView;
 	using Desc				   = RgViewDesc;
 	using Type				   = RgView;
 };
@@ -328,6 +332,7 @@ template<>
 struct RgResourceTraits<D3D12UnorderedAccessView>
 {
 	static constexpr auto Enum = RgResourceType::UnorderedAccessView;
+	using ApiType			   = D3D12UnorderedAccessView;
 	using Desc				   = RgViewDesc;
 	using Type				   = RgView;
 };

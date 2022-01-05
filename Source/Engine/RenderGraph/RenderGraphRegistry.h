@@ -46,11 +46,41 @@ public:
 
 	void RealizeResources(RenderGraph* Graph);
 
-	[[nodiscard]] auto GetBuffer(RgResourceHandle Handle) -> D3D12Buffer&;
-	[[nodiscard]] auto GetTexture(RgResourceHandle Handle) -> D3D12Texture&;
-	[[nodiscard]] auto GetRenderTarget(RgResourceHandle Handle) -> D3D12RenderTarget&;
-	[[nodiscard]] auto GetShaderResourceView(RgResourceHandle Handle) -> D3D12ShaderResourceView&;
-	[[nodiscard]] auto GetUnorderedAccessView(RgResourceHandle Handle) -> D3D12UnorderedAccessView&;
+	template<typename T>
+	[[nodiscard]] auto Get(RgResourceHandle Handle) -> T*
+	{
+		auto& Container = GetContainer<T>();
+		assert(Handle.IsValid());
+		assert(Handle.Type == RgResourceTraits<T>::Enum);
+		assert(Handle.Id < Container.size());
+		return &Container[Handle.Id];
+	}
+
+private:
+	template<typename T>
+	[[nodiscard]] auto GetContainer() -> std::vector<typename RgResourceTraits<T>::ApiType>&
+	{
+		if constexpr (std::is_same_v<T, D3D12Buffer>)
+		{
+			return Buffers;
+		}
+		else if constexpr (std::is_same_v<T, D3D12Texture>)
+		{
+			return Textures;
+		}
+		else if constexpr (std::is_same_v<T, D3D12RenderTarget>)
+		{
+			return RenderTargets;
+		}
+		else if constexpr (std::is_same_v<T, D3D12ShaderResourceView>)
+		{
+			return ShaderResourceViews;
+		}
+		else if constexpr (std::is_same_v<T, D3D12UnorderedAccessView>)
+		{
+			return UnorderedAccessViews;
+		}
+	}
 
 private:
 	RenderGraph*					Graph = nullptr;

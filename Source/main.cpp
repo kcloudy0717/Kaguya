@@ -15,12 +15,6 @@
 #include "Core/Asset/AssetManager.h"
 #include "RenderCore/RenderCore.h"
 
-#include "Graphics/UI/WorldWindow.h"
-#include "Graphics/UI/ViewportWindow.h"
-#include "Graphics/UI/InspectorWindow.h"
-#include "Graphics/UI/AssetWindow.h"
-#include "Graphics/UI/ConsoleWindow.h"
-
 #include "Graphics/Renderer.h"
 #include "Graphics/PathIntegratorDXR1_0.h"
 #include "Graphics/PathIntegratorDXR1_1.h"
@@ -76,10 +70,6 @@ public:
 		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
 
-		WorldWindow.SetContext(World);
-		InspectorWindow.SetContext(World, {});
-		AssetWindow.SetContext(World);
-
 		Renderer->OnInitialize();
 
 		return true;
@@ -94,8 +84,6 @@ public:
 
 	void Update(float DeltaTime) override
 	{
-		World->WorldState = EWorldState::EWorldState_Render;
-
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
@@ -107,25 +95,7 @@ public:
 
 		ImGuizmo::AllowAxisFlip(false);
 
-		WorldWindow.Render();
-		InspectorWindow.SetContext(World, WorldWindow.GetSelectedActor());
-
-		ViewportWindow.SetContext(Renderer->GetViewportDescriptor(), MainWindow);
-		ViewportWindow.Render();
-
-		AssetWindow.Render();
-		ConsoleWindow.Render();
-		InspectorWindow.Render();
-
-		const uint32_t ViewportWidth = ViewportWindow.Resolution.x, ViewportHeight = ViewportWindow.Resolution.y;
-		// const uint32_t ViewportWidth = 3840, ViewportHeight = 2160;
-		// const uint32_t ViewportWidth = 1920, ViewportHeight = 1080;
-
 		World->Update(DeltaTime);
-
-		// Render
-		Renderer->OnSetViewportResolution(ViewportWidth, ViewportHeight);
-
 		Renderer->OnRender(World);
 	}
 
@@ -203,12 +173,6 @@ public:
 
 	World*	  World	   = nullptr;
 	Renderer* Renderer = nullptr;
-
-	WorldWindow		WorldWindow;
-	ViewportWindow	ViewportWindow;
-	InspectorWindow InspectorWindow;
-	AssetWindow		AssetWindow;
-	ConsoleWindow	ConsoleWindow;
 };
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -251,7 +215,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	World World;
 
 	// PathIntegratorDXR1_0 Renderer(MainWindow.GetWindowHandle());
-	PathIntegratorDXR1_1 Renderer(MainWindow.GetWindowHandle());
+	PathIntegratorDXR1_1 Renderer(&MainWindow);
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

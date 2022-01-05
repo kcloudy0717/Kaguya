@@ -20,6 +20,11 @@ struct TonemapParameters
 
 static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, TonemapInputParameters Inputs)
 {
+	assert(Inputs.Input.IsValid());
+	assert(Inputs.BloomInput.IsValid());
+	assert(Inputs.Srv.IsValid());
+	assert(Inputs.BloomInputSrv.IsValid());
+
 	TonemapParameters TonemapArgs;
 
 	constexpr DXGI_FORMAT Format = D3D12SwapChain::Format;
@@ -44,9 +49,9 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
 					 Args.BloomIntensity	= 3.0f;
-					 Args.InputIndex		= Registry.GetShaderResourceView(Inputs.Srv).GetIndex();
-					 Args.BloomIndex		= Registry.GetShaderResourceView(Inputs.BloomInputSrv).GetIndex();
-					 Args.OutputIndex		= Registry.GetUnorderedAccessView(TonemapArgs.Uav).GetIndex();
+					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
+					 Args.BloomIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv)->GetIndex();
+					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav)->GetIndex();
 
 					 D3D12ScopedEvent(Context, "Tonemap");
 

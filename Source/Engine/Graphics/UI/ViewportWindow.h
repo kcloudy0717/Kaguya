@@ -21,7 +21,6 @@ protected:
 	void OnRender() override;
 
 public:
-	Vec2i Resolution = {};
 	RECT  Rect		 = {};
 
 private:

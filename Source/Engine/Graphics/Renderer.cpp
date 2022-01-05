@@ -3,24 +3,11 @@
 
 using Microsoft::WRL::ComPtr;
 
-Renderer::Renderer(HWND HWnd)
-	: SwapChain(RenderCore::Device, HWnd)
+Renderer::Renderer(Window* MainWindow)
+	: MainWindow(MainWindow)
+	, SwapChain(RenderCore::Device, MainWindow->GetWindowHandle())
 	, Allocator(64 * 1024)
 {
-}
-
-void Renderer::OnSetViewportResolution(uint32_t Width, uint32_t Height)
-{
-	// Clamp at 4k
-	Width  = std::clamp<uint32_t>(Width, 0, 3840);
-	Height = std::clamp<uint32_t>(Height, 0, 2160);
-	if (Width == 0 || Height == 0)
-	{
-		return;
-	}
-
-	ValidViewport = false;
-	SetViewportResolution(Width, Height);
 }
 
 void Renderer::OnInitialize()
@@ -41,8 +28,6 @@ void Renderer::OnRender(World* World)
 	{
 		RenderCore::Device->BeginCapture(Application::ExecutableDirectory / "GPU 0.wpix");
 	}*/
-
-	World->ActiveCamera->AspectRatio = float(View.Width) / float(View.Height);
 
 	RenderCore::Device->OnBeginFrame();
 
@@ -103,8 +88,72 @@ void Renderer::OnRender(World* World)
 	D3D12CommandContext& Context = RenderCore::Device->GetDevice()->GetCommandContext();
 	Context.OpenCommandList();
 	{
-		D3D12ScopedEvent(Context, "Render");
-		Render(World, Context);
+		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
+		{
+			bool IsHovered = ImGui::IsWindowHovered();
+
+			ImGuizmo::SetDrawlist();
+			ImGuizmo::SetRect(
+				ImGui::GetWindowPos().x,
+				ImGui::GetWindowPos().y,
+				ImGui::GetWindowWidth(),
+				ImGui::GetWindowHeight());
+
+			auto ViewportOffset = ImGui::GetCursorPos(); // includes tab bar
+			auto ViewportPos	= ImGui::GetWindowPos();
+			auto ViewportSize	= ImGui::GetContentRegionAvail();
+			auto WindowSize		= ImGui::GetWindowSize();
+
+			RECT Rect	= {};
+			Rect.left	= static_cast<LONG>(ViewportPos.x + ViewportOffset.x);
+			Rect.top	= static_cast<LONG>(ViewportPos.y + ViewportOffset.y);
+			Rect.right	= static_cast<LONG>(Rect.left + WindowSize.x);
+			Rect.bottom = static_cast<LONG>(Rect.top + WindowSize.y);
+
+			// Clamp at 4k
+			View.Width						 = std::clamp<uint32_t>(static_cast<int>(ViewportSize.x), 1, 3840);
+			View.Height						 = std::clamp<uint32_t>(static_cast<int>(ViewportSize.y), 1, 2160);
+			World->ActiveCamera->AspectRatio = static_cast<float>(View.Width) / static_cast<float>(View.Height);
+
+			D3D12ScopedEvent(Context, "Render");
+			Render(World, Context);
+
+			// Viewport must be valid after Render
+			assert(Viewport);
+			ImGui::Image(Viewport, ViewportSize);
+
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
+			{
+				Application::InputManager.DisableCursor(MainWindow->GetWindowHandle());
+			}
+			else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+			{
+				Application::InputManager.EnableCursor();
+			}
+
+			// Camera operates in raw input mode
+			if (!Application::InputManager.CursorEnabled)
+			{
+				Application::InputManager.RawInputEnabled = true;
+				MainWindow->SetRawInput(true);
+				ClipCursor(&Rect);
+			}
+			else
+			{
+				Application::InputManager.RawInputEnabled = false;
+				MainWindow->SetRawInput(false);
+				ClipCursor(nullptr);
+			}
+		}
+		ImGui::End();
+
+		WorldWindow.SetContext(World);
+		WorldWindow.Render();
+		AssetWindow.SetContext(World);
+		AssetWindow.Render();
+		ConsoleWindow.Render();
+		InspectorWindow.SetContext(World, WorldWindow.GetSelectedActor());
+		InspectorWindow.Render();
 
 		auto [pRenderTarget, RenderTargetView] = SwapChain.GetCurrentBackBufferResource();
 
@@ -141,7 +190,7 @@ void Renderer::OnRender(World* World)
 	Context.CloseCommandList();
 
 	RendererPresent Present(Context);
-	SwapChain.Present(false, Present);
+	SwapChain.Present(true, Present);
 
 	RenderCore::Device->OnEndFrame();
 	++FrameIndex;
@@ -155,14 +204,4 @@ void Renderer::OnRender(World* World)
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
 	SwapChain.Resize(Width, Height);
-}
-
-void* Renderer::GetViewportDescriptor() const noexcept
-{
-	if (ValidViewport)
-	{
-		return Viewport;
-	}
-
-	return nullptr;
 }

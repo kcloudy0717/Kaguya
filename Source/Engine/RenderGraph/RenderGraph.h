@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderGraphRegistry.h"
+#include "DgmlBuilder.h"
 
 #include <stack>
 
@@ -156,6 +157,8 @@ public:
 
 	void Execute(D3D12CommandContext& Context);
 
+	void ExportDgml(DgmlBuilder& Builder);
+
 	[[nodiscard]] bool AllowRenderTarget(RgResourceHandle Resource) const noexcept;
 	[[nodiscard]] bool AllowDepthStencil(RgResourceHandle Resource) const noexcept;
 	[[nodiscard]] bool AllowUnorderedAccess(RgResourceHandle Resource) const noexcept;
@@ -164,6 +167,17 @@ private:
 	void Setup();
 
 	void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack);
+
+	std::string_view GetResourceName(RgResourceHandle Handle)
+	{
+		switch (Handle.Type)
+		{
+		case RgResourceType::Buffer:
+			return Buffers[Handle.Id].Name;
+		case RgResourceType::Texture:
+			return Textures[Handle.Id].Name;
+		}
+	}
 
 private:
 	friend class RenderGraphRegistry;
@@ -177,8 +191,8 @@ private:
 	std::vector<RgView>			ShaderResourceViews;
 	std::vector<RgView>			UnorderedAccessViews;
 
-	std::vector<RenderPass*>						  RenderPasses;
-	RenderPass*										  EpiloguePass;
+	std::vector<RenderPass*> RenderPasses;
+	RenderPass*				 EpiloguePass;
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;
 	std::vector<RenderPass*>		 TopologicalSortedPasses;

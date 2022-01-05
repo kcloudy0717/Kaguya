@@ -3,12 +3,6 @@
 
 #include "Tonemap.h"
 
-void PathIntegratorDXR1_0::SetViewportResolution(uint32_t Width, uint32_t Height)
-{
-	View.Width	= Width;
-	View.Height = Height;
-}
-
 void PathIntegratorDXR1_0::Initialize()
 {
 	Shaders::Compile();
@@ -217,7 +211,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
 					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-					 g_GlobalConstants.RenderTarget			 = Registry.GetUnorderedAccessView(PathTraceArgs.OutputUav).GetIndex();
+					 g_GlobalConstants.RenderTarget			 = Registry.Get<D3D12UnorderedAccessView>(PathTraceArgs.OutputUav)->GetIndex();
 					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
 					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
 					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
@@ -250,6 +244,5 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 
 	Graph.Execute(Context);
 
-	ValidViewport = true;
-	Viewport	  = reinterpret_cast<void*>(Registry.GetShaderResourceView(TonemapArgs.Srv).GetGpuHandle().ptr);
+	Viewport	  = reinterpret_cast<void*>(Registry.Get<D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }
