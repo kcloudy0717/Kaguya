@@ -242,7 +242,7 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 	if (ExportDgml)
 	{
 		ExportDgml = false;
-		DgmlBuilder Builder;
+		DgmlBuilder Builder("Render Graph");
 		Graph.ExportDgml(Builder);
 		Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
 	}

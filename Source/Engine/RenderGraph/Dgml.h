@@ -1,40 +1,49 @@
 #pragma once
 #include <memory>
-#include <ostream>
 #include <string>
 #include <vector>
 
 namespace Dgml
 {
-	class Node;
-	class Link;
+	struct Node
+	{
+		std::string Id;
+		std::string Label;
+	};
+
+	struct Link
+	{
+		std::string Source;
+		std::string Target;
+		std::string Label;
+	};
+
+	enum class GraphDirection
+	{
+		Default,
+		TopToBottom,
+		BottomToTop,
+		LeftToRight,
+		RightToLeft
+	};
 
 	class Graph
 	{
 	public:
-		std::string							   Title;
-		std::vector<std::unique_ptr<Node>>	   Nodes;
-		std::vector<std::unique_ptr<Link>>	   Links;
+		explicit Graph(
+			const std::string& Title,
+			GraphDirection	   Direction = GraphDirection::Default);
 
-		void Serialize(std::ostream& Output) const;
-	};
+		Node* AddNode();
 
-	class Node
-	{
-	public:
-		std::string Id;
-		std::string Label;
+		Link* AddLink();
 
-		void Serialize(std::ostream& Output) const;
-	};
+		void Serialize(std::ostream& Stream) const;
 
-	class Link
-	{
-	public:
-		std::string Source;
-		std::string Target;
-		std::string Label;
-
-		void Serialize(std::ostream& Output) const;
+	private:
+		std::string						   Title;
+		GraphDirection					   Direction;
+		std::vector<std::unique_ptr<Node>> Nodes;
+		std::vector<std::unique_ptr<Link>> Links;
 	};
 } // namespace Dgml

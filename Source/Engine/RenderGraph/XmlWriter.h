@@ -1,40 +1,39 @@
 #pragma once
 #include <ostream>
-#include <string_view>
 
 class XmlWriter
 {
 public:
 	inline static constexpr char NewLine[] = "\n";
 
-	static void Xml(std::ostream& Output)
+	static void Xml(std::ostream& Stream)
 	{
 		constexpr char Header[] = R"(<?xml version="1.0" encoding="utf-8"?>)";
-		Output << Header << NewLine;
+		Stream << Header << NewLine;
 	}
-	static void BeginElement(std::ostream& Output, std::string_view Name)
+	static void BeginElement(std::ostream& Stream, std::string_view Name)
 	{
-		Output << "<" << Name;
+		Stream << "<" << Name;
 	}
-	static void CloseElement(std::ostream& Output)
+	static void CloseElement(std::ostream& Stream)
 	{
-		Output << ">" << NewLine;
+		Stream << ">" << NewLine;
 	}
-	static void EndCloseElement(std::ostream& Output)
+	static void EndCloseElement(std::ostream& Stream)
 	{
-		Output << " />" << NewLine;
+		Stream << " />" << NewLine;
 	}
-	static void EndElement(std::ostream& Output, std::string_view Name)
+	static void EndElement(std::ostream& Stream, std::string_view Name)
 	{
-		Output << "</" << Name << ">" << NewLine;
+		Stream << "</" << Name << ">" << NewLine;
 	}
 
-	static void Attribute(std::ostream& Output, std::string_view Name, std::string_view Value)
+	static void Attribute(std::ostream& Stream, std::string_view Name, std::string_view Value)
 	{
 		if (Value.empty())
 		{
 			return;
 		}
-		Output << " " << Name << "=\"" << Value << "\"";
+		Stream << " " << Name << "=\"" << Value << "\"";
 	}
 };

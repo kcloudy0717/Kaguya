@@ -3,59 +3,99 @@
 
 namespace Dgml
 {
-	void Graph::Serialize(std::ostream& Output) const
+	constexpr const char* GetDirectionName(GraphDirection Direction)
 	{
-		// <DirectedGraph xmlns="http://schemas.microsoft.com/vs/2009/dgml">
-		XmlWriter::BeginElement(Output, "DirectedGraph");
-		XmlWriter::Attribute(Output, "xmlns", "http://schemas.microsoft.com/vs/2009/dgml");
-		XmlWriter::CloseElement(Output);
+		switch (Direction)
+		{
+		case GraphDirection::TopToBottom:
+			return "TopToBottom";
+		case GraphDirection::BottomToTop:
+			return "BottomToTop";
+		case GraphDirection::LeftToRight:
+			return "LeftToRight";
+		case GraphDirection::RightToLeft:
+			return "RightToLeft";
+		}
+		return nullptr;
+	}
+
+	static void SerializeNode(const Node& Node, std::ostream& Stream)
+	{
+		XmlWriter::BeginElement(Stream, "Node");
+		{
+			XmlWriter::Attribute(Stream, "Id", Node.Id);
+			XmlWriter::Attribute(Stream, "Label", Node.Label);
+		}
+		XmlWriter::EndCloseElement(Stream);
+	}
+
+	static void SerializeLink(const Link& Link, std::ostream& Stream)
+	{
+		XmlWriter::BeginElement(Stream, "Link");
+		{
+			XmlWriter::Attribute(Stream, "Source", Link.Source);
+			XmlWriter::Attribute(Stream, "Target", Link.Target);
+			XmlWriter::Attribute(Stream, "Label", Link.Label);
+		}
+		XmlWriter::EndCloseElement(Stream);
+	}
+
+	Graph::Graph(
+		const std::string& Title,
+		GraphDirection	   Direction /*= GraphDirection::Default*/)
+		: Title(Title)
+		, Direction(Direction)
+	{
+	}
+
+	Dgml::Node* Graph::AddNode()
+	{
+		return Nodes.emplace_back(std::make_unique<Node>()).get();
+	}
+
+	Dgml::Link* Graph::AddLink()
+	{
+		return Links.emplace_back(std::make_unique<Link>()).get();
+	}
+
+	void Graph::Serialize(std::ostream& Stream) const
+	{
+		// <DirectedGraph Title=Title xmlns="http://schemas.microsoft.com/vs/2009/dgml">
+		XmlWriter::BeginElement(Stream, "DirectedGraph");
+		XmlWriter::Attribute(Stream, "Title", Title.data());
+		if (Direction != GraphDirection::Default)
+		{
+			XmlWriter::Attribute(Stream, "Layout", "Sugiyama");
+			XmlWriter::Attribute(Stream, "GraphDirection", GetDirectionName(Direction));
+		}
+		XmlWriter::Attribute(Stream, "xmlns", "http://schemas.microsoft.com/vs/2009/dgml");
+		XmlWriter::CloseElement(Stream);
 		{
 			// <Nodes>
-			XmlWriter::BeginElement(Output, "Nodes");
-			XmlWriter::CloseElement(Output);
+			XmlWriter::BeginElement(Stream, "Nodes");
+			XmlWriter::CloseElement(Stream);
 			{
 				for (const auto& Node : Nodes)
 				{
-					Node->Serialize(Output);
+					SerializeNode(*Node, Stream);
 				}
 			}
-			XmlWriter::EndElement(Output, "Nodes");
+			XmlWriter::EndElement(Stream, "Nodes");
 			// <Nodes />
 
 			// <Links>
-			XmlWriter::BeginElement(Output, "Links");
-			XmlWriter::CloseElement(Output);
+			XmlWriter::BeginElement(Stream, "Links");
+			XmlWriter::CloseElement(Stream);
 			{
 				for (const auto& Link : Links)
 				{
-					Link->Serialize(Output);
+					SerializeLink(*Link, Stream);
 				}
 			}
-			XmlWriter::EndElement(Output, "Links");
+			XmlWriter::EndElement(Stream, "Links");
 			// <Links />
 		}
-		XmlWriter::EndElement(Output, "DirectedGraph");
+		XmlWriter::EndElement(Stream, "DirectedGraph");
 		// </DirectedGraph>
-	}
-
-	void Node::Serialize(std::ostream& Output) const
-	{
-		XmlWriter::BeginElement(Output, "Node");
-		{
-			XmlWriter::Attribute(Output, "Id", Id);
-			XmlWriter::Attribute(Output, "Label", Label);
-		}
-		XmlWriter::EndCloseElement(Output);
-	}
-
-	void Link::Serialize(std::ostream& Output) const
-	{
-		XmlWriter::BeginElement(Output, "Link");
-		{
-			XmlWriter::Attribute(Output, "Source", Source);
-			XmlWriter::Attribute(Output, "Target", Target);
-			XmlWriter::Attribute(Output, "Label", Label);
-		}
-		XmlWriter::EndCloseElement(Output);
 	}
 } // namespace Dgml

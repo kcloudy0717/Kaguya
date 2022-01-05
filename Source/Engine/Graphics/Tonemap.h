@@ -3,6 +3,17 @@
 #include "RenderGraph/RenderGraph.h"
 #include "View.h"
 
+enum class TonemapOperator
+{
+	Aces
+};
+
+struct TonemapSettings
+{
+	TonemapOperator Operator	   = TonemapOperator::Aces;
+	float			BloomIntensity = 2.0f;
+};
+
 struct TonemapInputParameters
 {
 	RgResourceHandle Input;
@@ -18,7 +29,7 @@ struct TonemapParameters
 	RgResourceHandle Uav;
 };
 
-static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, TonemapInputParameters Inputs)
+static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, TonemapInputParameters Inputs, TonemapSettings Settings = TonemapSettings())
 {
 	assert(Inputs.Input.IsValid());
 	assert(Inputs.BloomInput.IsValid());
@@ -48,7 +59,7 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 						 unsigned int OutputIndex;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
-					 Args.BloomIntensity	= 3.0f;
+					 Args.BloomIntensity	= Settings.BloomIntensity;
 					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
 					 Args.BloomIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv)->GetIndex();
 					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav)->GetIndex();

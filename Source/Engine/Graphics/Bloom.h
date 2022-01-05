@@ -4,6 +4,11 @@
 #include "View.h"
 #include "Math.h"
 
+struct BloomSettings
+{
+	float Threshold = 4.0f;
+};
+
 struct BloomInputParameters
 {
 	RgResourceHandle Input;
@@ -69,11 +74,11 @@ static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsample
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
 					 Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
-					 Context.Dispatch2D<8, 8>(HighResInput->GetDesc().Width, HighResInput->GetDesc().Height);
+					 Context.Dispatch2D<8, 8>(static_cast<UINT>(HighResInput->GetDesc().Width), HighResInput->GetDesc().Height);
 				 });
 }
 
-static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomInputParameters Inputs)
+static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomInputParameters Inputs, BloomSettings Settings = BloomSettings())
 {
 	uint32_t kBloomWidth  = View.Width > 2560 ? 1280 : 640;
 	uint32_t kBloomHeight = View.Height > 1440 ? 768 : 384;
@@ -121,7 +126,7 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 						 unsigned int OutputIndex;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
-					 Args.Threshold			= 1.0f;
+					 Args.Threshold			= Settings.Threshold;
 					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
 					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0])->GetIndex();
 
@@ -179,7 +184,7 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));
 					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
-					 Context.Dispatch2D<8, 8>(Output5a->GetDesc().Width, Output5a->GetDesc().Height);
+					 Context.Dispatch2D<8, 8>(static_cast<UINT>(Output5a->GetDesc().Width), Output5a->GetDesc().Height);
 				 });
 
 	BlurUpsampleInputParameters UpsampleArgs;

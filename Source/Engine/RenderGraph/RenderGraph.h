@@ -177,6 +177,7 @@ private:
 		case RgResourceType::Texture:
 			return Textures[Handle.Id].Name;
 		}
+		return "<unknown>";
 	}
 
 private:
