@@ -29,6 +29,80 @@ public:
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		constexpr auto ColorFromBytes = [](uint8_t r, uint8_t g, uint8_t b)
+		{
+			return ImVec4(static_cast<float>(r) / 255.0f, static_cast<float>(g) / 255.0f, static_cast<float>(b) / 255.0f, 1.0f);
+		};
+
+		ImVec4* Colors = ImGui::GetStyle().Colors;
+
+		const ImVec4 BgColor		  = ColorFromBytes(37, 37, 38);
+		const ImVec4 LightBgColor	  = ColorFromBytes(82, 82, 85);
+		const ImVec4 VeryLightBgColor = ColorFromBytes(90, 90, 95);
+
+		const ImVec4 PanelColor		  = ColorFromBytes(51, 51, 55);
+		const ImVec4 PanelHoverColor  = ColorFromBytes(29, 151, 236);
+		const ImVec4 PanelActiveColor = ColorFromBytes(0, 119, 200);
+
+		const ImVec4 TextColor		   = ColorFromBytes(255, 255, 255);
+		const ImVec4 TextDisabledColor = ColorFromBytes(151, 151, 151);
+		const ImVec4 BorderColor	   = ColorFromBytes(78, 78, 78);
+
+		Colors[ImGuiCol_Text]				  = TextColor;
+		Colors[ImGuiCol_TextDisabled]		  = TextDisabledColor;
+		Colors[ImGuiCol_TextSelectedBg]		  = PanelActiveColor;
+		Colors[ImGuiCol_WindowBg]			  = BgColor;
+		Colors[ImGuiCol_ChildBg]			  = BgColor;
+		Colors[ImGuiCol_PopupBg]			  = BgColor;
+		Colors[ImGuiCol_Border]				  = BorderColor;
+		Colors[ImGuiCol_BorderShadow]		  = BorderColor;
+		Colors[ImGuiCol_FrameBg]			  = PanelColor;
+		Colors[ImGuiCol_FrameBgHovered]		  = PanelHoverColor;
+		Colors[ImGuiCol_FrameBgActive]		  = PanelActiveColor;
+		Colors[ImGuiCol_TitleBg]			  = BgColor;
+		Colors[ImGuiCol_TitleBgActive]		  = BgColor;
+		Colors[ImGuiCol_TitleBgCollapsed]	  = BgColor;
+		Colors[ImGuiCol_MenuBarBg]			  = PanelColor;
+		Colors[ImGuiCol_ScrollbarBg]		  = PanelColor;
+		Colors[ImGuiCol_ScrollbarGrab]		  = LightBgColor;
+		Colors[ImGuiCol_ScrollbarGrabHovered] = VeryLightBgColor;
+		Colors[ImGuiCol_ScrollbarGrabActive]  = VeryLightBgColor;
+		Colors[ImGuiCol_CheckMark]			  = PanelActiveColor;
+		Colors[ImGuiCol_SliderGrab]			  = PanelHoverColor;
+		Colors[ImGuiCol_SliderGrabActive]	  = PanelActiveColor;
+		Colors[ImGuiCol_Button]				  = PanelColor;
+		Colors[ImGuiCol_ButtonHovered]		  = PanelHoverColor;
+		Colors[ImGuiCol_ButtonActive]		  = PanelHoverColor;
+		Colors[ImGuiCol_Header]				  = PanelColor;
+		Colors[ImGuiCol_HeaderHovered]		  = PanelHoverColor;
+		Colors[ImGuiCol_HeaderActive]		  = PanelActiveColor;
+		Colors[ImGuiCol_Separator]			  = BorderColor;
+		Colors[ImGuiCol_SeparatorHovered]	  = BorderColor;
+		Colors[ImGuiCol_SeparatorActive]	  = BorderColor;
+		Colors[ImGuiCol_ResizeGrip]			  = BgColor;
+		Colors[ImGuiCol_ResizeGripHovered]	  = PanelColor;
+		Colors[ImGuiCol_ResizeGripActive]	  = LightBgColor;
+		Colors[ImGuiCol_PlotLines]			  = PanelActiveColor;
+		Colors[ImGuiCol_PlotLinesHovered]	  = PanelHoverColor;
+		Colors[ImGuiCol_PlotHistogram]		  = PanelActiveColor;
+		Colors[ImGuiCol_PlotHistogramHovered] = PanelHoverColor;
+		Colors[ImGuiCol_DragDropTarget]		  = BgColor;
+		Colors[ImGuiCol_NavHighlight]		  = BgColor;
+		Colors[ImGuiCol_DockingPreview]		  = PanelActiveColor;
+		Colors[ImGuiCol_Tab]				  = BgColor;
+		Colors[ImGuiCol_TabActive]			  = PanelActiveColor;
+		Colors[ImGuiCol_TabUnfocused]		  = BgColor;
+		Colors[ImGuiCol_TabUnfocusedActive]	  = PanelActiveColor;
+		Colors[ImGuiCol_TabHovered]			  = PanelHoverColor;
+
+		ImGui::GetStyle().WindowRounding	= 0.0f;
+		ImGui::GetStyle().ChildRounding		= 0.0f;
+		ImGui::GetStyle().FrameRounding		= 0.0f;
+		ImGui::GetStyle().GrabRounding		= 0.0f;
+		ImGui::GetStyle().PopupRounding		= 0.0f;
+		ImGui::GetStyle().ScrollbarRounding = 0.0f;
+		ImGui::GetStyle().TabRounding		= 0.0f;
 	}
 
 	~ImGuiContextManager()

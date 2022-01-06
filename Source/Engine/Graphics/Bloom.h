@@ -6,7 +6,7 @@
 
 struct BloomSettings
 {
-	float Threshold = 4.0f;
+	float Threshold = 3.5f;
 };
 
 struct BloomInputParameters

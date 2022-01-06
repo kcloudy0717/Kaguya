@@ -116,7 +116,7 @@ Microsoft::WRL::ComPtr<IDXGISwapChain4> D3D12SwapChain::InitializeSwapChain()
 	Desc.Scaling			   = DXGI_SCALING_NONE;
 	Desc.SwapEffect			   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	Desc.AlphaMode			   = DXGI_ALPHA_MODE_UNSPECIFIED;
-	Desc.Flags				   = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+	Desc.Flags				   = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> SwapChain1;
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> SwapChain4;

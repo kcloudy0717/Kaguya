@@ -156,7 +156,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
 		auto Info			 = std::bit_cast<MINMAXINFO*>(lParam);
-		Info->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) };
+		Info->ptMinTrackSize = { 200, 200 };
 	}
 	break;
 
