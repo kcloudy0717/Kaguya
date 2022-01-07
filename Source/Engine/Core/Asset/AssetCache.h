@@ -15,14 +15,13 @@ public:
 		: Cache(NumAssets)
 		, CachedHandles(NumAssets)
 		, Assets(NumAssets)
-		, Mutex(STATIC_RWLOCK{})
 	{
 	}
 
 	void DestroyAll()
 	{
 		// Destroy in opposite order
-		ScopedWriteLock Swl(Mutex);
+		RwLockWriteGuard Guard(Mutex);
 		Assets.clear();
 		Assets.resize(NumAssets);
 		CachedHandles.clear();
@@ -40,7 +39,7 @@ public:
 	template<typename... TArgs>
 	AssetHandle Create(TArgs&&... Args)
 	{
-		ScopedWriteLock Swl(Mutex);
+		RwLockWriteGuard Guard(Mutex);
 
 		std::size_t Index = Cache.Allocate();
 
@@ -58,13 +57,16 @@ public:
 		return Handle;
 	}
 
-	T* GetAsset(AssetHandle Handle) { return Assets[Handle.Id].get(); }
+	T* GetAsset(AssetHandle Handle)
+	{
+		return Assets[Handle.Id].get();
+	}
 
 	T* GetValidAsset(AssetHandle& Handle)
 	{
 		if (Handle.IsValid() && ValidateHandle(Handle))
 		{
-			ScopedReadLock Srl(Mutex);
+			RwLockReadGuard Guard(Mutex);
 
 			bool State = CachedHandles[Handle.Id].State;
 			if (State)
@@ -81,7 +83,7 @@ public:
 	{
 		if (Handle.IsValid() && ValidateHandle(Handle))
 		{
-			ScopedWriteLock Swl(Mutex);
+			RwLockWriteGuard Guard(Mutex);
 
 			Cache.Deallocate(Handle.Id);
 			CachedHandles[Handle.Id].Invalidate();
@@ -93,7 +95,7 @@ public:
 	{
 		if (Handle.IsValid() && ValidateHandle(Handle))
 		{
-			ScopedWriteLock Swl(Mutex);
+			RwLockWriteGuard Guard(Mutex);
 
 			CachedHandles[Handle.Id].State = Handle.State;
 		}
@@ -102,7 +104,7 @@ public:
 	template<typename Functor>
 	void EnumerateAsset(Functor F)
 	{
-		ScopedReadLock Srl(Mutex);
+		RwLockReadGuard Guard(Mutex);
 
 		auto begin = CachedHandles.begin();
 		auto end   = CachedHandles.end();
@@ -125,7 +127,7 @@ private:
 	// CachedHandles are use to update any external handle's states
 	std::vector<AssetHandle> CachedHandles;
 	std::vector<AssetPtr<T>> Assets;
-	mutable RWLock			 Mutex;
+	mutable RwLock			 Mutex;
 
 	friend class AssetWindow;
 	friend class SceneParser;

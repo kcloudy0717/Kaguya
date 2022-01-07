@@ -19,8 +19,7 @@ void D3D12DescriptorHeap::Allocate(
 	D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
 	UINT&						 Index)
 {
-	std::scoped_lock Guard(Mutex);
-
+	MutexGuard Guard(Mutex);
 	Index				= static_cast<UINT>(IndexPool.Allocate());
 	CpuDescriptorHandle = this->GetCpuDescriptorHandle(Index);
 	GpuDescriptorHandle = this->GetGpuDescriptorHandle(Index);
@@ -28,8 +27,7 @@ void D3D12DescriptorHeap::Allocate(
 
 void D3D12DescriptorHeap::Release(UINT Index)
 {
-	std::scoped_lock Guard(Mutex);
-
+	MutexGuard Guard(Mutex);
 	IndexPool.Release(static_cast<size_t>(Index));
 }
 
@@ -135,7 +133,7 @@ D3D12DescriptorPage::D3D12DescriptorPage(
 
 std::optional<D3D12DescriptorArray> D3D12DescriptorPage::Allocate(UINT NumDescriptors)
 {
-	std::scoped_lock Guard(Mutex);
+	MutexGuard Guard(Mutex);
 	if (NumDescriptors > Desc.NumDescriptors)
 	{
 		return std::nullopt;
@@ -181,7 +179,7 @@ std::optional<D3D12DescriptorArray> D3D12DescriptorPage::Allocate(UINT NumDescri
 
 void D3D12DescriptorPage::Release(D3D12DescriptorArray&& DescriptorArray)
 {
-	std::scoped_lock Guard(Mutex);
+	MutexGuard Guard(Mutex);
 	FreeBlock(DescriptorArray.GetOffset(), DescriptorArray.GetNumDescriptors());
 }
 

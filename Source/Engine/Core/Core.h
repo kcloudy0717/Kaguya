@@ -13,9 +13,8 @@
 #include "Math/Math.h"
 
 // Threading
+#include "Sync.h"
 #include "ThreadPool.h"
-#include "CriticalSection.h"
-#include "RWLock.h"
 
 // Asset
 #include "Asset/AssetCache.h"

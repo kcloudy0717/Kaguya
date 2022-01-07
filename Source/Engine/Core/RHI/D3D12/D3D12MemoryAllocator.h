@@ -1,6 +1,4 @@
 #pragma once
-#include <Core/CoreDefines.h>
-#include <Core/CriticalSection.h>
 #include "D3D12Common.h"
 
 struct D3D12Allocation

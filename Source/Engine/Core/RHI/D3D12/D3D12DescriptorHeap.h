@@ -63,7 +63,7 @@ private:
 	UINT										 DescriptorSize = 0;
 
 	DescriptorIndexPool IndexPool;
-	CriticalSection		Mutex;
+	Mutex				Mutex;
 };
 
 // Many of these came from the DirectX-Graphics samples (MiniEngine) and 3dgep
@@ -165,7 +165,7 @@ private:
 
 	CFreeBlocksByOffsetPool FreeBlocksByOffsetPool;
 	CFreeBlocksBySizePool	SizePool;
-	CriticalSection			Mutex;
+	Mutex					Mutex;
 };
 
 class D3D12DescriptorAllocator : public D3D12LinkedDeviceChild
