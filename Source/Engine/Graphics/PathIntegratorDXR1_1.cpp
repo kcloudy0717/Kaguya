@@ -130,12 +130,12 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 	if (AccelerationStructure.IsValid())
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
-		AsyncCompute.OpenCommandList();
+		AsyncCompute.Open();
 		{
 			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
 			AccelerationStructure.Build(AsyncCompute);
 		}
-		AsyncCompute.CloseCommandList();
+		AsyncCompute.Close();
 
 		ASBuildSyncHandle = AsyncCompute.Execute(false);
 

@@ -86,7 +86,7 @@ void Renderer::OnRender(World* World)
 	ImGui::End();
 
 	D3D12CommandContext& Context = RenderCore::Device->GetDevice()->GetCommandContext();
-	Context.OpenCommandList();
+	Context.Open();
 	{
 		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
 		{
@@ -187,7 +187,7 @@ void Renderer::OnRender(World* World)
 			D3D12_RESOURCE_STATE_PRESENT);
 		Context->ResourceBarrier(1, &Barrier);
 	}
-	Context.CloseCommandList();
+	Context.Close();
 
 	RendererPresent Present(Context);
 	SwapChain.Present(true, Present);

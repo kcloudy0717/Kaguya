@@ -38,7 +38,7 @@ ID3D12GraphicsCommandList6* D3D12CommandContext::GetGraphicsCommandList6() const
 	return CommandListHandle.GetGraphicsCommandList6();
 }
 
-void D3D12CommandContext::OpenCommandList()
+void D3D12CommandContext::Open()
 {
 	if (!CommandAllocator)
 	{
@@ -60,7 +60,7 @@ void D3D12CommandContext::OpenCommandList()
 	Cache = {};
 }
 
-void D3D12CommandContext::CloseCommandList()
+void D3D12CommandContext::Close()
 {
 	CommandListHandle.Close();
 }

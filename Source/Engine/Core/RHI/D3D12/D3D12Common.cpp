@@ -30,8 +30,8 @@ LPCWSTR GetCommandQueueTypeFenceString(ED3D12CommandQueueType CommandQueueType)
 
 LPCWSTR GetAutoBreadcrumbOpString(D3D12_AUTO_BREADCRUMB_OP Op)
 {
-#define STRINGIFY(x)                                                                                                   \
-	case x:                                                                                                            \
+#define STRINGIFY(x) \
+	case x:          \
 		return L#x
 
 	switch (Op)
@@ -90,8 +90,8 @@ LPCWSTR GetAutoBreadcrumbOpString(D3D12_AUTO_BREADCRUMB_OP Op)
 
 LPCWSTR GetDredAllocationTypeString(D3D12_DRED_ALLOCATION_TYPE Type)
 {
-#define STRINGIFY(x)                                                                                                   \
-	case x:                                                                                                            \
+#define STRINGIFY(x) \
+	case x:          \
 		return L#x
 
 	switch (Type)
@@ -145,9 +145,9 @@ const char* D3D12Exception::GetErrorType() const noexcept
 
 std::string D3D12Exception::GetError() const
 {
-#define STRINGIFY(x)                                                                                                   \
-	case x:                                                                                                            \
-		Error = #x;                                                                                                    \
+#define STRINGIFY(x) \
+	case x:          \
+		Error = #x;  \
 		break
 
 	std::string Error;
@@ -226,29 +226,14 @@ auto D3D12SyncHandle::WaitForCompletion() const -> void
 	Fence->HostWaitForValue(Value);
 }
 
-D3D12InputLayout::operator D3D12_INPUT_LAYOUT_DESC() const noexcept
-{
-	for (size_t i = 0; i < InputElements.size(); ++i)
-	{
-		InputElements[i].SemanticName = SemanticNames[i].data();
-	}
-
-	D3D12_INPUT_LAYOUT_DESC Desc = {};
-	Desc.pInputElementDescs		 = InputElements.data();
-	Desc.NumElements			 = static_cast<UINT>(InputElements.size());
-	return Desc;
-}
-
 void D3D12InputLayout::AddVertexLayoutElement(
 	std::string_view SemanticName,
 	UINT			 SemanticIndex,
 	DXGI_FORMAT		 Format,
 	UINT			 InputSlot)
 {
-	SemanticNames.emplace_back(SemanticName);
-
 	D3D12_INPUT_ELEMENT_DESC& Desc = InputElements.emplace_back();
-	Desc.SemanticName			   = nullptr; // Will be resolved later
+	Desc.SemanticName			   = SemanticName.data();
 	Desc.SemanticIndex			   = SemanticIndex;
 	Desc.Format					   = Format;
 	Desc.InputSlot				   = InputSlot;

@@ -16,6 +16,7 @@
 #include "RenderCore/RenderCore.h"
 
 #include "Graphics/Renderer.h"
+#include "Graphics/DeferredRenderer.h"
 #include "Graphics/PathIntegratorDXR1_0.h"
 #include "Graphics/PathIntegratorDXR1_1.h"
 #include "World/WorldArchive.h"
@@ -288,8 +289,9 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	World World;
 
-	// PathIntegratorDXR1_0 Renderer(MainWindow.GetWindowHandle());
-	PathIntegratorDXR1_1 Renderer(&MainWindow);
+	DeferredRenderer Renderer(&MainWindow);
+	// PathIntegratorDXR1_0 Renderer(&MainWindow);
+	// PathIntegratorDXR1_1 Renderer(&MainWindow);
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

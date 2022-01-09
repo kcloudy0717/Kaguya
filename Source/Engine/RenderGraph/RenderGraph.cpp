@@ -8,6 +8,7 @@ RenderPass::RenderPass(std::string_view Name)
 RenderPass& RenderPass::Read(RgResourceHandle Resource)
 {
 	// Only allow buffers/textures
+	assert(Resource.IsValid());
 	assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
 	Reads.insert(Resource);
 	ReadWrites.insert(Resource);
@@ -17,6 +18,7 @@ RenderPass& RenderPass::Read(RgResourceHandle Resource)
 RenderPass& RenderPass::Write(RgResourceHandle* Resource)
 {
 	// Only allow buffers/textures
+	assert(Resource && Resource->IsValid());
 	assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
 	Resource->Version++;
 	Writes.insert(*Resource);

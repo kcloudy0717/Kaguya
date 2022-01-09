@@ -104,7 +104,7 @@ void D3D12PipelineState::CompileGraphicsPipeline(
 	Desc.SampleMask							= DefaultSampleMask();
 	Desc.RasterizerState					= RHITranslateD3D12(Parser.RasterizerState);
 	Desc.DepthStencilState					= RHITranslateD3D12(Parser.DepthStencilState);
-	Desc.InputLayout						= {};
+	Desc.InputLayout						= { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) };
 	Desc.IBStripCutValue					= D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 	Desc.PrimitiveTopologyType				= RHITranslateD3D12(Parser.PrimitiveTopology);
 	Desc.NumRenderTargets					= Parser.RenderTargetState.NumRenderTargets;

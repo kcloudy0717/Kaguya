@@ -96,7 +96,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 	if (AccelerationStructure.IsValid())
 	{
 		D3D12CommandContext& Copy = RenderCore::Device->GetDevice()->GetCopyContext1();
-		Copy.OpenCommandList();
+		Copy.Open();
 
 		// Update shader table
 		HitGroupShaderTable->Reset();
@@ -117,7 +117,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 
 		ShaderBindingTable.WriteToGpu(Copy.GetGraphicsCommandList());
 
-		Copy.CloseCommandList();
+		Copy.Close();
 
 		CopySyncHandle = Copy.Execute(false);
 	}
@@ -126,12 +126,12 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 	if (AccelerationStructure.IsValid())
 	{
 		D3D12CommandContext& AsyncCompute = RenderCore::Device->GetDevice()->GetAsyncComputeCommandContext();
-		AsyncCompute.OpenCommandList();
+		AsyncCompute.Open();
 		{
 			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
 			AccelerationStructure.Build(AsyncCompute);
 		}
-		AsyncCompute.CloseCommandList();
+		AsyncCompute.Close();
 
 		ASBuildSyncHandle = AsyncCompute.Execute(false);
 

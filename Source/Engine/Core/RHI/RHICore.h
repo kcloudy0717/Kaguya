@@ -30,6 +30,7 @@ enum class RHI_PIPELINE_STATE_TYPE
 enum class RHI_PIPELINE_STATE_SUBOBJECT_TYPE
 {
 	RootSignature,
+	InputLayout,
 	VS,
 	PS,
 	DS,
@@ -52,6 +53,8 @@ inline const char* GetRHIPipelineStateSubobjectTypeString(RHI_PIPELINE_STATE_SUB
 	{
 	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature:
 		return "Root Signature";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout:
+		return "Input Layout";
 	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS:
 		return "Vertex Shader";
 	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS:
@@ -294,10 +297,12 @@ private:
 };
 
 class D3D12RootSignature;
+class D3D12InputLayout;
 class Shader;
 
 // clang-format off
 using PipelineStateStreamRootSignature		= PipelineStateStreamSubobject<D3D12RootSignature*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature>;
+using PipelineStateStreamInputLayout		= PipelineStateStreamSubobject<D3D12InputLayout*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout>;
 using PipelineStateStreamVS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS>;
 using PipelineStateStreamPS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS>;
 using PipelineStateStreamDS					= PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DS>;
@@ -320,6 +325,7 @@ public:
 
 	// Subobject Callbacks
 	virtual void RootSignatureCb(D3D12RootSignature*) {}
+	virtual void InputLayoutCb(D3D12InputLayout*) {}
 	virtual void VSCb(Shader*) {}
 	virtual void PSCb(Shader*) {}
 	virtual void DSCb(Shader*) {}
@@ -379,6 +385,10 @@ static void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelin
 		case RootSignature:
 			Callbacks->RootSignatureCb(*reinterpret_cast<PipelineStateStreamRootSignature*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamRootSignature);
+			break;
+		case InputLayout:
+			Callbacks->InputLayoutCb(*reinterpret_cast<PipelineStateStreamInputLayout*>(Stream));
+			SizeOfSubobject = sizeof(PipelineStateStreamInputLayout);
 			break;
 		case VS:
 			Callbacks->VSCb(*reinterpret_cast<PipelineStateStreamVS*>(Stream));

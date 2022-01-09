@@ -124,7 +124,7 @@ MRT PSMain(VertexAttributes input)
 	}
 
 	uint meshletIndex  = input.MeshletIndex;
-	material.baseColor = float3(float(meshletIndex & 1), float(meshletIndex & 3) / 4, float(meshletIndex & 7) / 8);
+	//material.baseColor = float3(float(meshletIndex & 1), float(meshletIndex & 3) / 4, float(meshletIndex & 7) / 8);
 
 	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;
 	float3 previousPosNDC = input.PrevPosition.xyz / input.PrevPosition.w;

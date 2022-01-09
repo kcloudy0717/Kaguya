@@ -32,43 +32,43 @@ public:
 	{
 		VertexCount = static_cast<std::uint32_t>(Vertices.size());
 		IndexCount	= static_cast<std::uint32_t>(Indices.size());
-		//MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
-		//VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
-		//PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
+		MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
+		VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
+		PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
 	}
 
 	void Release()
 	{
 		decltype(Vertices)().swap(Vertices);
 		decltype(Indices)().swap(Indices);
-		//decltype(Meshlets)().swap(Meshlets);
-		//decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
-		//decltype(PrimitiveIndices)().swap(PrimitiveIndices);
+		decltype(Meshlets)().swap(Meshlets);
+		decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
+		decltype(PrimitiveIndices)().swap(PrimitiveIndices);
 	}
 
 	MeshImportOptions Options;
 
 	std::string Name;
 
-	std::uint32_t VertexCount = 0;
-	std::uint32_t IndexCount  = 0;
-	//std::uint32_t MeshletCount	   = 0;
-	//std::uint32_t VertexIndexCount = 0;
-	//std::uint32_t PrimitiveCount   = 0;
+	std::uint32_t VertexCount	   = 0;
+	std::uint32_t IndexCount	   = 0;
+	std::uint32_t MeshletCount	   = 0;
+	std::uint32_t VertexIndexCount = 0;
+	std::uint32_t PrimitiveCount   = 0;
 
-	std::vector<Vertex>	  Vertices;
-	std::vector<uint32_t> Indices;
-	// std::vector<DirectX::Meshlet>		  Meshlets;
-	// std::vector<uint8_t>				  UniqueVertexIndices;
-	// std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
+	std::vector<Vertex>					  Vertices;
+	std::vector<uint32_t>				  Indices;
+	std::vector<DirectX::Meshlet>		  Meshlets;
+	std::vector<uint8_t>				  UniqueVertexIndices;
+	std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
 
 	BoundingBox BoundingBox;
 
-	D3D12Buffer VertexResource;
-	D3D12Buffer IndexResource;
-	// D3D12Buffer				  MeshletResource;
-	// D3D12Buffer				  UniqueVertexIndexResource;
-	// D3D12Buffer				  PrimitiveIndexResource;
+	D3D12Buffer				  VertexResource;
+	D3D12Buffer				  IndexResource;
+	D3D12Buffer				  MeshletResource;
+	D3D12Buffer				  UniqueVertexIndexResource;
+	D3D12Buffer				  PrimitiveIndexResource;
 	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure; // Managed by D3D12RaytracingAccelerationStructureManager
 	D3D12RaytracingGeometry	  Blas;
 	UINT64					  BlasIndex		= UINT64_MAX;

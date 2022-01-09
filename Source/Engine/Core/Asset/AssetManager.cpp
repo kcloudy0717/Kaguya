@@ -154,32 +154,17 @@ void AssetManager::UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Devic
 
 void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 {
-	UINT64 VertexBufferSizeInBytes = AssetMesh->Vertices.size() * sizeof(Vertex);
-	UINT64 IndexBufferSizeInBytes  = AssetMesh->Indices.size() * sizeof(uint32_t);
-	//UINT64 MeshletBufferSizeInBytes			  = AssetMesh->Meshlets.size() * sizeof(Meshlet);
-	//UINT64 UniqueVertexIndexBufferSizeInBytes = AssetMesh->UniqueVertexIndices.size() * sizeof(uint8_t);
-	//UINT64 PrimitiveIndexBufferSizeInBytes	  = AssetMesh->PrimitiveIndices.size() * sizeof(MeshletTriangle);
+	UINT64 VertexBufferSizeInBytes			  = AssetMesh->Vertices.size() * sizeof(Vertex);
+	UINT64 IndexBufferSizeInBytes			  = AssetMesh->Indices.size() * sizeof(uint32_t);
+	UINT64 MeshletBufferSizeInBytes			  = AssetMesh->Meshlets.size() * sizeof(Meshlet);
+	UINT64 UniqueVertexIndexBufferSizeInBytes = AssetMesh->UniqueVertexIndices.size() * sizeof(uint8_t);
+	UINT64 PrimitiveIndexBufferSizeInBytes	  = AssetMesh->PrimitiveIndices.size() * sizeof(MeshletTriangle);
 
-	auto VertexBuffer = D3D12Buffer(Device, VertexBufferSizeInBytes, sizeof(Vertex), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	auto IndexBuffer  = D3D12Buffer(Device, IndexBufferSizeInBytes, sizeof(uint32_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	//auto MeshletBuffer = D3D12Buffer(
-	//	Device,
-	//	MeshletBufferSizeInBytes,
-	//	sizeof(Meshlet),
-	//	D3D12_HEAP_TYPE_DEFAULT,
-	//	D3D12_RESOURCE_FLAG_NONE);
-	//auto UniqueVertexIndexBuffer = D3D12Buffer(
-	//	Device,
-	//	UniqueVertexIndexBufferSizeInBytes,
-	//	sizeof(uint8_t),
-	//	D3D12_HEAP_TYPE_DEFAULT,
-	//	D3D12_RESOURCE_FLAG_NONE);
-	//auto PrimitiveIndexBuffer = D3D12Buffer(
-	//	Device,
-	//	PrimitiveIndexBufferSizeInBytes,
-	//	sizeof(MeshletTriangle),
-	//	D3D12_HEAP_TYPE_DEFAULT,
-	//	D3D12_RESOURCE_FLAG_NONE);
+	auto VertexBuffer  = D3D12Buffer(Device, VertexBufferSizeInBytes, sizeof(Vertex), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto IndexBuffer   = D3D12Buffer(Device, IndexBufferSizeInBytes, sizeof(uint32_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto MeshletBuffer = D3D12Buffer(Device, MeshletBufferSizeInBytes, sizeof(Meshlet), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto UniqueVertexIndexBuffer = D3D12Buffer(Device, UniqueVertexIndexBufferSizeInBytes, sizeof(uint8_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto PrimitiveIndexBuffer = D3D12Buffer(Device, PrimitiveIndexBufferSizeInBytes, sizeof(MeshletTriangle), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
 
 	{
 		D3D12_SUBRESOURCE_DATA SubresourceData = {};
@@ -197,7 +182,7 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 		Device->Upload(SubresourceData, IndexBuffer.GetResource());
 	}
 
-	/*{
+	{
 		D3D12_SUBRESOURCE_DATA SubresourceData = {};
 		SubresourceData.pData				   = AssetMesh->Meshlets.data();
 		SubresourceData.RowPitch			   = MeshletBufferSizeInBytes;
@@ -219,13 +204,13 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 		SubresourceData.RowPitch			   = PrimitiveIndexBufferSizeInBytes;
 		SubresourceData.SlicePitch			   = PrimitiveIndexBufferSizeInBytes;
 		Device->Upload(SubresourceData, PrimitiveIndexBuffer.GetResource());
-	}*/
+	}
 
-	AssetMesh->VertexResource = std::move(VertexBuffer);
-	AssetMesh->IndexResource  = std::move(IndexBuffer);
-	//AssetMesh->MeshletResource			 = std::move(MeshletBuffer);
-	//AssetMesh->UniqueVertexIndexResource = std::move(UniqueVertexIndexBuffer);
-	//AssetMesh->PrimitiveIndexResource	 = std::move(PrimitiveIndexBuffer);
+	AssetMesh->VertexResource			 = std::move(VertexBuffer);
+	AssetMesh->IndexResource			 = std::move(IndexBuffer);
+	AssetMesh->MeshletResource			 = std::move(MeshletBuffer);
+	AssetMesh->UniqueVertexIndexResource = std::move(UniqueVertexIndexBuffer);
+	AssetMesh->PrimitiveIndexResource	 = std::move(PrimitiveIndexBuffer);
 
 	D3D12_GPU_VIRTUAL_ADDRESS IndexAddress	= AssetMesh->IndexResource.GetGpuVirtualAddress();
 	D3D12_GPU_VIRTUAL_ADDRESS VertexAddress = AssetMesh->VertexResource.GetGpuVirtualAddress();

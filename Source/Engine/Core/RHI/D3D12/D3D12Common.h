@@ -190,16 +190,12 @@ struct D3D12ScopedMap
 class D3D12InputLayout
 {
 public:
-	[[nodiscard]] explicit operator D3D12_INPUT_LAYOUT_DESC() const noexcept;
-
 	D3D12InputLayout() noexcept = default;
 	D3D12InputLayout(size_t NumElements) { InputElements.reserve(NumElements); }
 
 	void AddVertexLayoutElement(std::string_view SemanticName, UINT SemanticIndex, DXGI_FORMAT Format, UINT InputSlot);
 
-private:
-	std::vector<std::string>					  SemanticNames;
-	mutable std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 };
 
 // https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking

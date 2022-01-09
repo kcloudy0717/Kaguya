@@ -218,7 +218,7 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 			Mesh->Vertices = std::move(Vertices);
 			Mesh->Indices  = std::move(Indices);
 
-			/*std::vector<XMFLOAT3> Positions;
+			std::vector<XMFLOAT3> Positions;
 			Positions.reserve(Mesh->Vertices.size());
 			for (const auto& Vertex : Mesh->Vertices)
 			{
@@ -233,7 +233,7 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 				nullptr,
 				Mesh->Meshlets,
 				Mesh->UniqueVertexIndices,
-				Mesh->PrimitiveIndices);*/
+				Mesh->PrimitiveIndices);
 		}
 
 		Export(BinaryPath, Meshes);
@@ -263,19 +263,19 @@ void AsyncMeshImporter::Export(const std::filesystem::path& BinaryPath, const st
 		Writer.Write<size_t>(Mesh->Name.size());
 		Writer.Write(Mesh->Name);
 
-		MeshHeader Header  = {};
-		Header.NumVertices = Mesh->Vertices.size();
-		Header.NumIndices  = Mesh->Indices.size();
-		/*Header.NumMeshlets			  = Mesh->Meshlets.size();
+		MeshHeader Header			  = {};
+		Header.NumVertices			  = Mesh->Vertices.size();
+		Header.NumIndices			  = Mesh->Indices.size();
+		Header.NumMeshlets			  = Mesh->Meshlets.size();
 		Header.NumUniqueVertexIndices = Mesh->UniqueVertexIndices.size();
-		Header.NumPrimitiveIndices	  = Mesh->PrimitiveIndices.size();*/
+		Header.NumPrimitiveIndices	  = Mesh->PrimitiveIndices.size();
 
 		Writer.Write<MeshHeader>(Header);
 		Writer.Write(Mesh->Vertices.data(), Mesh->Vertices.size() * sizeof(Vertex));
 		Writer.Write(Mesh->Indices.data(), Mesh->Indices.size() * sizeof(std::uint32_t));
-		/*Writer.Write(Mesh->Meshlets.data(), Mesh->Meshlets.size() * sizeof(Meshlet));
+		Writer.Write(Mesh->Meshlets.data(), Mesh->Meshlets.size() * sizeof(Meshlet));
 		Writer.Write(Mesh->UniqueVertexIndices.data(), Mesh->UniqueVertexIndices.size() * sizeof(uint8_t));
-		Writer.Write(Mesh->PrimitiveIndices.data(), Mesh->PrimitiveIndices.size() * sizeof(MeshletTriangle));*/
+		Writer.Write(Mesh->PrimitiveIndices.data(), Mesh->PrimitiveIndices.size() * sizeof(MeshletTriangle));
 	}
 }
 
@@ -316,11 +316,11 @@ std::vector<Mesh*> AsyncMeshImporter::ImportExisting(
 		Mesh->Options = Options;
 		Mesh->Name	  = string;
 
-		Mesh->Vertices = std::move(Vertices);
-		Mesh->Indices  = std::move(Indices);
-		/*Mesh->Meshlets			  = std::move(Meshlets);
+		Mesh->Vertices			  = std::move(Vertices);
+		Mesh->Indices			  = std::move(Indices);
+		Mesh->Meshlets			  = std::move(Meshlets);
 		Mesh->UniqueVertexIndices = std::move(UniqueVertexIndices);
-		Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);*/
+		Mesh->PrimitiveIndices	  = std::move(PrimitiveIndices);
 
 		Mesh->UpdateInfo();
 	}

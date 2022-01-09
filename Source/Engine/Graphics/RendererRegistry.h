@@ -39,8 +39,9 @@ struct Shaders
 		inline static Shader BloomDownsample;
 		inline static Shader BloomBlur;
 		inline static Shader BloomUpsampleBlur;
-
 		inline static Shader Tonemap;
+		inline static Shader BayerDither;
+		inline static Shader Sobol;
 	};
 
 	struct RTX
@@ -151,6 +152,20 @@ struct Shaders
 				ExecutableDirectory / L"Shaders/PostprocessComposition.hlsl",
 				Options);
 		}
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
+			CS::BayerDither = RenderCore::Compiler->CompileShader(
+				RHI_SHADER_TYPE::Compute,
+				ExecutableDirectory / L"Shaders/BayerDither.hlsl",
+				Options);
+		}
+		{
+			ShaderCompileOptions Options(g_CSEntryPoint);
+			CS::Sobol = RenderCore::Compiler->CompileShader(
+				RHI_SHADER_TYPE::Compute,
+				ExecutableDirectory / L"Shaders/Sobol.hlsl",
+				Options);
+		}
 	}
 };
 
@@ -178,6 +193,8 @@ struct RootSignatures
 	inline static RgResourceHandle BloomBlur;
 	inline static RgResourceHandle BloomUpsampleBlur;
 	inline static RgResourceHandle Tonemap;
+	inline static RgResourceHandle BayerDither;
+	inline static RgResourceHandle Sobol;
 
 	struct RTX
 	{
@@ -251,6 +268,14 @@ struct RootSignatures
 		Tonemap = Registry.CreateRootSignature(RenderCore::Device->CreateRootSignature(
 			RootSignatureDesc()
 				.Add32BitConstants<0, 0>(6)));
+
+		BayerDither = Registry.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			RootSignatureDesc()
+				.Add32BitConstants<0, 0>(2)));
+
+		Sobol = Registry.CreateRootSignature(RenderCore::Device->CreateRootSignature(
+			RootSignatureDesc()
+				.Add32BitConstants<0, 0>(2)));
 	}
 };
 
@@ -267,6 +292,8 @@ struct PipelineStates
 	inline static RgResourceHandle BloomBlur;
 	inline static RgResourceHandle BloomUpsampleBlur;
 	inline static RgResourceHandle Tonemap;
+	inline static RgResourceHandle BayerDither;
+	inline static RgResourceHandle Sobol;
 
 	struct RTX
 	{
@@ -288,13 +315,20 @@ struct PipelineStates
 		}
 
 		{
-			/*D3D12InputLayout InputLayout(3);
+			D3D12InputLayout InputLayout(3);
 			InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 
 			DepthStencilState DepthStencilState;
 			DepthStencilState.DepthEnable = true;
+
+			RenderTargetState RenderTargetState;
+			RenderTargetState.RTFormats[0]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			RenderTargetState.RTFormats[2]	   = DXGI_FORMAT_R16G16_FLOAT;
+			RenderTargetState.NumRenderTargets = 3;
+			RenderTargetState.DSFormat		   = DXGI_FORMAT_D32_FLOAT;
 
 			struct PsoStream
 			{
@@ -304,17 +338,17 @@ struct PipelineStates
 				PipelineStateStreamVS				 VS;
 				PipelineStateStreamPS				 PS;
 				PipelineStateStreamDepthStencilState DepthStencilState;
-				PipelineStateStreamRenderPass		 RenderPass;
+				PipelineStateStreamRenderTargetState RenderTargetState;
 			} Stream;
 			Stream.RootSignature		 = Device.GetRootSignature(RootSignatures::GBuffer);
-			Stream.InputLayout			 = InputLayout;
+			Stream.InputLayout			 = &InputLayout;
 			Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
 			Stream.VS					 = &Shaders::VS::GBuffer;
 			Stream.PS					 = &Shaders::PS::GBuffer;
 			Stream.DepthStencilState	 = DepthStencilState;
-			Stream.RenderPass			 = &RenderPasses::GBufferRenderPass;
+			Stream.RenderTargetState	 = RenderTargetState;
 
-			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"GBuffer", Stream));*/
+			GBuffer = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"GBuffer", Stream));
 		}
 		{
 			struct PsoStream
@@ -421,6 +455,28 @@ struct PipelineStates
 			Stream.CS			 = &Shaders::CS::Tonemap;
 
 			Tonemap = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"Tonemap", Stream));
+		}
+		{
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::BayerDither);
+			Stream.CS			 = &Shaders::CS::BayerDither;
+
+			BayerDither = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"Bayer Dither", Stream));
+		}
+		{
+			struct PsoStream
+			{
+				PipelineStateStreamRootSignature RootSignature;
+				PipelineStateStreamCS			 CS;
+			} Stream;
+			Stream.RootSignature = Device.GetRootSignature(RootSignatures::Sobol);
+			Stream.CS			 = &Shaders::CS::Sobol;
+
+			Sobol = Device.CreatePipelineState(RenderCore::Device->CreatePipelineState(L"Sobol", Stream));
 		}
 	}
 };

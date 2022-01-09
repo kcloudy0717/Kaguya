@@ -9,6 +9,10 @@ public:
 	{
 		this->RootSignature = RootSignature;
 	}
+	void InputLayoutCb(D3D12InputLayout* InputLayout) override
+	{
+		InputElements = InputLayout->InputElements;
+	}
 	void VSCb(Shader* VS) override
 	{
 		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
@@ -88,21 +92,22 @@ public:
 		LOG_ERROR("Unknown subobject at {}", Index);
 	}
 
-	RHI_PIPELINE_STATE_TYPE Type;
-	D3D12RootSignature*		RootSignature = nullptr;
-	Shader*					VS			  = nullptr;
-	Shader*					PS			  = nullptr;
-	Shader*					DS			  = nullptr;
-	Shader*					HS			  = nullptr;
-	Shader*					GS			  = nullptr;
-	Shader*					CS			  = nullptr;
-	Shader*					AS			  = nullptr;
-	Shader*					MS			  = nullptr;
-	BlendState				BlendState;
-	RasterizerState			RasterizerState;
-	DepthStencilState		DepthStencilState;
-	RenderTargetState		RenderTargetState;
-	RHI_PRIMITIVE_TOPOLOGY	PrimitiveTopology;
+	RHI_PIPELINE_STATE_TYPE				  Type;
+	D3D12RootSignature*					  RootSignature = nullptr;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
+	Shader*								  VS = nullptr;
+	Shader*								  PS = nullptr;
+	Shader*								  DS = nullptr;
+	Shader*								  HS = nullptr;
+	Shader*								  GS = nullptr;
+	Shader*								  CS = nullptr;
+	Shader*								  AS = nullptr;
+	Shader*								  MS = nullptr;
+	BlendState							  BlendState;
+	RasterizerState						  RasterizerState;
+	DepthStencilState					  DepthStencilState;
+	RenderTargetState					  RenderTargetState;
+	RHI_PRIMITIVE_TOPOLOGY				  PrimitiveTopology;
 };
 
 class D3D12PipelineState : public D3D12DeviceChild

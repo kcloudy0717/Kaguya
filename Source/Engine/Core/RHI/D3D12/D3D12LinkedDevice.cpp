@@ -149,12 +149,12 @@ void D3D12LinkedDevice::BeginResourceUpload()
 		TrackedResources.clear();
 	}
 
-	CopyContext2->OpenCommandList();
+	CopyContext2->Open();
 }
 
 D3D12SyncHandle D3D12LinkedDevice::EndResourceUpload(bool WaitForCompletion)
 {
-	CopyContext2->CloseCommandList();
+	CopyContext2->Close();
 	UploadSyncHandle = CopyContext2->Execute(WaitForCompletion);
 	return UploadSyncHandle;
 }

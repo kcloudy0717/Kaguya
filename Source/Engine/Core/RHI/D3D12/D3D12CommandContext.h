@@ -25,8 +25,8 @@ public:
 	[[nodiscard]] ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const noexcept;
 	D3D12CommandListHandle&					  operator->() { return CommandListHandle; }
 
-	void OpenCommandList();
-	void CloseCommandList();
+	void Open();
+	void Close();
 
 	// Returns D3D12SyncHandle, may be ignored if WaitForCompletion is true
 	D3D12SyncHandle Execute(bool WaitForCompletion);
