@@ -289,9 +289,9 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	World World;
 
-	DeferredRenderer Renderer(&MainWindow);
+	// DeferredRenderer Renderer(&MainWindow);
 	// PathIntegratorDXR1_0 Renderer(&MainWindow);
-	// PathIntegratorDXR1_1 Renderer(&MainWindow);
+	PathIntegratorDXR1_1 Renderer(&MainWindow);
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;
