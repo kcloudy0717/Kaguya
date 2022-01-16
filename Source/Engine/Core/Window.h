@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <wil/resource.h>
 
 class Application;
 
@@ -21,6 +22,8 @@ struct WINDOW_DESC
 class Window
 {
 public:
+	static LPCWSTR WindowClass;
+
 	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc);
 
 	[[nodiscard]] const WINDOW_DESC& GetDesc() const noexcept;

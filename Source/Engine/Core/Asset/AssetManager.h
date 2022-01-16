@@ -5,7 +5,7 @@
 class AssetManager
 {
 public:
-	static void Initialize();
+	static void Initialize(D3D12Device* Device);
 
 	static void Shutdown();
 

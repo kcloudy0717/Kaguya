@@ -1,5 +1,8 @@
 ﻿#include "Window.h"
+#include "Application.h"
 #include <hidusage.h>
+
+LPCWSTR Window::WindowClass = L"KaguyaWindow";
 
 void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc)
 {
@@ -22,7 +25,7 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 
 	WindowHandle = wil::unique_hwnd(CreateWindowExW(
 		ExStyle,
-		Application::WindowClass,
+		WindowClass,
 		WindowName,
 		Style,
 		Desc.x,

@@ -1,8 +1,7 @@
 #pragma once
 #include <filesystem>
-
+#include <wil/resource.h>
 #include "Window.h"
-#include "Stopwatch.h"
 #include "InputManager.h"
 
 struct ApplicationOptions
@@ -15,9 +14,9 @@ class IApplicationMessageHandler;
 class Application
 {
 public:
-	inline static LPCWSTR WindowClass = L"KaguyaWindow";
+	using MessageCallback = void (*)(void*, HWND, UINT, WPARAM, LPARAM);
 
-	explicit Application(const std::string& LoggerName, const ApplicationOptions& Options);
+	explicit Application(const ApplicationOptions& Options);
 	virtual ~Application();
 
 	void Run();
@@ -25,12 +24,13 @@ public:
 	void SetMessageHandler(IApplicationMessageHandler* MessageHandler);
 
 	void AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc);
+	void RegisterMessageCallback(MessageCallback Callback, void* Context);
 
 	void SetRawInputMode(bool Enable, Window* Window);
 
-	virtual bool Initialize()			 = 0;
-	virtual void Shutdown()				 = 0;
-	virtual void Update(float DeltaTime) = 0;
+	virtual bool Initialize() = 0;
+	virtual void Shutdown()	  = 0;
+	virtual void Update()	  = 0;
 
 private:
 	static LRESULT CALLBACK WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
@@ -44,13 +44,27 @@ public:
 	inline static InputManager			InputManager;
 
 private:
-	Microsoft::WRL::Wrappers::RoInitializeWrapper InitializeWrapper;
-	HINSTANCE									  HInstance;
+	struct PlatformWindows
+	{
+		PlatformWindows()
+			: Result(CoInitializeEx(nullptr, COINIT_MULTITHREADED))
+		{
+		}
+		~PlatformWindows()
+		{
+			if (SUCCEEDED(Result))
+			{
+				CoUninitialize();
+			}
+		}
+		HRESULT Result = S_FALSE;
+	};
+
+	HINSTANCE HInstance;
 
 protected:
 	wil::unique_hicon	HIcon;
 	wil::unique_hcursor HCursor;
-	Stopwatch			Stopwatch;
 
 	bool Minimized = false;
 	bool Maximized = false;
@@ -58,11 +72,16 @@ protected:
 
 	bool RequestExit = false;
 
-	float DeltaTime;
-
 private:
 	bool Initialized = false;
 
 	IApplicationMessageHandler* MessageHandler = nullptr;
 	std::vector<Window*>		Windows;
+
+	struct CallbackEntry
+	{
+		MessageCallback Function;
+		void*			Context;
+	};
+	std::vector<CallbackEntry> Callbacks;
 };
