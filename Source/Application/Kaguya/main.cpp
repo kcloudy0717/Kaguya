@@ -232,7 +232,7 @@ public:
 	void Update() override
 	{
 		Stopwatch.Signal();
-		DeltaTime = Stopwatch.GetDeltaTime();
+		DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();

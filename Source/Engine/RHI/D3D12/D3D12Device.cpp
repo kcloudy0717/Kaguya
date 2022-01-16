@@ -327,6 +327,12 @@ CD3DX12FeatureSupport D3D12Device::InitializeFeatureSupport(const DeviceOptions&
 		}
 	}
 
+	BOOL EnhancedBarriersSupported = FeatureSupport.EnhancedBarriersSupported();
+	if (!EnhancedBarriersSupported)
+	{
+		LUNA_LOG(D3D12RHI, Warn, "Enhanced barriers not supported");
+	}
+
 	return FeatureSupport;
 }
 

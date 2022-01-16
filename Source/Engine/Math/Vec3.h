@@ -87,7 +87,7 @@ struct Vec3
 	Vec3 operator/(T s) const noexcept
 	{
 		float inv = static_cast<T>(1) / s;
-		return Vec3<T>(x * inv, y * inv, z * inv);
+		return Vec3(x * inv, y * inv, z * inv);
 	}
 
 	Vec3& operator/=(T s) noexcept

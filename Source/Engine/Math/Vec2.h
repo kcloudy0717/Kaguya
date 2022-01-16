@@ -82,7 +82,7 @@ struct Vec2
 	Vec2 operator/(T s) const noexcept
 	{
 		float inv = static_cast<T>(1) / s;
-		return Vec2<T>(x * inv, y * inv);
+		return Vec2(x * inv, y * inv);
 	}
 
 	Vec2& operator/=(T s) noexcept
