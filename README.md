@@ -14,6 +14,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 ## Graphics
 
+- Render graph system
 - Progressive stochastic path tracing
 - Importance sampling of BSDFs and multiple importance sampling of lights
 - Lambertian, Mirror, Glass, and Disney BSDFs
@@ -36,7 +37,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 ## World
 
-- ECS with the following implemented components:
+- Ecs with the following implemented components:
   - Core: Main component that all actor in the scene have, it contains tag that identifies the actor and a transform which controls position, scale, and orientation
   - Camera: controls camera parameters for scene viewing
   - Light: used to illuminate the scene, controls light parameters
@@ -51,31 +52,37 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
       - Disney
   - NativeScript: C++ scripting
 
-# Goals
+# What I'm working on now/future
 
-- Implement wavefront path tracer
-- Implement volumetric scattering and sub-surface scattering
-- Implement temporal anti-aliasing
-- Implement denoising
+I'm currently modularizing the engine into libraries so they can be reused, I plan on extending Kaguya to more than just a path tracer using the new
+render graph system. Vulkan support probably won't be soon until I figure out a robust way for abstracting resource binding to bindless model. I want to add a voxel renderer
+so I can make my own minecraft, write a proper deferred renderer with pbr lighting (the knowledge of raytracing should make this process straightforward). Utilize new D3D12
+features such as mesh shaders and the upcoming enhanced barrier that will replace old resource barriers. There's lots of things I want to do but going to take one step at a time.
 
-# Work in progress
+For the moment, I think I'll work on a voxel renderer which will combine raster and raytracing to create a beautiful world.
 
-- Render graph
+## Future stuff to work on
+
+- Voxel renderer
+- Hybrid renderer (Raster & Raytracing)
+- Explore spectral rendering and all kinds of stuff mentioned in PBRT (I really need to brush up my calculus to understand the theory)
+- Readd physx back into World system
 - GPU driven architecture
 - Mesh shading using meshlets
+- Vulkan support
 
 # Build
 
 - Visual Studio 2019 (I am using VS 2022, but 2019 should still work)
 - GPU that supports DXR
 - Windows SDK Version 10.0.19041.0
-- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build)
+- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build, older version should still work)
 - CMake Version 3.16
 - C++ 20
 
 1. Initialize submodules after you have cloned, use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
 
-2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the Hierarchy window of the application's UI.
+2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the World window of the application's UI.
 
 Let me know if you have any trouble setting up the project and getting it up and running!
 
@@ -109,6 +116,11 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
 - [Casual Shadertoy Path Tracing series](https://blog.demofox.org/) by Alan Wolfe
 
 ## Implementation details
+
+- ## Render Graph
+  - https://media.contentapi.ea.com/content/dam/ea/seed/presentations/wihlidal-halcyonarchitecture-notes.pdf
+  - https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in
+  - https://levelup.gitconnected.com/organizing-gpu-work-with-directed-acyclic-graphs-f3fd5f2c2af3
 
 - ## BSDF
   - Disney
