@@ -174,8 +174,6 @@ bool RenderGraph::AllowUnorderedAccess(RgResourceHandle Resource) const noexcept
 void RenderGraph::Setup()
 {
 	// https://levelup.gitconnected.com/organizing-gpu-work-with-directed-acyclic-graphs-f3fd5f2c2af3
-	// https://themaister.net/blog/2017/08/15/render-graphs-and-vulkan-a-deep-dive/
-	// https://andrewcjp.wordpress.com/2019/09/28/the-render-graph-architecture/
 	// https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in
 	// https://media.contentapi.ea.com/content/dam/ea/seed/presentations/wihlidal-halcyonarchitecture-notes.pdf
 
