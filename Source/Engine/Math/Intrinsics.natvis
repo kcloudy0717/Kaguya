@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<Type Name="xvm::scalar_swizzle&lt;0&gt;">
+		<DisplayString Optional="true">{{ {fp32[0]} }}</DisplayString>
+	</Type>
+	<Type Name="xvm::scalar_swizzle&lt;1&gt;">
+		<DisplayString Optional="true">{{ {fp32[1]} }}</DisplayString>
+	</Type>
+	<Type Name="xvm::scalar_swizzle&lt;2&gt;">
+		<DisplayString Optional="true">{{ {fp32[2]} }}</DisplayString>
+	</Type>
+	<Type Name="xvm::scalar_swizzle&lt;3&gt;">
+		<DisplayString Optional="true">{{ {fp32[3]} }}</DisplayString>
+	</Type>
+
+	<Type Name="xvm::Vec2;">
+		<DisplayString Optional="true">Vec2 {{ {x.fp32[0]}, {y.fp32[1]} }}</DisplayString>
+	</Type>
+
+	<Type Name="xvm::Vec3;">
+		<DisplayString Optional="true">Vec3 {{ {x.fp32[0]}, {y.fp32[1]}, {z.fp32[2]} }}</DisplayString>
+	</Type>
+
+	<Type Name="xvm::Vec4;">
+		<DisplayString Optional="true">Vec4 {{ {x.fp32[0]}, {y.fp32[1]}, {z.fp32[2]}, {w.fp32[3]} }}</DisplayString>
+	</Type>
+
+	<Type Name="xvm::Quaternion;">
+		<Expand>
+			<Synthetic Name ="s" Optional="true">
+				<DisplayString>{w.fp32[3]}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="v" Optional="true">
+				<DisplayString>{x.fp32[0]}, {y.fp32[1]}, {z.fp32[2]}</DisplayString>
+			</Synthetic>
+		</Expand>
+	</Type>
+
+	<Type Name="xvm::Matrix4x4">
+		<DisplayString>Matrix4x4</DisplayString>
+		<Expand>
+			<Synthetic Name ="row0" Optional="true">
+				<DisplayString>{r0.x.fp32[0]}, {r0.y.fp32[1]}, {r0.z.fp32[2]}, {r0.w.fp32[3]}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="row1" Optional="true">
+				<DisplayString>{r1.x.fp32[0]}, {r1.y.fp32[1]}, {r1.z.fp32[2]}, {r1.w.fp32[3]}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="row2" Optional="true">
+				<DisplayString>{r2.x.fp32[0]}, {r2.y.fp32[1]}, {r2.z.fp32[2]}, {r2.w.fp32[3]}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="row3" Optional="true">
+				<DisplayString>{r3.x.fp32[0]}, {r3.y.fp32[1]}, {r3.z.fp32[2]}, {r3.w.fp32[3]}</DisplayString>
+			</Synthetic>
+		</Expand>
+	</Type>
+
+</AutoVisualizer>

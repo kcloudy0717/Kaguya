@@ -69,18 +69,11 @@ public:
 	Shader() noexcept = default;
 	Shader(
 		RHI_SHADER_TYPE				   ShaderType,
-		const ShaderCompilationResult& Result) noexcept
-		: ShaderType(ShaderType)
-		, Binary(Result.Binary)
-		, PdbName(Result.PdbName)
-		, Pdb(Result.Pdb)
-		, ShaderHash(Result.ShaderHash)
-	{
-	}
+		const ShaderCompilationResult& Result) noexcept;
 
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
-	[[nodiscard]] void*			GetPointer() const noexcept { return Binary->GetBufferPointer(); }
-	[[nodiscard]] size_t		GetSize() const noexcept { return Binary->GetBufferSize(); }
+	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
+	[[nodiscard]] void*			GetPointer() const noexcept;
+	[[nodiscard]] size_t		GetSize() const noexcept;
 
 private:
 	RHI_SHADER_TYPE					 ShaderType;
@@ -102,17 +95,11 @@ class Library
 public:
 	Library() noexcept = default;
 	Library(
-		const ShaderCompilationResult& Result) noexcept
-		: Binary(Result.Binary)
-		, PdbName(std::move(Result.PdbName))
-		, Pdb(Result.Pdb)
-		, ShaderHash(Result.ShaderHash)
-	{
-	}
+		const ShaderCompilationResult& Result) noexcept;
 
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept { return ShaderHash; }
-	[[nodiscard]] void*			GetPointer() const noexcept { return Binary->GetBufferPointer(); }
-	[[nodiscard]] size_t		GetSize() const noexcept { return Binary->GetBufferSize(); }
+	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
+	[[nodiscard]] void*			GetPointer() const noexcept;
+	[[nodiscard]] size_t		GetSize() const noexcept;
 
 private:
 	Microsoft::WRL::ComPtr<IDxcBlob> Binary;

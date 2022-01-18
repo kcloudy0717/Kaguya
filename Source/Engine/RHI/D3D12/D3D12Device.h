@@ -55,29 +55,15 @@ public:
 	void OnBeginFrame();
 	void OnEndFrame();
 
-	void BeginCapture(const std::filesystem::path& Path)
-	{
-		PIXCaptureParameters CaptureParameters			= {};
-		CaptureParameters.GpuCaptureParameters.FileName = Path.c_str();
-		CaptureStatus									= PIXBeginCapture(PIX_CAPTURE_GPU, &CaptureParameters);
-	}
-	void EndCapture()
-	{
-		if (SUCCEEDED(CaptureStatus))
-		{
-			PIXEndCapture(FALSE);
-		}
-	}
+	void BeginCapture(const std::filesystem::path& Path) const;
+	void EndCapture() const;
 
 	void WaitIdle();
 
-	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(
-		RootSignatureDesc& Desc);
+	[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(RootSignatureDesc& Desc);
 
 	template<typename PipelineStateStream>
-	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(
-		std::wstring		 Name,
-		PipelineStateStream& Stream)
+	[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(std::wstring Name, PipelineStateStream& Stream)
 	{
 		PipelineStateStreamDesc Desc;
 		Desc.SizeInBytes				   = sizeof(Stream);
@@ -85,8 +71,7 @@ public:
 		return std::make_unique<D3D12PipelineState>(this, Name, Desc);
 	}
 
-	[[nodiscard]] std::unique_ptr<D3D12RaytracingPipelineState> CreateRaytracingPipelineState(
-		RaytracingPipelineStateDesc& Desc);
+	[[nodiscard]] std::unique_ptr<D3D12RaytracingPipelineState> CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc);
 
 private:
 	using TDescriptorSizeCache = std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>;
@@ -114,7 +99,7 @@ private:
 	struct ReportLiveObjectGuard
 	{
 		~ReportLiveObjectGuard() { D3D12Device::ReportLiveObjects(); }
-	} Guard;
+	} MemoryGuard;
 
 	/*struct WinPix
 	{
@@ -160,7 +145,7 @@ private:
 	std::unique_ptr<ThreadPool>			  PsoCompilationThreadPool;
 	std::unique_ptr<D3D12PipelineLibrary> Library;
 
-	HRESULT CaptureStatus = S_FALSE;
+	mutable HRESULT CaptureStatus = S_FALSE;
 };
 
 inline LPCWSTR GetAutoBreadcrumbOpString(D3D12_AUTO_BREADCRUMB_OP Op)

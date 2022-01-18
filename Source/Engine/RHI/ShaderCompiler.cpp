@@ -44,6 +44,53 @@ std::string DxcException::GetError() const
 	return Error;
 }
 
+DxcShaderHash Shader::GetShaderHash() const noexcept
+{
+	return ShaderHash;
+}
+
+Shader::Shader(RHI_SHADER_TYPE ShaderType, const ShaderCompilationResult& Result) noexcept
+	: ShaderType(ShaderType)
+	, Binary(Result.Binary)
+	, PdbName(Result.PdbName)
+	, Pdb(Result.Pdb)
+	, ShaderHash(Result.ShaderHash)
+{
+}
+
+void* Shader::GetPointer() const noexcept
+{
+	return Binary->GetBufferPointer();
+}
+
+size_t Shader::GetSize() const noexcept
+{
+	return Binary->GetBufferSize();
+}
+
+DxcShaderHash Library::GetShaderHash() const noexcept
+{
+	return ShaderHash;
+}
+
+Library::Library(const ShaderCompilationResult& Result) noexcept
+	: Binary(Result.Binary)
+	, PdbName(Result.PdbName)
+	, Pdb(Result.Pdb)
+	, ShaderHash(Result.ShaderHash)
+{
+}
+
+void* Library::GetPointer() const noexcept
+{
+	return Binary->GetBufferPointer();
+}
+
+size_t Library::GetSize() const noexcept
+{
+	return Binary->GetBufferSize();
+}
+
 ShaderCompiler::ShaderCompiler()
 	: ShaderModel(RHI_SHADER_MODEL::ShaderModel_6_5)
 {

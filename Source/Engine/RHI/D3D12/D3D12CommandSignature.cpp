@@ -1,7 +1,7 @@
 #include "D3D12CommandSignature.h"
 #include "D3D12Device.h"
 
-D3D12_COMMAND_SIGNATURE_DESC CommandSignatureBuilder::Build() noexcept
+D3D12_COMMAND_SIGNATURE_DESC CommandSignatureDesc::Build() noexcept
 {
 	// for (const auto& Parameter : Parameters)
 	//{
@@ -54,7 +54,7 @@ D3D12_COMMAND_SIGNATURE_DESC CommandSignatureBuilder::Build() noexcept
 
 D3D12CommandSignature::D3D12CommandSignature(
 	D3D12Device*			 Parent,
-	CommandSignatureBuilder& Builder,
+	CommandSignatureDesc& Builder,
 	ID3D12RootSignature*	 RootSignature)
 	: D3D12DeviceChild(Parent)
 {

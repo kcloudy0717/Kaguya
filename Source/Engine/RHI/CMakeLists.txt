@@ -5,19 +5,13 @@ set(PROJECTNAME "RHI")
 file(GLOB_RECURSE inc ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB_RECURSE src ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
-set(cityhash
-	${DEPDIR}/google/cityhash/city.h
-	${DEPDIR}/google/cityhash/city.cc)
-
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
 add_library(${PROJECTNAME} STATIC
 	${inc}
-	${src}
-
-	${cityhash})
+	${src})
 
 if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
@@ -31,13 +25,10 @@ target_include_directories(${PROJECTNAME} PRIVATE ${ENGINE_DIR})
 target_link_libraries(${PROJECTNAME} PRIVATE System)
 
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/wil/include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/google/cityhash")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/spdlog/include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/AgilitySDK/Include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/WinPixEventRuntime/Include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/AgilitySDK/Include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/WinPixEventRuntime/Include")
 target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.lib)
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/dxc")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
 target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/dxc/dxcompiler.lib)
 
 # Linking

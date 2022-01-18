@@ -1,7 +1,5 @@
 #include "D3D12Device.h"
 
-using Microsoft::WRL::ComPtr;
-
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
@@ -32,7 +30,7 @@ D3D12Device::D3D12Device(const DeviceOptions& Options)
 	, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
 	, Library(!Options.CachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.CachePath) : nullptr)
 {
-	ComPtr<ID3D12InfoQueue> InfoQueue;
+	ARC<ID3D12InfoQueue> InfoQueue;
 	if (SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(&InfoQueue))))
 	{
 		VERIFY_D3D12_API(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE));
@@ -84,6 +82,21 @@ void D3D12Device::OnEndFrame()
 	Profiler.OnEndFrame();
 }
 
+void D3D12Device::BeginCapture(const std::filesystem::path& Path) const
+{
+	PIXCaptureParameters CaptureParameters			= {};
+	CaptureParameters.GpuCaptureParameters.FileName = Path.c_str();
+	CaptureStatus									= PIXBeginCapture(PIX_CAPTURE_GPU, &CaptureParameters);
+}
+
+void D3D12Device::EndCapture() const
+{
+	if (SUCCEEDED(CaptureStatus))
+	{
+		PIXEndCapture(FALSE);
+	}
+}
+
 void D3D12Device::WaitIdle()
 {
 	LinkedDevice.WaitIdle();
@@ -101,8 +114,7 @@ std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(RootSignatu
 	return std::make_unique<D3D12RootSignature>(this, Desc);
 }
 
-std::unique_ptr<D3D12RaytracingPipelineState> D3D12Device::CreateRaytracingPipelineState(
-	RaytracingPipelineStateDesc& Desc)
+std::unique_ptr<D3D12RaytracingPipelineState> D3D12Device::CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc)
 {
 	return std::make_unique<D3D12RaytracingPipelineState>(this, Desc);
 }
@@ -110,7 +122,7 @@ std::unique_ptr<D3D12RaytracingPipelineState> D3D12Device::CreateRaytracingPipel
 void D3D12Device::ReportLiveObjects()
 {
 #ifdef _DEBUG
-	ComPtr<IDXGIDebug> Debug;
+	ARC<IDXGIDebug> Debug;
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&Debug))))
 	{
 		Debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);

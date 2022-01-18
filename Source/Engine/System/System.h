@@ -6,6 +6,7 @@
 #include "Stopwatch.h"
 #include "ThreadPool.h"
 #include "Console.h"
+#include "Hash.h"
 
 #include "IO/FileStream.h"
 #include "IO/AsyncFileStream.h"

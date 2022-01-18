@@ -1,6 +1,5 @@
 #pragma once
 #include <compare>
-#include <city.h>
 #include "System/System.h"
 #include "RHI/RHI.h"
 
@@ -46,7 +45,7 @@ struct std::hash<RgResourceHandle>
 {
 	size_t operator()(const RgResourceHandle& RenderResourceHandle) const noexcept
 	{
-		return CityHash64((char*)&RenderResourceHandle, sizeof(RenderResourceHandle));
+		return Hash::Hash64(&RenderResourceHandle, sizeof(RenderResourceHandle));
 	}
 };
 

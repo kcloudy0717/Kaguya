@@ -1,10 +1,10 @@
 #pragma once
 #include "D3D12Core.h"
 
-class CommandSignatureBuilder
+class CommandSignatureDesc
 {
 public:
-	explicit CommandSignatureBuilder(size_t NumParameters, UINT Stride)
+	explicit CommandSignatureDesc(size_t NumParameters, UINT Stride)
 		: Stride(Stride)
 	{
 		Parameters.reserve(NumParameters);
@@ -95,10 +95,13 @@ class D3D12CommandSignature final : public D3D12DeviceChild
 public:
 	// The root signature must be specified if and only if the command signature changes one of the root arguments.
 	D3D12CommandSignature() noexcept = default;
-	D3D12CommandSignature(D3D12Device* Parent, CommandSignatureBuilder& Builder, ID3D12RootSignature* RootSignature);
+	explicit D3D12CommandSignature(
+		D3D12Device*		  Parent,
+		CommandSignatureDesc& Builder,
+		ID3D12RootSignature*  RootSignature);
 
 	operator ID3D12CommandSignature*() const noexcept { return CommandSignature.Get(); }
 
 private:
-	Microsoft::WRL::ComPtr<ID3D12CommandSignature> CommandSignature;
+	ARC<ID3D12CommandSignature> CommandSignature;
 };

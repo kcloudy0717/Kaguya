@@ -33,26 +33,12 @@ set(ImGuizmo
 	${DEPDIR}/ImGuizmo/ImSequencer.cpp
 	${DEPDIR}/ImGuizmo/ImSequencer.h
 	${DEPDIR}/ImGuizmo/ImZoomSlider.h)
-set(json
-	${DEPDIR}/json/single_include/nlohmann/json.hpp)
-set(spdlog
-	${DEPDIR}/spdlog/include/spdlog/spdlog.h)
-set(dxc
-	${DEPDIR}/dxc/d3d12shader.h
-	${DEPDIR}/dxc/dxcapi.h)
-set(cityhash
-	${DEPDIR}/google/cityhash/city.h
-	${DEPDIR}/google/cityhash/city.cc)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${Main})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${imgui})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${ImGuizmo})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${json})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${spdlog})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${dxc})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
 add_executable(
 	${PROJECTNAME}
@@ -61,12 +47,9 @@ add_executable(
 	${src}
 
 	${imgui}
-	${ImGuizmo}
-	${json}
-	${spdlog}
-	${dxc}
-	${cityhash})
-
+	${ImGuizmo})
+set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
+target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
@@ -89,35 +72,14 @@ add_custom_command(
 
 add_dependencies(${PROJECTNAME} Shaders)
 
-set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
-target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
-
 target_include_directories(${PROJECTNAME} PRIVATE "${ENGINE_DIR}")
 target_link_libraries(${PROJECTNAME} PRIVATE "System")
 target_link_libraries(${PROJECTNAME} PRIVATE "RHI")
 target_link_libraries(${PROJECTNAME} PRIVATE "Math")
 target_link_libraries(${PROJECTNAME} PRIVATE "Core")
 
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/entt/single_include/entt")
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/imgui")
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/ImGuizmo")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/json/single_include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/spdlog/include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/wil/include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/assimp/include")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/assimp/lib/Release/assimp-vc143-mt.lib)
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/DirectXMesh/include")
-target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXMesh/lib/Debug/DirectXMesh.lib)
-target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXMesh/lib/Release/DirectXMesh.lib)
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/DirectXTex/include")
-target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
-target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/dxc")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/dxc/dxcompiler.lib)
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/google/cityhash")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/AgilitySDK/Include")
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/WinPixEventRuntime/Include")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.lib)
 
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
@@ -131,6 +93,7 @@ add_custom_command(
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
+
 		${CMAKE_SOURCE_DIR}/Assets/Assets
 
 		$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets

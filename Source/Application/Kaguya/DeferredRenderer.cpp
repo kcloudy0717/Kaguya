@@ -10,7 +10,7 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(Device, Registry);
 
 #if USE_MESH_SHADERS
-	CommandSignatureBuilder Builder(6, sizeof(CommandSignatureParams));
+	CommandSignatureDesc Builder(6, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddShaderResourceView(1);
 	Builder.AddShaderResourceView(2);
@@ -18,7 +18,7 @@ void DeferredRenderer::Initialize()
 	Builder.AddShaderResourceView(4);
 	Builder.AddDispatchMesh();
 #else
-	CommandSignatureBuilder Builder(4, sizeof(CommandSignatureParams));
+	CommandSignatureDesc Builder(4, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddVertexBufferView(0);
 	Builder.AddIndexBufferView();
