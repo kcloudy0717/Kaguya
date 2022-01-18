@@ -52,6 +52,21 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
       - Disney
   - NativeScript: C++ scripting
 
+# Build
+
+- Visual Studio 2019 (I am using VS 2022, but 2019 should still work)
+- GPU that supports DXR
+- Windows SDK Version 10.0.19041.0
+- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build, older version should still work)
+- CMake Version 3.16
+- C++ 20
+
+1. Initialize submodules after you have cloned, use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
+
+2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the World window of the application's UI.
+
+Let me know if you have any trouble setting up the project and getting it up and running!
+
 # What I'm working on now/future
 
 I'm currently modularizing the engine into libraries so they can be reused, I plan on extending Kaguya to more than just a path tracer using the new
@@ -70,21 +85,6 @@ For the moment, I think I'll work on a voxel renderer which will combine raster 
 - GPU driven architecture
 - Mesh shading using meshlets
 - Vulkan support
-
-# Build
-
-- Visual Studio 2019 (I am using VS 2022, but 2019 should still work)
-- GPU that supports DXR
-- Windows SDK Version 10.0.19041.0
-- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build, older version should still work)
-- CMake Version 3.16
-- C++ 20
-
-1. Initialize submodules after you have cloned, use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
-
-2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the World window of the application's UI.
-
-Let me know if you have any trouble setting up the project and getting it up and running!
 
 # Acknowledgements
 
