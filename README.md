@@ -54,11 +54,11 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 # Build
 
-- Visual Studio 2019 (I am using VS 2022, but 2019 should still work)
-- GPU that supports DXR
-- Windows SDK Version 10.0.19041.0
-- Windows 10 Minimum Version: 20H2 (I am on Windows 11 insider build, older version should still work)
-- CMake Version 3.16
+- Visual Studio 2019. I am using VS 2022, but 2019 should still work.
+- GPU/Driver that supports DXR.
+- Windows SDK Version: 10.0.19041.0
+- Windows 10 Minimum Version: 20H2. I am on Windows 11 insider build, older version should still work.
+- [CMake](https://cmake.org/) Version 3.16 or up. Make sure the option "Add CMake to the system PATH for all users" during installation.
 - C++ 20
 
 1. Initialize submodules after you have cloned, use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
