@@ -43,7 +43,6 @@ static BayerDitherParameters AddBayerDitherPass(RenderGraph& Graph, const View& 
 					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
 					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(BayerDitherArgs.Uav)->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Bayer Dither");
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BayerDither));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BayerDither));
 					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);

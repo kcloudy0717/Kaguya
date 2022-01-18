@@ -43,7 +43,6 @@ static SobolParameters AddSobolPass(RenderGraph& Graph, const View& View, SobolI
 					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
 					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(SobolArgs.Uav)->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Sobol");
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Sobol));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Sobol));
 					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);

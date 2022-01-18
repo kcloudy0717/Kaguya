@@ -71,7 +71,6 @@ static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsample
 					 Args.LowResolutionIndex		  = Registry.Get<D3D12ShaderResourceView>(Inputs.LowResInputSrv)->GetIndex();
 					 Args.OutputIndex				  = Registry.Get<D3D12UnorderedAccessView>(Inputs.HighResOutputUav)->GetIndex();
 
-					 D3D12ScopedEvent(Context, Name);
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
 					 Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
@@ -131,7 +130,6 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
 					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0])->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Bloom Mask");
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomMask));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomMask));
 					 Context->SetComputeRoot32BitConstants(0, 5, &Args, 0);
@@ -161,7 +159,6 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 Args.Output3Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0])->GetIndex();
 					 Args.Output4Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0])->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Bloom Downsample");
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomDownsample));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomDownsample));
 					 Context->SetComputeRoot32BitConstants(0, 7, &Args, 0);
@@ -181,7 +178,6 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0])->GetIndex();
 					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1])->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Bloom Blur");
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));
 					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);

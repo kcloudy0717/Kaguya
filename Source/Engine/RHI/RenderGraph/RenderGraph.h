@@ -156,6 +156,7 @@ public:
 
 	RenderPass& AddRenderPass(std::string_view Name);
 
+	[[nodiscard]] RenderPass& GetProloguePass(); 
 	[[nodiscard]] RenderPass& GetEpiloguePass();
 
 	[[nodiscard]] RenderGraphRegistry& GetRegistry();
@@ -198,6 +199,7 @@ private:
 	std::vector<RgView>			UnorderedAccessViews;
 
 	std::vector<RenderPass*> RenderPasses;
+	RenderPass*				 ProloguePass;
 	RenderPass*				 EpiloguePass;
 
 	std::vector<std::vector<UINT64>> AdjacencyLists;

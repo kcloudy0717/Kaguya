@@ -96,6 +96,7 @@ void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandC
 	{
 		if (RenderPass->Callback)
 		{
+			D3D12ScopedEvent(Context, RenderPass->Name);
 			RenderPass->Callback(RenderGraph->GetRegistry(), Context);
 		}
 	}
@@ -108,7 +109,9 @@ RenderGraph::RenderGraph(RenderGraphAllocator& Allocator, RenderGraphRegistry& R
 	Allocator.Reset();
 
 	// Allocate epilogue pass after allocator reset
+	ProloguePass = Allocator.Construct<RenderPass>("Prologue");
 	EpiloguePass = Allocator.Construct<RenderPass>("Epilogue");
+	RenderPasses.push_back(ProloguePass);
 }
 
 RenderGraph::~RenderGraph()
@@ -125,6 +128,11 @@ RenderPass& RenderGraph::AddRenderPass(std::string_view Name)
 	RenderPass* NewRenderPass = Allocator.Construct<RenderPass>(Name);
 	RenderPasses.emplace_back(NewRenderPass);
 	return *NewRenderPass;
+}
+
+RenderPass& RenderGraph::GetProloguePass()
+{
+	return *ProloguePass;
 }
 
 RenderPass& RenderGraph::GetEpiloguePass()

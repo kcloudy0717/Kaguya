@@ -171,8 +171,6 @@ void PathIntegratorDXR1_1::Render(World* World, D3D12CommandContext& Context)
 		.Write(&PathTraceArgs.Output)
 		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 				 {
-					 D3D12ScopedEvent(Context, "Path Trace");
-
 					 _declspec(align(256)) struct GlobalConstants
 					 {
 						 Hlsl::Camera Camera;

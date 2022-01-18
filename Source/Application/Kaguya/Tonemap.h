@@ -66,8 +66,6 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 					 Args.BloomIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv)->GetIndex();
 					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav)->GetIndex();
 
-					 D3D12ScopedEvent(Context, "Tonemap");
-
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));
 					 Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);

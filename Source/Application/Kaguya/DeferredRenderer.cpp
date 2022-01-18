@@ -264,8 +264,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		.Write(&GBufferArgs.Depth)
 		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 				 {
-					 D3D12ScopedEvent(Context, "GBuffer (Mesh Shaders)");
-
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Meshlet));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::Meshlet));
 					 Context.SetGraphicsConstantBuffer(5, sizeof(GlobalConstants), &g_GlobalConstants);
@@ -298,8 +296,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		.Write(&GBufferArgs.Depth)
 		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
 				 {
-					 D3D12ScopedEvent(Context, "GBuffer");
-
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::GBuffer));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::GBuffer));
 					 Context.SetGraphicsConstantBuffer(1, sizeof(GlobalConstants), &g_GlobalConstants);
