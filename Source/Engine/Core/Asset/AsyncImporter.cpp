@@ -21,38 +21,10 @@ static constexpr uint32_t s_ImporterFlags =
 	aiProcess_OptimizeMeshes |
 	aiProcess_ValidateDataStructure;
 
-template<typename TLambda>
-class ExecutionTimer
-{
-public:
-	using Clock = std::conditional_t<
-		std::chrono::high_resolution_clock::is_steady,
-		std::chrono::high_resolution_clock,
-		std::chrono::steady_clock>;
-
-	ExecutionTimer(TLambda Message)
-		: Message(Message)
-	{
-	}
-
-	~ExecutionTimer() { Message(std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - Start)); }
-
-private:
-	Clock::time_point Start = Clock::now();
-	TLambda			  Message;
-};
-
 void AsyncTextureImporter::Import(const TextureImportOptions& Options)
 {
 	const auto& Path	  = Options.Path;
 	const auto	Extension = Path.extension().string();
-
-	LOG_INFO("Loading: {}", Path.string());
-	ExecutionTimer Timer(
-		[&](auto Elapsed)
-		{
-			LOG_INFO("{} loaded in {}(ms)", Path.string(), Elapsed.count());
-		});
 
 	TexMetadata	 TexMetadata = {};
 	ScratchImage OutImage	 = {};
@@ -111,13 +83,6 @@ void AsyncTextureImporter::Import(const TextureImportOptions& Options)
 
 void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 {
-	LOG_INFO("Loading: {}", Options.Path.string());
-	ExecutionTimer Timer(
-		[&](auto Elapsed)
-		{
-			LOG_INFO("{} loaded in {}(ms)", Options.Path.string(), Elapsed.count());
-		});
-
 	std::filesystem::path BinaryPath = Options.Path;
 	BinaryPath.replace_extension(MeshExportExtension);
 
@@ -134,17 +99,11 @@ void AsyncMeshImporter::Import(const MeshImportOptions& Options)
 
 		if (!paiScene || !paiScene->HasMeshes())
 		{
-			LOG_ERROR("Assimp::Importer error when loading {}", Path.data());
-			LOG_ERROR("Error: {}", s_Importer.GetErrorString());
 			return;
 		}
 
 		if (paiScene->mNumMeshes >= AssetManager::GetMeshCache().NumAssets)
 		{
-			LOG_ERROR(
-				"Scene contains {} meshes, but AssetManager can only handle {} meshes",
-				paiScene->mNumMeshes,
-				AssetManager::GetMeshCache().NumAssets);
 			return;
 		}
 

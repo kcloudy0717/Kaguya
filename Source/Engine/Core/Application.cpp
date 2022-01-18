@@ -1,16 +1,10 @@
 #include "Application.h"
-
 #include "IApplicationMessageHandler.h"
 
 #include <shellapi.h>
 
-#pragma comment(lib, "runtimeobject.lib")
-
-using Microsoft::WRL::ComPtr;
-
-Application::Application(const std::string& LoggerName, const ApplicationOptions& Options)
-	: InitializeWrapper(RO_INIT_MULTITHREADED)
-	, HInstance(GetModuleHandle(nullptr))
+Application::Application(const ApplicationOptions& Options)
+	: HInstance(GetModuleHandle(nullptr))
 {
 	// Initialize ExecutableDirectory
 	int Argc;
@@ -20,15 +14,11 @@ Application::Application(const std::string& LoggerName, const ApplicationOptions
 		LocalFree(Argv);
 	}
 
-	// Initialize Log
-	Log::Initialize(LoggerName);
-	LOG_INFO("Log Initialized");
-
 	if (!Options.Icon.empty())
 	{
 		assert(Options.Icon.extension() == ".ico");
-		HIcon = wil::unique_hicon(static_cast<HICON>(
-			LoadImage(nullptr, Options.Icon.wstring().data(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
+		std::filesystem::path Path = ExecutableDirectory / Options.Icon;
+		HIcon					   = wil::unique_hicon(static_cast<HICON>(LoadImage(nullptr, Path.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
 	}
 
 	HCursor = wil::unique_hcursor(::LoadCursor(nullptr, IDC_ARROW));
@@ -45,7 +35,7 @@ Application::Application(const std::string& LoggerName, const ApplicationOptions
 	ClassDesc.hCursor		= HCursor.get();
 	ClassDesc.hbrBackground = nullptr;
 	ClassDesc.lpszMenuName	= nullptr;
-	ClassDesc.lpszClassName = WindowClass;
+	ClassDesc.lpszClassName = Window::WindowClass;
 	ClassDesc.hIconSm		= HIcon.get();
 	if (!RegisterClassExW(&ClassDesc))
 	{
@@ -55,23 +45,20 @@ Application::Application(const std::string& LoggerName, const ApplicationOptions
 
 Application::~Application()
 {
-	UnregisterClassW(WindowClass, HInstance);
+	UnregisterClassW(Window::WindowClass, HInstance);
 }
 
 void Application::Run()
 {
 	Initialized = Initialize();
 
-	Stopwatch.Restart();
 	while (!RequestExit)
 	{
 		PumpMessages();
 
-		Stopwatch.Signal();
 		if (!Minimized)
 		{
-			DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
-			Update(DeltaTime);
+			Update();
 		}
 	}
 
@@ -87,7 +74,11 @@ void Application::AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& D
 {
 	Windows.push_back(Window);
 	Window->Initialize(this, Parent, HInstance, Desc);
-	LOG_INFO(L"Added Window: Address: {}, Name: {}", fmt::ptr(Window), Window->GetDesc().Name);
+}
+
+void Application::RegisterMessageCallback(MessageCallback Callback, void* Context)
+{
+	Callbacks.emplace_back(Callback, Context);
 }
 
 void Application::SetRawInputMode(bool Enable, Window* Window)
@@ -97,7 +88,7 @@ void Application::SetRawInputMode(bool Enable, Window* Window)
 
 LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
 {
-	Application* WindowsApplication = nullptr;
+	Application* WindowsApplication;
 	if (uMsg == WM_NCCREATE)
 	{
 		// Save the Application* passed in to CreateWindow.
@@ -128,19 +119,10 @@ void Application::PumpMessages()
 	}
 }
 
-// Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
-	{
-		return true;
-	}
-
 	auto WindowIter = std::ranges::find_if(
-		Windows.begin(),
-		Windows.end(),
+		Windows,
 		[=](Window* Window)
 		{
 			return Window->GetWindowHandle() == hWnd;
@@ -151,12 +133,17 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	Window* CurrentWindow = *WindowIter;
 
+	for (auto& Callback : Callbacks)
+	{
+		Callback.Function(Callback.Context, CurrentWindow->GetWindowHandle(), uMsg, wParam, lParam);
+	}
+
 	switch (uMsg)
 	{
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
 		auto Info			 = std::bit_cast<MINMAXINFO*>(lParam);
-		Info->ptMinTrackSize = { 200, 200 };
+		Info->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) };
 	}
 	break;
 
@@ -416,6 +403,15 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 			{
 				MessageHandler->OnWindowResize(CurrentWindow, WindowWidth, WindowHeight);
 			}
+		}
+	}
+	break;
+
+	case WM_MOVE:
+	{
+		if (Initialized)
+		{
+			MessageHandler->OnWindowMove(CurrentWindow, LOWORD(lParam), HIWORD(lParam));
 		}
 	}
 	break;

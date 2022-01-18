@@ -1,15 +1,13 @@
 #include "AssetManager.h"
-#include "RenderCore/RenderCore.h"
 
 using namespace DirectX;
-using Microsoft::WRL::ComPtr;
 
-void AssetManager::Initialize()
+void AssetManager::Initialize(D3D12Device* Device)
 {
 	Thread = std::jthread(
-		[&]()
+		[=]()
 		{
-			D3D12LinkedDevice* Device = RenderCore::Device->GetDevice();
+			D3D12LinkedDevice* LinkedDevice = Device->GetDevice();
 
 			while (true)
 			{
@@ -24,14 +22,14 @@ void AssetManager::Initialize()
 				std::vector<Mesh*>	  Meshes;
 				std::vector<Texture*> Textures;
 
-				Device->BeginResourceUpload();
+				LinkedDevice->BeginResourceUpload();
 
 				// Process Mesh
 				while (!MeshUploadQueue.empty())
 				{
 					Mesh* Mesh = MeshUploadQueue.front();
 					MeshUploadQueue.pop();
-					UploadMesh(Mesh, Device);
+					UploadMesh(Mesh, LinkedDevice);
 					Meshes.push_back(Mesh);
 				}
 
@@ -40,11 +38,11 @@ void AssetManager::Initialize()
 				{
 					Texture* Texture = TextureUploadQueue.front();
 					TextureUploadQueue.pop();
-					UploadTexture(Texture, Device);
+					UploadTexture(Texture, LinkedDevice);
 					Textures.push_back(Texture);
 				}
 
-				Device->EndResourceUpload(true);
+				LinkedDevice->EndResourceUpload(true);
 
 				for (auto Mesh : Meshes)
 				{
@@ -137,8 +135,8 @@ void AssetManager::UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Devic
 		break;
 	}
 
-	AssetTexture->DxTexture = D3D12Texture(RenderCore::Device->GetDevice(), ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
-	AssetTexture->SRV		= D3D12ShaderResourceView(RenderCore::Device->GetDevice(), &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
+	AssetTexture->DxTexture = D3D12Texture(Device, ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
+	AssetTexture->SRV		= D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
 
 	std::vector<D3D12_SUBRESOURCE_DATA> Subresources(AssetTexture->TexImage.GetImageCount());
 	const auto							pImages = AssetTexture->TexImage.GetImages();
@@ -229,8 +227,8 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 
 	AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
 
-	AssetMesh->VertexView = D3D12ShaderResourceView(RenderCore::Device->GetDevice(), &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
-	AssetMesh->IndexView  = D3D12ShaderResourceView(RenderCore::Device->GetDevice(), &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
+	AssetMesh->VertexView = D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
+	AssetMesh->IndexView  = D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
 }
 
 void AssetManager::RequestUpload(Texture* Texture)
