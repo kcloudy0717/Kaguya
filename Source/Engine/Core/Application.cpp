@@ -3,7 +3,7 @@
 
 #include <shellapi.h>
 
-Application::Application(const ApplicationOptions& Options)
+Application::Application()
 	: HInstance(GetModuleHandle(nullptr))
 {
 	// Initialize ExecutableDirectory
@@ -14,15 +14,6 @@ Application::Application(const ApplicationOptions& Options)
 		LocalFree(Argv);
 	}
 
-	if (!Options.Icon.empty())
-	{
-		assert(Options.Icon.extension() == ".ico");
-		std::filesystem::path Path = ExecutableDirectory / Options.Icon;
-		HIcon					   = wil::unique_hicon(static_cast<HICON>(LoadImage(nullptr, Path.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE)));
-	}
-
-	HCursor = wil::unique_hcursor(::LoadCursor(nullptr, IDC_ARROW));
-
 	// Register window class
 	WNDCLASSEXW ClassDesc	= {};
 	ClassDesc.cbSize		= sizeof(WNDCLASSEX);
@@ -31,12 +22,12 @@ Application::Application(const ApplicationOptions& Options)
 	ClassDesc.cbClsExtra	= 0;
 	ClassDesc.cbWndExtra	= 0;
 	ClassDesc.hInstance		= HInstance;
-	ClassDesc.hIcon			= HIcon.get();
-	ClassDesc.hCursor		= HCursor.get();
+	ClassDesc.hIcon			= nullptr;
+	ClassDesc.hCursor		= ::LoadCursor(nullptr, IDC_ARROW);
 	ClassDesc.hbrBackground = nullptr;
 	ClassDesc.lpszMenuName	= nullptr;
 	ClassDesc.lpszClassName = Window::WindowClass;
-	ClassDesc.hIconSm		= HIcon.get();
+	ClassDesc.hIconSm		= nullptr;
 	if (!RegisterClassExW(&ClassDesc))
 	{
 		ErrorExit(TEXT("RegisterClassExW"));
@@ -52,9 +43,13 @@ void Application::Run()
 {
 	Initialized = Initialize();
 
-	while (!RequestExit)
+	while (true)
 	{
 		PumpMessages();
+		if (RequestExit)
+		{
+			break;
+		}
 
 		if (!Minimized)
 		{
@@ -203,7 +198,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_MBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
-		auto Button = EMouseButton::Unknown;
+		auto Button = EMouseButton::NumButtons;
 		if (uMsg == WM_LBUTTONDOWN)
 		{
 			Button = EMouseButton::Left;
@@ -219,6 +214,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 		auto [x, y] = MAKEPOINTS(lParam);
 		MessageHandler->OnMouseDown(CurrentWindow, Button, x, y);
+		InputManager.OnButtonDown(Button);
 	}
 	break;
 
@@ -226,7 +222,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_MBUTTONUP:
 	case WM_RBUTTONUP:
 	{
-		auto Button = EMouseButton::Unknown;
+		auto Button = EMouseButton::NumButtons;
 		if (uMsg == WM_LBUTTONUP)
 		{
 			Button = EMouseButton::Left;
@@ -242,6 +238,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 		auto [x, y] = MAKEPOINTS(lParam);
 		MessageHandler->OnMouseUp(Button, x, y);
+		InputManager.OnButtonUp(Button);
 	}
 	break;
 
@@ -249,7 +246,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_MBUTTONDBLCLK:
 	case WM_RBUTTONDBLCLK:
 	{
-		auto Button = EMouseButton::Unknown;
+		auto Button = EMouseButton::NumButtons;
 		if (uMsg == WM_LBUTTONDBLCLK)
 		{
 			Button = EMouseButton::Left;

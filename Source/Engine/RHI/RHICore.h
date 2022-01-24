@@ -19,6 +19,8 @@
 #include <set>
 #include <unordered_map>
 
+#include <dxgiformat.h>
+
 enum class RHI_VENDOR
 {
 	NVIDIA = 0x10DE,

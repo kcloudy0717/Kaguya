@@ -67,7 +67,7 @@ public:
 		Type					= RHI_PIPELINE_STATE_TYPE::Graphics;
 		this->DepthStencilState = DepthStencilState;
 	}
-	void RenderTargetStateCb(const RenderTargetState& RenderTargetState)
+	void RenderTargetStateCb(const RenderTargetState& RenderTargetState) override
 	{
 		Type					= RHI_PIPELINE_STATE_TYPE::Graphics;
 		this->RenderTargetState = RenderTargetState;
@@ -106,7 +106,7 @@ public:
 	RasterizerState						  RasterizerState;
 	DepthStencilState					  DepthStencilState;
 	RenderTargetState					  RenderTargetState;
-	RHI_PRIMITIVE_TOPOLOGY				  PrimitiveTopology;
+	RHI_PRIMITIVE_TOPOLOGY				  PrimitiveTopology = RHI_PRIMITIVE_TOPOLOGY::Undefined;
 };
 
 class D3D12PipelineState : public D3D12DeviceChild

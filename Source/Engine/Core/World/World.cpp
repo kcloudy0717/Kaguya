@@ -2,8 +2,6 @@
 #include "Actor.h"
 #include "Core/Asset/AssetManager.h"
 
-#include "Scripts/Player.script.h"
-
 static const char* DefaultActorName = "Actor";
 
 World::World()
@@ -51,7 +49,10 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
 	Registry.clear();
-	ActiveCamera = nullptr;
+	ActiveCameraActor	= {};
+	ActiveSkyLightActor = {};
+	ActiveCamera		= nullptr;
+	ActiveSkyLight		= nullptr;
 	Actors.clear();
 	if (AddDefaultEntities)
 	{
@@ -84,10 +85,6 @@ void World::Update(float DeltaTime)
 {
 	ResolveComponentDependencies();
 	UpdateScripts(DeltaTime);
-}
-
-void World::BeginPlay()
-{
 }
 
 void World::ResolveComponentDependencies()
@@ -173,8 +170,8 @@ void World::OnComponentAdded<CameraComponent>(Actor Actor, CameraComponent& Comp
 {
 	if (!ActiveCamera)
 	{
-		ActiveCamera = &Component;
-		Actor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
+		ActiveCameraActor = Actor;
+		ActiveCamera	  = &Component;
 	}
 	else
 	{
@@ -192,7 +189,8 @@ void World::OnComponentAdded<SkyLightComponent>(Actor Actor, SkyLightComponent& 
 {
 	if (!ActiveSkyLight)
 	{
-		ActiveSkyLight = &Component;
+		ActiveSkyLightActor = Actor;
+		ActiveSkyLight		= &Component;
 	}
 	else
 	{

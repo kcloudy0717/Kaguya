@@ -46,6 +46,8 @@ public:
 
 	void RealizeResources(RenderGraph* Graph, D3D12Device* Device);
 
+	D3D12Texture* GetImportedResource(RgResourceHandle Handle);
+
 	template<typename T>
 	[[nodiscard]] auto Get(RgResourceHandle Handle) -> T*
 	{

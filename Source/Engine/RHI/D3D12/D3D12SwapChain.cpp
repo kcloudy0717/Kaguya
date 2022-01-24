@@ -130,16 +130,15 @@ void D3D12SwapChain::EnsureSwapChainColorSpace(BitDepth BitDepth, bool EnableST2
 	}
 }
 
-ID3D12Resource* D3D12SwapChain::GetBackBuffer(UINT Index) const
+D3D12Texture* D3D12SwapChain::GetBackBuffer(UINT Index)
 {
-	return BackBuffers[Index].GetResource();
+	return &BackBuffers[Index];
 }
 
-D3D12SwapChainResource D3D12SwapChain::GetCurrentBackBufferResource() const
+D3D12SwapChainResource D3D12SwapChain::GetCurrentBackBufferResource()
 {
-	UINT			BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
-	ID3D12Resource* BackBuffer		= GetBackBuffer(BackBufferIndex);
-	return { BackBuffer, RenderTargetViews[BackBufferIndex] };
+	UINT BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
+	return { GetBackBuffer(BackBufferIndex), RenderTargetViews[BackBufferIndex] };
 }
 
 D3D12_VIEWPORT D3D12SwapChain::GetViewport() const noexcept

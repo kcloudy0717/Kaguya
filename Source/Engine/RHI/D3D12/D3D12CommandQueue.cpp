@@ -45,50 +45,6 @@ void D3D12CommandQueue::WaitForSyncHandle(const D3D12SyncHandle& SyncHandle)
 	}
 }
 
-ARC<ID3D12CommandQueue> D3D12CommandQueue::InitializeCommandQueue()
-{
-	constexpr UINT			 NodeMask = 0;
-	ARC<ID3D12CommandQueue>	 CommandQueue;
-	D3D12_COMMAND_QUEUE_DESC Desc = {};
-	Desc.Type					  = CommandListType;
-	Desc.Priority				  = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	Desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	Desc.NodeMask				  = NodeMask;
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(
-		&Desc,
-		IID_PPV_ARGS(&CommandQueue)));
-	return CommandQueue;
-}
-
-UINT64 D3D12CommandQueue::InitializeTimestampFrequency()
-{
-	UINT64 Frequency = 0;
-	CommandQueue->GetTimestampFrequency(&Frequency);
-	return Frequency;
-}
-
-bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle)
-{
-	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle.ResolveResourceBarriers();
-
-	bool AnyResolved = !ResourceBarriers.empty();
-	if (AnyResolved)
-	{
-		if (!ResourceBarrierCommandAllocator)
-		{
-			ResourceBarrierCommandAllocator = ResourceBarrierCommandAllocatorPool.RequestCommandAllocator();
-		}
-
-		ResourceBarrierCommandListHandle.Open(ResourceBarrierCommandAllocator);
-		ResourceBarrierCommandListHandle->ResourceBarrier(
-			static_cast<UINT>(ResourceBarriers.size()),
-			ResourceBarriers.data());
-		ResourceBarrierCommandListHandle.Close();
-	}
-
-	return AnyResolved;
-}
-
 D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
 	UINT					NumCommandListHandles,
 	D3D12CommandListHandle* CommandListHandles,
@@ -131,4 +87,48 @@ D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
 	}
 
 	return SyncHandle;
+}
+
+ARC<ID3D12CommandQueue> D3D12CommandQueue::InitializeCommandQueue()
+{
+	constexpr UINT			 NodeMask = 0;
+	ARC<ID3D12CommandQueue>	 CommandQueue;
+	D3D12_COMMAND_QUEUE_DESC Desc = {};
+	Desc.Type					  = CommandListType;
+	Desc.Priority				  = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+	Desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	Desc.NodeMask				  = NodeMask;
+	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(
+		&Desc,
+		IID_PPV_ARGS(&CommandQueue)));
+	return CommandQueue;
+}
+
+UINT64 D3D12CommandQueue::InitializeTimestampFrequency()
+{
+	UINT64 Frequency = 0;
+	CommandQueue->GetTimestampFrequency(&Frequency);
+	return Frequency;
+}
+
+bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle)
+{
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle.ResolveResourceBarriers();
+
+	bool AnyResolved = !ResourceBarriers.empty();
+	if (AnyResolved)
+	{
+		if (!ResourceBarrierCommandAllocator)
+		{
+			ResourceBarrierCommandAllocator = ResourceBarrierCommandAllocatorPool.RequestCommandAllocator();
+		}
+
+		ResourceBarrierCommandListHandle.Open(ResourceBarrierCommandAllocator);
+		ResourceBarrierCommandListHandle->ResourceBarrier(
+			static_cast<UINT>(ResourceBarriers.size()),
+			ResourceBarriers.data());
+		ResourceBarrierCommandListHandle.Close();
+	}
+
+	return AnyResolved;
 }

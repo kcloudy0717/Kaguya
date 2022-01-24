@@ -67,7 +67,10 @@ public:
 	Material Material;
 };
 
-REGISTER_CLASS_ATTRIBUTES(MaterialTexture, "MaterialTexture", CLASS_ATTRIBUTE(MaterialTexture, HandleId))
+REGISTER_CLASS_ATTRIBUTES(
+	MaterialTexture,
+	"MaterialTexture",
+	CLASS_ATTRIBUTE(MaterialTexture, HandleId))
 
 REGISTER_CLASS_ATTRIBUTES(
 	Material,

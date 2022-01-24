@@ -1,7 +1,8 @@
 #include "WorldWindow.h"
 
-#include <Core/World/WorldArchive.h>
+#include "Core/World/WorldArchive.h"
 #include "Core/CoreDefines.h"
+#include "Core/World/Scripts/Player.script.h"
 
 void WorldWindow::OnRender()
 {
@@ -54,6 +55,7 @@ void WorldWindow::OnRender()
 		if (ImGui::MenuItem("Clear"))
 		{
 			pWorld->Clear();
+			pWorld->ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 			SelectedIndex = std::nullopt;
 		}
 
@@ -74,6 +76,7 @@ void WorldWindow::OnRender()
 			if (!Path.empty())
 			{
 				WorldArchive::Load(Path, pWorld);
+				pWorld->ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 			}
 		}
 

@@ -24,6 +24,7 @@ target_include_directories(${PROJECTNAME} PRIVATE ${RHI_DIR})
 target_include_directories(${PROJECTNAME} PRIVATE ${ENGINE_DIR})
 target_link_libraries(${PROJECTNAME} PRIVATE System)
 
+# Public include/linking for now until a RHI abstraction is build on top of it
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/AgilitySDK/Include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/WinPixEventRuntime/Include")

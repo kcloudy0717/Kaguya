@@ -16,6 +16,7 @@
 #include "Core/IApplicationMessageHandler.h"
 #include "Core/Asset/AssetManager.h"
 #include "Core/World/World.h"
+#include "Core/World/Scripts/Player.script.h"
 
 #include "Renderer.h"
 #include "DeferredRenderer.h"
@@ -28,11 +29,11 @@ namespace RenderCore
 	extern ShaderCompiler* Compiler;
 } // namespace RenderCore
 
-class D3D12RHIInitializer
+class VulkanRHIInitializer
 {
 public:
-	D3D12RHIInitializer(const DeviceOptions& Options);
-	~D3D12RHIInitializer();
+	VulkanRHIInitializer(const DeviceOptions& Options);
+	~VulkanRHIInitializer();
 
 private:
 	std::unique_ptr<D3D12Device>	Device;
@@ -47,7 +48,7 @@ namespace RenderCore
 	ShaderCompiler* Compiler = nullptr;
 } // namespace RenderCore
 
-D3D12RHIInitializer::D3D12RHIInitializer(const DeviceOptions& Options)
+VulkanRHIInitializer::VulkanRHIInitializer(const DeviceOptions& Options)
 {
 	assert(!Device && !Compiler);
 
@@ -75,7 +76,7 @@ D3D12RHIInitializer::D3D12RHIInitializer(const DeviceOptions& Options)
 	RenderCore::Compiler = Compiler.get();
 }
 
-D3D12RHIInitializer::~D3D12RHIInitializer()
+VulkanRHIInitializer::~VulkanRHIInitializer()
 {
 	Device->WaitIdle();
 	if (ImGuiD3D12Initialized)
@@ -201,8 +202,8 @@ class Editor final
 	, public IApplicationMessageHandler
 {
 public:
-	explicit Editor(const ApplicationOptions& Options)
-		: Application(Options)
+	explicit Editor()
+		: Application()
 	{
 		SetMessageHandler(this);
 		RegisterMessageCallback(ImguiMessageCallback, nullptr);
@@ -343,7 +344,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	ENABLE_LEAK_DETECTION();
 	SET_LEAK_BREAKPOINT(-1);
 
-	Editor				Editor(ApplicationOptions{});
+	Editor				Editor;
 	ImGuiContextManager ImGui;
 
 	Window MainWindow;
@@ -370,9 +371,10 @@ int main(int /*argc*/, char* /*argv*/[])
 	DeviceOptions.Raytracing	   = true;
 	DeviceOptions.DynamicResources = true;
 	DeviceOptions.MeshShaders	   = true;
-	D3D12RHIInitializer D3D12RHIInitializer(DeviceOptions);
+	VulkanRHIInitializer D3D12RHIInitializer(DeviceOptions);
 
 	World World;
+	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 
 	// DeferredRenderer Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);
 	// PathIntegratorDXR1_0 Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);

@@ -121,7 +121,7 @@ void Renderer::OnRender(World* World)
 		auto [pRenderTarget, RenderTargetView] = SwapChain.GetCurrentBackBufferResource();
 
 		auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			pRenderTarget,
+			pRenderTarget->GetResource(),
 			D3D12_RESOURCE_STATE_PRESENT,
 			D3D12_RESOURCE_STATE_RENDER_TARGET);
 		Context->ResourceBarrier(1, &Barrier);
@@ -145,7 +145,7 @@ void Renderer::OnRender(World* World)
 			}
 		}
 		Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			pRenderTarget,
+			pRenderTarget->GetResource(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PRESENT);
 		Context->ResourceBarrier(1, &Barrier);

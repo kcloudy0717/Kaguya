@@ -29,6 +29,9 @@ public:
 	[[nodiscard]] D3D12CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0);
 	[[nodiscard]] D3D12CommandContext& GetCopyContext1();
 
+	[[nodiscard]] D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const;
+	[[nodiscard]] bool							 ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& Desc) const;
+
 	void WaitIdle();
 
 	void			BeginResourceUpload();
@@ -52,6 +55,12 @@ private:
 	std::vector<std::unique_ptr<D3D12CommandContext>> AvailableAsyncCommandContexts;
 	std::unique_ptr<D3D12CommandContext>			  CopyContext1;
 	std::unique_ptr<D3D12CommandContext>			  CopyContext2;
+
+	struct ResourceAllocationInfoTable
+	{
+		RwLock													Mutex;
+		std::unordered_map<u64, D3D12_RESOURCE_ALLOCATION_INFO> Table;
+	} mutable ResourceAllocationInfoTable;
 
 	D3D12SyncHandle					 UploadSyncHandle;
 	std::vector<ARC<ID3D12Resource>> TrackedResources;

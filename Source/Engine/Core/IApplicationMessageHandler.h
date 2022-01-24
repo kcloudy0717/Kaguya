@@ -1,31 +1,7 @@
 ﻿#pragma once
+#include "InputManager.h"
 
 class Window;
-
-enum class EMouseButton
-{
-	Unknown,
-	Left,
-	Middle,
-	Right
-};
-
-constexpr const char* EMouseButtonToString(EMouseButton Button)
-{
-	switch (Button)
-	{
-	case EMouseButton::Unknown:
-		return "<unknown>";
-	case EMouseButton::Left:
-		return "Left";
-	case EMouseButton::Middle:
-		return "Middle";
-	case EMouseButton::Right:
-		return "Right";
-	default:
-		return "<unknown>";
-	}
-}
 
 class IApplicationMessageHandler
 {

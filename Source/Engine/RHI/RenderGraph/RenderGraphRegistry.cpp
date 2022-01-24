@@ -47,8 +47,9 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Devi
 	{
 		auto& RHITexture = Graph->Textures[i];
 
-		RgResourceHandle&	 Handle = RHITexture.Handle;
-		const RgTextureDesc& Desc	= RHITexture.Desc;
+		RgResourceHandle& Handle = RHITexture.Handle;
+		assert(!Handle.IsImported());
+		const RgTextureDesc& Desc = RHITexture.Desc;
 
 		if (Handle.State)
 		{
@@ -140,11 +141,27 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Devi
 
 		for (UINT j = 0; j < RgRt.Desc.NumRenderTargets; ++j)
 		{
-			ApiDesc.AddRenderTarget(Get<D3D12Texture>(RgRt.Desc.RenderTargets[j]), RgRt.Desc.sRGB[j]);
+			RgResourceHandle Handle = RgRt.Desc.RenderTargets[j];
+			if (Handle.IsImported())
+			{
+				ApiDesc.AddRenderTarget(GetImportedResource(Handle), RgRt.Desc.sRGB[j]);
+			}
+			else
+			{
+				ApiDesc.AddRenderTarget(Get<D3D12Texture>(Handle), RgRt.Desc.sRGB[j]);
+			}
 		}
 		if (RgRt.Desc.DepthStencil.IsValid())
 		{
-			ApiDesc.SetDepthStencil(Get<D3D12Texture>(RgRt.Desc.DepthStencil));
+			RgResourceHandle Handle = RgRt.Desc.DepthStencil;
+			if (Handle.IsImported())
+			{
+				ApiDesc.SetDepthStencil(GetImportedResource(Handle));
+			}
+			else
+			{
+				ApiDesc.SetDepthStencil(Get<D3D12Texture>(Handle));
+			}
 		}
 
 		RenderTargets[i] = D3D12RenderTarget(Device->GetDevice(), ApiDesc);
@@ -217,4 +234,10 @@ void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Devi
 			assert(false && "Invalid Uav");
 		}
 	}
+}
+
+D3D12Texture* RenderGraphRegistry::GetImportedResource(RgResourceHandle Handle)
+{
+	assert(Handle.IsImported());
+	return Graph->ImportedTextures[Handle.Id];
 }

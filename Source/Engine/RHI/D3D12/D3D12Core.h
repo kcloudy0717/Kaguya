@@ -1,8 +1,8 @@
 #pragma once
 #include "D3D12RHI.h"
-#include "ARC.h"
 #include "RHICore.h"
 #include "System/System.h"
+#include "ARC.h"
 
 namespace D3D12RHIUtils
 {

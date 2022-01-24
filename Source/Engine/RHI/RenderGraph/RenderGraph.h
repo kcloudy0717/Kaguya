@@ -22,10 +22,11 @@ public:
 
 	void* Allocate(size_t SizeInBytes, size_t Alignment)
 	{
-		SizeInBytes		  = D3D12RHIUtils::AlignUp(SizeInBytes, Alignment);
-		std::byte* Result = Ptr += SizeInBytes;
-		assert(Result + SizeInBytes <= Sentinel);
+		SizeInBytes = D3D12RHIUtils::AlignUp(SizeInBytes, Alignment);
+		assert(Ptr + SizeInBytes <= Sentinel);
+		std::byte* Result = Ptr + SizeInBytes;
 
+		Ptr += SizeInBytes;
 		CurrentMemoryUsage += SizeInBytes;
 		return Result;
 	}
@@ -136,6 +137,21 @@ public:
 		}
 	}
 
+	// TODO: Add support for other rg resource types
+	// Currently only support textures (mainly swapchain textures)
+	auto Import(D3D12Texture* Texture) -> RgResourceHandle
+	{
+		RgResourceHandle Handle = {};
+		Handle.Type				= RgResourceType::Texture;
+		Handle.State			= 1;
+		Handle.Flags			= RG_RESOURCE_FLAG_IMPORTED;
+		Handle.Version			= 0;
+		Handle.Id				= ImportedTextures.size();
+
+		ImportedTextures.emplace_back(Texture);
+		return Handle;
+	}
+
 	template<typename T>
 	auto Create(std::string_view Name, const typename RgResourceTraits<T>::Desc& Desc) -> RgResourceHandle
 	{
@@ -144,6 +160,7 @@ public:
 		RgResourceHandle Handle = {};
 		Handle.Type				= RgResourceTraits<T>::Enum;
 		Handle.State			= 1;
+		Handle.Flags			= RG_RESOURCE_FLAG_NONE;
 		Handle.Version			= 0;
 		Handle.Id				= Container.size();
 
@@ -156,7 +173,7 @@ public:
 
 	RenderPass& AddRenderPass(std::string_view Name);
 
-	[[nodiscard]] RenderPass& GetProloguePass(); 
+	[[nodiscard]] RenderPass& GetProloguePass();
 	[[nodiscard]] RenderPass& GetEpiloguePass();
 
 	[[nodiscard]] RenderGraphRegistry& GetRegistry();
@@ -191,6 +208,8 @@ private:
 
 	RenderGraphAllocator& Allocator;
 	RenderGraphRegistry&  Registry;
+
+	std::vector<D3D12Texture*> ImportedTextures;
 
 	std::vector<RgBuffer>		Buffers;
 	std::vector<RgTexture>		Textures;

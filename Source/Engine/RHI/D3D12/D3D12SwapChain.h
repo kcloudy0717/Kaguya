@@ -17,10 +17,12 @@ public:
 
 struct D3D12SwapChainResource
 {
-	ID3D12Resource*				Resource;
+	D3D12Texture*				BackBuffer;
 	D3D12_CPU_DESCRIPTOR_HANDLE View;
 };
 
+// HDR is not fully supported yet, still WIP
+// Currently HDR code is based on D3D12HDR Sample from Microsoft Samples
 class D3D12SwapChain : public D3D12DeviceChild
 {
 public:
@@ -68,8 +70,8 @@ public:
 	// Calling this function to ensure the correct color space for the different pixel formats.
 	void EnsureSwapChainColorSpace(BitDepth BitDepth, bool EnableST2084);
 
-	[[nodiscard]] ID3D12Resource*		 GetBackBuffer(UINT Index) const;
-	[[nodiscard]] D3D12SwapChainResource GetCurrentBackBufferResource() const;
+	[[nodiscard]] D3D12Texture*			 GetBackBuffer(UINT Index);
+	[[nodiscard]] D3D12SwapChainResource GetCurrentBackBufferResource();
 
 	[[nodiscard]] D3D12_VIEWPORT GetViewport() const noexcept;
 	[[nodiscard]] D3D12_RECT	 GetScissorRect() const noexcept;

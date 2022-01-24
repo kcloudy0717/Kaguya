@@ -38,8 +38,6 @@ public:
 
 	void Update(float DeltaTime);
 
-	void BeginPlay();
-
 private:
 	void ResolveComponentDependencies();
 	void UpdateScripts(float DeltaTime);

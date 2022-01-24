@@ -1,5 +1,25 @@
 #include "InputManager.h"
 
+bool InputManager::IsPressed(EMouseButton Button) const
+{
+	return ButtonStates[static_cast<size_t>(Button)];
+}
+
+bool InputManager::IsLeftPressed() const
+{
+	return IsPressed(EMouseButton::Left);
+}
+
+bool InputManager::IsMiddlePressed() const
+{
+	return IsPressed(EMouseButton::Middle);
+}
+
+bool InputManager::IsRightPressed() const
+{
+	return IsPressed(EMouseButton::Right);
+}
+
 bool InputManager::IsPressed(unsigned char KeyCode) const
 {
 	return KeyStates[KeyCode];
@@ -8,6 +28,16 @@ bool InputManager::IsPressed(unsigned char KeyCode) const
 void InputManager::ResetKeyState()
 {
 	KeyStates.reset();
+}
+
+void InputManager::OnButtonDown(EMouseButton Button)
+{
+	ButtonStates[static_cast<size_t>(Button)] = true;
+}
+
+void InputManager::OnButtonUp(EMouseButton Button)
+{
+	ButtonStates[static_cast<size_t>(Button)] = false;
 }
 
 void InputManager::OnKeyDown(unsigned char KeyCode)

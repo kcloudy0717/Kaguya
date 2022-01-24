@@ -2,7 +2,7 @@
 #include "Renderer.h"
 #include "Core/CoreDefines.h"
 
-#define USE_MESH_SHADERS 1
+#define USE_MESH_SHADERS 0
 
 class DeferredRenderer final : public Renderer
 {
@@ -19,7 +19,7 @@ private:
 #if USE_MESH_SHADERS
 	struct CommandSignatureParams
 	{
-		UINT						  MeshIndex;
+		u32							  MeshIndex;
 		D3D12_GPU_VIRTUAL_ADDRESS	  Vertices;
 		D3D12_GPU_VIRTUAL_ADDRESS	  Meshlets;
 		D3D12_GPU_VIRTUAL_ADDRESS	  UniqueVertexIndices;
@@ -29,7 +29,7 @@ private:
 #else
 	struct CommandSignatureParams
 	{
-		UINT						 MeshIndex;
+		u32							 MeshIndex;
 		D3D12_VERTEX_BUFFER_VIEW	 VertexBuffer;
 		D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
 		D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
@@ -37,8 +37,8 @@ private:
 #endif
 #pragma pack(pop)
 
-	static constexpr UINT64 TotalCommandBufferSizeInBytes = World::MeshLimit * sizeof(CommandSignatureParams);
-	static constexpr UINT64 CommandBufferCounterOffset	  = AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
+	static constexpr u64 TotalCommandBufferSizeInBytes = World::MeshLimit * sizeof(CommandSignatureParams);
+	static constexpr u64 CommandBufferCounterOffset	   = AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 
 	D3D12CommandSignature CommandSignature;
 
@@ -55,7 +55,7 @@ private:
 	D3D12Buffer		Meshes;
 	Hlsl::Mesh*		pMeshes = nullptr;
 
-	UINT NumMaterials = 0, NumLights = 0, NumMeshes = 0;
+	u32 NumMaterials = 0, NumLights = 0, NumMeshes = 0;
 
 	int ViewMode = 0;
 };

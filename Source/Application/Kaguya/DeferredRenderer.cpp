@@ -1,5 +1,4 @@
 #include "DeferredRenderer.h"
-#include "DeferredRenderer.h"
 
 #include "RendererRegistry.h"
 
@@ -32,7 +31,7 @@ void DeferredRenderer::Initialize()
 		Registry.GetRootSignature(RootSignatures::Meshlet)->GetApiHandle());
 #else
 	CommandSignature = D3D12CommandSignature(
-		RenderCore::Device,
+		Device,
 		Builder,
 		Registry.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle());
 #endif
@@ -78,7 +77,6 @@ void DeferredRenderer::Initialize()
 
 void DeferredRenderer::Destroy()
 {
-	//DEBUG_RENDERER_SHUTDOWN();
 }
 
 void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
@@ -130,8 +128,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				HlslMeshes[NumMeshes] = Mesh;
 
 				StaticMeshes.push_back(&StaticMesh);
-
-				// DEBUG_RENDERER_ADD_BOUNDINGBOX(Core.Transform, Mesh.BoundingBox, Vector3f(1.0f));
 
 				++NumMaterials;
 				++NumMeshes;
@@ -285,8 +281,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						 0,
 						 IndirectCommandBuffer.GetResource(),
 						 CommandBufferCounterOffset);
-
-					 // DEBUG_RENDERER_RENDER(g_GlobalConstants.Camera.ViewProjection, Context);
 				 });
 #else
 	Graph.AddRenderPass("GBuffer")
@@ -318,8 +312,6 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 						 0,
 						 IndirectCommandBuffer.GetResource(),
 						 CommandBufferCounterOffset);
-
-					 // DEBUG_RENDERER_RENDER(g_GlobalConstants.Camera.ViewProjection, Context);
 				 });
 #endif //
 

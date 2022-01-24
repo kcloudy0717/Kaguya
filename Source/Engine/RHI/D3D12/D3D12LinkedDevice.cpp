@@ -134,6 +134,58 @@ D3D12CommandContext& D3D12LinkedDevice::GetCopyContext1()
 	return *CopyContext1;
 }
 
+D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const
+{
+	u64 Hash = Hash::Hash64(&Desc, sizeof(Desc));
+	{
+		RwLockReadGuard Guard(ResourceAllocationInfoTable.Mutex);
+		if (auto Iter = ResourceAllocationInfoTable.Table.find(Hash);
+			Iter != ResourceAllocationInfoTable.Table.end())
+		{
+			return Iter->second;
+		}
+	}
+
+	RwLockWriteGuard Guard(ResourceAllocationInfoTable.Mutex);
+
+	D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(0, 1, &Desc);
+	ResourceAllocationInfoTable.Table.insert(std::make_pair(Hash, ResourceAllocationInfo));
+
+	return ResourceAllocationInfo;
+}
+
+bool D3D12LinkedDevice::ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& Desc) const
+{
+	// 4KB alignment is only available for read only textures
+	if (!(Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET ||
+		  Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ||
+		  Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) &&
+		Desc.SampleDesc.Count == 1)
+	{
+		// Since we are using small resources we can take advantage of 4KB
+		// resource alignments. As long as the most detailed mip can fit in an
+		// allocation less than 64KB, 4KB alignments can be used.
+		//
+		// When dealing with MSAA textures the rules are similar, but the minimum
+		// alignment is 64KB for a texture whose most detailed mip can fit in an
+		// allocation less than 4MB.
+		Desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+
+		D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(Desc);
+		if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		{
+			// If the alignment requested is not granted, then let D3D tell us
+			// the alignment that needs to be used for these resources.
+			Desc.Alignment = 0;
+			return false;
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
 void D3D12LinkedDevice::WaitIdle()
 {
 	GraphicsQueue.WaitIdle();

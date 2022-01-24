@@ -104,6 +104,14 @@ void D3D12CommandContext::FlushResourceBarriers()
 	CommandListHandle.FlushResourceBarriers();
 }
 
+bool D3D12CommandContext::AssertResourceState(
+	D3D12Resource*		  Resource,
+	D3D12_RESOURCE_STATES State,
+	UINT				  Subresource)
+{
+	return CommandListHandle.AssertResourceState(Resource, State, Subresource);
+}
+
 void D3D12CommandContext::SetPipelineState(
 	D3D12PipelineState* PipelineState)
 {
@@ -135,20 +143,7 @@ void D3D12CommandContext::SetGraphicsRootSignature(
 
 		CommandListHandle->SetGraphicsRootSignature(RootSignature->GetApiHandle());
 
-		UINT NumParameters		= RootSignature->GetNumParameters();
-		UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
-		auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
-
-		CommandListHandle->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
-			ResourceDescriptor);
-		CommandListHandle->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
-			ResourceDescriptor);
-		CommandListHandle->SetGraphicsRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
-			SamplerDescriptor);
+		SetDynamicResourceDescriptorTables<RHI_PIPELINE_STATE_TYPE::Graphics>(RootSignature);
 	}
 }
 
@@ -161,21 +156,41 @@ void D3D12CommandContext::SetComputeRootSignature(
 
 		CommandListHandle->SetComputeRootSignature(RootSignature->GetApiHandle());
 
-		UINT NumParameters		= RootSignature->GetNumParameters();
-		UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
-		auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
-
-		CommandListHandle->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset,
-			ResourceDescriptor);
-		CommandListHandle->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset,
-			ResourceDescriptor);
-		CommandListHandle->SetComputeRootDescriptorTable(
-			RootParameters::DescriptorTable::SamplerDescriptorTable + Offset,
-			SamplerDescriptor);
+		SetDynamicResourceDescriptorTables<RHI_PIPELINE_STATE_TYPE::Compute>(RootSignature);
 	}
+}
+
+void D3D12CommandContext::ClearRenderTarget(
+	D3D12RenderTarget* RenderTarget)
+{
+	UINT						 NumRenderTargets  = RenderTarget->GetNumRenderTargets();
+	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->GetRenderTargetViewPtr();
+	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = RenderTarget->GetDepthStencilViewPtr();
+	for (UINT i = 0; i < NumRenderTargets; ++i)
+	{
+		D3D12_CLEAR_VALUE ClearValue = RenderTarget->GetClearValueAt(i);
+		CommandListHandle->ClearRenderTargetView(RenderTargetViews[i], ClearValue.Color, 0, nullptr);
+	}
+	if (DepthStencilView)
+	{
+		D3D12_CLEAR_VALUE ClearValue = RenderTarget->GetDepthStencilClearValue();
+		FLOAT			  Depth		 = ClearValue.DepthStencil.Depth;
+		UINT8			  Stencil	 = ClearValue.DepthStencil.Stencil;
+
+		CommandListHandle->ClearDepthStencilView(*DepthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, Depth, Stencil, 0, nullptr);
+	}
+}
+
+void D3D12CommandContext::SetRenderTarget(
+	D3D12RenderTarget* RenderTarget)
+{
+	Cache.Graphics.RenderTarget = RenderTarget;
+
+	UINT						 NumRenderTargets  = RenderTarget->GetNumRenderTargets();
+	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->GetRenderTargetViewPtr();
+	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = RenderTarget->GetDepthStencilViewPtr();
+
+	CommandListHandle->OMSetRenderTargets(NumRenderTargets, RenderTargetViews, TRUE, DepthStencilView);
 }
 
 void D3D12CommandContext::SetViewport(
@@ -256,40 +271,6 @@ void D3D12CommandContext::SetComputeConstantBuffer(
 	CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
 }
 
-void D3D12CommandContext::ClearRenderTarget(
-	D3D12RenderTarget* RenderTarget)
-{
-	UINT						 NumRenderTargets  = RenderTarget->GetNumRenderTargets();
-	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->GetRenderTargetViewPtr();
-	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = RenderTarget->GetDepthStencilViewPtr();
-	for (UINT i = 0; i < NumRenderTargets; ++i)
-	{
-		D3D12_CLEAR_VALUE ClearValue = RenderTarget->GetClearValueAt(i);
-		CommandListHandle->ClearRenderTargetView(RenderTargetViews[i], ClearValue.Color, 0, nullptr);
-	}
-	if (DepthStencilView)
-	{
-		D3D12_CLEAR_VALUE			ClearValue = RenderTarget->GetDepthStencilClearValue();
-		constexpr D3D12_CLEAR_FLAGS ClearFlags = D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL;
-		FLOAT						Depth	   = ClearValue.DepthStencil.Depth;
-		UINT8						Stencil	   = ClearValue.DepthStencil.Stencil;
-
-		CommandListHandle->ClearDepthStencilView(*DepthStencilView, ClearFlags, Depth, Stencil, 0, nullptr);
-	}
-}
-
-void D3D12CommandContext::SetRenderTarget(
-	D3D12RenderTarget* RenderTarget)
-{
-	Cache.Graphics.RenderTarget = RenderTarget;
-
-	UINT						 NumRenderTargets  = RenderTarget->GetNumRenderTargets();
-	D3D12_CPU_DESCRIPTOR_HANDLE* RenderTargetViews = RenderTarget->GetRenderTargetViewPtr();
-	D3D12_CPU_DESCRIPTOR_HANDLE* DepthStencilView  = RenderTarget->GetDepthStencilViewPtr();
-
-	CommandListHandle->OMSetRenderTargets(NumRenderTargets, RenderTargetViews, TRUE, DepthStencilView);
-}
-
 void D3D12CommandContext::DrawInstanced(
 	UINT VertexCount,
 	UINT InstanceCount,
@@ -308,7 +289,7 @@ void D3D12CommandContext::DrawIndexedInstanced(
 	UINT IndexCount,
 	UINT InstanceCount,
 	UINT StartIndexLocation,
-	UINT BaseVertexLocation,
+	INT	 BaseVertexLocation,
 	UINT StartInstanceLocation)
 {
 	CommandListHandle.FlushResourceBarriers();
@@ -366,4 +347,20 @@ void D3D12CommandContext::ResetCounter(
 		Allocation.Resource,
 		Allocation.Offset,
 		sizeof(UINT));
+}
+
+template<RHI_PIPELINE_STATE_TYPE PsoType>
+void D3D12CommandContext::SetDynamicResourceDescriptorTables(D3D12RootSignature* RootSignature)
+{
+	ID3D12GraphicsCommandList* CommandList = CommandListHandle.GetGraphicsCommandList();
+
+	// Bindless descriptors
+	UINT NumParameters		= RootSignature->GetNumParameters();
+	UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+
+	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset, ResourceDescriptor);
+	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset, ResourceDescriptor);
+	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::SamplerDescriptorTable + Offset, SamplerDescriptor);
 }

@@ -218,12 +218,12 @@ struct D3D12DescriptorTraits
 template<>
 struct D3D12DescriptorTraits<D3D12_SHADER_RESOURCE_VIEW_DESC>
 {
-	static decltype(&ID3D12Device::CreateShaderResourceView) Create() { return &ID3D12Device::CreateShaderResourceView; }
+	static auto Create() { return &ID3D12Device::CreateShaderResourceView; }
 };
 template<>
 struct D3D12DescriptorTraits<D3D12_UNORDERED_ACCESS_VIEW_DESC>
 {
-	static decltype(&ID3D12Device::CreateUnorderedAccessView) Create() { return &ID3D12Device::CreateUnorderedAccessView; }
+	static auto Create() { return &ID3D12Device::CreateUnorderedAccessView; }
 };
 
 template<typename ViewDesc>

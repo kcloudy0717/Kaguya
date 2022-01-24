@@ -16,6 +16,12 @@ enum class RgResourceType : u64
 	RaytracingPipelineState,
 };
 
+enum RgResourceFlags : u64
+{
+	RG_RESOURCE_FLAG_NONE,
+	RG_RESOURCE_FLAG_IMPORTED
+};
+
 // A virtual resource handle, the underlying realization of the
 // resource type is done in RenderGraphRegistry, refer to RenderGraph/FrameGraph in Halcyon/Frostbite
 struct RgResourceHandle
@@ -23,19 +29,22 @@ struct RgResourceHandle
 	auto operator<=>(const RgResourceHandle&) const = default;
 
 	[[nodiscard]] bool IsValid() const noexcept { return Type != RgResourceType::Unknown && Id != UINT_MAX; }
+	[[nodiscard]] bool IsImported() const noexcept { return Flags & RG_RESOURCE_FLAG_IMPORTED; }
 
 	void Invalidate()
 	{
 		Type	= RgResourceType::Unknown;
 		State	= 0;
+		Flags	= RG_RESOURCE_FLAG_NONE;
 		Version = 0;
 		Id		= UINT_MAX;
 	}
 
-	RgResourceType Type	   : 16; // 16 bit to represent type, might remove some bits from this and give it to version
-	u64			   State   : 1;	 // 1 bit to represent state of the handle, true = ready to use, vice versa
-	u64			   Version : 15; // 15 bits to represent version should be more than enough, we can always just increase bit used if is not enough
-	u64			   Id	   : 32; // 32 bit unsigned int
+	RgResourceType	Type	: 16; // 16 bit to represent type, might remove some bits from this and give it to version
+	u64				State	: 1;  // 1 bit to represent state of the handle, true = ready to use, vice versa
+	RgResourceFlags Flags	: 1;
+	u64				Version : 14; // 15 bits to represent version should be more than enough, we can always just increase bit used if is not enough
+	u64				Id		: 32; // 32 bit unsigned int
 };
 
 static_assert(sizeof(RgResourceHandle) == sizeof(u64));

@@ -4,11 +4,6 @@
 #include "Window.h"
 #include "InputManager.h"
 
-struct ApplicationOptions
-{
-	std::filesystem::path Icon;
-};
-
 class IApplicationMessageHandler;
 
 class Application
@@ -16,7 +11,7 @@ class Application
 public:
 	using MessageCallback = void (*)(void*, HWND, UINT, WPARAM, LPARAM);
 
-	explicit Application(const ApplicationOptions& Options);
+	Application();
 	virtual ~Application();
 
 	void Run();
@@ -58,14 +53,11 @@ private:
 			}
 		}
 		HRESULT Result = S_FALSE;
-	};
+	} PlatformWindows;
 
 	HINSTANCE HInstance;
 
 protected:
-	wil::unique_hicon	HIcon;
-	wil::unique_hcursor HCursor;
-
 	bool Minimized = false;
 	bool Maximized = false;
 	bool Resizing  = false;

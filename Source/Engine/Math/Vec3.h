@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <algorithm>
+#include <compare>
 #include "Intrinsics.h"
 
 namespace xvm
@@ -244,6 +245,8 @@ struct Vec3
 	{
 	}
 
+	auto operator<=>(const Vec3&) const = default;
+
 	T*		 data() noexcept { return reinterpret_cast<T*>(this); }
 	const T* data() const noexcept { return reinterpret_cast<const T*>(this); }
 
@@ -367,6 +370,30 @@ template<typename T>
 {
 	return dot(n, v) < 0.0f ? -n : n;
 }
+
+namespace std
+{
+	// https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
+	template<typename T>
+	void hash_combine(std::size_t& seed, const T& v) noexcept
+	{
+		std::hash<T> hasher;
+		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+	}
+
+	template<typename T>
+	struct hash<Vec3<T>>
+	{
+		size_t operator()(const Vec3<T>& v) const noexcept
+		{
+			std::size_t seed = 0;
+			hash_combine<T>(seed, v.x);
+			hash_combine<T>(seed, v.y);
+			hash_combine<T>(seed, v.z);
+			return seed;
+		}
+	};
+} // namespace std
 
 using Vec3i = Vec3<int>;
 using Vec3f = Vec3<float>;

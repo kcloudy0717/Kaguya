@@ -44,6 +44,11 @@ public:
 
 	void FlushResourceBarriers();
 
+	bool AssertResourceState(
+		D3D12Resource*		  Resource,
+		D3D12_RESOURCE_STATES State,
+		UINT				  Subresource);
+
 	void SetPipelineState(
 		D3D12PipelineState* PipelineState);
 
@@ -113,7 +118,7 @@ public:
 		UINT IndexCount,
 		UINT InstanceCount,
 		UINT StartIndexLocation,
-		UINT BaseVertexLocation,
+		INT	 BaseVertexLocation,
 		UINT StartInstanceLocation);
 
 	void Dispatch(
@@ -171,6 +176,24 @@ private:
 		return (T)((Value + Alignment - 1) / Alignment);
 	}
 
+	template<RHI_PIPELINE_STATE_TYPE PsoType>
+	struct D3D12DescriptorTableTraits
+	{
+	};
+	template<>
+	struct D3D12DescriptorTableTraits<RHI_PIPELINE_STATE_TYPE::Graphics>
+	{
+		static auto Bind() { return &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable; }
+	};
+	template<>
+	struct D3D12DescriptorTableTraits<RHI_PIPELINE_STATE_TYPE::Compute>
+	{
+		static auto Bind() { return &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable; }
+	};
+
+	template<RHI_PIPELINE_STATE_TYPE PsoType>
+	void SetDynamicResourceDescriptorTables(D3D12RootSignature* RootSignature);
+
 private:
 	RHID3D12CommandQueueType	Type;
 	D3D12CommandListHandle		CommandListHandle;
@@ -207,7 +230,7 @@ private:
 		{
 			D3D12RaytracingPipelineState* RaytracingPipelineState;
 		} Raytracing;
-	} Cache;
+	} Cache = {};
 };
 
 class D3D12ScopedEventObject
