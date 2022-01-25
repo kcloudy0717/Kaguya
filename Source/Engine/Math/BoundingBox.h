@@ -116,7 +116,7 @@ inline bool BoundingBox::Intersects(const BoundingBox& Other) const noexcept
 inline PlaneIntersection BoundingBox::Intersects(const Plane& Plane) const noexcept
 {
 	// Compute signed distance from plane to box center
-	float sd = dot(Center, Plane.Normal) - Plane.Offset;
+	float sd = Dot(Center, Plane.Normal) - Plane.Offset;
 
 	// Compute the projection interval radius of b onto L(t) = b.Center + t * p.Normal
 	// Projection radii r_i of the 8 bounding box vertices
@@ -128,7 +128,7 @@ inline PlaneIntersection BoundingBox::Intersects(const Plane& Plane) const noexc
 	// r = e0*|dot(u0, n)| + e1*|dot(u1, n)| + e2*|dot(u2, n)|
 	// When the separating axis vector Normal is not a unit vector, we need to divide the radii by the length(Normal)
 	// u0,u1,u2 are the local axes of the box, which is = [(1,0,0), (0,1,0), (0,0,1)] respectively for axis aligned bb
-	float r = dot(Extents, abs(Plane.Normal));
+	float r = Dot(Extents, Abs(Plane.Normal));
 
 	if (sd > r)
 	{

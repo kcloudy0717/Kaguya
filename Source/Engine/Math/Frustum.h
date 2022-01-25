@@ -63,12 +63,12 @@ inline Frustum::Frustum(const DirectX::XMFLOAT4X4& Matrix) noexcept
 	Far.Normal.z = Matrix._34 - Matrix._33;
 	Far.Offset	 = -(Matrix._44 - Matrix._43);
 
-	Left   = normalize(Left);
-	Right  = normalize(Right);
-	Bottom = normalize(Bottom);
-	Top	   = normalize(Top);
-	Near   = normalize(Near);
-	Far	   = normalize(Far);
+	Left   = Normalize(Left);
+	Right  = Normalize(Right);
+	Bottom = Normalize(Bottom);
+	Top	   = Normalize(Top);
+	Near   = Normalize(Near);
+	Far	   = Normalize(Far);
 }
 
 inline ContainmentType Frustum::Contains(const BoundingBox& Box) const noexcept

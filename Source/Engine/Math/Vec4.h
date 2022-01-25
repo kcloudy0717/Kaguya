@@ -58,21 +58,21 @@ namespace xvm
 	Vec4& XVM_CALLCONV operator*=(Vec4& v1, Vec4 v2);
 	Vec4& XVM_CALLCONV operator/=(Vec4& v1, Vec4 v2);
 
-	bool XVM_CALLCONV all(Vec4 v);
-	bool XVM_CALLCONV any(Vec4 v);
-	bool XVM_CALLCONV isfinite(Vec4 v);
-	bool XVM_CALLCONV isinf(Vec4 v);
-	bool XVM_CALLCONV isnan(Vec4 v);
+	bool XVM_CALLCONV All(Vec4 v);
+	bool XVM_CALLCONV Any(Vec4 v);
+	bool XVM_CALLCONV IsFinite(Vec4 v);
+	bool XVM_CALLCONV IsInfinite(Vec4 v);
+	bool XVM_CALLCONV IsNan(Vec4 v);
 
-	Vec4 XVM_CALLCONV abs(Vec4 v);
-	Vec4 XVM_CALLCONV clamp(Vec4 v, Vec4 min, Vec4 max);
-	Vec4 XVM_CALLCONV dot(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV length(Vec4 v);
-	Vec4 XVM_CALLCONV lerp(Vec4 v1, Vec4 v2, Vec4 s);
-	Vec4 XVM_CALLCONV max(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV min(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV normalize(Vec4 v);
-	Vec4 XVM_CALLCONV sqrt(Vec4 v);
+	Vec4 XVM_CALLCONV Abs(Vec4 v);
+	Vec4 XVM_CALLCONV Clamp(Vec4 v, Vec4 min, Vec4 max);
+	Vec4 XVM_CALLCONV Dot(Vec4 v1, Vec4 v2);
+	Vec4 XVM_CALLCONV Length(Vec4 v);
+	Vec4 XVM_CALLCONV Lerp(Vec4 v1, Vec4 v2, Vec4 s);
+	Vec4 XVM_CALLCONV Max(Vec4 v1, Vec4 v2);
+	Vec4 XVM_CALLCONV Min(Vec4 v1, Vec4 v2);
+	Vec4 XVM_CALLCONV Normalize(Vec4 v);
+	Vec4 XVM_CALLCONV Sqrt(Vec4 v);
 
 	XVM_INLINE Vec4 XVM_CALLCONV operator-(Vec4 v)
 	{
@@ -123,21 +123,21 @@ namespace xvm
 		return v1;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV all(Vec4 v)
+	XVM_INLINE bool XVM_CALLCONV All(Vec4 v)
 	{
 		__m128 cmp	= _mm_cmpneq_ps(v.vec, _mm_setzero_ps()); // v != 0
 		int	   mask = _mm_movemask_ps(cmp) & 0x0000000F;	  // If all is non-zero, the mask is exactly 0x0000000F
 		return mask == 0x0000000F;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV any(Vec4 v)
+	XVM_INLINE bool XVM_CALLCONV Any(Vec4 v)
 	{
 		__m128 cmp	= _mm_cmpneq_ps(v.vec, _mm_setzero_ps()); // v != 0
 		int	   mask = _mm_movemask_ps(cmp) & 0x0000000F;	  // If x or y or z or w are non-zero, the mask is non-zero
 		return mask != 0;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV isfinite(Vec4 v)
+	XVM_INLINE bool XVM_CALLCONV IsFinite(Vec4 v)
 	{
 		__m128 cmp = _mm_and_ps(v.vec, xvm::XVMMaskAbsoluteValue); // Mask off the sign bit
 		cmp		   = _mm_cmpneq_ps(cmp, xvm::XVMInfinity);		   // v != infinity
@@ -145,7 +145,7 @@ namespace xvm
 		return mask == 0x0000000F;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV isinf(Vec4 v)
+	XVM_INLINE bool XVM_CALLCONV IsInfinite(Vec4 v)
 	{
 		__m128 cmp = _mm_and_ps(v.vec, xvm::XVMMaskAbsoluteValue); // Mask off the sign bit then compare to infinity
 		cmp		   = _mm_cmpeq_ps(cmp, xvm::XVMInfinity);		   // v == infinity
@@ -153,27 +153,27 @@ namespace xvm
 		return mask != 0;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV isnan(Vec4 v)
+	XVM_INLINE bool XVM_CALLCONV IsNan(Vec4 v)
 	{
 		__m128 dst	= _mm_cmpneq_ps(v.vec, v.vec);		 // v != v
 		int	   mask = _mm_movemask_ps(dst) & 0x0000000F; // If x or y or z or w are NaN, the mask is non-zero
 		return mask != 0;
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV abs(Vec4 v)
+	XVM_INLINE Vec4 XVM_CALLCONV Abs(Vec4 v)
 	{
 		// & the sign bit
 		return _mm_and_ps(xvm::XVMMaskAbsoluteValue, v.vec);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV clamp(Vec4 v, Vec4 min, Vec4 max)
+	XVM_INLINE Vec4 XVM_CALLCONV Clamp(Vec4 v, Vec4 min, Vec4 max)
 	{
 		__m128 xmm0 = _mm_min_ps(v.vec, max.vec);
 		__m128 xmm1 = _mm_max_ps(xmm0, min.vec);
 		return xmm1;
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV dot(Vec4 v1, Vec4 v2)
+	XVM_INLINE Vec4 XVM_CALLCONV Dot(Vec4 v1, Vec4 v2)
 	{
 		__m128 dot	 = _mm_mul_ps(v1.vec, v2.vec);
 		__m128 shuff = XVM_SWIZZLE_PS(dot, _MM_SHUFFLE(2, 3, 0, 1)); // { y, x, w, z }
@@ -183,13 +183,13 @@ namespace xvm
 		return XVM_SWIZZLE_PS(dot, _MM_SHUFFLE(0, 0, 0, 0));		 // splat fp0
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV length(Vec4 v)
+	XVM_INLINE Vec4 XVM_CALLCONV Length(Vec4 v)
 	{
-		Vec4 v2 = dot(v, v);
+		Vec4 v2 = Dot(v, v);
 		return _mm_sqrt_ps(v2.vec);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV lerp(Vec4 v1, Vec4 v2, Vec4 s)
+	XVM_INLINE Vec4 XVM_CALLCONV Lerp(Vec4 v1, Vec4 v2, Vec4 s)
 	{
 		// x + s(y-x)
 		__m128 sub = _mm_sub_ps(v2.vec, v1.vec);
@@ -197,23 +197,23 @@ namespace xvm
 		return _mm_add_ps(v1.vec, mul);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV max(Vec4 v1, Vec4 v2)
+	XVM_INLINE Vec4 XVM_CALLCONV Max(Vec4 v1, Vec4 v2)
 	{
 		return _mm_max_ps(v1.vec, v2.vec);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV min(Vec4 v1, Vec4 v2)
+	XVM_INLINE Vec4 XVM_CALLCONV Min(Vec4 v1, Vec4 v2)
 	{
 		return _mm_min_ps(v1.vec, v2.vec);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV normalize(Vec4 v)
+	XVM_INLINE Vec4 XVM_CALLCONV Normalize(Vec4 v)
 	{
-		Vec4 l = length(v);
+		Vec4 l = Length(v);
 		return _mm_div_ps(v.vec, l.vec);
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV sqrt(Vec4 v)
+	XVM_INLINE Vec4 XVM_CALLCONV Sqrt(Vec4 v)
 	{
 		return _mm_sqrt_ps(v.vec);
 	}
