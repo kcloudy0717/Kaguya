@@ -52,7 +52,7 @@ D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
 {
 	UINT			   NumCommandLists		 = 0;
 	UINT			   NumBarrierCommandList = 0;
-	ID3D12CommandList* CommandLists[64]		 = {};
+	ID3D12CommandList* CommandLists[32]		 = {};
 
 	// Resolve resource barriers
 	for (UINT i = 0; i < NumCommandListHandles; ++i)
@@ -75,9 +75,7 @@ D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
 	// Discard command allocator used exclusively to resolve resource barriers
 	if (NumBarrierCommandList > 0)
 	{
-		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(
-			std::exchange(ResourceBarrierCommandAllocator, {}),
-			SyncHandle);
+		ResourceBarrierCommandAllocatorPool.DiscardCommandAllocator(std::exchange(ResourceBarrierCommandAllocator, {}), SyncHandle);
 	}
 
 	if (WaitForCompletion)
@@ -93,14 +91,13 @@ ARC<ID3D12CommandQueue> D3D12CommandQueue::InitializeCommandQueue()
 {
 	constexpr UINT			 NodeMask = 0;
 	ARC<ID3D12CommandQueue>	 CommandQueue;
-	D3D12_COMMAND_QUEUE_DESC Desc = {};
-	Desc.Type					  = CommandListType;
-	Desc.Priority				  = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-	Desc.Flags					  = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	Desc.NodeMask				  = NodeMask;
-	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(
-		&Desc,
-		IID_PPV_ARGS(&CommandQueue)));
+	D3D12_COMMAND_QUEUE_DESC Desc = {
+		.Type	  = CommandListType,
+		.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+		.Flags	  = D3D12_COMMAND_QUEUE_FLAG_NONE,
+		.NodeMask = NodeMask
+	};
+	VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
 	return CommandQueue;
 }
 
@@ -124,9 +121,7 @@ bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle
 		}
 
 		ResourceBarrierCommandListHandle.Open(ResourceBarrierCommandAllocator);
-		ResourceBarrierCommandListHandle->ResourceBarrier(
-			static_cast<UINT>(ResourceBarriers.size()),
-			ResourceBarriers.data());
+		ResourceBarrierCommandListHandle->ResourceBarrier(static_cast<UINT>(ResourceBarriers.size()), ResourceBarriers.data());
 		ResourceBarrierCommandListHandle.Close();
 	}
 

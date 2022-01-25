@@ -178,12 +178,16 @@ public:
 		return *this;
 	}
 
-	bool operator==(const CViewSubresourceIterator& other) const
+	bool operator==(const CViewSubresourceIterator& CViewSubresourceIterator) const
 	{
-		return &other.ViewSubresourceSubset == &ViewSubresourceSubset && other.CurrentArraySlice == CurrentArraySlice &&
-			   other.CurrentPlaneSlice == CurrentPlaneSlice;
+		return &CViewSubresourceIterator.ViewSubresourceSubset == &ViewSubresourceSubset &&
+			   CViewSubresourceIterator.CurrentArraySlice == CurrentArraySlice &&
+			   CViewSubresourceIterator.CurrentPlaneSlice == CurrentPlaneSlice;
 	}
-	bool operator!=(const CViewSubresourceIterator& other) const { return !(other == *this); }
+	bool operator!=(const CViewSubresourceIterator& CViewSubresourceIterator) const
+	{
+		return !(CViewSubresourceIterator == *this);
+	}
 
 	[[nodiscard]] UINT StartSubresource() const
 	{

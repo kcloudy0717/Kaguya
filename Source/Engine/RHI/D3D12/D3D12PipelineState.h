@@ -419,7 +419,7 @@ public:
 	D3D12_STATE_OBJECT_DESC Build();
 
 private:
-	std::vector<std::wstring_view> BuildShaderExportList();
+	std::vector<std::wstring_view> BuildShaderExportList() const;
 
 private:
 	CD3DX12_STATE_OBJECT_DESC Desc;

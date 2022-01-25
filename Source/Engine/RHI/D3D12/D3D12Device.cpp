@@ -144,8 +144,7 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 
 			if (SUCCEEDED(Dred->GetAutoBreadcrumbsOutput(&AutoBreadcrumbsOutput)))
 			{
-				for (const D3D12_AUTO_BREADCRUMB_NODE* Node = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode; Node;
-					 Node									= Node->pNext)
+				for (const D3D12_AUTO_BREADCRUMB_NODE* Node = AutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode; Node; Node = Node->pNext)
 				{
 					INT32 LastCompletedOp = static_cast<INT32>(*Node->pLastBreadcrumbValue);
 
@@ -165,13 +164,7 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 					for (INT32 Op = FirstOp; Op <= LastOp; ++Op)
 					{
 						D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
-						LUNA_LOG(
-							D3D12RHI,
-							Error,
-							LR"(    Op: {0:d}, {1} {2})",
-							Op,
-							GetAutoBreadcrumbOpString(BreadcrumbOp),
-							Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
+						LUNA_LOG(D3D12RHI, Error, LR"(    Op: {0:d}, {1} {2})", Op, GetAutoBreadcrumbOpString(BreadcrumbOp), Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
 					}
 				}
 			}
@@ -181,27 +174,15 @@ void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 				LUNA_LOG(D3D12RHI, Error, "[DRED] PageFault at VA GPUAddress: {0:x};", PageFaultOutput.PageFaultVA);
 
 				LUNA_LOG(D3D12RHI, Error, "[DRED] Active objects with VA ranges that match the faulting VA:");
-				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node;
-					 Node									= Node->pNext)
+				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node; Node = Node->pNext)
 				{
-					LUNA_LOG(
-						D3D12RHI,
-						Error,
-						L"    Name: {} (Type: {})",
-						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
-						GetDredAllocationTypeString(Node->AllocationType));
+					LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>", GetDredAllocationTypeString(Node->AllocationType));
 				}
 
 				LUNA_LOG(D3D12RHI, Error, "[DRED] Recent freed objects with VA ranges that match the faulting VA:");
-				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadRecentFreedAllocationNode; Node;
-					 Node									= Node->pNext)
+				for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadRecentFreedAllocationNode; Node; Node = Node->pNext)
 				{
-					LUNA_LOG(
-						D3D12RHI,
-						Error,
-						L"    Name: {} (Type: {})",
-						Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>",
-						GetDredAllocationTypeString(Node->AllocationType));
+					LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>", GetDredAllocationTypeString(Node->AllocationType));
 				}
 			}
 		}

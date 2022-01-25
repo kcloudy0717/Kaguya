@@ -360,7 +360,7 @@ void D3D12CommandContext::SetDynamicResourceDescriptorTables(D3D12RootSignature*
 	auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
 	auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
 
-	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset, ResourceDescriptor);
-	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset, ResourceDescriptor);
-	(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::SamplerDescriptorTable + Offset, SamplerDescriptor);
+	(CommandList->*D3D12DynamicResourceTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset, ResourceDescriptor);
+	(CommandList->*D3D12DynamicResourceTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset, ResourceDescriptor);
+	(CommandList->*D3D12DynamicResourceTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::SamplerDescriptorTable + Offset, SamplerDescriptor);
 }

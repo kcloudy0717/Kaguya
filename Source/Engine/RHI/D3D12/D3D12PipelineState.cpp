@@ -97,28 +97,29 @@ void D3D12PipelineState::CompileGraphicsPipeline(
 	const std::wstring&					Name,
 	const D3D12PipelineParserCallbacks& Parser)
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {};
-	Desc.pRootSignature						= Parser.RootSignature->GetApiHandle();
-	Desc.VS									= RHITranslateD3D12(Parser.VS);
-	Desc.PS									= RHITranslateD3D12(Parser.PS);
-	Desc.DS									= RHITranslateD3D12(Parser.DS);
-	Desc.HS									= RHITranslateD3D12(Parser.HS);
-	Desc.GS									= RHITranslateD3D12(Parser.GS);
-	Desc.StreamOutput						= D3D12_STREAM_OUTPUT_DESC();
-	Desc.BlendState							= RHITranslateD3D12(Parser.BlendState);
-	Desc.SampleMask							= DefaultSampleMask();
-	Desc.RasterizerState					= RHITranslateD3D12(Parser.RasterizerState);
-	Desc.DepthStencilState					= RHITranslateD3D12(Parser.DepthStencilState);
-	Desc.InputLayout						= { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) };
-	Desc.IBStripCutValue					= D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-	Desc.PrimitiveTopologyType				= RHITranslateD3D12(Parser.PrimitiveTopology);
-	Desc.NumRenderTargets					= Parser.RenderTargetState.NumRenderTargets;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
+		.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
+		.VS					   = RHITranslateD3D12(Parser.VS),
+		.PS					   = RHITranslateD3D12(Parser.PS),
+		.DS					   = RHITranslateD3D12(Parser.DS),
+		.HS					   = RHITranslateD3D12(Parser.HS),
+		.GS					   = RHITranslateD3D12(Parser.GS),
+		.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC(),
+		.BlendState			   = RHITranslateD3D12(Parser.BlendState),
+		.SampleMask			   = DefaultSampleMask(),
+		.RasterizerState	   = RHITranslateD3D12(Parser.RasterizerState),
+		.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
+		.InputLayout		   = { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) },
+		.IBStripCutValue	   = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
+		.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
+		.DSVFormat			   = Parser.RenderTargetState.DSFormat,
+		.SampleDesc			   = DefaultSampleDesc(),
+		.NodeMask			   = 0,
+		.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
+		.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
+	};
 	memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
-	Desc.DSVFormat	= Parser.RenderTargetState.DSFormat;
-	Desc.SampleDesc = DefaultSampleDesc();
-	Desc.NodeMask	= 0;
-	Desc.CachedPSO	= D3D12_CACHED_PIPELINE_STATE();
-	Desc.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE;
 
 	if (GetParentDevice()->GetPipelineLibrary())
 	{
@@ -147,22 +148,23 @@ void D3D12PipelineState::CompileMeshShaderPipeline(
 {
 	// TODO: Amplification Shader
 
-	D3DX12_MESH_SHADER_PIPELINE_STATE_DESC Desc = {};
-	Desc.pRootSignature							= Parser.RootSignature->GetApiHandle();
-	Desc.MS										= RHITranslateD3D12(Parser.MS);
-	Desc.PS										= RHITranslateD3D12(Parser.PS);
-	Desc.BlendState								= RHITranslateD3D12(Parser.BlendState);
-	Desc.SampleMask								= DefaultSampleMask();
-	Desc.RasterizerState						= RHITranslateD3D12(Parser.RasterizerState);
-	Desc.DepthStencilState						= RHITranslateD3D12(Parser.DepthStencilState);
-	Desc.PrimitiveTopologyType					= RHITranslateD3D12(Parser.PrimitiveTopology);
-	Desc.NumRenderTargets						= Parser.RenderTargetState.NumRenderTargets;
+	D3DX12_MESH_SHADER_PIPELINE_STATE_DESC Desc = {
+		.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
+		.MS					   = RHITranslateD3D12(Parser.MS),
+		.PS					   = RHITranslateD3D12(Parser.PS),
+		.BlendState			   = RHITranslateD3D12(Parser.BlendState),
+		.SampleMask			   = DefaultSampleMask(),
+		.RasterizerState	   = RHITranslateD3D12(Parser.RasterizerState),
+		.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
+		.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
+		.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
+		.DSVFormat			   = Parser.RenderTargetState.DSFormat,
+		.SampleDesc			   = DefaultSampleDesc(),
+		.NodeMask			   = 0,
+		.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
+		.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
+	};
 	memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
-	Desc.DSVFormat	= Parser.RenderTargetState.DSFormat;
-	Desc.SampleDesc = DefaultSampleDesc();
-	Desc.NodeMask	= 0;
-	Desc.CachedPSO	= D3D12_CACHED_PIPELINE_STATE();
-	Desc.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE;
 
 	CD3DX12_PIPELINE_STATE_STREAM2	 Stream(Desc);
 	D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {};
@@ -175,18 +177,13 @@ void D3D12PipelineState::CompileMeshShaderPipeline(
 		HRESULT					Result			 = PipelineLibrary1->LoadPipeline(Name.data(), &StreamDesc, IID_PPV_ARGS(&PipelineState));
 		if (Result == E_INVALIDARG)
 		{
-			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(
-				&StreamDesc,
-				IID_PPV_ARGS(&PipelineState)));
-
+			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
 			StorePipeline(Name, PipelineLibrary1);
 		}
 	}
 	else
 	{
-		VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(
-			&StreamDesc,
-			IID_PPV_ARGS(&PipelineState)));
+		VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
 	}
 }
 
@@ -207,18 +204,13 @@ void D3D12PipelineState::CompileComputePipline(
 		HRESULT					Result			 = PipelineLibrary1->LoadComputePipeline(Name.data(), &Desc, IID_PPV_ARGS(&PipelineState));
 		if (Result == E_INVALIDARG)
 		{
-			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(
-				&Desc,
-				IID_PPV_ARGS(&PipelineState)));
-
+			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 			StorePipeline(Name, PipelineLibrary1);
 		}
 	}
 	else
 	{
-		VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(
-			&Desc,
-			IID_PPV_ARGS(&PipelineState)));
+		VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 	}
 }
 
@@ -357,8 +349,7 @@ D3D12_STATE_OBJECT_DESC RaytracingPipelineStateDesc::Build()
 		LocalRootSignatureSubobject->SetRootSignature(RootSignature);
 
 		// Add a subobject for the association between the exported shader symbols and the local root signature
-		auto SubobjectToExportsAssociationSubobject =
-			Desc.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+		auto SubobjectToExportsAssociationSubobject = Desc.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 		for (const auto& Symbol : Symbols)
 		{
 			SubobjectToExportsAssociationSubobject->AddExport(Symbol.data());
@@ -375,9 +366,8 @@ D3D12_STATE_OBJECT_DESC RaytracingPipelineStateDesc::Build()
 	RaytracingShaderConfigSubobject->Config(ShaderConfig.MaxPayloadSizeInBytes, ShaderConfig.MaxAttributeSizeInBytes);
 
 	// Add a subobject for the association between shaders and the payload
-	std::vector<std::wstring_view> ExportedSymbols = BuildShaderExportList();
-	auto						   SubobjectToExportsAssociationSubobject =
-		Desc.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+	std::vector<std::wstring_view> ExportedSymbols						  = BuildShaderExportList();
+	auto						   SubobjectToExportsAssociationSubobject = Desc.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 	for (const auto& Symbol : ExportedSymbols)
 	{
 		SubobjectToExportsAssociationSubobject->AddExport(Symbol.data());
@@ -391,7 +381,7 @@ D3D12_STATE_OBJECT_DESC RaytracingPipelineStateDesc::Build()
 	return Desc;
 }
 
-std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportList()
+std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportList() const
 {
 	// Get all names from libraries
 	// Get names associated to hit groups
@@ -405,7 +395,7 @@ std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportLis
 		{
 #ifdef _DEBUG
 			// Sanity check in debug mode: check that no name is exported more than once
-			if (Exports.find(Symbol) != Exports.end())
+			if (Exports.contains(Symbol))
 			{
 				throw std::logic_error("Multiple definition of a symbol in the imported DXIL libraries");
 			}
@@ -421,17 +411,17 @@ std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportLis
 
 		for (const auto& HitGroup : HitGroups)
 		{
-			if (!HitGroup.AnyHitSymbol.empty() && Exports.find(HitGroup.AnyHitSymbol) == Exports.end())
+			if (!HitGroup.AnyHitSymbol.empty() && !Exports.contains(HitGroup.AnyHitSymbol))
 			{
 				throw std::logic_error("Any hit symbol not found in the imported DXIL libraries");
 			}
 
-			if (!HitGroup.ClosestHitSymbol.empty() && Exports.find(HitGroup.ClosestHitSymbol) == Exports.end())
+			if (!HitGroup.ClosestHitSymbol.empty() && !Exports.contains(HitGroup.ClosestHitSymbol))
 			{
 				throw std::logic_error("Closest hit symbol not found in the imported DXIL libraries");
 			}
 
-			if (!HitGroup.IntersectionSymbol.empty() && Exports.find(HitGroup.IntersectionSymbol) == Exports.end())
+			if (!HitGroup.IntersectionSymbol.empty() && !Exports.contains(HitGroup.IntersectionSymbol))
 			{
 				throw std::logic_error("Intersection symbol not found in the imported DXIL libraries");
 			}
@@ -445,10 +435,9 @@ std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportLis
 		{
 			for (const auto& Symbol : RootSignatureAssociation.Symbols)
 			{
-				if (!Symbol.empty() && AllExports.find(Symbol) == AllExports.end())
+				if (!Symbol.empty() && !AllExports.contains(Symbol))
 				{
-					throw std::logic_error(
-						"Root association symbol not found in the imported DXIL libraries and hit group names");
+					throw std::logic_error("Root association symbol not found in the imported DXIL libraries and hit group names");
 				}
 			}
 		}
@@ -477,7 +466,7 @@ std::vector<std::wstring_view> RaytracingPipelineStateDesc::BuildShaderExportLis
 		Exports.insert(HitGroup.HitGroupName);
 	}
 
-	return std::vector(Exports.begin(), Exports.end());
+	return { Exports.begin(), Exports.end() };
 }
 
 D3D12RaytracingPipelineState::D3D12RaytracingPipelineState(

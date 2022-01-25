@@ -113,12 +113,13 @@ D3D12_ROOT_SIGNATURE_DESC1 RootSignatureDesc::Build() noexcept
 		}
 	}
 
-	D3D12_ROOT_SIGNATURE_DESC1 Desc = {};
-	Desc.NumParameters				= static_cast<UINT>(Parameters.size());
-	Desc.pParameters				= Parameters.data();
-	Desc.NumStaticSamplers			= static_cast<UINT>(StaticSamplers.size());
-	Desc.pStaticSamplers			= StaticSamplers.data();
-	Desc.Flags						= Flags;
+	D3D12_ROOT_SIGNATURE_DESC1 Desc = {
+		.NumParameters	   = static_cast<UINT>(Parameters.size()),
+		.pParameters	   = Parameters.data(),
+		.NumStaticSamplers = static_cast<UINT>(StaticSamplers.size()),
+		.pStaticSamplers   = StaticSamplers.data(),
+		.Flags			   = Flags
+	};
 	return Desc;
 }
 
@@ -134,10 +135,11 @@ D3D12RootSignature::D3D12RootSignature(
 	RootSignatureDesc& Desc)
 	: D3D12DeviceChild(Parent)
 {
-	D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {};
-	ApiDesc.Version								= D3D_ROOT_SIGNATURE_VERSION_1_1;
-	ApiDesc.Desc_1_1							= Desc.Build();
-	NumParameters								= ApiDesc.Desc_1_1.NumParameters;
+	D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {
+		.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1,
+		.Desc_1_1 = Desc.Build()
+	};
+	NumParameters = ApiDesc.Desc_1_1.NumParameters;
 
 	// Serialize the root signature
 	ARC<ID3DBlob> SerializedRootSignatureBlob;
@@ -151,9 +153,5 @@ D3D12RootSignature::D3D12RootSignature(
 	VERIFY_D3D12_API(Result);
 
 	// Create the root signature
-	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(
-		0,
-		SerializedRootSignatureBlob->GetBufferPointer(),
-		SerializedRootSignatureBlob->GetBufferSize(),
-		IID_PPV_ARGS(&RootSignature)));
+	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(0, SerializedRootSignatureBlob->GetBufferPointer(), SerializedRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
 }

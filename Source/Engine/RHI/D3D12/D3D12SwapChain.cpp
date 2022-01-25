@@ -218,16 +218,19 @@ ARC<IDXGISwapChain4> D3D12SwapChain::InitializeSwapChain()
 	TearingSupport = AllowTearing == TRUE;
 
 	// Width/Height can be set to 0
-	DXGI_SWAP_CHAIN_DESC1 Desc = {};
-	Desc.Format				   = Format;
-	Desc.Stereo				   = FALSE;
-	Desc.SampleDesc			   = DefaultSampleDesc();
-	Desc.BufferUsage		   = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	Desc.BufferCount		   = BackBufferCount;
-	Desc.Scaling			   = DXGI_SCALING_NONE;
-	Desc.SwapEffect			   = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	Desc.AlphaMode			   = DXGI_ALPHA_MODE_UNSPECIFIED;
-	Desc.Flags				   = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+	DXGI_SWAP_CHAIN_DESC1 Desc = {
+		.Width		 = 0,
+		.Height		 = 0,
+		.Format		 = Format,
+		.Stereo		 = FALSE,
+		.SampleDesc	 = DXGI_SAMPLE_DESC{ 1, 0 },
+		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+		.BufferCount = BackBufferCount,
+		.Scaling	 = DXGI_SCALING_NONE,
+		.SwapEffect	 = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.AlphaMode	 = DXGI_ALPHA_MODE_UNSPECIFIED,
+		.Flags		 = TearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u
+	};
 
 	ARC<IDXGISwapChain1> SwapChain1;
 	ARC<IDXGISwapChain4> SwapChain4;
@@ -243,11 +246,13 @@ void D3D12SwapChain::CreateRenderTargetViews()
 {
 	for (UINT i = 0; i < BackBufferCount; ++i)
 	{
-		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
-		ViewDesc.Format						   = Format;
-		ViewDesc.ViewDimension				   = D3D12_RTV_DIMENSION_TEXTURE2D;
-		ViewDesc.Texture2D.MipSlice			   = 0;
-		ViewDesc.Texture2D.PlaneSlice		   = 0;
+		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {
+			.Format		   = Format,
+			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+			.Texture2D	   = {
+				.MipSlice	= 0,
+				.PlaneSlice = 0 }
+		};
 
 		GetParentDevice()->GetD3D12Device()->CreateRenderTargetView(
 			BackBuffers[i].GetResource(),

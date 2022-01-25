@@ -177,16 +177,16 @@ private:
 	}
 
 	template<RHI_PIPELINE_STATE_TYPE PsoType>
-	struct D3D12DescriptorTableTraits
+	struct D3D12DynamicResourceTableTraits
 	{
 	};
 	template<>
-	struct D3D12DescriptorTableTraits<RHI_PIPELINE_STATE_TYPE::Graphics>
+	struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Graphics>
 	{
 		static auto Bind() { return &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable; }
 	};
 	template<>
-	struct D3D12DescriptorTableTraits<RHI_PIPELINE_STATE_TYPE::Compute>
+	struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Compute>
 	{
 		static auto Bind() { return &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable; }
 	};

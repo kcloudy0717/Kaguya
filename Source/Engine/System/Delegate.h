@@ -409,5 +409,5 @@ private:
 
 	u32								DelegateId = 0;
 	std::vector<DelegateHandlePair> Delegates;
-	std::unique_ptr<std::mutex>			OptMutex;
+	std::unique_ptr<std::mutex>		OptMutex;
 };

@@ -43,10 +43,7 @@ void D3D12Fence::HostWaitForValue(UINT64 Value)
 ARC<ID3D12Fence1> D3D12Fence::InitializeFence(UINT64 InitialValue, D3D12_FENCE_FLAGS Flags)
 {
 	ARC<ID3D12Fence1> Fence;
-	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateFence(
-		InitialValue,
-		Flags,
-		IID_PPV_ARGS(&Fence)));
+	VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateFence(InitialValue, Flags, IID_PPV_ARGS(&Fence)));
 	return Fence;
 }
 

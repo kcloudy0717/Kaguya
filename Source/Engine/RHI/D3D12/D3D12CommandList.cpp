@@ -15,9 +15,7 @@ ARC<ID3D12CommandAllocator> D3D12CommandAllocatorPool::RequestCommandAllocator()
 	auto CreateCommandAllocator = [this]()
 	{
 		ARC<ID3D12CommandAllocator> CommandAllocator;
-		VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(
-			CommandListType,
-			IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
+		VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
 		return CommandAllocator;
 	};
 	auto CommandAllocator = CommandAllocatorPool.RetrieveFromPool(CreateCommandAllocator);
@@ -111,15 +109,9 @@ D3D12CommandListHandle::D3D12CommandListHandle(
 	: D3D12LinkedDeviceChild(Parent)
 	, Type(Type)
 {
-	VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(
-		1,
-		Type,
-		D3D12_COMMAND_LIST_FLAG_NONE,
-		IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-
+	VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(1, Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
 	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList4.ReleaseAndGetAddressOf()));
 	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList6.ReleaseAndGetAddressOf()));
-
 #ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
 	GraphicsCommandList->QueryInterface(IID_PPV_ARGS(DebugCommandList.ReleaseAndGetAddressOf()));
 #endif
@@ -186,10 +178,11 @@ void D3D12CommandListHandle::TransitionBarrier(
 	// First use on the command list
 	if (ResourceState.IsUnknown())
 	{
-		PendingResourceBarrier PendingResourceBarrier;
-		PendingResourceBarrier.Resource	   = Resource;
-		PendingResourceBarrier.State	   = State;
-		PendingResourceBarrier.Subresource = Subresource;
+		PendingResourceBarrier PendingResourceBarrier = {
+			.Resource	 = Resource,
+			.State		 = State,
+			.Subresource = Subresource
+		};
 		ResourceStateTracker.Add(PendingResourceBarrier);
 	}
 	// Known state within the command list
@@ -275,12 +268,7 @@ std::vector<D3D12_RESOURCE_BARRIER> D3D12CommandListHandle::ResolveResourceBarri
 
 		if (StateBefore != StateAfter)
 		{
-			Desc.Transition.pResource	= Resource->GetResource();
-			Desc.Transition.Subresource = Subresource;
-			Desc.Transition.StateBefore = StateBefore;
-			Desc.Transition.StateAfter	= StateAfter;
-
-			ResourceBarriers.push_back(Desc);
+			ResourceBarriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
 		}
 
 		// Get the command list resource state associate with this resource

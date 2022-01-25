@@ -17,7 +17,7 @@ void UpdateProfileData(ProfileData& Data, UINT64 GpuFrequency, UINT64 StartTime,
 	}
 
 	Data.TimeSamples[Data.Sample] = Time;
-	Data.Sample					  = (Data.Sample + 1) % Data.FilterSize;
+	Data.Sample					  = (Data.Sample + 1) % ProfileData::FilterSize;
 
 	UINT64 AvgTimeSamples = 0;
 	for (double TimeSample : Data.TimeSamples)
@@ -76,13 +76,7 @@ D3D12Profiler::D3D12Profiler(
 
 	D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
 	D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
-	VERIFY_D3D12_API(Device->CreateCommittedResource(
-		&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&QueryReadback)));
+	VERIFY_D3D12_API(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&QueryReadback)));
 	QueryReadback->SetName(L"Timestamp Query Readback");
 }
 
@@ -91,7 +85,7 @@ void D3D12Profiler::OnBeginFrame()
 	UINT64* QueryData = nullptr;
 	if (SUCCEEDED(QueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
 	{
-		const UINT64* FrameQueryData = QueryData + (FrameIndex * MaxProfiles * 2);
+		const UINT64* FrameQueryData = QueryData + FrameIndex * MaxProfiles * 2;
 
 		for (UINT i = 0; i < NumProfiles; ++i)
 		{
@@ -154,14 +148,8 @@ void D3D12Profiler::EndProfile(
 	CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndIndex);
 
 	// Resolve the data
-	UINT64 AlignedDestinationBufferOffset = ((FrameIndex * MaxProfiles * 2) + StartIndex) * sizeof(UINT64);
-	CommandList->ResolveQueryData(
-		QueryHeap.Get(),
-		D3D12_QUERY_TYPE_TIMESTAMP,
-		StartIndex,
-		2,
-		QueryReadback.Get(),
-		AlignedDestinationBufferOffset);
+	UINT64 AlignedDestinationBufferOffset = (FrameIndex * MaxProfiles * 2 + StartIndex) * sizeof(UINT64);
+	CommandList->ResolveQueryData(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartIndex, 2, QueryReadback.Get(), AlignedDestinationBufferOffset);
 
 	ProfileData.QueryStarted  = false;
 	ProfileData.QueryFinished = true;

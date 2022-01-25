@@ -13,19 +13,12 @@ D3D12RenderTarget::D3D12RenderTarget(
 	for (UINT i = 0; i < Desc.NumRenderTargets; ++i)
 	{
 		RenderTargetViews[i] = RenderTargetArray[i];
-
-		Desc.RenderTargets[i]->CreateRenderTargetView(
-			RenderTargetViews[i],
-			std::nullopt,
-			std::nullopt,
-			std::nullopt,
-			Desc.sRGB[i]);
+		Desc.RenderTargets[i]->CreateRenderTargetView(RenderTargetViews[i], std::nullopt, std::nullopt, std::nullopt, Desc.sRGB[i]);
 	}
 	if (Desc.DepthStencil)
 	{
 		DepthStencilArray = Parent->GetDsvAllocator().Allocate(1);
 		DepthStencilView  = DepthStencilArray[0];
-
 		Desc.DepthStencil->CreateDepthStencilView(DepthStencilView);
 	}
 }
