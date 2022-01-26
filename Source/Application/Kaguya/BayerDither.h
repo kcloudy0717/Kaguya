@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererRegistry.h"
 #include "RHI/RHI.h"
+#include "RHI/HlslResourceHandle.h"
 #include "RHI/RenderGraph/RenderGraph.h"
 #include "View.h"
 
@@ -37,11 +38,11 @@ static BayerDitherParameters AddBayerDitherPass(RenderGraph& Graph, const View& 
 				 {
 					 struct Parameters
 					 {
-						 unsigned int InputIndex;
-						 unsigned int OutputIndex;
+						 HlslTexture2D	 Input;
+						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
-					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(BayerDitherArgs.Uav)->GetIndex();
+					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(BayerDitherArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BayerDither));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BayerDither));

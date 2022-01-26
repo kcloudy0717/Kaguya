@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Math.hlsli"
 
 float PhaseHenyeyGreenstein(float cosTheta, float g)

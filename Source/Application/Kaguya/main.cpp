@@ -29,11 +29,11 @@ namespace RenderCore
 	extern ShaderCompiler* Compiler;
 } // namespace RenderCore
 
-class VulkanRHIInitializer
+class D3D12RHIInitializer
 {
 public:
-	VulkanRHIInitializer(const DeviceOptions& Options);
-	~VulkanRHIInitializer();
+	D3D12RHIInitializer(const DeviceOptions& Options);
+	~D3D12RHIInitializer();
 
 private:
 	std::unique_ptr<D3D12Device>	Device;
@@ -48,7 +48,7 @@ namespace RenderCore
 	ShaderCompiler* Compiler = nullptr;
 } // namespace RenderCore
 
-VulkanRHIInitializer::VulkanRHIInitializer(const DeviceOptions& Options)
+D3D12RHIInitializer::D3D12RHIInitializer(const DeviceOptions& Options)
 {
 	assert(!Device && !Compiler);
 
@@ -70,13 +70,16 @@ VulkanRHIInitializer::VulkanRHIInitializer(const DeviceOptions& Options)
 		ImGuiGpuDescriptor);
 
 	Compiler = std::make_unique<ShaderCompiler>();
-	Compiler->SetShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6);
+	if (Device->SupportsDynamicResources())
+	{
+		Compiler->SetShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6);
+	}
 
 	RenderCore::Device	 = Device.get();
 	RenderCore::Compiler = Compiler.get();
 }
 
-VulkanRHIInitializer::~VulkanRHIInitializer()
+D3D12RHIInitializer::~D3D12RHIInitializer()
 {
 	Device->WaitIdle();
 	if (ImGuiD3D12Initialized)
@@ -371,7 +374,8 @@ int main(int /*argc*/, char* /*argv*/[])
 	DeviceOptions.Raytracing	   = true;
 	DeviceOptions.DynamicResources = true;
 	DeviceOptions.MeshShaders	   = true;
-	VulkanRHIInitializer D3D12RHIInitializer(DeviceOptions);
+	DeviceOptions.PsoCachePath	   = Application::ExecutableDirectory / "Pso.cache";
+	D3D12RHIInitializer D3D12RHIInitializer(DeviceOptions);
 
 	World World;
 	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();

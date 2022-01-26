@@ -1,11 +1,10 @@
-#include "d3d12.hlsli"
 #include "Shader.hlsli"
-#include "DescriptorTable.hlsli"
+#include "HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
-	uint   InputIndex;
-	uint   OutputIndex;
+	uint InputIndex;
+	uint OutputIndex;
 };
 
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
@@ -23,11 +22,11 @@ cbuffer Parameters : register(b0)
 		63, 31, 55, 23, 61, 29, 53, 21
 	};
 
-	Texture2D			Input  = g_Texture2DTable[InputIndex];
-	RWTexture2D<float4> Output = g_RWTexture2DTable[OutputIndex];
+	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
+	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
 
-	uint x = Params.DispatchThreadID.x % Dimension;
-	uint y = Params.DispatchThreadID.y % Dimension;
+	uint  x			 = Params.DispatchThreadID.x % Dimension;
+	uint  y			 = Params.DispatchThreadID.y % Dimension;
 	float BayerValue = BayerMatrix8x8[y * Dimension + x] / 64.0f;
 
 	float4 Color = Input[Params.DispatchThreadID.xy];

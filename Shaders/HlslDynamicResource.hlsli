@@ -1,5 +1,4 @@
 #pragma once
-
 /*
 	Defines bindless descriptor table, resources are grouped together based on their usage [Read/Write] within
 	their respected descriptor tables
@@ -27,3 +26,9 @@ SamplerState g_SamplerLinearBorder : register(s4, space101);
 
 SamplerState g_SamplerAnisotropicWrap : register(s5, space101);
 SamplerState g_SamplerAnisotropicClamp : register(s6, space101);
+
+#define HLSL_BYTEADDRESSBUFFER(Resource) g_ByteAddressBufferTable[Resource]
+#define HLSL_TEXTURE2D(Resource)		 g_Texture2DTable[Resource]
+#define HLSL_TEXTURE2DARRAY(Resource)	 g_Texture2DArrayTable[Resource]
+#define HLSL_TEXTURECUBE(Resource)		 g_TextureCubeTable[Resource]
+#define HLSL_RWTEXTURE2D(Resource)		 g_RWTexture2DTable[Resource]

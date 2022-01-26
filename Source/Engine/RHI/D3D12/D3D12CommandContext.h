@@ -94,7 +94,6 @@ public:
 		UINT	 RootParameterIndex,
 		const T& Data)
 	{
-		static_assert(std::is_trivial_v<T>);
 		SetGraphicsConstantBuffer(RootParameterIndex, sizeof(T), &Data);
 	}
 
@@ -103,7 +102,6 @@ public:
 		UINT	 RootParameterIndex,
 		const T& Data)
 	{
-		static_assert(std::is_trivial_v<T>);
 		SetComputeConstantBuffer(RootParameterIndex, sizeof(T), &Data);
 	}
 

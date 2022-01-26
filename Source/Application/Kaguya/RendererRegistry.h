@@ -268,7 +268,9 @@ struct RootSignatures
 
 		Tonemap = Registry.CreateRootSignature(Device->CreateRootSignature(
 			RootSignatureDesc()
-				.Add32BitConstants<0, 0>(6)));
+				.Add32BitConstants<0, 0>(6)
+				.AllowResourceDescriptorHeapIndexing()
+				.AllowSampleDescriptorHeapIndexing()));
 
 		BayerDither = Registry.CreateRootSignature(Device->CreateRootSignature(
 			RootSignatureDesc()

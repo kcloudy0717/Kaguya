@@ -1,5 +1,5 @@
 ﻿#include "HLSLCommon.hlsli"
-#include "DescriptorTable.hlsli"
+#include "HlslDynamicResource.hlsli"
 
 cbuffer RootConstants : register(b0, space0)
 {
@@ -64,9 +64,8 @@ MRT PSMain(VertexAttributes input)
 	Material material = g_Materials[mesh.MaterialIndex];
 	if (material.Albedo != -1)
 	{
-		// Texture2D texture = ResourceDescriptorHeap[material.Albedo];
-		Texture2D texture  = g_Texture2DTable[material.Albedo];
-		material.baseColor = texture.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
+		Texture2D Albedo   = HLSL_TEXTURE2D(material.Albedo);
+		material.baseColor = Albedo.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
 	}
 
 	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;

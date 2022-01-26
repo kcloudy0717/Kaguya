@@ -28,7 +28,7 @@ D3D12Device::D3D12Device(const DeviceOptions& Options)
 	, LinkedDevice(this)
 	, Profiler(1, Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency())
 	, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
-	, Library(!Options.CachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.CachePath) : nullptr)
+	, Library(!Options.PsoCachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.PsoCachePath) : nullptr)
 {
 	ARC<ID3D12InfoQueue> InfoQueue;
 	if (SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(&InfoQueue))))
@@ -70,6 +70,43 @@ void D3D12Device::CreateDxgiFactory(bool Debug)
 bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
 {
 	return CVar_AsyncPsoCompilation;
+}
+
+bool D3D12Device::SupportsWaveIntrinsics() const noexcept
+{
+	if (SUCCEEDED(FeatureSupport.GetStatus()))
+	{
+		return FeatureSupport.WaveOps();
+	}
+	return false;
+}
+
+bool D3D12Device::SupportsRaytracing() const noexcept
+{
+	if (SUCCEEDED(FeatureSupport.GetStatus()))
+	{
+		return FeatureSupport.RaytracingTier() >= D3D12_RAYTRACING_TIER_1_0;
+	}
+	return false;
+}
+
+bool D3D12Device::SupportsDynamicResources() const noexcept
+{
+	if (SUCCEEDED(FeatureSupport.GetStatus()))
+	{
+		return FeatureSupport.HighestShaderModel() >= D3D_SHADER_MODEL_6_6 ||
+			   FeatureSupport.ResourceBindingTier() >= D3D12_RESOURCE_BINDING_TIER_3;
+	}
+	return false;
+}
+
+bool D3D12Device::SupportsMeshShaders() const noexcept
+{
+	if (SUCCEEDED(FeatureSupport.GetStatus()))
+	{
+		return FeatureSupport.MeshShaderTier() >= D3D12_MESH_SHADER_TIER_1;
+	}
+	return false;
 }
 
 void D3D12Device::OnBeginFrame()
@@ -285,7 +322,7 @@ CD3DX12FeatureSupport D3D12Device::InitializeFeatureSupport(const DeviceOptions&
 		LUNA_LOG(D3D12RHI, Warn, "Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
 	}
 
-	if (Options.WaveOperation)
+	if (Options.WaveIntrinsics)
 	{
 		if (!FeatureSupport.WaveOps())
 		{

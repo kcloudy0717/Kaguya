@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Vertex.hlsli"
 #include "Math.hlsli"
 #include "Sampling.hlsli"

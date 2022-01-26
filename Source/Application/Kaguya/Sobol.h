@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererRegistry.h"
 #include "RHI/RHI.h"
+#include "RHI/HlslResourceHandle.h"
 #include "RHI/RenderGraph/RenderGraph.h"
 #include "View.h"
 
@@ -37,11 +38,11 @@ static SobolParameters AddSobolPass(RenderGraph& Graph, const View& View, SobolI
 				 {
 					 struct Parameters
 					 {
-						 unsigned int InputIndex;
-						 unsigned int OutputIndex;
+						 HlslTexture2D	 Input;
+						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
-					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(SobolArgs.Uav)->GetIndex();
+					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(SobolArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Sobol));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Sobol));

@@ -1,11 +1,10 @@
-#include "d3d12.hlsli"
 #include "Shader.hlsli"
-#include "DescriptorTable.hlsli"
+#include "HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
-	uint   InputIndex;
-	uint   OutputIndex;
+	uint InputIndex;
+	uint OutputIndex;
 };
 
 // Approximates luminance ("brightness") from an RGB value.  These weights are derived from
@@ -17,8 +16,8 @@ float CalcLuminance(float3 color)
 
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
 {
-	Texture2D			Input  = g_Texture2DTable[InputIndex];
-	RWTexture2D<float4> Output = g_RWTexture2DTable[OutputIndex];
+	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
+	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
 
 	// Sample the pixels in the neighborhood of this pixel.
 	float4 c[3][3];

@@ -70,58 +70,6 @@ Frame InitFrameFromXY(float3 x, float3 y)
 	return frame;
 }
 
-// float SignNotZero(float v)
-//{
-//	return (v < 0.0f) ? -1.0f : 1.0f;
-//}
-
-// struct OctahedralVector
-//{
-//	uint16_t x, y;
-
-//	float3 Decode()
-//	{
-//		float3 v;
-//		v.x = -1.0f + 2.0f * (x / 65535.0f);
-//		v.y = -1.0f + 2.0f * (y / 65535.0f);
-//		v.z = 1.0f - (abs(v.x) + abs(v.y));
-//		// Reparameterize directions in the $z<0$ portion of the octahedron
-//		if (v.z < 0.0f)
-//		{
-//			float xo = v.x;
-//			v.x		 = (1.0f - abs(v.y)) * SignNotZero(xo);
-//			v.y		 = (1.0f - abs(xo)) * SignNotZero(v.y);
-//		}
-
-//		return normalize(v);
-//	}
-//};
-
-// uint16_t Encode(float f)
-//{
-//	return (uint16_t)round(clamp((f + 1.0f) / 2.0f, 0.0f, 1.0f) * 65535.0f);
-//}
-
-// OctahedralVector InitOctahedralVector(float3 v)
-//{
-//	OctahedralVector ov;
-
-//	v /= abs(v.x) + abs(v.y) + abs(v.z);
-//	if (v.z >= 0.0f)
-//	{
-//		ov.x = Encode(v.x);
-//		ov.y = Encode(v.y);
-//	}
-//	else
-//	{
-//		// Encode octahedral vector with $z < 0$
-//		ov.x = Encode((1.0f - abs(v.y)) * SignNotZero(v.x));
-//		ov.y = Encode((1.0f - abs(v.x)) * SignNotZero(v.y));
-//	}
-
-//	return ov;
-//}
-
 float2 octWrap(float2 v)
 {
 	return float2((1.0f - abs(v.y)) * (v.x >= 0.0f ? 1.0f : -1.0f), (1.0f - abs(v.x)) * (v.y >= 0.0f ? 1.0f : -1.0f));

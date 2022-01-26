@@ -1,7 +1,8 @@
 #include "Shader.hlsli"
+#include "HlslDynamicResource.hlsli"
+
 #include "Vertex.hlsli"
 #include "HLSLCommon.hlsli"
-#include "DescriptorTable.hlsli"
 
 struct Meshlet
 {
@@ -94,8 +95,8 @@ VertexAttributes GetVertexAttributes(uint meshletIndex, uint vertexIndex)
 [outputtopology("triangle")]
 void MSMain(
 	MSParams					  params,
-	out INDICES uint3			  primitives[128],
-	out VERTICES VertexAttributes vertices[128])
+	out indices uint3			  primitives[128],
+	out vertices VertexAttributes vertices[128])
 {
 	Meshlet meshlet = Meshlets[params.GroupID.x];
 	SetMeshOutputCounts(meshlet.VertexCount, meshlet.PrimitiveCount);
@@ -118,12 +119,11 @@ MRT PSMain(VertexAttributes input)
 	Material material = g_Materials[mesh.MaterialIndex];
 	if (material.Albedo != -1)
 	{
-		// Texture2D texture = ResourceDescriptorHeap[material.Albedo];
-		Texture2D texture  = g_Texture2DTable[material.Albedo];
-		material.baseColor = texture.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
+		Texture2D Albedo   = HLSL_TEXTURE2D(material.Albedo);
+		material.baseColor = Albedo.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
 	}
 
-	uint meshletIndex  = input.MeshletIndex;
+	//uint meshletIndex  = input.MeshletIndex;
 	//material.baseColor = float3(float(meshletIndex & 1), float(meshletIndex & 3) / 4, float(meshletIndex & 7) / 8);
 
 	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;

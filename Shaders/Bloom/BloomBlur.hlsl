@@ -1,6 +1,5 @@
-#include "../d3d12.hlsli"
 #include "../Shader.hlsli"
-#include "../DescriptorTable.hlsli"
+#include "../HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
@@ -81,8 +80,8 @@ void BlurVertically(uint2 pixelCoord, uint topMostIndex, RWTexture2D<float4> out
 
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
 {
-	Texture2D			Input  = g_Texture2DTable[InputIndex];
-	RWTexture2D<float4> Output = g_RWTexture2DTable[OutputIndex];
+	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
+	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
 
 	//
 	// Load 4 pixels per thread into LDS

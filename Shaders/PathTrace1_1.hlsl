@@ -1,6 +1,8 @@
-﻿#include "Vertex.hlsli"
+﻿#include "Shader.hlsli"
+#include "HlslDynamicResource.hlsli"
+
+#include "Vertex.hlsli"
 #include "Random.hlsli"
-#include "Shader.hlsli"
 #include "SharedTypes.hlsli"
 #include "HLSLCommon.hlsli"
 
@@ -54,8 +56,6 @@ StructuredBuffer<Material>		g_Materials : register(t1, space0);
 StructuredBuffer<Light>			g_Lights : register(t2, space0);
 StructuredBuffer<Mesh>			g_Meshes : register(t3, space0);
 
-#include "DescriptorTable.hlsli"
-
 struct VertexAttributes
 {
 	float3 p;
@@ -66,16 +66,19 @@ struct VertexAttributes
 
 VertexAttributes GetVertexAttributes(Mesh Mesh, RaytracingAttributes Attributes)
 {
+	ByteAddressBuffer IndexBuffer = HLSL_BYTEADDRESSBUFFER(Mesh.IndexView);
+	ByteAddressBuffer VertexBuffer = HLSL_BYTEADDRESSBUFFER(Mesh.VertexView);
+
 	// Fetch indices
-	uint3 indices = g_ByteAddressBufferTable[Mesh.IndexView].Load<uint3>(Attributes.PrimitiveIndex * sizeof(uint3));
+	uint3 indices = IndexBuffer.Load<uint3>(Attributes.PrimitiveIndex * sizeof(uint3));
 	uint  idx0	  = indices[0];
 	uint  idx1	  = indices[1];
 	uint  idx2	  = indices[2];
 
 	// Fetch vertices
-	Vertex vtx0 = g_ByteAddressBufferTable[Mesh.VertexView].Load<Vertex>(idx0 * sizeof(Vertex));
-	Vertex vtx1 = g_ByteAddressBufferTable[Mesh.VertexView].Load<Vertex>(idx1 * sizeof(Vertex));
-	Vertex vtx2 = g_ByteAddressBufferTable[Mesh.VertexView].Load<Vertex>(idx2 * sizeof(Vertex));
+	Vertex vtx0 = VertexBuffer.Load<Vertex>(idx0 * sizeof(Vertex));
+	Vertex vtx1 = VertexBuffer.Load<Vertex>(idx1 * sizeof(Vertex));
+	Vertex vtx2 = VertexBuffer.Load<Vertex>(idx2 * sizeof(Vertex));
 
 	float3 p0 = vtx0.Position, p1 = vtx1.Position, p2 = vtx2.Position;
 	// Compute 2 edges of the triangle
@@ -174,9 +177,8 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 		{
 			if (g_GlobalConstants.Sky != -1)
 			{
-				TextureCube Sky = g_TextureCubeTable[g_GlobalConstants.Sky];
-				L += beta * Sky.SampleLevel(g_SamplerLinearWrap, q.WorldRayDirection(), 0.0f).rgb *
-					 g_GlobalConstants.SkyIntensity;
+				TextureCube Sky = HLSL_TEXTURECUBE(g_GlobalConstants.Sky);
+				L += beta * Sky.SampleLevel(g_SamplerLinearWrap, q.WorldRayDirection(), 0.0f).rgb * g_GlobalConstants.SkyIntensity;
 			}
 			else
 			{
@@ -226,9 +228,8 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 
 		if (material.Albedo != -1)
 		{
-			// Texture2D Texture = ResourceDescriptorHeap[material.Albedo];
-			Texture2D Texture  = g_Texture2DTable[material.Albedo];
-			material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
+			Texture2D Albedo = HLSL_TEXTURE2D(material.Albedo);
+			material.baseColor = Albedo.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
 		}
 
 		si.BSDF = InitBSDF(si.GeometryFrame.z, si.ShadingFrame, material);
@@ -241,7 +242,7 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 		}
 
 		// Sample BSDF to get new path direction
-		BSDFSample bsdfSample = (BSDFSample)0;
+		BSDFSample bsdfSample;
 		bool	   success	  = si.BSDF.Samplef(si.wo, Sampler.Get2D(), bsdfSample);
 		if (!success)
 		{

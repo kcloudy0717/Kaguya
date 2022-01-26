@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererRegistry.h"
 #include "RHI/RHI.h"
+#include "RHI/HlslResourceHandle.h"
 #include "RHI/RenderGraph/RenderGraph.h"
 #include "View.h"
 #include "Math/Math.h"
@@ -59,17 +60,17 @@ static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsample
 					 D3D12Texture* HighResInput = Registry.Get<D3D12Texture>(Inputs.HighResInput);
 					 struct Parameters
 					 {
-						 Vec2f		  InverseOutputSize;
-						 float		  UpsampleInterpolationFactor;
-						 unsigned int HighResolutionIndex;
-						 unsigned int LowResolutionIndex;
-						 unsigned int OutputIndex;
+						 Vec2f			 InverseOutputSize;
+						 float			 UpsampleInterpolationFactor;
+						 HlslTexture2D	 HighRes;
+						 HlslTexture2D	 LowRes;
+						 HlslRWTexture2D Output;
 					 } Args;
 					 Args.InverseOutputSize			  = Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
 					 Args.UpsampleInterpolationFactor = UpsampleInterpolationFactor;
-					 Args.HighResolutionIndex		  = Registry.Get<D3D12ShaderResourceView>(Inputs.HighResInputSrv)->GetIndex();
-					 Args.LowResolutionIndex		  = Registry.Get<D3D12ShaderResourceView>(Inputs.LowResInputSrv)->GetIndex();
-					 Args.OutputIndex				  = Registry.Get<D3D12UnorderedAccessView>(Inputs.HighResOutputUav)->GetIndex();
+					 Args.HighRes					  = Registry.Get<D3D12ShaderResourceView>(Inputs.HighResInputSrv);
+					 Args.LowRes					  = Registry.Get<D3D12ShaderResourceView>(Inputs.LowResInputSrv);
+					 Args.Output					  = Registry.Get<D3D12UnorderedAccessView>(Inputs.HighResOutputUav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
@@ -120,15 +121,15 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 				 {
 					 struct Parameters
 					 {
-						 Vec2f		  InverseOutputSize;
-						 float		  Threshold;
-						 unsigned int InputIndex;
-						 unsigned int OutputIndex;
+						 Vec2f			 InverseOutputSize;
+						 float			 Threshold;
+						 HlslTexture2D	 Input;
+						 HlslRWTexture2D Output;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
 					 Args.Threshold			= Settings.Threshold;
-					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
-					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0])->GetIndex();
+					 Args.Input				= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomMask));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomMask));
@@ -145,19 +146,19 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 				 {
 					 struct Parameters
 					 {
-						 Vec2f		  InverseOutputSize;
-						 unsigned int BloomIndex;
-						 unsigned int Output1Index;
-						 unsigned int Output2Index;
-						 unsigned int Output3Index;
-						 unsigned int Output4Index;
+						 Vec2f			 InverseOutputSize;
+						 HlslTexture2D	 Bloom;
+						 HlslRWTexture2D Output1;
+						 HlslRWTexture2D Output2;
+						 HlslRWTexture2D Output3;
+						 HlslRWTexture2D Output4;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
-					 Args.BloomIndex		= Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0])->GetIndex();
-					 Args.Output1Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0])->GetIndex();
-					 Args.Output2Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0])->GetIndex();
-					 Args.Output3Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0])->GetIndex();
-					 Args.Output4Index		= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0])->GetIndex();
+					 Args.Bloom				= Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
+					 Args.Output1			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
+					 Args.Output2			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);
+					 Args.Output3			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0]);
+					 Args.Output4			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomDownsample));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomDownsample));
@@ -172,11 +173,11 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 D3D12Texture* Output5a = Registry.Get<D3D12Texture>(BloomArgs.Output5[0]);
 					 struct Parameters
 					 {
-						 unsigned int InputIndex;
-						 unsigned int OutputIndex;
+						 HlslTexture2D	 Input;
+						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.InputIndex  = Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0])->GetIndex();
-					 Args.OutputIndex = Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1])->GetIndex();
+					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0]);
+					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));

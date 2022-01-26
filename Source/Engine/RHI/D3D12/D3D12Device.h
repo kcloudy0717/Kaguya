@@ -13,11 +13,11 @@ struct DeviceOptions
 	bool EnableAutoDebugName;
 
 	D3D_FEATURE_LEVEL	  FeatureLevel;
-	bool				  WaveOperation;
+	bool				  WaveIntrinsics;
 	bool				  Raytracing;
 	bool				  DynamicResources;
 	bool				  MeshShaders;
-	std::filesystem::path CachePath;
+	std::filesystem::path PsoCachePath;
 };
 
 struct RootParameters
@@ -51,6 +51,11 @@ public:
 	[[nodiscard]] bool					AllowAsyncPsoCompilation() const noexcept;
 	[[nodiscard]] ThreadPool*			GetPsoCompilationThreadPool() const noexcept { return PsoCompilationThreadPool.get(); }
 	[[nodiscard]] D3D12PipelineLibrary* GetPipelineLibrary() const noexcept { return Library.get(); }
+
+	[[nodiscard]] bool SupportsWaveIntrinsics() const noexcept;
+	[[nodiscard]] bool SupportsRaytracing() const noexcept;
+	[[nodiscard]] bool SupportsDynamicResources() const noexcept;
+	[[nodiscard]] bool SupportsMeshShaders() const noexcept;
 
 	void OnBeginFrame();
 	void OnEndFrame();

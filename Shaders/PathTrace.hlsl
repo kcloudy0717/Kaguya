@@ -1,4 +1,5 @@
 #include "Global.hlsli"
+#include "HlslDynamicResource.hlsli"
 
 /*
  * TODO:
@@ -210,9 +211,8 @@ float3 Li(RayDesc ray, inout Sampler Sampler)
 
 		if (material.Albedo != -1)
 		{
-			// Texture2D Texture = ResourceDescriptorHeap[material.Albedo];
-			Texture2D Texture  = g_Texture2DTable[material.Albedo];
-			material.baseColor = Texture.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
+			Texture2D Albedo   = HLSL_TEXTURE2D(material.Albedo);
+			material.baseColor = Albedo.SampleLevel(g_SamplerAnisotropicWrap, si.uv, 0.0f).rgb;
 		}
 
 		si.BSDF = InitBSDF(si.GeometryFrame.z, si.ShadingFrame, material);
@@ -293,7 +293,7 @@ void RayGeneration()
 	L.b = isnan(L.b) ? 0.0f : L.b;
 
 	// RWTexture2D<float4> RenderTarget = ResourceDescriptorHeap[g_GlobalConstants.RenderTarget];
-	RWTexture2D<float4> RenderTarget = g_RWTexture2DTable[g_GlobalConstants.RenderTarget];
+	RWTexture2D<float4> RenderTarget = HLSL_RWTEXTURE2D(g_GlobalConstants.RenderTarget);
 
 	// Progressive accumulation
 	if (g_GlobalConstants.NumAccumulatedSamples > 0)

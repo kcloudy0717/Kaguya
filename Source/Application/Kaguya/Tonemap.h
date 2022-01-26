@@ -1,6 +1,7 @@
 #pragma once
 #include "RendererRegistry.h"
 #include "RHI/RHI.h"
+#include "RHI/HlslResourceHandle.h"
 #include "RHI/RenderGraph/RenderGraph.h"
 #include "View.h"
 #include "Math/Math.h"
@@ -54,17 +55,17 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 				 {
 					 struct Parameters
 					 {
-						 Vec2f		  InverseOutputSize;
-						 float		  BloomIntensity;
-						 unsigned int InputIndex;
-						 unsigned int BloomIndex;
-						 unsigned int OutputIndex;
+						 Vec2f			 InverseOutputSize;
+						 float			 BloomIntensity;
+						 HlslTexture2D	 Input;
+						 HlslTexture2D	 Bloom;
+						 HlslRWTexture2D Output;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
 					 Args.BloomIntensity	= Settings.BloomIntensity;
-					 Args.InputIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv)->GetIndex();
-					 Args.BloomIndex		= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv)->GetIndex();
-					 Args.OutputIndex		= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav)->GetIndex();
+					 Args.Input				= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Bloom				= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv);
+					 Args.Output			= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));

@@ -1,6 +1,5 @@
-#include "../d3d12.hlsli"
 #include "../Shader.hlsli"
-#include "../DescriptorTable.hlsli"
+#include "../HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
@@ -16,11 +15,11 @@ groupshared float4 g_Tile[64]; // 8x8 input pixels
 
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
 {
-	Texture2D			Bloom	= g_Texture2DTable[BloomIndex];
-	RWTexture2D<float4> Output1 = g_RWTexture2DTable[Output1Index];
-	RWTexture2D<float4> Output2 = g_RWTexture2DTable[Output2Index];
-	RWTexture2D<float4> Output3 = g_RWTexture2DTable[Output3Index];
-	RWTexture2D<float4> Output4 = g_RWTexture2DTable[Output4Index];
+	Texture2D			Bloom	= HLSL_TEXTURE2D(BloomIndex);
+	RWTexture2D<float4> Output1 = HLSL_RWTEXTURE2D(Output1Index);
+	RWTexture2D<float4> Output2 = HLSL_RWTEXTURE2D(Output2Index);
+	RWTexture2D<float4> Output3 = HLSL_RWTEXTURE2D(Output3Index);
+	RWTexture2D<float4> Output4 = HLSL_RWTEXTURE2D(Output4Index);
 
 	// You can tell if both x and y are divisible by a power of two with this value
 	uint parity = Params.DispatchThreadID.x | Params.DispatchThreadID.y;
