@@ -1,1 +1,0 @@
-#include "BayerDither.h"

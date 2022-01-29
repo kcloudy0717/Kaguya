@@ -14,7 +14,7 @@ void PathIntegratorDXR1_0::Initialize()
 	AccelerationStructure = RaytracingAccelerationStructure(Device, 1, World::MeshLimit);
 	AccelerationStructure.Initialize();
 
-	Materials = D3D12Buffer(
+	Materials = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(Hlsl::Material) * World::MaterialLimit,
 		sizeof(Hlsl::Material),
@@ -23,7 +23,7 @@ void PathIntegratorDXR1_0::Initialize()
 	Materials.Initialize();
 	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
 
-	Lights = D3D12Buffer(
+	Lights = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(Hlsl::Light) * World::LightLimit,
 		sizeof(Hlsl::Light),
@@ -48,7 +48,7 @@ void PathIntegratorDXR1_0::Destroy()
 {
 }
 
-void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
+void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Context)
 {
 	bool ResetPathIntegrator = false;
 
@@ -92,10 +92,10 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
 		});
 
-	D3D12SyncHandle CopySyncHandle;
+	RHI::D3D12SyncHandle CopySyncHandle;
 	if (AccelerationStructure.IsValid())
 	{
-		D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
+		RHI::D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
 		Copy.Open();
 
 		// Update shader table
@@ -105,7 +105,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 			ID3D12Resource* VertexBuffer = MeshRenderer->Mesh->VertexResource.GetResource();
 			ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
 
-			D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
+			RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
 			Record.ShaderIdentifier									= RaytracingPipelineStates::g_DefaultSID;
 			Record.RootArguments.MaterialIndex						= static_cast<UINT>(i);
 			Record.RootArguments.Padding							= 0xDEADBEEF;
@@ -122,10 +122,10 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 		CopySyncHandle = Copy.Execute(false);
 	}
 
-	D3D12SyncHandle ASBuildSyncHandle;
+	RHI::D3D12SyncHandle ASBuildSyncHandle;
 	if (AccelerationStructure.IsValid())
 	{
-		D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
+		RHI::D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.Open();
 		{
 			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
@@ -152,35 +152,35 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 		NumTemporalSamples = 0;
 	}
 
-	RenderGraph Graph(Allocator, Registry);
+	RHI::RenderGraph Graph(Allocator, Registry);
 
 	struct PathTraceParameters
 	{
-		RgResourceHandle Output;
-		RgResourceHandle OutputSrv;
-		RgResourceHandle OutputUav;
+		RHI::RgResourceHandle Output;
+		RHI::RgResourceHandle OutputSrv;
+		RHI::RgResourceHandle OutputUav;
 	} PathTraceArgs;
-	PathTraceArgs.Output = Graph.Create<D3D12Texture>(
+	PathTraceArgs.Output = Graph.Create<RHI::D3D12Texture>(
 		"Path Trace Output",
-		RgTextureDesc()
+		RHI::RgTextureDesc()
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowUnorderedAccess());
-	PathTraceArgs.OutputSrv = Graph.Create<D3D12ShaderResourceView>(
+	PathTraceArgs.OutputSrv = Graph.Create<RHI::D3D12ShaderResourceView>(
 		"Path Trace Output Srv",
-		RgViewDesc()
+		RHI::RgViewDesc()
 			.SetResource(PathTraceArgs.Output)
 			.AsTextureSrv());
-	PathTraceArgs.OutputUav = Graph.Create<D3D12UnorderedAccessView>(
+	PathTraceArgs.OutputUav = Graph.Create<RHI::D3D12UnorderedAccessView>(
 		"Path Trace Output Uav",
-		RgViewDesc()
+		RHI::RgViewDesc()
 			.SetResource(PathTraceArgs.Output)
 			.AsTextureUav());
 
 	Graph.AddRenderPass(
 			 "Path Trace")
 		.Write(&PathTraceArgs.Output)
-		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 _declspec(align(256)) struct GlobalConstants
 					 {
@@ -209,7 +209,7 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
 					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-					 g_GlobalConstants.RenderTarget			 = Registry.Get<D3D12UnorderedAccessView>(PathTraceArgs.OutputUav)->GetIndex();
+					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.OutputUav)->GetIndex();
 					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
 					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
 					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
@@ -242,5 +242,5 @@ void PathIntegratorDXR1_0::Render(World* World, D3D12CommandContext& Context)
 
 	Graph.Execute(Context);
 
-	Viewport	  = reinterpret_cast<void*>(Registry.Get<D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
+	Viewport	  = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }

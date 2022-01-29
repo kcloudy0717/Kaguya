@@ -4,7 +4,7 @@
 struct HlslByteAddressBuffer
 {
 	HlslByteAddressBuffer() noexcept = default;
-	HlslByteAddressBuffer(const D3D12ShaderResourceView* ShaderResourceView)
+	HlslByteAddressBuffer(const RHI::D3D12ShaderResourceView* ShaderResourceView)
 		: Handle(ShaderResourceView->GetIndex())
 	{
 	}
@@ -15,7 +15,7 @@ struct HlslByteAddressBuffer
 struct HlslTexture2D
 {
 	HlslTexture2D() noexcept = default;
-	HlslTexture2D(const D3D12ShaderResourceView* ShaderResourceView)
+	HlslTexture2D(const RHI::D3D12ShaderResourceView* ShaderResourceView)
 		: Handle(ShaderResourceView->GetIndex())
 	{
 	}
@@ -26,7 +26,7 @@ struct HlslTexture2D
 struct HlslTexture2DArray
 {
 	HlslTexture2DArray() noexcept = default;
-	HlslTexture2DArray(const D3D12ShaderResourceView* ShaderResourceView)
+	HlslTexture2DArray(const RHI::D3D12ShaderResourceView* ShaderResourceView)
 		: Handle(ShaderResourceView->GetIndex())
 	{
 	}
@@ -37,7 +37,7 @@ struct HlslTexture2DArray
 struct HlslTextureCube
 {
 	HlslTextureCube() noexcept = default;
-	HlslTextureCube(const D3D12ShaderResourceView* ShaderResourceView)
+	HlslTextureCube(const RHI::D3D12ShaderResourceView* ShaderResourceView)
 		: Handle(ShaderResourceView->GetIndex())
 	{
 	}
@@ -48,7 +48,7 @@ struct HlslTextureCube
 struct HlslRWTexture2D
 {
 	HlslRWTexture2D() noexcept = default;
-	HlslRWTexture2D(const D3D12UnorderedAccessView* UnorderedAccessView)
+	HlslRWTexture2D(const RHI::D3D12UnorderedAccessView* UnorderedAccessView)
 		: Handle(UnorderedAccessView->GetIndex())
 	{
 	}

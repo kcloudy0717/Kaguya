@@ -1,8 +1,6 @@
 #pragma once
 #include <map>
-#include <wrl/client.h>
-#include "dxcapi.h"
-#include "d3d12shader.h"
+#include "Shader.h"
 #include "System/System.h"
 
 class DxcException : public Exception
@@ -21,92 +19,12 @@ private:
 	const HRESULT ErrorCode;
 };
 
-enum class RHI_SHADER_MODEL
-{
-	ShaderModel_6_5,
-	ShaderModel_6_6
-};
-
-enum class RHI_SHADER_TYPE
-{
-	Vertex,
-	Hull,
-	Domain,
-	Geometry,
-	Pixel,
-	Compute,
-	Amplification,
-	Mesh
-};
-
-struct ShaderCompileOptions
-{
-	ShaderCompileOptions(std::wstring_view EntryPoint)
-		: EntryPoint(EntryPoint)
-	{
-	}
-
-	void SetDefine(std::wstring_view Define, std::wstring_view Value) { Defines[Define] = Value; }
-
-	std::wstring_view EntryPoint;
-
-	std::map<std::wstring_view, std::wstring_view> Defines;
-};
-
 struct ShaderCompilationResult
 {
-	IDxcBlob* Binary;
-
-	std::wstring PdbName;
-	IDxcBlob*	 Pdb;
-
-	DxcShaderHash ShaderHash;
-};
-
-class Shader
-{
-public:
-	Shader() noexcept = default;
-	Shader(
-		RHI_SHADER_TYPE				   ShaderType,
-		const ShaderCompilationResult& Result) noexcept;
-
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
-	[[nodiscard]] void*			GetPointer() const noexcept;
-	[[nodiscard]] size_t		GetSize() const noexcept;
-
-private:
-	RHI_SHADER_TYPE					 ShaderType;
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
-	std::wstring					 PdbName;
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
-
-	DxcShaderHash ShaderHash = {};
-};
-
-/*
-	A DXIL library can be seen similarly as a regular DLL,
-	which contains compiled code that can be accessed using a number of exported symbols.
-	In the case of the raytracing pipeline, such symbols correspond to the names of the functions
-	implementing the shader programs.
-*/
-class Library
-{
-public:
-	Library() noexcept = default;
-	Library(
-		const ShaderCompilationResult& Result) noexcept;
-
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
-	[[nodiscard]] void*			GetPointer() const noexcept;
-	[[nodiscard]] size_t		GetSize() const noexcept;
-
-private:
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
-	std::wstring					 PdbName;
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
-
-	DxcShaderHash ShaderHash = {};
+	Microsoft::WRL::ComPtr<IDxcBlob>			   Binary;
+	std::wstring								   PdbName;
+	Microsoft::WRL::ComPtr<IDxcBlob>			   Pdb;
+	DxcShaderHash								   ShaderHash;
 };
 
 class ShaderCompiler

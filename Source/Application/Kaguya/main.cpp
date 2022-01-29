@@ -25,34 +25,34 @@
 
 namespace RenderCore
 {
-	extern D3D12Device*	   Device;
-	extern ShaderCompiler* Compiler;
+	extern RHI::D3D12Device* Device;
+	extern ShaderCompiler*	 Compiler;
 } // namespace RenderCore
 
 class D3D12RHIInitializer
 {
 public:
-	D3D12RHIInitializer(const DeviceOptions& Options);
+	D3D12RHIInitializer(const RHI::DeviceOptions& Options);
 	~D3D12RHIInitializer();
 
 private:
-	std::unique_ptr<D3D12Device>	Device;
-	std::unique_ptr<ShaderCompiler> Compiler;
+	std::unique_ptr<RHI::D3D12Device> Device;
+	std::unique_ptr<ShaderCompiler>	  Compiler;
 
 	bool ImGuiD3D12Initialized = false;
 };
 
 namespace RenderCore
 {
-	D3D12Device*	Device	 = nullptr;
-	ShaderCompiler* Compiler = nullptr;
+	RHI::D3D12Device* Device   = nullptr;
+	ShaderCompiler*	  Compiler = nullptr;
 } // namespace RenderCore
 
-D3D12RHIInitializer::D3D12RHIInitializer(const DeviceOptions& Options)
+D3D12RHIInitializer::D3D12RHIInitializer(const RHI::DeviceOptions& Options)
 {
 	assert(!Device && !Compiler);
 
-	Device = std::make_unique<D3D12Device>(Options);
+	Device = std::make_unique<RHI::D3D12Device>(Options);
 
 	// First descriptor always reserved for imgui
 	UINT						ImGuiIndex		   = 0;
@@ -64,7 +64,7 @@ D3D12RHIInitializer::D3D12RHIInitializer(const DeviceOptions& Options)
 	ImGuiD3D12Initialized = ImGui_ImplDX12_Init(
 		Device->GetD3D12Device(),
 		1,
-		D3D12SwapChain::Format,
+		RHI::D3D12SwapChain::Format,
 		Device->GetDevice()->GetResourceDescriptorHeap(),
 		ImGuiCpuDescriptor,
 		ImGuiGpuDescriptor);
@@ -364,7 +364,7 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	MainWindow.Show();
 
-	DeviceOptions DeviceOptions = {};
+	RHI::DeviceOptions DeviceOptions = {};
 #if _DEBUG
 	DeviceOptions.EnableDebugLayer		   = true;
 	DeviceOptions.EnableGpuBasedValidation = false;

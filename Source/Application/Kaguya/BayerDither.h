@@ -7,42 +7,42 @@
 
 struct BayerDitherInputParameters
 {
-	RgResourceHandle Input;
-	RgResourceHandle Srv;
+	RHI::RgResourceHandle Input;
+	RHI::RgResourceHandle Srv;
 };
 
 struct BayerDitherParameters
 {
-	RgResourceHandle Output;
-	RgResourceHandle Srv;
-	RgResourceHandle Uav;
+	RHI::RgResourceHandle Output;
+	RHI::RgResourceHandle Srv;
+	RHI::RgResourceHandle Uav;
 };
 
-static BayerDitherParameters AddBayerDitherPass(RenderGraph& Graph, const View& View, BayerDitherInputParameters Inputs)
+static BayerDitherParameters AddBayerDitherPass(RHI::RenderGraph& Graph, const View& View, BayerDitherInputParameters Inputs)
 {
 	assert(Inputs.Input.IsValid());
 	assert(Inputs.Srv.IsValid());
 
 	BayerDitherParameters BayerDitherArgs;
 
-	constexpr DXGI_FORMAT Format = D3D12SwapChain::Format;
+	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	BayerDitherArgs.Output = Graph.Create<D3D12Texture>("Bayer Dither Output", RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
-	BayerDitherArgs.Srv	   = Graph.Create<D3D12ShaderResourceView>("Bayer Dither Srv", RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureSrv());
-	BayerDitherArgs.Uav	   = Graph.Create<D3D12UnorderedAccessView>("Bayer Dither Uav", RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureUav());
+	BayerDitherArgs.Output = Graph.Create<RHI::D3D12Texture>("Bayer Dither Output", RHI::RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	BayerDitherArgs.Srv	   = Graph.Create<RHI::D3D12ShaderResourceView>("Bayer Dither Srv", RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureSrv());
+	BayerDitherArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>("Bayer Dither Uav", RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Bayer Dither")
 		.Read(Inputs.Input)
 		.Write(&BayerDitherArgs.Output)
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 struct Parameters
 					 {
 						 HlslTexture2D	 Input;
 						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(BayerDitherArgs.Uav);
+					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BayerDitherArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BayerDither));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BayerDither));

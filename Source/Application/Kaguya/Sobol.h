@@ -7,42 +7,42 @@
 
 struct SobolInputParameters
 {
-	RgResourceHandle Input;
-	RgResourceHandle Srv;
+	RHI::RgResourceHandle Input;
+	RHI::RgResourceHandle Srv;
 };
 
 struct SobolParameters
 {
-	RgResourceHandle Output;
-	RgResourceHandle Srv;
-	RgResourceHandle Uav;
+	RHI::RgResourceHandle Output;
+	RHI::RgResourceHandle Srv;
+	RHI::RgResourceHandle Uav;
 };
 
-static SobolParameters AddSobolPass(RenderGraph& Graph, const View& View, SobolInputParameters Inputs)
+static SobolParameters AddSobolPass(RHI::RenderGraph& Graph, const View& View, SobolInputParameters Inputs)
 {
 	assert(Inputs.Input.IsValid());
 	assert(Inputs.Srv.IsValid());
 
 	SobolParameters SobolArgs;
 
-	constexpr DXGI_FORMAT Format = D3D12SwapChain::Format;
+	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	SobolArgs.Output = Graph.Create<D3D12Texture>("Sobol Output", RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
-	SobolArgs.Srv	 = Graph.Create<D3D12ShaderResourceView>("Sobol Srv", RgViewDesc().SetResource(SobolArgs.Output).AsTextureSrv());
-	SobolArgs.Uav	 = Graph.Create<D3D12UnorderedAccessView>("Sobol Uav", RgViewDesc().SetResource(SobolArgs.Output).AsTextureUav());
+	SobolArgs.Output = Graph.Create<RHI::D3D12Texture>("Sobol Output", RHI::RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	SobolArgs.Srv	 = Graph.Create<RHI::D3D12ShaderResourceView>("Sobol Srv", RHI::RgViewDesc().SetResource(SobolArgs.Output).AsTextureSrv());
+	SobolArgs.Uav	 = Graph.Create<RHI::D3D12UnorderedAccessView>("Sobol Uav", RHI::RgViewDesc().SetResource(SobolArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Sobol")
 		.Read(Inputs.Input)
 		.Write(&SobolArgs.Output)
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 struct Parameters
 					 {
 						 HlslTexture2D	 Input;
 						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(SobolArgs.Uav);
+					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(SobolArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Sobol));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Sobol));

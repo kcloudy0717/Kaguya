@@ -1,6 +1,6 @@
 #include "RaytracingAccelerationStructure.h"
 
-RaytracingAccelerationStructure::RaytracingAccelerationStructure(D3D12Device* Device, UINT NumHitGroups, size_t NumInstances)
+RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups, size_t NumInstances)
 	: Device(Device)
 	, NumHitGroups(NumHitGroups)
 	, NumInstances(NumInstances)
@@ -8,14 +8,14 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(D3D12Device* De
 {
 	StaticMeshes.reserve(NumInstances);
 
-	Manager = D3D12RaytracingAccelerationStructureManager(Device->GetDevice(), 6 * 1024 * 1024);
+	Manager = RHI::D3D12RaytracingAccelerationStructureManager(Device->GetDevice(), 6 * 1024 * 1024);
 
-	Null = D3D12ShaderResourceView(Device->GetDevice(), nullptr);
+	Null = RHI::D3D12ShaderResourceView(Device->GetDevice(), nullptr);
 }
 
 void RaytracingAccelerationStructure::Initialize()
 {
-	InstanceDescs = D3D12Buffer(
+	InstanceDescs = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * NumInstances,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
@@ -52,7 +52,7 @@ void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, St
 	CurrentInstanceContributionToHitGroupIndex += StaticMesh->Mesh->Blas.Size() * NumHitGroups;
 }
 
-void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
+void RaytracingAccelerationStructure::Build(RHI::D3D12CommandContext& Context)
 {
 	bool AnyBlasBuild = false;
 
@@ -105,7 +105,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	if (!TlasScratch.GetResource() || TlasScratch.GetDesc().Width < ScratchSize)
 	{
 		// TLAS Scratch
-		TlasScratch = D3D12Buffer(
+		TlasScratch = RHI::D3D12Buffer(
 			Device->GetDevice(),
 			ScratchSize,
 			0,
@@ -116,8 +116,8 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 	if (!TlasResult.GetResource() || TlasResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TlasResult = D3D12ASBuffer(Device->GetDevice(), ResultSize);
-		SRV		   = D3D12ShaderResourceView(Device->GetDevice(), &TlasResult);
+		TlasResult = RHI::D3D12ASBuffer(Device->GetDevice(), ResultSize);
+		SRV		   = RHI::D3D12ShaderResourceView(Device->GetDevice(), &TlasResult);
 	}
 
 	// Create the description for each instance
@@ -134,7 +134,7 @@ void RaytracingAccelerationStructure::Build(D3D12CommandContext& Context)
 		InstanceDescs.GetGpuVirtualAddress());
 }
 
-void RaytracingAccelerationStructure::PostBuild(D3D12SyncHandle SyncHandle)
+void RaytracingAccelerationStructure::PostBuild(RHI::D3D12SyncHandle SyncHandle)
 {
 	for (const auto& Geometry : ReferencedGeometries)
 	{

@@ -84,19 +84,19 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 #include <unordered_map>
 #include <queue>
 
-#define VERIFY_D3D12_API(expr)                            \
-	do                                                    \
-	{                                                     \
-		HRESULT hr = expr;                                \
-		if (FAILED(hr))                                   \
-		{                                                 \
-			throw D3D12Exception(__FILE__, __LINE__, hr); \
-		}                                                 \
+#define VERIFY_D3D12_API(expr)                                 \
+	do                                                         \
+	{                                                          \
+		HRESULT hr = expr;                                     \
+		if (FAILED(hr))                                        \
+		{                                                      \
+			throw RHI::D3D12Exception(__FILE__, __LINE__, hr); \
+		}                                                      \
 	} while (false)
 
 #define D3D12Concatenate(a, b)				  a##b
 #define D3D12GetScopedEventVariableName(a, b) D3D12Concatenate(a, b)
-#define D3D12ScopedEvent(context, name)		  D3D12ScopedEventObject D3D12GetScopedEventVariableName(D3D12Event, __LINE__)(context, name)
+#define D3D12ScopedEvent(context, name)		  RHI::D3D12ScopedEventObject D3D12GetScopedEventVariableName(D3D12Event, __LINE__)(context, name)
 
 // Custom resource states
 constexpr D3D12_RESOURCE_STATES D3D12_RESOURCE_STATE_UNKNOWN	   = static_cast<D3D12_RESOURCE_STATES>(-1);

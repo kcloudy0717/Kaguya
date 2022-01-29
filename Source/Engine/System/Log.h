@@ -94,6 +94,8 @@ private:
 	std::shared_ptr<spdlog::logger> Logger;
 };
 
+#define LOG_CONCATENATE(a, b)		  a##b
+
 #define DECLARE_LOG_CATEGORY(Name)       \
 	extern struct Log##Name : public Log \
 	{                                    \
@@ -101,14 +103,14 @@ private:
 			: Log(#Name)                 \
 		{                                \
 		}                                \
-	} Name
+	} LOG_CONCATENATE(g_Log, Name)
 
-#define DEFINE_LOG_CATEGORY(Name)  Log##Name Name
+#define DEFINE_LOG_CATEGORY(Name)  Log##Name LOG_CONCATENATE(g_Log, Name)
 
-#define LUNA_LOG(Name, Level, ...) Name.##Level(__VA_ARGS__)
+#define LUNA_LOG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
 
 #if _DEBUG
-#define LUNA_LOG_DEBUG(Name, Level, ...) Name.##Level(__VA_ARGS__)
+#define LUNA_LOG_DEBUG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
 #else
 #define LUNA_LOG_DEBUG(Name, Level, ...)
 #endif

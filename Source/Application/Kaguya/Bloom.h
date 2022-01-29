@@ -13,51 +13,51 @@ struct BloomSettings
 
 struct BloomInputParameters
 {
-	RgResourceHandle Input;
-	RgResourceHandle Srv;
+	RHI::RgResourceHandle Input;
+	RHI::RgResourceHandle Srv;
 };
 
 struct BloomParameters
 {
 	// 0: Bloom downsampled, 1: Bloom blurred and upscaled
-	RgResourceHandle Output1[2]; // 640x384 (1/3)
-	RgResourceHandle Output2[2]; // 320x192 (1/6)
-	RgResourceHandle Output3[2]; // 160x96  (1/12)
-	RgResourceHandle Output4[2]; // 80x48   (1/24)
-	RgResourceHandle Output5[2]; // 40x24   (1/48)
+	RHI::RgResourceHandle Output1[2]; // 640x384 (1/3)
+	RHI::RgResourceHandle Output2[2]; // 320x192 (1/6)
+	RHI::RgResourceHandle Output3[2]; // 160x96  (1/12)
+	RHI::RgResourceHandle Output4[2]; // 80x48   (1/24)
+	RHI::RgResourceHandle Output5[2]; // 40x24   (1/48)
 
-	RgResourceHandle Output1Srvs[2];
-	RgResourceHandle Output2Srvs[2];
-	RgResourceHandle Output3Srvs[2];
-	RgResourceHandle Output4Srvs[2];
-	RgResourceHandle Output5Srvs[2];
-	RgResourceHandle Output1Uavs[2];
-	RgResourceHandle Output2Uavs[2];
-	RgResourceHandle Output3Uavs[2];
-	RgResourceHandle Output4Uavs[2];
-	RgResourceHandle Output5Uavs[2];
+	RHI::RgResourceHandle Output1Srvs[2];
+	RHI::RgResourceHandle Output2Srvs[2];
+	RHI::RgResourceHandle Output3Srvs[2];
+	RHI::RgResourceHandle Output4Srvs[2];
+	RHI::RgResourceHandle Output5Srvs[2];
+	RHI::RgResourceHandle Output1Uavs[2];
+	RHI::RgResourceHandle Output2Uavs[2];
+	RHI::RgResourceHandle Output3Uavs[2];
+	RHI::RgResourceHandle Output4Uavs[2];
+	RHI::RgResourceHandle Output5Uavs[2];
 };
 
 struct BlurUpsampleInputParameters
 {
-	RgResourceHandle  HighResInput; // [0]
-	RgResourceHandle  LowResInput;
-	RgResourceHandle* HighResOutput; // [1]
+	RHI::RgResourceHandle  HighResInput; // [0]
+	RHI::RgResourceHandle  LowResInput;
+	RHI::RgResourceHandle* HighResOutput; // [1]
 
-	RgResourceHandle HighResInputSrv;
-	RgResourceHandle LowResInputSrv;
-	RgResourceHandle HighResOutputUav;
+	RHI::RgResourceHandle HighResInputSrv;
+	RHI::RgResourceHandle LowResInputSrv;
+	RHI::RgResourceHandle HighResOutputUav;
 };
 
-static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsampleInputParameters Inputs, float UpsampleInterpolationFactor)
+static void BlurUpsample(std::string_view Name, RHI::RenderGraph& Graph, BlurUpsampleInputParameters Inputs, float UpsampleInterpolationFactor)
 {
 	Graph.AddRenderPass(Name)
 		.Read(Inputs.HighResInput)
 		.Read(Inputs.LowResInput)
 		.Write(Inputs.HighResOutput)
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
-					 D3D12Texture* HighResInput = Registry.Get<D3D12Texture>(Inputs.HighResInput);
+					 RHI::D3D12Texture* HighResInput = Registry.Get<RHI::D3D12Texture>(Inputs.HighResInput);
 					 struct Parameters
 					 {
 						 Vec2f			 InverseOutputSize;
@@ -68,9 +68,9 @@ static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsample
 					 } Args;
 					 Args.InverseOutputSize			  = Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
 					 Args.UpsampleInterpolationFactor = UpsampleInterpolationFactor;
-					 Args.HighRes					  = Registry.Get<D3D12ShaderResourceView>(Inputs.HighResInputSrv);
-					 Args.LowRes					  = Registry.Get<D3D12ShaderResourceView>(Inputs.LowResInputSrv);
-					 Args.Output					  = Registry.Get<D3D12UnorderedAccessView>(Inputs.HighResOutputUav);
+					 Args.HighRes					  = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.HighResInputSrv);
+					 Args.LowRes					  = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.LowResInputSrv);
+					 Args.Output					  = Registry.Get<RHI::D3D12UnorderedAccessView>(Inputs.HighResOutputUav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
@@ -79,7 +79,7 @@ static void BlurUpsample(std::string_view Name, RenderGraph& Graph, BlurUpsample
 				 });
 }
 
-static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomInputParameters Inputs, BloomSettings Settings = BloomSettings())
+static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, BloomInputParameters Inputs, BloomSettings Settings = BloomSettings())
 {
 	uint32_t kBloomWidth  = View.Width > 2560 ? 1280 : 640;
 	uint32_t kBloomHeight = View.Height > 1440 ? 768 : 384;
@@ -87,37 +87,37 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 	BloomParameters BloomArgs;
 
 	constexpr DXGI_FORMAT Format = DXGI_FORMAT_R11G11B10_FLOAT;
-	BloomArgs.Output1[0]		 = Graph.Create<D3D12Texture>("Bloom Output 1a", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
-	BloomArgs.Output1[1]		 = Graph.Create<D3D12Texture>("Bloom Output 1b", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
-	BloomArgs.Output2[0]		 = Graph.Create<D3D12Texture>("Bloom Output 2a", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
-	BloomArgs.Output2[1]		 = Graph.Create<D3D12Texture>("Bloom Output 2b", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
-	BloomArgs.Output3[0]		 = Graph.Create<D3D12Texture>("Bloom Output 3a", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
-	BloomArgs.Output3[1]		 = Graph.Create<D3D12Texture>("Bloom Output 3b", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
-	BloomArgs.Output4[0]		 = Graph.Create<D3D12Texture>("Bloom Output 4a", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
-	BloomArgs.Output4[1]		 = Graph.Create<D3D12Texture>("Bloom Output 4b", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
-	BloomArgs.Output5[0]		 = Graph.Create<D3D12Texture>("Bloom Output 5a", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
-	BloomArgs.Output5[1]		 = Graph.Create<D3D12Texture>("Bloom Output 5b", RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
+	BloomArgs.Output1[0]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 1a", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
+	BloomArgs.Output1[1]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 1b", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
+	BloomArgs.Output2[0]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 2a", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
+	BloomArgs.Output2[1]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 2b", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
+	BloomArgs.Output3[0]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 3a", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
+	BloomArgs.Output3[1]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 3b", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
+	BloomArgs.Output4[0]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 4a", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
+	BloomArgs.Output4[1]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 4b", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
+	BloomArgs.Output5[0]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 5a", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
+	BloomArgs.Output5[1]		 = Graph.Create<RHI::D3D12Texture>("Bloom Output 5b", RHI::RgTextureDesc().SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
 
 	for (size_t i = 0; i < 2; ++i)
 	{
 		// Srvs
-		BloomArgs.Output1Srvs[i] = Graph.Create<D3D12ShaderResourceView>("Bloom Srv", RgViewDesc().SetResource(BloomArgs.Output1[i]).AsTextureSrv());
-		BloomArgs.Output2Srvs[i] = Graph.Create<D3D12ShaderResourceView>("Bloom Srv", RgViewDesc().SetResource(BloomArgs.Output2[i]).AsTextureSrv());
-		BloomArgs.Output3Srvs[i] = Graph.Create<D3D12ShaderResourceView>("Bloom Srv", RgViewDesc().SetResource(BloomArgs.Output3[i]).AsTextureSrv());
-		BloomArgs.Output4Srvs[i] = Graph.Create<D3D12ShaderResourceView>("Bloom Srv", RgViewDesc().SetResource(BloomArgs.Output4[i]).AsTextureSrv());
-		BloomArgs.Output5Srvs[i] = Graph.Create<D3D12ShaderResourceView>("Bloom Srv", RgViewDesc().SetResource(BloomArgs.Output5[i]).AsTextureSrv());
+		BloomArgs.Output1Srvs[i] = Graph.Create<RHI::D3D12ShaderResourceView>("Bloom Srv", RHI::RgViewDesc().SetResource(BloomArgs.Output1[i]).AsTextureSrv());
+		BloomArgs.Output2Srvs[i] = Graph.Create<RHI::D3D12ShaderResourceView>("Bloom Srv", RHI::RgViewDesc().SetResource(BloomArgs.Output2[i]).AsTextureSrv());
+		BloomArgs.Output3Srvs[i] = Graph.Create<RHI::D3D12ShaderResourceView>("Bloom Srv", RHI::RgViewDesc().SetResource(BloomArgs.Output3[i]).AsTextureSrv());
+		BloomArgs.Output4Srvs[i] = Graph.Create<RHI::D3D12ShaderResourceView>("Bloom Srv", RHI::RgViewDesc().SetResource(BloomArgs.Output4[i]).AsTextureSrv());
+		BloomArgs.Output5Srvs[i] = Graph.Create<RHI::D3D12ShaderResourceView>("Bloom Srv", RHI::RgViewDesc().SetResource(BloomArgs.Output5[i]).AsTextureSrv());
 		// Uavs
-		BloomArgs.Output1Uavs[i] = Graph.Create<D3D12UnorderedAccessView>("Bloom Uav", RgViewDesc().SetResource(BloomArgs.Output1[i]).AsTextureUav());
-		BloomArgs.Output2Uavs[i] = Graph.Create<D3D12UnorderedAccessView>("Bloom Uav", RgViewDesc().SetResource(BloomArgs.Output2[i]).AsTextureUav());
-		BloomArgs.Output3Uavs[i] = Graph.Create<D3D12UnorderedAccessView>("Bloom Uav", RgViewDesc().SetResource(BloomArgs.Output3[i]).AsTextureUav());
-		BloomArgs.Output4Uavs[i] = Graph.Create<D3D12UnorderedAccessView>("Bloom Uav", RgViewDesc().SetResource(BloomArgs.Output4[i]).AsTextureUav());
-		BloomArgs.Output5Uavs[i] = Graph.Create<D3D12UnorderedAccessView>("Bloom Uav", RgViewDesc().SetResource(BloomArgs.Output5[i]).AsTextureUav());
+		BloomArgs.Output1Uavs[i] = Graph.Create<RHI::D3D12UnorderedAccessView>("Bloom Uav", RHI::RgViewDesc().SetResource(BloomArgs.Output1[i]).AsTextureUav());
+		BloomArgs.Output2Uavs[i] = Graph.Create<RHI::D3D12UnorderedAccessView>("Bloom Uav", RHI::RgViewDesc().SetResource(BloomArgs.Output2[i]).AsTextureUav());
+		BloomArgs.Output3Uavs[i] = Graph.Create<RHI::D3D12UnorderedAccessView>("Bloom Uav", RHI::RgViewDesc().SetResource(BloomArgs.Output3[i]).AsTextureUav());
+		BloomArgs.Output4Uavs[i] = Graph.Create<RHI::D3D12UnorderedAccessView>("Bloom Uav", RHI::RgViewDesc().SetResource(BloomArgs.Output4[i]).AsTextureUav());
+		BloomArgs.Output5Uavs[i] = Graph.Create<RHI::D3D12UnorderedAccessView>("Bloom Uav", RHI::RgViewDesc().SetResource(BloomArgs.Output5[i]).AsTextureUav());
 	}
 
 	Graph.AddRenderPass("Bloom Mask")
 		.Read(Inputs.Input)
 		.Write(&BloomArgs.Output1[0])
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 struct Parameters
 					 {
@@ -128,8 +128,8 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
 					 Args.Threshold			= Settings.Threshold;
-					 Args.Input				= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
+					 Args.Input				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Output			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomMask));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomMask));
@@ -142,7 +142,7 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 		.Write(&BloomArgs.Output3[0])
 		.Write(&BloomArgs.Output4[0])
 		.Write(&BloomArgs.Output5[0])
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 struct Parameters
 					 {
@@ -154,11 +154,11 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 						 HlslRWTexture2D Output4;
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
-					 Args.Bloom				= Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
-					 Args.Output1			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
-					 Args.Output2			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);
-					 Args.Output3			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0]);
-					 Args.Output4			= Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0]);
+					 Args.Bloom				= Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
+					 Args.Output1			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
+					 Args.Output2			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);
+					 Args.Output3			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0]);
+					 Args.Output4			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomDownsample));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomDownsample));
@@ -168,16 +168,16 @@ static BloomParameters AddBloomPass(RenderGraph& Graph, const View& View, BloomI
 	Graph.AddRenderPass("Bloom Blur")
 		.Read(BloomArgs.Output5[0])
 		.Write(&BloomArgs.Output5[1])
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
-					 D3D12Texture* Output5a = Registry.Get<D3D12Texture>(BloomArgs.Output5[0]);
+					 RHI::D3D12Texture* Output5a = Registry.Get<RHI::D3D12Texture>(BloomArgs.Output5[0]);
 					 struct Parameters
 					 {
 						 HlslTexture2D	 Input;
 						 HlslRWTexture2D Output;
 					 } Args;
-					 Args.Input	 = Registry.Get<D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0]);
-					 Args.Output = Registry.Get<D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1]);
+					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0]);
+					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1]);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));

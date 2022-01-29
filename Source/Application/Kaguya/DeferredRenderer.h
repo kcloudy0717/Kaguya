@@ -12,7 +12,7 @@ public:
 private:
 	void Initialize() override;
 	void Destroy() override;
-	void Render(World* World, D3D12CommandContext& Context) override;
+	void Render(World* World, RHI::D3D12CommandContext& Context) override;
 
 private:
 #pragma pack(push, 4)
@@ -40,20 +40,20 @@ private:
 	static constexpr u64 TotalCommandBufferSizeInBytes = World::MeshLimit * sizeof(CommandSignatureParams);
 	static constexpr u64 CommandBufferCounterOffset	   = AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 
-	D3D12CommandSignature CommandSignature;
+	RHI::D3D12CommandSignature CommandSignature;
 
-	D3D12Buffer				 IndirectCommandBuffer;
-	D3D12UnorderedAccessView UAV;
+	RHI::D3D12Buffer			  IndirectCommandBuffer;
+	RHI::D3D12UnorderedAccessView UAV;
 
 	std::vector<StaticMeshComponent*> StaticMeshes;
 	std::vector<Hlsl::Mesh>			  HlslMeshes;
 
-	D3D12Buffer		Materials;
-	Hlsl::Material* pMaterial = nullptr;
-	D3D12Buffer		Lights;
-	Hlsl::Light*	pLights = nullptr;
-	D3D12Buffer		Meshes;
-	Hlsl::Mesh*		pMeshes = nullptr;
+	RHI::D3D12Buffer Materials;
+	Hlsl::Material*	 pMaterial = nullptr;
+	RHI::D3D12Buffer Lights;
+	Hlsl::Light*	 pLights = nullptr;
+	RHI::D3D12Buffer Meshes;
+	Hlsl::Mesh*		 pMeshes = nullptr;
 
 	u32 NumMaterials = 0, NumLights = 0, NumMeshes = 0;
 

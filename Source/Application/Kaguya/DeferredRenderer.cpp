@@ -17,7 +17,7 @@ void DeferredRenderer::Initialize()
 	Builder.AddShaderResourceView(4);
 	Builder.AddDispatchMesh();
 #else
-	CommandSignatureDesc Builder(4, sizeof(CommandSignatureParams));
+	RHI::CommandSignatureDesc Builder(4, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddVertexBufferView(0);
 	Builder.AddIndexBufferView();
@@ -30,21 +30,21 @@ void DeferredRenderer::Initialize()
 		Builder,
 		Registry.GetRootSignature(RootSignatures::Meshlet)->GetApiHandle());
 #else
-	CommandSignature = D3D12CommandSignature(
+	CommandSignature = RHI::D3D12CommandSignature(
 		Device,
 		Builder,
 		Registry.GetRootSignature(RootSignatures::GBuffer)->GetApiHandle());
 #endif
 
-	IndirectCommandBuffer = D3D12Buffer(
+	IndirectCommandBuffer = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		CommandBufferCounterOffset + sizeof(UINT64),
 		sizeof(CommandSignatureParams),
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	UAV = D3D12UnorderedAccessView(Device->GetDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
+	UAV = RHI::D3D12UnorderedAccessView(Device->GetDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
 
-	Materials = D3D12Buffer(
+	Materials = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(Hlsl::Material) * World::MaterialLimit,
 		sizeof(Hlsl::Material),
@@ -53,7 +53,7 @@ void DeferredRenderer::Initialize()
 	Materials.Initialize();
 	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
 
-	Lights = D3D12Buffer(
+	Lights = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(Hlsl::Light) * World::LightLimit,
 		sizeof(Hlsl::Light),
@@ -62,7 +62,7 @@ void DeferredRenderer::Initialize()
 	Lights.Initialize();
 	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
 
-	Meshes = D3D12Buffer(
+	Meshes = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(Hlsl::Mesh) * World::MeshLimit,
 		sizeof(Hlsl::Mesh),
@@ -79,7 +79,7 @@ void DeferredRenderer::Destroy()
 {
 }
 
-void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
+void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 {
 	if (ImGui::Begin("Renderer"))
 	{
@@ -97,8 +97,8 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		{
 			if (StaticMesh.Mesh)
 			{
-				D3D12Buffer& VertexBuffer = StaticMesh.Mesh->VertexResource;
-				D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
+				RHI::D3D12Buffer& VertexBuffer = StaticMesh.Mesh->VertexResource;
+				RHI::D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
 
 				D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
 				DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->IndexCount;
@@ -160,18 +160,18 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 	// Copy Queue -> Compute Queue -> Graphics Queue
 	// Workloads are executed asynchronously
 
-	D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
+	RHI::D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
 	Copy.Open();
 	{
 		Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
 	}
 	Copy.Close();
-	D3D12SyncHandle CopySyncHandle = Copy.Execute(false);
+	RHI::D3D12SyncHandle CopySyncHandle = Copy.Execute(false);
 
-	D3D12SyncHandle ComputeSyncHandle;
+	RHI::D3D12SyncHandle ComputeSyncHandle;
 	if (NumMeshes > 0)
 	{
-		D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
+		RHI::D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
 
 		AsyncCompute.Open();
@@ -195,62 +195,62 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 
 	Context.GetCommandQueue()->WaitForSyncHandle(ComputeSyncHandle);
 
-	RenderGraph Graph(Allocator, Registry);
+	RHI::RenderGraph Graph(Allocator, Registry);
 
 	struct GBufferParameters
 	{
-		RgResourceHandle Albedo;
-		RgResourceHandle Normal;
-		RgResourceHandle Motion;
-		RgResourceHandle Depth;
-		RgResourceHandle RenderTarget;
+		RHI::RgResourceHandle Albedo;
+		RHI::RgResourceHandle Normal;
+		RHI::RgResourceHandle Motion;
+		RHI::RgResourceHandle Depth;
+		RHI::RgResourceHandle RenderTarget;
 
-		RgResourceHandle AlbedoSrv;
-		RgResourceHandle NormalSrv;
-		RgResourceHandle MotionSrv;
-		RgResourceHandle DepthSrv;
+		RHI::RgResourceHandle AlbedoSrv;
+		RHI::RgResourceHandle NormalSrv;
+		RHI::RgResourceHandle MotionSrv;
+		RHI::RgResourceHandle DepthSrv;
 	} GBufferArgs;
 	FLOAT Color[]	   = { 0, 0, 0, 0 };
-	GBufferArgs.Albedo = Graph.Create<D3D12Texture>(
+	GBufferArgs.Albedo = Graph.Create<RHI::D3D12Texture>(
 		"Albedo",
-		RgTextureDesc()
+		RHI::RgTextureDesc()
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
-	GBufferArgs.Normal = Graph.Create<D3D12Texture>(
+	GBufferArgs.Normal = Graph.Create<RHI::D3D12Texture>(
 		"Normal",
-		RgTextureDesc()
+		RHI::RgTextureDesc()
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
-	GBufferArgs.Motion = Graph.Create<D3D12Texture>(
+	GBufferArgs.Motion = Graph.Create<RHI::D3D12Texture>(
 		"Motion",
-		RgTextureDesc()
+		RHI::RgTextureDesc()
 			.SetFormat(DXGI_FORMAT_R16G16_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
-	GBufferArgs.Depth = Graph.Create<D3D12Texture>(
+	GBufferArgs.Depth = Graph.Create<RHI::D3D12Texture>(
 		"Depth",
-		RgTextureDesc()
+		RHI::RgTextureDesc()
 			.SetFormat(DXGI_FORMAT_D32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowDepthStencil()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
-	GBufferArgs.RenderTarget = Graph.Create<D3D12RenderTarget>(
+	GBufferArgs.RenderTarget = Graph.Create<RHI::D3D12RenderTarget>(
 		"GBuffer",
-		RgRenderTargetDesc()
+		RHI::RgRenderTargetDesc()
 			.AddRenderTarget(GBufferArgs.Albedo, false)
 			.AddRenderTarget(GBufferArgs.Normal, false)
 			.AddRenderTarget(GBufferArgs.Motion, false)
 			.SetDepthStencil(GBufferArgs.Depth));
 
-	GBufferArgs.AlbedoSrv = Graph.Create<D3D12ShaderResourceView>("Albedo Srv", RgViewDesc().SetResource(GBufferArgs.Albedo).AsTextureSrv());
-	GBufferArgs.NormalSrv = Graph.Create<D3D12ShaderResourceView>("Normal Srv", RgViewDesc().SetResource(GBufferArgs.Normal).AsTextureSrv());
-	GBufferArgs.MotionSrv = Graph.Create<D3D12ShaderResourceView>("Motion Srv", RgViewDesc().SetResource(GBufferArgs.Motion).AsTextureSrv());
-	GBufferArgs.DepthSrv  = Graph.Create<D3D12ShaderResourceView>("Depth Srv", RgViewDesc().SetResource(GBufferArgs.Depth).AsTextureSrv());
+	GBufferArgs.AlbedoSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Albedo Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Albedo).AsTextureSrv());
+	GBufferArgs.NormalSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Normal Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsTextureSrv());
+	GBufferArgs.MotionSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Motion Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsTextureSrv());
+	GBufferArgs.DepthSrv  = Graph.Create<RHI::D3D12ShaderResourceView>("Depth Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsTextureSrv());
 
 #if USE_MESH_SHADERS
 	Graph.AddRenderPass("GBuffer (Mesh Shaders)")
@@ -288,7 +288,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		.Write(&GBufferArgs.Normal)
 		.Write(&GBufferArgs.Motion)
 		.Write(&GBufferArgs.Depth)
-		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::GBuffer));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::GBuffer));
@@ -301,7 +301,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
 					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
 
-					 D3D12RenderTarget* RenderTarget = Registry.Get<D3D12RenderTarget>(GBufferArgs.RenderTarget);
+					 RHI::D3D12RenderTarget* RenderTarget = Registry.Get<RHI::D3D12RenderTarget>(GBufferArgs.RenderTarget);
 					 Context.ClearRenderTarget(RenderTarget);
 					 Context.SetRenderTarget(RenderTarget);
 
@@ -315,7 +315,7 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 				 });
 #endif //
 
-	RgResourceHandle Views[] = {
+	RHI::RgResourceHandle Views[] = {
 		GBufferArgs.AlbedoSrv,
 		GBufferArgs.NormalSrv,
 		GBufferArgs.MotionSrv,
@@ -329,5 +329,5 @@ void DeferredRenderer::Render(World* World, D3D12CommandContext& Context)
 		.Read(GBufferArgs.Depth);
 
 	Graph.Execute(Context);
-	Viewport = reinterpret_cast<void*>(Registry.Get<D3D12ShaderResourceView>(Views[ViewMode])->GetGpuHandle().ptr);
+	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(Views[ViewMode])->GetGpuHandle().ptr);
 }

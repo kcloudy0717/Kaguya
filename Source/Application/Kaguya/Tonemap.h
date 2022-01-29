@@ -19,20 +19,20 @@ struct TonemapSettings
 
 struct TonemapInputParameters
 {
-	RgResourceHandle Input;
-	RgResourceHandle Srv;
-	RgResourceHandle BloomInput;
-	RgResourceHandle BloomInputSrv;
+	RHI::RgResourceHandle Input;
+	RHI::RgResourceHandle Srv;
+	RHI::RgResourceHandle BloomInput;
+	RHI::RgResourceHandle BloomInputSrv;
 };
 
 struct TonemapParameters
 {
-	RgResourceHandle Output;
-	RgResourceHandle Srv;
-	RgResourceHandle Uav;
+	RHI::RgResourceHandle Output;
+	RHI::RgResourceHandle Srv;
+	RHI::RgResourceHandle Uav;
 };
 
-static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, TonemapInputParameters Inputs, TonemapSettings Settings = TonemapSettings())
+static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& View, TonemapInputParameters Inputs, TonemapSettings Settings = TonemapSettings())
 {
 	assert(Inputs.Input.IsValid());
 	assert(Inputs.BloomInput.IsValid());
@@ -41,17 +41,17 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 
 	TonemapParameters TonemapArgs;
 
-	constexpr DXGI_FORMAT Format = D3D12SwapChain::Format;
+	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	TonemapArgs.Output = Graph.Create<D3D12Texture>("Tonemap Output", RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
-	TonemapArgs.Srv	   = Graph.Create<D3D12ShaderResourceView>("Tonemap Srv", RgViewDesc().SetResource(TonemapArgs.Output).AsTextureSrv());
-	TonemapArgs.Uav	   = Graph.Create<D3D12UnorderedAccessView>("Tonemap Uav", RgViewDesc().SetResource(TonemapArgs.Output).AsTextureUav());
+	TonemapArgs.Output = Graph.Create<RHI::D3D12Texture>("Tonemap Output", RHI::RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	TonemapArgs.Srv	   = Graph.Create<RHI::D3D12ShaderResourceView>("Tonemap Srv", RHI::RgViewDesc().SetResource(TonemapArgs.Output).AsTextureSrv());
+	TonemapArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>("Tonemap Uav", RHI::RgViewDesc().SetResource(TonemapArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Tonemap")
 		.Read(Inputs.Input)
 		.Read(Inputs.BloomInput)
 		.Write(&TonemapArgs.Output)
-		.Execute([=](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 struct Parameters
 					 {
@@ -63,9 +63,9 @@ static TonemapParameters AddTonemapPass(RenderGraph& Graph, const View& View, To
 					 } Args;
 					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
 					 Args.BloomIntensity	= Settings.BloomIntensity;
-					 Args.Input				= Registry.Get<D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Bloom				= Registry.Get<D3D12ShaderResourceView>(Inputs.BloomInputSrv);
-					 Args.Output			= Registry.Get<D3D12UnorderedAccessView>(TonemapArgs.Uav);
+					 Args.Input				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+					 Args.Bloom				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
+					 Args.Output			= Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);
 
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));

@@ -9,10 +9,10 @@
 #include "UI/InspectorWindow.h"
 #include "UI/AssetWindow.h"
 
-class RendererPresent : public IPresent
+class RendererPresent : public RHI::IPresent
 {
 public:
-	RendererPresent(D3D12CommandContext& Context) noexcept
+	RendererPresent(RHI::D3D12CommandContext& Context) noexcept
 		: Context(Context)
 	{
 	}
@@ -27,14 +27,14 @@ public:
 		SyncHandle.WaitForCompletion();
 	}
 
-	D3D12CommandContext& Context;
-	D3D12SyncHandle		 SyncHandle;
+	RHI::D3D12CommandContext& Context;
+	RHI::D3D12SyncHandle	  SyncHandle;
 };
 
 class Renderer
 {
 public:
-	Renderer(D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
+	Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
 	virtual ~Renderer() = default;
 
 	void OnInitialize();
@@ -48,18 +48,18 @@ public:
 	void OnMove(std::int32_t x, std::int32_t y);
 
 protected:
-	virtual void Initialize()										= 0;
-	virtual void Destroy()											= 0;
-	virtual void Render(World* World, D3D12CommandContext& Context) = 0;
+	virtual void Initialize()											 = 0;
+	virtual void Destroy()												 = 0;
+	virtual void Render(World* World, RHI::D3D12CommandContext& Context) = 0;
 
 protected:
-	D3D12Device*	Device	   = nullptr;
-	ShaderCompiler* Compiler   = nullptr;
-	Window*			MainWindow = nullptr;
-	D3D12SwapChain	SwapChain;
+	RHI::D3D12Device*	Device	   = nullptr;
+	ShaderCompiler*		Compiler   = nullptr;
+	Window*				MainWindow = nullptr;
+	RHI::D3D12SwapChain SwapChain;
 
-	RenderGraphAllocator Allocator;
-	RenderGraphRegistry	 Registry;
+	RHI::RenderGraphAllocator Allocator;
+	RHI::RenderGraphRegistry  Registry;
 
 	View View;
 

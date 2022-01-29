@@ -28,8 +28,8 @@ public:
 	std::string			  Name;
 	DirectX::ScratchImage TexImage;
 
-	D3D12Texture			DxTexture;
-	D3D12ShaderResourceView SRV;
+	RHI::D3D12Texture			 DxTexture;
+	RHI::D3D12ShaderResourceView SRV;
 };
 
 template<>

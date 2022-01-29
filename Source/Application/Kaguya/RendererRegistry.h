@@ -184,28 +184,28 @@ struct Libraries
 
 struct RootSignatures
 {
-	inline static RgResourceHandle GBuffer;
-	inline static RgResourceHandle IndirectCull;
+	inline static RHI::RgResourceHandle GBuffer;
+	inline static RHI::RgResourceHandle IndirectCull;
 
-	inline static RgResourceHandle Meshlet;
+	inline static RHI::RgResourceHandle Meshlet;
 
-	inline static RgResourceHandle BloomMask;
-	inline static RgResourceHandle BloomDownsample;
-	inline static RgResourceHandle BloomBlur;
-	inline static RgResourceHandle BloomUpsampleBlur;
-	inline static RgResourceHandle Tonemap;
-	inline static RgResourceHandle BayerDither;
-	inline static RgResourceHandle Sobol;
+	inline static RHI::RgResourceHandle BloomMask;
+	inline static RHI::RgResourceHandle BloomDownsample;
+	inline static RHI::RgResourceHandle BloomBlur;
+	inline static RHI::RgResourceHandle BloomUpsampleBlur;
+	inline static RHI::RgResourceHandle Tonemap;
+	inline static RHI::RgResourceHandle BayerDither;
+	inline static RHI::RgResourceHandle Sobol;
 
 	struct RTX
 	{
-		inline static RgResourceHandle PathTrace;
+		inline static RHI::RgResourceHandle PathTrace;
 	};
 
-	static void Compile(D3D12Device* Device, RenderGraphRegistry& Registry)
+	static void Compile(RHI::D3D12Device* Device, RHI::RenderGraphRegistry& Registry)
 	{
 		RTX::PathTrace = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.AddConstantBufferView<0, 0>()				// g_SystemConstants	register(b0, space0)
 				.AddRaytracingAccelerationStructure<0, 0>() // g_Scene				register(t0, space0)
 				.AddShaderResourceView<1, 0>()				// g_Materials			register(t1, space0)
@@ -215,7 +215,7 @@ struct RootSignatures
 				.AllowSampleDescriptorHeapIndexing()));
 
 		GBuffer = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 0>(1)
 				.AddConstantBufferView<1, 0>()
 				.AddShaderResourceView<0, 0>()
@@ -226,7 +226,7 @@ struct RootSignatures
 				.AllowSampleDescriptorHeapIndexing()));
 
 		IndirectCull = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.AddConstantBufferView<0, 0>()
 				.AddShaderResourceView<0, 0>()
 				.AddUnorderedAccessViewWithCounter<0, 0>()
@@ -234,7 +234,7 @@ struct RootSignatures
 				.AllowSampleDescriptorHeapIndexing()));
 
 		Meshlet = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 0>(1)
 				.AddShaderResourceView<0, 0>()
 				.AddShaderResourceView<1, 0>()
@@ -248,62 +248,62 @@ struct RootSignatures
 
 		BloomMask = Registry.CreateRootSignature(
 			Device->CreateRootSignature(
-				RootSignatureDesc()
+				RHI::RootSignatureDesc()
 					.Add32BitConstants<0, 0>(5)));
 
 		BloomDownsample = Registry.CreateRootSignature(
 			Device->CreateRootSignature(
-				RootSignatureDesc()
+				RHI::RootSignatureDesc()
 					.Add32BitConstants<0, 0>(7)));
 
 		BloomBlur = Registry.CreateRootSignature(
 			Device->CreateRootSignature(
-				RootSignatureDesc()
+				RHI::RootSignatureDesc()
 					.Add32BitConstants<0, 0>(2)));
 
 		BloomUpsampleBlur = Registry.CreateRootSignature(
 			Device->CreateRootSignature(
-				RootSignatureDesc()
+				RHI::RootSignatureDesc()
 					.Add32BitConstants<0, 0>(6)));
 
 		Tonemap = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 0>(6)
 				.AllowResourceDescriptorHeapIndexing()
 				.AllowSampleDescriptorHeapIndexing()));
 
 		BayerDither = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 0>(2)));
 
 		Sobol = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 0>(2)));
 	}
 };
 
 struct PipelineStates
 {
-	inline static RgResourceHandle GBuffer;
-	inline static RgResourceHandle IndirectCull;
-	inline static RgResourceHandle IndirectCullMeshShader;
+	inline static RHI::RgResourceHandle GBuffer;
+	inline static RHI::RgResourceHandle IndirectCull;
+	inline static RHI::RgResourceHandle IndirectCullMeshShader;
 
-	inline static RgResourceHandle Meshlet;
+	inline static RHI::RgResourceHandle Meshlet;
 
-	inline static RgResourceHandle BloomMask;
-	inline static RgResourceHandle BloomDownsample;
-	inline static RgResourceHandle BloomBlur;
-	inline static RgResourceHandle BloomUpsampleBlur;
-	inline static RgResourceHandle Tonemap;
-	inline static RgResourceHandle BayerDither;
-	inline static RgResourceHandle Sobol;
+	inline static RHI::RgResourceHandle BloomMask;
+	inline static RHI::RgResourceHandle BloomDownsample;
+	inline static RHI::RgResourceHandle BloomBlur;
+	inline static RHI::RgResourceHandle BloomUpsampleBlur;
+	inline static RHI::RgResourceHandle Tonemap;
+	inline static RHI::RgResourceHandle BayerDither;
+	inline static RHI::RgResourceHandle Sobol;
 
 	struct RTX
 	{
-		inline static RgResourceHandle PathTrace;
+		inline static RHI::RgResourceHandle PathTrace;
 	};
 
-	static void Compile(D3D12Device* Device, RenderGraphRegistry& Registry)
+	static void Compile(RHI::D3D12Device* Device, RHI::RenderGraphRegistry& Registry)
 	{
 		{
 			struct PsoStream
@@ -318,7 +318,7 @@ struct PipelineStates
 		}
 
 		{
-			D3D12InputLayout InputLayout(3);
+			RHI::D3D12InputLayout InputLayout(3);
 			InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
@@ -495,18 +495,18 @@ struct RaytracingPipelineStates
 	// HitGroup Exports
 	static constexpr LPCWSTR g_HitGroupExport = L"Default";
 
-	inline static ShaderIdentifier g_RayGenerationSID;
-	inline static ShaderIdentifier g_MissSID;
-	inline static ShaderIdentifier g_ShadowMissSID;
-	inline static ShaderIdentifier g_DefaultSID;
+	inline static RHI::ShaderIdentifier g_RayGenerationSID;
+	inline static RHI::ShaderIdentifier g_MissSID;
+	inline static RHI::ShaderIdentifier g_ShadowMissSID;
+	inline static RHI::ShaderIdentifier g_DefaultSID;
 
-	inline static RgResourceHandle GlobalRS, LocalHitGroupRS;
-	inline static RgResourceHandle RTPSO;
+	inline static RHI::RgResourceHandle GlobalRS, LocalHitGroupRS;
+	inline static RHI::RgResourceHandle RTPSO;
 
-	static void Compile(D3D12Device* Device, RenderGraphRegistry& Registry)
+	static void Compile(RHI::D3D12Device* Device, RHI::RenderGraphRegistry& Registry)
 	{
 		GlobalRS = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.AddConstantBufferView<0, 0>()				// g_SystemConstants	b0, space0
 				.AddRaytracingAccelerationStructure<0, 0>() // g_Scene				t0, space0
 				.AddShaderResourceView<1, 0>()				// g_Materials			t1, space0
@@ -515,7 +515,7 @@ struct RaytracingPipelineStates
 				.AllowSampleDescriptorHeapIndexing()));
 
 		LocalHitGroupRS = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RootSignatureDesc()
+			RHI::RootSignatureDesc()
 				.Add32BitConstants<0, 1>(1)	   // RootConstants		b0, space1
 				.AddShaderResourceView<0, 1>() // VertexBuffer		t0, space1
 				.AddShaderResourceView<1, 1>() // IndexBuffer		t1, space1
@@ -533,7 +533,7 @@ struct RaytracingPipelineStates
 		constexpr UINT MaxTraceRecursionDepth = 2;
 
 		RTPSO			   = Registry.CreateRaytracingPipelineState(Device->CreateRaytracingPipelineState(
-			 RaytracingPipelineStateDesc()
+			 RHI::RaytracingPipelineStateDesc()
 				 .AddLibrary(Bytecode, { g_RayGeneration, g_Miss, g_ShadowMiss, g_ClosestHit })
 				 .AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {})
 				 .AddRootSignatureAssociation(Registry.GetRootSignature(LocalHitGroupRS)->GetApiHandle(), { g_HitGroupExport })

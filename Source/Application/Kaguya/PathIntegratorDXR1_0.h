@@ -20,7 +20,7 @@ public:
 private:
 	void Initialize() override;
 	void Destroy() override;
-	void Render(World* World, D3D12CommandContext& Context) override;
+	void Render(World* World, RHI::D3D12CommandContext& Context) override;
 
 private:
 	RaytracingAccelerationStructure AccelerationStructure;
@@ -32,11 +32,11 @@ private:
 	PathIntegratorState PathIntegratorState;
 	// FSRState			FSRState;
 
-	D3D12Buffer		Materials;
-	Hlsl::Material* pMaterial = nullptr;
-	D3D12Buffer		Lights;
-	Hlsl::Light*	pLights		 = nullptr;
-	UINT			NumMaterials = 0, NumLights = 0;
+	RHI::D3D12Buffer Materials;
+	Hlsl::Material*	 pMaterial = nullptr;
+	RHI::D3D12Buffer Lights;
+	Hlsl::Light*	 pLights	  = nullptr;
+	UINT			 NumMaterials = 0, NumLights = 0;
 
 	// Pad local root arguments explicitly
 	struct RootArgument
@@ -47,8 +47,8 @@ private:
 		D3D12_GPU_VIRTUAL_ADDRESS IndexBuffer;
 	};
 
-	D3D12RaytracingShaderBindingTable		  ShaderBindingTable;
-	D3D12RaytracingShaderTable<void>*		  RayGenerationShaderTable = nullptr;
-	D3D12RaytracingShaderTable<void>*		  MissShaderTable		   = nullptr;
-	D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable	   = nullptr;
+	RHI::D3D12RaytracingShaderBindingTable		   ShaderBindingTable;
+	RHI::D3D12RaytracingShaderTable<void>*		   RayGenerationShaderTable = nullptr;
+	RHI::D3D12RaytracingShaderTable<void>*		   MissShaderTable			= nullptr;
+	RHI::D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable		= nullptr;
 };

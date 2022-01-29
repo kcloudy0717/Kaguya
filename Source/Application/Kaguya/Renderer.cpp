@@ -3,7 +3,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-Renderer::Renderer(D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
+Renderer::Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
 	: Device(Device)
 	, Compiler(Compiler)
 	, MainWindow(MainWindow)
@@ -35,7 +35,7 @@ void Renderer::OnRender(World* World)
 
 	if (ImGui::Begin("GPU Timing"))
 	{
-		for (const auto& iter : D3D12Profiler::Data)
+		for (const auto& iter : RHI::D3D12Profiler::Data)
 		{
 			for (INT i = 0; i < iter.Depth; ++i)
 			{
@@ -49,7 +49,7 @@ void Renderer::OnRender(World* World)
 	}
 	ImGui::End();
 
-	D3D12CommandContext& Context = Device->GetDevice()->GetCommandContext();
+	RHI::D3D12CommandContext& Context = Device->GetDevice()->GetCommandContext();
 	Context.Open();
 	{
 		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);

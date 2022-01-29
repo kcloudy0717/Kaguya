@@ -2,12 +2,12 @@
 
 using namespace DirectX;
 
-void AssetManager::Initialize(D3D12Device* Device)
+void AssetManager::Initialize(RHI::D3D12Device* Device)
 {
 	Thread = std::jthread(
 		[=]()
 		{
-			D3D12LinkedDevice* LinkedDevice = Device->GetDevice();
+			RHI::D3D12LinkedDevice* LinkedDevice = Device->GetDevice();
 
 			while (true)
 			{
@@ -97,7 +97,7 @@ void AssetManager::AsyncLoadMesh(const MeshImportOptions& Options)
 	MeshImporter.RequestAsyncLoad(Options);
 }
 
-void AssetManager::UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Device)
+void AssetManager::UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device)
 {
 	const auto& Metadata = AssetTexture->TexImage.GetMetadata();
 
@@ -135,8 +135,8 @@ void AssetManager::UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Devic
 		break;
 	}
 
-	AssetTexture->DxTexture = D3D12Texture(Device, ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
-	AssetTexture->SRV		= D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
+	AssetTexture->DxTexture = RHI::D3D12Texture(Device, ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
+	AssetTexture->SRV		= RHI::D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
 
 	std::vector<D3D12_SUBRESOURCE_DATA> Subresources(AssetTexture->TexImage.GetImageCount());
 	const auto							pImages = AssetTexture->TexImage.GetImages();
@@ -150,7 +150,7 @@ void AssetManager::UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Devic
 	Device->Upload(Subresources, AssetTexture->DxTexture.GetResource());
 }
 
-void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
+void AssetManager::UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device)
 {
 	UINT64 VertexBufferSizeInBytes			  = AssetMesh->Vertices.size() * sizeof(Vertex);
 	UINT64 IndexBufferSizeInBytes			  = AssetMesh->Indices.size() * sizeof(uint32_t);
@@ -158,11 +158,11 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 	UINT64 UniqueVertexIndexBufferSizeInBytes = AssetMesh->UniqueVertexIndices.size() * sizeof(uint8_t);
 	UINT64 PrimitiveIndexBufferSizeInBytes	  = AssetMesh->PrimitiveIndices.size() * sizeof(MeshletTriangle);
 
-	auto VertexBuffer  = D3D12Buffer(Device, VertexBufferSizeInBytes, sizeof(Vertex), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	auto IndexBuffer   = D3D12Buffer(Device, IndexBufferSizeInBytes, sizeof(uint32_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	auto MeshletBuffer = D3D12Buffer(Device, MeshletBufferSizeInBytes, sizeof(Meshlet), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	auto UniqueVertexIndexBuffer = D3D12Buffer(Device, UniqueVertexIndexBufferSizeInBytes, sizeof(uint8_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
-	auto PrimitiveIndexBuffer = D3D12Buffer(Device, PrimitiveIndexBufferSizeInBytes, sizeof(MeshletTriangle), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto VertexBuffer			 = RHI::D3D12Buffer(Device, VertexBufferSizeInBytes, sizeof(Vertex), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto IndexBuffer			 = RHI::D3D12Buffer(Device, IndexBufferSizeInBytes, sizeof(uint32_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto MeshletBuffer			 = RHI::D3D12Buffer(Device, MeshletBufferSizeInBytes, sizeof(Meshlet), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto UniqueVertexIndexBuffer = RHI::D3D12Buffer(Device, UniqueVertexIndexBufferSizeInBytes, sizeof(uint8_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+	auto PrimitiveIndexBuffer	 = RHI::D3D12Buffer(Device, PrimitiveIndexBufferSizeInBytes, sizeof(MeshletTriangle), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
 
 	{
 		D3D12_SUBRESOURCE_DATA SubresourceData = {};
@@ -227,8 +227,8 @@ void AssetManager::UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device)
 
 	AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
 
-	AssetMesh->VertexView = D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
-	AssetMesh->IndexView  = D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
+	AssetMesh->VertexView = RHI::D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
+	AssetMesh->IndexView  = RHI::D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
 }
 
 void AssetManager::RequestUpload(Texture* Texture)

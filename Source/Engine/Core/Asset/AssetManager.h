@@ -5,7 +5,7 @@
 class AssetManager
 {
 public:
-	static void Initialize(D3D12Device* Device);
+	static void Initialize(RHI::D3D12Device* Device);
 
 	static void Shutdown();
 
@@ -40,8 +40,8 @@ public:
 	static void RequestUpload(Mesh* Mesh);
 
 private:
-	static void UploadTexture(Texture* AssetTexture, D3D12LinkedDevice* Device);
-	static void UploadMesh(Mesh* AssetMesh, D3D12LinkedDevice* Device);
+	static void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
+	static void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);
 
 	inline static AsyncMeshImporter	   MeshImporter;
 	inline static AsyncTextureImporter TextureImporter;
