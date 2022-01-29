@@ -67,22 +67,13 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 
 Let me know if you have any trouble setting up the project and getting it up and running!
 
-# What I'm working on now/future
+# Future stuff to work on
 
-I'm currently modularizing the engine into libraries so they can be reused, I plan on extending Kaguya to more than just a path tracer using the new
-render graph system. Vulkan support probably won't be soon until I figure out a robust way for abstracting resource binding to bindless model. I want to add a voxel renderer
-so I can make my own minecraft, write a proper deferred renderer with pbr lighting (the knowledge of raytracing should make this process straightforward). Utilize new D3D12
-features such as mesh shaders and the upcoming enhanced barrier that will replace old resource barriers. There's lots of things I want to do but going to take one step at a time.
-
-For the moment, I think I'll work on a voxel renderer which will combine raster and raytracing to create a beautiful world.
-
-## Future stuff to work on
-
-- Voxel renderer
-- Hybrid renderer (Raster & Raytracing)
-- Explore spectral rendering and all kinds of stuff mentioned in PBRT (I really need to brush up my calculus to understand the theory)
-- Readd physx back into World system
 - GPU driven architecture
+- Deferred renderer
+- Hybrid renderer (Raster & Raytracing)
+- Explore spectral rendering and all kinds of integrators mentioned in PBRT
+- Add physx back into World system
 - Mesh shading using meshlets
 - Vulkan support
 
