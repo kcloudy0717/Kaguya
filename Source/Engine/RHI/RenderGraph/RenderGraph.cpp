@@ -132,17 +132,17 @@ namespace RHI
 		return *NewRenderPass;
 	}
 
-	RenderPass& RenderGraph::GetProloguePass()
+	RenderPass& RenderGraph::GetProloguePass() const noexcept
 	{
 		return *ProloguePass;
 	}
 
-	RenderPass& RenderGraph::GetEpiloguePass()
+	RenderPass& RenderGraph::GetEpiloguePass() const noexcept
 	{
 		return *EpiloguePass;
 	}
 
-	RenderGraphRegistry& RenderGraph::GetRegistry()
+	RenderGraphRegistry& RenderGraph::GetRegistry() const noexcept
 	{
 		return Registry;
 	}
@@ -198,7 +198,7 @@ namespace RHI
 				continue;
 			}
 
-			std::vector<UINT64>& Indices = AdjacencyLists[i];
+			std::vector<u64>& Indices = AdjacencyLists[i];
 
 			// Reverse iterate the render passes here, because often or not, the adjacency list should be built upon
 			// the latest changes to the render passes since those pass are more likely to change the resource we are writing to from other passes
@@ -285,7 +285,7 @@ namespace RHI
 		Stack.push(n);
 	}
 
-	void RenderGraph::ExportDgml(DgmlBuilder& Builder)
+	void RenderGraph::ExportDgml(DgmlBuilder& Builder) const
 	{
 		for (size_t i = 0; i < AdjacencyLists.size(); ++i)
 		{

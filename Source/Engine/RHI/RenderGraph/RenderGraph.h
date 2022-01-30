@@ -114,8 +114,77 @@ namespace RHI
 			RenderGraphRegistry&  Registry);
 		~RenderGraph();
 
+		// TODO: Add support for other rg resource types
+		// Currently only support textures (mainly swapchain textures)
+		auto Import(D3D12Texture* Texture) -> RgResourceHandle
+		{
+			RgResourceHandle Handle = {
+				.Type	 = RgResourceType::Texture,
+				.State	 = 1,
+				.Flags	 = RG_RESOURCE_FLAG_IMPORTED,
+				.Version = 0,
+				.Id		 = ImportedTextures.size()
+
+			};
+
+			ImportedTextures.emplace_back(Texture);
+			return Handle;
+		}
+
 		template<typename T>
-		std::vector<typename RgResourceTraits<T>::Type>& GetContainer()
+		auto Create(std::string_view Name, const typename RgResourceTraits<T>::Desc& Desc) -> RgResourceHandle
+		{
+			auto& Container = GetContainer<T>();
+
+			RgResourceHandle Handle = {
+				.Type	 = RgResourceTraits<T>::Enum,
+				.State	 = 1,
+				.Flags	 = RG_RESOURCE_FLAG_NONE,
+				.Version = 0,
+				.Id		 = Container.size()
+			};
+
+			auto& Resource	= Container.emplace_back();
+			Resource.Name	= Name;
+			Resource.Handle = Handle;
+			Resource.Desc	= Desc;
+			return Handle;
+		}
+
+		RenderPass& AddRenderPass(std::string_view Name);
+
+		[[nodiscard]] RenderPass& GetProloguePass() const noexcept;
+		[[nodiscard]] RenderPass& GetEpiloguePass() const noexcept;
+
+		[[nodiscard]] RenderGraphRegistry& GetRegistry() const noexcept;
+
+		void Execute(D3D12CommandContext& Context);
+
+		void ExportDgml(DgmlBuilder& Builder) const;
+
+		[[nodiscard]] bool AllowRenderTarget(RgResourceHandle Resource) const noexcept;
+		[[nodiscard]] bool AllowDepthStencil(RgResourceHandle Resource) const noexcept;
+		[[nodiscard]] bool AllowUnorderedAccess(RgResourceHandle Resource) const noexcept;
+
+	private:
+		void Setup();
+
+		void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack);
+
+		[[nodiscard]] std::string_view GetResourceName(RgResourceHandle Handle) const
+		{
+			switch (Handle.Type)
+			{
+			case RgResourceType::Buffer:
+				return Buffers[Handle.Id].Name;
+			case RgResourceType::Texture:
+				return Textures[Handle.Id].Name;
+			}
+			return "<unknown>";
+		}
+
+		template<typename T>
+		[[nodiscard]] auto GetContainer() -> std::vector<typename RgResourceTraits<T>::Type>&
 		{
 			if constexpr (std::is_same_v<T, D3D12Buffer>)
 			{
@@ -139,72 +208,6 @@ namespace RHI
 			}
 		}
 
-		// TODO: Add support for other rg resource types
-		// Currently only support textures (mainly swapchain textures)
-		auto Import(D3D12Texture* Texture) -> RgResourceHandle
-		{
-			RgResourceHandle Handle = {};
-			Handle.Type				= RgResourceType::Texture;
-			Handle.State			= 1;
-			Handle.Flags			= RG_RESOURCE_FLAG_IMPORTED;
-			Handle.Version			= 0;
-			Handle.Id				= ImportedTextures.size();
-
-			ImportedTextures.emplace_back(Texture);
-			return Handle;
-		}
-
-		template<typename T>
-		auto Create(std::string_view Name, const typename RgResourceTraits<T>::Desc& Desc) -> RgResourceHandle
-		{
-			auto& Container = GetContainer<T>();
-
-			RgResourceHandle Handle = {};
-			Handle.Type				= RgResourceTraits<T>::Enum;
-			Handle.State			= 1;
-			Handle.Flags			= RG_RESOURCE_FLAG_NONE;
-			Handle.Version			= 0;
-			Handle.Id				= Container.size();
-
-			auto& Resource	= Container.emplace_back();
-			Resource.Name	= Name;
-			Resource.Handle = Handle;
-			Resource.Desc	= Desc;
-			return Handle;
-		}
-
-		RenderPass& AddRenderPass(std::string_view Name);
-
-		[[nodiscard]] RenderPass& GetProloguePass();
-		[[nodiscard]] RenderPass& GetEpiloguePass();
-
-		[[nodiscard]] RenderGraphRegistry& GetRegistry();
-
-		void Execute(D3D12CommandContext& Context);
-
-		void ExportDgml(DgmlBuilder& Builder);
-
-		[[nodiscard]] bool AllowRenderTarget(RgResourceHandle Resource) const noexcept;
-		[[nodiscard]] bool AllowDepthStencil(RgResourceHandle Resource) const noexcept;
-		[[nodiscard]] bool AllowUnorderedAccess(RgResourceHandle Resource) const noexcept;
-
-	private:
-		void Setup();
-
-		void DepthFirstSearch(size_t n, std::vector<bool>& Visited, std::stack<size_t>& Stack);
-
-		std::string_view GetResourceName(RgResourceHandle Handle)
-		{
-			switch (Handle.Type)
-			{
-			case RgResourceType::Buffer:
-				return Buffers[Handle.Id].Name;
-			case RgResourceType::Texture:
-				return Textures[Handle.Id].Name;
-			}
-			return "<unknown>";
-		}
-
 	private:
 		friend class RenderGraphRegistry;
 
@@ -223,8 +226,8 @@ namespace RHI
 		RenderPass*				 ProloguePass;
 		RenderPass*				 EpiloguePass;
 
-		std::vector<std::vector<UINT64>> AdjacencyLists;
-		std::vector<RenderPass*>		 TopologicalSortedPasses;
+		std::vector<std::vector<u64>> AdjacencyLists;
+		std::vector<RenderPass*>	  TopologicalSortedPasses;
 
 		std::vector<RenderGraphDependencyLevel> DependencyLevels;
 	};

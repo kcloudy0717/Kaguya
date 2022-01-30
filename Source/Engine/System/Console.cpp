@@ -1,5 +1,5 @@
 #include "Console.h"
-#include <city.h>
+#include "Hash.h"
 
 IConsoleObject::IConsoleObject(std::string_view Name)
 	: Name(Name)
@@ -12,12 +12,12 @@ class CConsole final : public IConsole
 public:
 	void Register(std::string_view Name, IConsoleObject* Object) override
 	{
-		UINT64 Hash	   = CityHash64(Name.data(), Name.size());
+		u64 Hash	   = Hash::Hash64(Name.data(), Name.size());
 		Registry[Hash] = Object;
 	}
 
 private:
-	std::unordered_map<UINT64, IConsoleObject*> Registry;
+	std::unordered_map<u64, IConsoleObject*> Registry;
 };
 
 IConsole* IConsole::GetConsole()

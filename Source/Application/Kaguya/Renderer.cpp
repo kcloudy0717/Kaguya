@@ -1,8 +1,6 @@
 #include "Renderer.h"
 #include "RendererRegistry.h"
 
-using Microsoft::WRL::ComPtr;
-
 Renderer::Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
 	: Device(Device)
 	, Compiler(Compiler)
@@ -80,7 +78,7 @@ void Renderer::OnRender(World* World)
 			World->ActiveCamera->AspectRatio = static_cast<float>(View.Width) / static_cast<float>(View.Height);
 
 			D3D12ScopedEvent(Context, "Render");
-			Render(World, Context);
+			this->Render(World, Context);
 
 			// Viewport must be valid after Render
 			assert(Viewport);

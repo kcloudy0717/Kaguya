@@ -52,6 +52,7 @@ struct HlslRWTexture2D
 		: Handle(UnorderedAccessView->GetIndex())
 	{
 	}
+
 	u32 Handle;
 };
 

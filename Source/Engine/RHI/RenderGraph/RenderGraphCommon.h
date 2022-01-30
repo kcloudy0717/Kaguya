@@ -24,11 +24,10 @@ namespace RHI
 		RG_RESOURCE_FLAG_IMPORTED
 	};
 
-	// A virtual resource handle, the underlying realization of the
-	// resource type is done in RenderGraphRegistry, refer to RenderGraph/FrameGraph in Halcyon/Frostbite
+	// A virtual resource handle, the underlying realization of the resource type is done in RenderGraphRegistry
 	struct RgResourceHandle
 	{
-		auto operator<=>(const RgResourceHandle&) const = default;
+		auto operator<=>(const RgResourceHandle&) const noexcept = default;
 
 		[[nodiscard]] bool IsValid() const noexcept { return Type != RgResourceType::Unknown && Id != UINT_MAX; }
 		[[nodiscard]] bool IsImported() const noexcept { return Flags & RG_RESOURCE_FLAG_IMPORTED; }
@@ -42,10 +41,10 @@ namespace RHI
 			Id		= UINT_MAX;
 		}
 
-		RgResourceType	Type	: 16; // 16 bit to represent type, might remove some bits from this and give it to version
+		RgResourceType	Type	: 14; // 14 bit to represent type, might remove some bits from this and give it to version
 		u64				State	: 1;  // 1 bit to represent state of the handle, true = ready to use, vice versa
 		RgResourceFlags Flags	: 1;
-		u64				Version : 14; // 15 bits to represent version should be more than enough, we can always just increase bit used if is not enough
+		u64				Version : 16; // 16 bits to represent version should be more than enough, we can always just increase bit used if is not enough
 		u64				Id		: 32; // 32 bit unsigned int
 	};
 
@@ -53,7 +52,7 @@ namespace RHI
 
 	struct RgBufferDesc
 	{
-		RgBufferDesc& SetSize(UINT64 SizeInBytes)
+		RgBufferDesc& SetSize(u64 SizeInBytes)
 		{
 			this->SizeInBytes = SizeInBytes;
 			return *this;
@@ -65,8 +64,8 @@ namespace RHI
 			return *this;
 		}
 
-		UINT64 SizeInBytes	   = 0;
-		bool   UnorderedAccess = false;
+		u64	 SizeInBytes	 = 0;
+		bool UnorderedAccess = false;
 	};
 
 	enum class RgTextureType

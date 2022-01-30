@@ -1,6 +1,5 @@
 #pragma once
 #include <filesystem>
-#include <wil/resource.h>
 #include "Window.h"
 #include "InputManager.h"
 
