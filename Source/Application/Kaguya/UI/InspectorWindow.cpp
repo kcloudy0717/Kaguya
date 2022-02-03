@@ -1,6 +1,6 @@
 #include "InspectorWindow.h"
 #include <imgui_internal.h>
-#include <Core/Asset/AssetManager.h>
+#include "../Globals.h"
 
 template<typename T, bool IsCoreComponent, typename UIFunction>
 static void RenderComponent(std::string_view Name, Actor Actor, UIFunction Func)
@@ -213,7 +213,7 @@ void InspectorWindow::OnRender()
 			{
 				bool IsEdited = false;
 
-				Component.Mesh = AssetManager::GetMeshCache().GetValidAsset(Component.Handle);
+				Component.Mesh = Kaguya::AssetManager->GetMeshRegistry().GetValidAsset(Component.Handle);
 
 				ImGui::Text("Mesh: ");
 				ImGui::SameLine();
@@ -230,8 +230,8 @@ void InspectorWindow::OnRender()
 				{
 					if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_MESH"); Payload)
 					{
-						IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
-						Component.Handle = *static_cast<AssetHandle*>(Payload->Data);
+						IM_ASSERT(Payload->DataSize == sizeof(Asset::AssetHandle));
+						Component.Handle = *static_cast<Asset::AssetHandle*>(Payload->Data);
 
 						IsEdited = true;
 					}
@@ -287,7 +287,7 @@ void InspectorWindow::OnRender()
 
 					auto ImageBox = [&](ETextureTypes Type, MaterialTexture& MaterialTexture, std::string_view Name)
 					{
-						MaterialTexture.Texture = AssetManager::GetTextureCache().GetValidAsset(MaterialTexture.Handle);
+						MaterialTexture.Texture = Kaguya::AssetManager->GetTextureRegistry().GetValidAsset(MaterialTexture.Handle);
 
 						ImGui::Text(Name.data());
 						ImGui::SameLine();
@@ -305,8 +305,8 @@ void InspectorWindow::OnRender()
 						{
 							if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); Payload)
 							{
-								IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
-								MaterialTexture.Handle = *static_cast<AssetHandle*>(Payload->Data);
+								IM_ASSERT(Payload->DataSize == sizeof(Asset::AssetHandle));
+								MaterialTexture.Handle = *static_cast<Asset::AssetHandle*>(Payload->Data);
 
 								IsEdited |= true;
 							}
@@ -377,9 +377,9 @@ void InspectorWindow::OnRender()
 				{
 					if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ASSET_IMAGE"); Payload)
 					{
-						IM_ASSERT(Payload->DataSize == sizeof(AssetHandle));
-						auto Handle	 = *static_cast<AssetHandle*>(Payload->Data);
-						auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+						IM_ASSERT(Payload->DataSize == sizeof(Asset::AssetHandle));
+						auto Handle	 = *static_cast<Asset::AssetHandle*>(Payload->Data);
+						auto Texture = Kaguya::AssetManager->GetTextureRegistry().GetValidAsset(Handle);
 						if (Texture)
 						{
 							if (Texture->IsCubemap)

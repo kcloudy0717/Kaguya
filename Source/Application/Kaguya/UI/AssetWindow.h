@@ -20,10 +20,10 @@ protected:
 	void OnRender() override;
 
 private:
-	World*					 pWorld = nullptr;
-	std::vector<AssetHandle> ValidImageHandles;
-	std::vector<AssetHandle> ValidMeshHandles;
+	World*							pWorld = nullptr;
+	std::vector<Asset::AssetHandle> ValidImageHandles;
+	std::vector<Asset::AssetHandle> ValidMeshHandles;
 
-	MeshImportOptions	 MeshOptions	= {};
-	TextureImportOptions TextureOptions = {};
+	Asset::MeshImportOptions	MeshOptions	   = {};
+	Asset::TextureImportOptions TextureOptions = {};
 };

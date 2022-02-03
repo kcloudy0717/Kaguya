@@ -16,6 +16,3 @@
 [submodule "Dependencies/wil"]
 	path = Dependencies/wil
 	url = https://github.com/microsoft/wil.git
-[submodule "Assets"]
-	path = Assets
-	url = https://github.com/KaiH0717/ProjectAssets.git

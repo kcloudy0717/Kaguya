@@ -1,39 +1,43 @@
 #pragma once
-#include "Asset.h"
+#include "IAsset.h"
 #include "Math/Math.h"
 #include "RHI/RHI.h"
 #include <DirectXTex.h>
 
-struct TextureImportOptions
+namespace Asset
 {
-	std::filesystem::path Path;
-
-	bool sRGB		  = false;
-	bool GenerateMips = true;
-};
-
-class Texture : public Asset
-{
-public:
-	void Release()
+	struct TextureImportOptions
 	{
-		TexImage.Release();
-	}
+		std::filesystem::path Path;
 
-	TextureImportOptions Options;
+		bool sRGB		  = false;
+		bool GenerateMips = true;
+	};
 
-	Vec2i Resolution;
-	bool  IsCubemap = false;
+	class Texture : public IAsset
+	{
+	public:
+		void Release()
+		{
+			TexImage.Release();
+		}
 
-	std::string			  Name;
-	DirectX::ScratchImage TexImage;
+		TextureImportOptions Options;
 
-	RHI::D3D12Texture			 DxTexture;
-	RHI::D3D12ShaderResourceView SRV;
-};
+		Vec2i Resolution;
+		bool  IsCubemap = false;
 
-template<>
-struct AssetTypeTraits<AssetType::Texture>
-{
-	using Type = Texture;
-};
+		std::string			  Name;
+		DirectX::ScratchImage TexImage;
+
+		RHI::D3D12Texture			 DxTexture;
+		RHI::D3D12ShaderResourceView SRV;
+	};
+
+	template<>
+	struct AssetTypeTraits<Texture>
+	{
+		static constexpr AssetType Enum = AssetType::Texture;
+		using ApiType					= Texture;
+	};
+} // namespace Asset

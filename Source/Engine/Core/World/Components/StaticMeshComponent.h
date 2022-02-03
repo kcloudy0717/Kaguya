@@ -1,5 +1,5 @@
 #pragma once
-#include "Core/Asset/Asset.h"
+#include "Core/Asset/IAsset.h"
 #include "Core/Asset/Mesh.h"
 
 enum ETextureTypes
@@ -19,9 +19,9 @@ enum class EBSDFTypes
 
 struct MaterialTexture
 {
-	AssetHandle Handle	 = {};
-	uint32_t	HandleId = UINT32_MAX;
-	Texture*	Texture	 = nullptr;
+	Asset::AssetHandle Handle	= {};
+	uint32_t		   HandleId = UINT32_MAX;
+	Asset::Texture*	   Texture	= nullptr;
 };
 
 struct Material
@@ -60,9 +60,9 @@ struct Material
 class StaticMeshComponent
 {
 public:
-	AssetHandle Handle	 = {};
-	uint32_t	HandleId = UINT32_MAX;
-	Mesh*		Mesh	 = nullptr;
+	Asset::AssetHandle Handle	= {};
+	uint32_t		   HandleId = UINT32_MAX;
+	Asset::Mesh*	   Mesh		= nullptr;
 
 	Material Material;
 };

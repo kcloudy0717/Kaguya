@@ -1,4 +1,5 @@
 #include "WorldWindow.h"
+#include "../Globals.h"
 
 #include "Core/World/WorldArchive.h"
 #include "Core/CoreDefines.h"
@@ -66,7 +67,7 @@ void WorldWindow::OnRender()
 			std::filesystem::path Path = FileSystem::SaveDialog(ComDlgFS);
 			if (!Path.empty())
 			{
-				WorldArchive::Save(Path.replace_extension(".json"), pWorld);
+				WorldArchive::Save(Path.replace_extension(".json"), pWorld, Kaguya::AssetManager);
 			}
 		}
 
@@ -75,7 +76,7 @@ void WorldWindow::OnRender()
 			std::filesystem::path Path = FileSystem::OpenDialog(ComDlgFS);
 			if (!Path.empty())
 			{
-				WorldArchive::Load(Path, pWorld);
+				WorldArchive::Load(Path, pWorld, Kaguya::AssetManager);
 				pWorld->ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 			}
 		}

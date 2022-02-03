@@ -70,14 +70,16 @@ namespace RHI
 		assert(!g_Profiler);
 		g_Profiler = this;
 
-		D3D12_QUERY_HEAP_DESC QueryHeapDesc = { .Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
-												.Count	  = MaxProfiles * 2,
-												.NodeMask = 0 };
+		D3D12_QUERY_HEAP_DESC QueryHeapDesc = {
+			.Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
+			.Count	  = MaxProfiles * 2,
+			.NodeMask = 0
+		};
 		VERIFY_D3D12_API(Device->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
 		QueryHeap->SetName(L"Timestamp Query Heap");
 
 		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
-		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(MaxProfiles * FrameLatency * 2 * sizeof(UINT64));
+		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(MaxProfiles) * FrameLatency * 2 * sizeof(UINT64));
 		VERIFY_D3D12_API(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&QueryReadback)));
 		QueryReadback->SetName(L"Timestamp Query Readback");
 	}
@@ -87,7 +89,7 @@ namespace RHI
 		UINT64* QueryData = nullptr;
 		if (SUCCEEDED(QueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
 		{
-			const UINT64* FrameQueryData = QueryData + FrameIndex * MaxProfiles * 2;
+			const UINT64* FrameQueryData = QueryData + static_cast<UINT64>(FrameIndex) * static_cast<UINT64>(MaxProfiles) * 2;
 
 			for (UINT i = 0; i < NumProfiles; ++i)
 			{

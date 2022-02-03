@@ -197,7 +197,7 @@ namespace RHI
 			UINT64 AccelerationStructureIndex);
 
 	private:
-		UINT64 GetAccelerationStructureIndex();
+		UINT64 AllocateAccelerationStructureIndex();
 
 		void ReleaseAccelerationStructure(UINT64 Index);
 

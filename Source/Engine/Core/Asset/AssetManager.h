@@ -1,62 +1,64 @@
 #pragma once
-#include "AsyncImporter.h"
-#include "AssetCache.h"
+#include "AssetImporter.h"
 
-class AssetManager
+namespace Asset
 {
-public:
-	static void Initialize(RHI::D3D12Device* Device);
-
-	static void Shutdown();
-
-	template<AssetType Type, typename... TArgs>
-	static typename AssetTypeTraits<Type>::Type* CreateAsset(TArgs&&... Args)
+	class AssetManager
 	{
-		if constexpr (Type == AssetType::Mesh)
+	public:
+		AssetManager(RHI::D3D12Device* Device);
+		~AssetManager();
+
+		template<typename T, typename... TArgs>
+		auto CreateAsset(TArgs&&... Args) -> typename AssetTypeTraits<T>::ApiType*
 		{
-			AssetHandle Handle = MeshCache.Create(std::forward<TArgs>(Args)...);
-			return MeshCache.GetAsset(Handle);
+			if constexpr (std::is_same_v<T, Mesh>)
+			{
+				AssetHandle Handle = MeshRegistry.Create(std::forward<TArgs>(Args)...);
+				return MeshRegistry.GetAsset(Handle);
+			}
+			else if constexpr (std::is_same_v<T, Texture>)
+			{
+				AssetHandle Handle = TextureRegistry.Create(std::forward<TArgs>(Args)...);
+				return TextureRegistry.GetAsset(Handle);
+			}
+
+			return nullptr;
 		}
-		else if constexpr (Type == AssetType::Texture)
-		{
-			AssetHandle Handle = TextureCache.Create(std::forward<TArgs>(Args)...);
-			return TextureCache.GetAsset(Handle);
-		}
 
-		return nullptr;
-	}
+		AssetRegistry<Mesh>&	GetMeshRegistry() { return MeshRegistry; }
+		AssetRegistry<Texture>& GetTextureRegistry() { return TextureRegistry; }
 
-	static AssetCache<AssetType::Mesh, Mesh>&		GetMeshCache() { return MeshCache; }
-	static AssetCache<AssetType::Texture, Texture>& GetTextureCache() { return TextureCache; }
+		AssetType GetAssetTypeFromExtension(const std::filesystem::path& Path);
 
-	static AssetType GetAssetTypeFromExtension(const std::filesystem::path& Path);
+		void AsyncLoadImage(const TextureImportOptions& Options);
 
-	static void AsyncLoadImage(const TextureImportOptions& Options);
+		void AsyncLoadMesh(const MeshImportOptions& Options);
 
-	static void AsyncLoadMesh(const MeshImportOptions& Options);
+		void RequestUpload(Texture* Texture);
 
-	static void RequestUpload(Texture* Texture);
+		void RequestUpload(Mesh* Mesh);
 
-	static void RequestUpload(Mesh* Mesh);
+	private:
+		void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
+		void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);
 
-private:
-	static void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
-	static void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);
+	private:
+		MeshImporter	MeshImporter;
+		TextureImporter TextureImporter;
 
-	inline static AsyncMeshImporter	   MeshImporter;
-	inline static AsyncTextureImporter TextureImporter;
+		AssetRegistry<Mesh>	   MeshRegistry;
+		AssetRegistry<Texture> TextureRegistry;
 
-	inline static AssetCache<AssetType::Mesh, Mesh>		  MeshCache;
-	inline static AssetCache<AssetType::Texture, Texture> TextureCache;
+		// Upload stuff to the GPU
+		std::mutex				Mutex;
+		std::condition_variable ConditionVariable;
+		std::queue<Mesh*>		MeshUploadQueue;
+		std::queue<Texture*>	TextureUploadQueue;
 
-	// Upload stuff to the GPU
-	inline static std::mutex			  Mutex;
-	inline static std::condition_variable ConditionVariable;
-	inline static std::queue<Mesh*>		  MeshUploadQueue;
-	inline static std::queue<Texture*>	  TextureUploadQueue;
+		std::jthread	  Thread;
+		std::atomic<bool> Quit = false;
 
-	inline static std::jthread		Thread;
-	inline static std::atomic<bool> Quit = false;
-
-	friend class AssetWindow;
-};
+		friend class AssetWindow;
+	};
+} // namespace Asset

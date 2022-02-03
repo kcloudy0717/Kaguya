@@ -13,6 +13,20 @@ public:
 
 	void Render();
 
+	// Helper to display a (?) mark that shows a tooltip when hovered
+	static void ShowHelpMarker(const char* Desc)
+	{
+		ImGui::TextDisabled("(?)");
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.f);
+			ImGui::TextUnformatted(Desc);
+			ImGui::PopTextWrapPos();
+			ImGui::EndTooltip();
+		}
+	}
+
 	static bool RenderButtonDragFloatControl(
 		std::string_view ButtonLabel,
 		std::string_view DragFloatLabel,

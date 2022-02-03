@@ -1,9 +1,9 @@
 #include "AssetWindow.h"
-#include <imgui_internal.h>
-#include "Core/Asset/AssetManager.h"
+#include "../Globals.h"
 
 enum AssetTextureColumnID
 {
+	AssetTextureColumnID_Handle,
 	AssetTextureColumnID_Name,
 	AssetTextureColumnID_Payload,
 	AssetTextureColumnID_IsCubemap,
@@ -12,6 +12,7 @@ enum AssetTextureColumnID
 
 enum AssetMeshColumnID
 {
+	AssetMeshColumnID_Handle,
 	AssetMeshColumnID_Name,
 	AssetMeshColumnID_Payload,
 	AssetMeshColumnCount
@@ -34,6 +35,8 @@ void AssetWindow::OnRender()
 			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 			if (ImGui::BeginPopupModal("Mesh Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
+				ImGui::Checkbox("Generate Meshlets", &MeshOptions.GenerateMeshlets);
+
 				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
 				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
 				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
@@ -53,7 +56,7 @@ void AssetWindow::OnRender()
 					MeshOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!MeshOptions.Path.empty())
 					{
-						AssetManager::AsyncLoadMesh(MeshOptions);
+						Kaguya::AssetManager->AsyncLoadMesh(MeshOptions);
 					}
 
 					MeshOptions = {};
@@ -91,7 +94,7 @@ void AssetWindow::OnRender()
 					TextureOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!TextureOptions.Path.empty())
 					{
-						AssetManager::AsyncLoadImage(TextureOptions);
+						Kaguya::AssetManager->AsyncLoadImage(TextureOptions);
 					}
 
 					TextureOptions = {};
@@ -120,17 +123,18 @@ void AssetWindow::OnRender()
 										   ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
 
 	ImGui::Text("Textures");
-	if (ImGui::BeginTable("TextureCache", AssetTextureColumnCount, TableFlags))
+	if (ImGui::BeginTable("TextureRegistry", AssetTextureColumnCount, TableFlags))
 	{
+		ImGui::TableSetupColumn("Handle", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_Handle);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_Payload);
 		ImGui::TableSetupColumn("IsCubemap", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetTextureColumnID_IsCubemap);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
-		auto& TextureCache = AssetManager::GetTextureCache();
+		auto& TextureRegistry = Kaguya::AssetManager->GetTextureRegistry();
 		ValidImageHandles.clear();
-		for (auto Handle : TextureCache)
+		for (auto Handle : TextureRegistry)
 		{
 			if (Handle.IsValid())
 			{
@@ -146,24 +150,29 @@ void AssetWindow::OnRender()
 		{
 			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; ++i)
 			{
-				AssetHandle Handle	= ValidImageHandles[i];
-				Texture*	Texture = AssetManager::GetTextureCache().GetAsset(Handle);
+				Asset::AssetHandle Handle  = ValidImageHandles[i];
+				Asset::Texture*	   Texture = TextureRegistry.GetAsset(Handle);
 
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
 					ImGui::TableNextColumn();
+					ImGui::Text("Handle Id %i", Handle.Id);
+
+					ImGui::TableNextColumn();
 					ImGui::TextUnformatted(Texture->Name.data());
 
 					ImGui::TableNextColumn();
 					ImGui::SmallButton("Payload");
+					//ImGui::SameLine();
+					//ShowHelpMarker("Use this to drag and drop into material properties");
 
 					// Our buttons are both drag sources and drag targets here!
 					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 					{
 						// Set payload to carry the index of our item (could be anything)
-						ImGui::SetDragDropPayload("ASSET_IMAGE", &Handle, sizeof(AssetHandle));
+						ImGui::SetDragDropPayload("ASSET_IMAGE", &Handle, sizeof(Asset::AssetHandle));
 
 						ImGui::EndDragDropSource();
 					}
@@ -177,12 +186,12 @@ void AssetWindow::OnRender()
 		ImGui::EndTable();
 	}
 
-	auto& MeshCache = AssetManager::GetMeshCache();
+	auto& MeshRegistry = Kaguya::AssetManager->GetMeshRegistry();
 
 	if (AddAllMeshToHierarchy)
 	{
-		MeshCache.EnumerateAsset(
-			[&](AssetHandle Handle, Mesh* Mesh)
+		MeshRegistry.EnumerateAsset(
+			[&](Asset::AssetHandle Handle, Asset::Mesh* Mesh)
 			{
 				auto  Entity	  = pWorld->CreateActor(Mesh->Name);
 				auto& StaticMesh  = Entity.AddComponent<StaticMeshComponent>();
@@ -191,15 +200,16 @@ void AssetWindow::OnRender()
 	}
 
 	ImGui::Text("Meshes");
-	if (ImGui::BeginTable("MeshCache", AssetMeshColumnCount, TableFlags))
+	if (ImGui::BeginTable("MeshRegistry", AssetMeshColumnCount, TableFlags))
 	{
+		ImGui::TableSetupColumn("Handle", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetMeshColumnID_Handle);
 		ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetMeshColumnID_Name);
 		ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthStretch, 0.0f, AssetMeshColumnID_Payload);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
 
 		ValidMeshHandles.clear();
-		for (auto Handle : MeshCache)
+		for (auto Handle : MeshRegistry)
 		{
 			if (Handle.IsValid())
 			{
@@ -215,24 +225,29 @@ void AssetWindow::OnRender()
 		{
 			for (int i = ListClipper.DisplayStart; i < ListClipper.DisplayEnd; i++)
 			{
-				AssetHandle Handle = ValidMeshHandles[i];
-				Mesh*		Mesh   = AssetManager::GetMeshCache().GetAsset(Handle);
+				Asset::AssetHandle Handle = ValidMeshHandles[i];
+				Asset::Mesh*	   Mesh	  = MeshRegistry.GetAsset(Handle);
 
 				ImGui::PushID(ID++);
 				{
 					ImGui::TableNextRow();
 
 					ImGui::TableNextColumn();
+					ImGui::Text("Handle Id %i", Handle.Id);
+
+					ImGui::TableNextColumn();
 					ImGui::TextUnformatted(Mesh->Name.data());
 
 					ImGui::TableNextColumn();
 					ImGui::SmallButton("Payload");
+					//ImGui::SameLine();
+					//ShowHelpMarker("Use this to drag and drop into mesh components");
 
 					// Our buttons are both drag sources and drag targets here!
 					if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 					{
 						// Set payload to carry the index of our item (could be anything)
-						ImGui::SetDragDropPayload("ASSET_MESH", &Handle, sizeof(AssetHandle));
+						ImGui::SetDragDropPayload("ASSET_MESH", &Handle, sizeof(Asset::AssetHandle));
 
 						ImGui::EndDragDropSource();
 					}

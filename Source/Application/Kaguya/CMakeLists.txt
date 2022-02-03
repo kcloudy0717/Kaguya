@@ -79,7 +79,7 @@ add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 
-		${CMAKE_SOURCE_DIR}/Assets/Assets
+		${CMAKE_SOURCE_DIR}/Assets
 
 		$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
 	DEPENDS ${PROJECTNAME})

@@ -2,124 +2,17 @@
 #include "World.h"
 #include <Core/Asset/AssetManager.h>
 #include <Core/CoreDefines.h>
-#include <Core/Application.h>	
+#include <Core/Application.h>
 
 #include <fstream>
-#include <nlohmann/json.hpp>
-
-// using json = nlohmann::json;
-using json = nlohmann::ordered_json;
-
-#define NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(Type, ...)                                   \
-	inline void to_json(nlohmann::ordered_json& nlohmann_json_j, const Type& nlohmann_json_t)   \
-	{                                                                                           \
-		NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__))                \
-	}                                                                                           \
-	inline void from_json(const nlohmann::ordered_json& nlohmann_json_j, Type& nlohmann_json_t) \
-	{                                                                                           \
-		NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(NLOHMANN_JSON_FROM, __VA_ARGS__))              \
-	}
-
-namespace DirectX
-{
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT2, x, y);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT3, x, y, z);
-	NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_ORDERED(XMFLOAT4, x, y, z, w);
-} // namespace DirectX
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-	ELightTypes,
-	{
-		{ ELightTypes::Point, "Point" },
-		{ ELightTypes::Quad, "Quad" },
-	});
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-	EBSDFTypes,
-	{
-		{ EBSDFTypes::Lambertian, "Lambertian" },
-		{ EBSDFTypes::Mirror, "Mirror" },
-		{ EBSDFTypes::Glass, "Glass" },
-		{ EBSDFTypes::Disney, "Disney" },
-	});
-
-inline void to_json(json& Json, const Transform& InTransform)
-{
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InTransform);
-		});
-}
-inline void from_json(const json& Json, Transform& OutTransform)
-{
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutTransform, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-}
-
-inline void to_json(json& Json, const MaterialTexture& InMaterialTexture)
-{
-	ForEachAttribute<MaterialTexture>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InMaterialTexture);
-		});
-}
-inline void from_json(const json& Json, MaterialTexture& OutMaterialTexture)
-{
-	ForEachAttribute<MaterialTexture>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutMaterialTexture, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-
-	OutMaterialTexture.Handle.Type	= AssetType::Texture;
-	OutMaterialTexture.Handle.State = false;
-	OutMaterialTexture.Handle.Id	= OutMaterialTexture.HandleId;
-}
-
-inline void to_json(json& Json, const Material& InMaterial)
-{
-	ForEachAttribute<Material>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InMaterial);
-		});
-}
-inline void from_json(const json& Json, Material& OutMaterial)
-{
-	ForEachAttribute<Material>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
-			{
-				Attribute.Set(OutMaterial, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-}
-
+#include "WorldJson.h"
 
 namespace Version
 {
-constexpr int	  Major	   = 1;
-constexpr int	  Minor	   = 0;
-constexpr int	  Revision = 0;
-const std::string String   = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
+	constexpr int	  Major	   = 1;
+	constexpr int	  Minor	   = 0;
+	constexpr int	  Revision = 0;
+	const std::string String   = std::to_string(Major) + "." + std::to_string(Minor) + "." + std::to_string(Revision);
 } // namespace Version
 
 template<typename T>
@@ -142,15 +35,18 @@ struct ComponentSerializer
 	}
 };
 
-void WorldArchive::Save(const std::filesystem::path& Path, World* World)
+void WorldArchive::Save(
+	const std::filesystem::path& Path,
+	World*						 World,
+	Asset::AssetManager*		 AssetManager)
 {
 	json Json;
 	{
 		Json["Version"] = Version::String;
 
 		auto& JsonTextures = Json["Textures"];
-		AssetManager::GetTextureCache().EnumerateAsset(
-			[&](AssetHandle Handle, Texture* Resource)
+		AssetManager->GetTextureRegistry().EnumerateAsset(
+			[&](Asset::AssetHandle Handle, Asset::Texture* Resource)
 			{
 				std::filesystem::path AssetPath		   = relative(Resource->Options.Path, Application::ExecutableDirectory);
 				auto&				  JsonTexture	   = JsonTextures[AssetPath.string()];
@@ -159,11 +55,12 @@ void WorldArchive::Save(const std::filesystem::path& Path, World* World)
 			});
 
 		auto& JsonMeshes = Json["Meshes"];
-		AssetManager::GetMeshCache().EnumerateAsset(
-			[&](AssetHandle Handle, Mesh* Resource)
+		AssetManager->GetMeshRegistry().EnumerateAsset(
+			[&](Asset::AssetHandle Handle, Asset::Mesh* Resource)
 			{
 				std::filesystem::path AssetPath = relative(Resource->Options.Path, Application::ExecutableDirectory);
-				auto&				  Mesh		= JsonMeshes[AssetPath.string()];
+				auto&				  JsonMesh	= JsonMeshes[AssetPath.string()];
+				JsonMesh["Options"]["GenerateMeshlets"] = Resource->Options.GenerateMeshlets;
 			});
 
 		auto& JsonWorld = Json["World"];
@@ -216,10 +113,13 @@ void JsonGetIfExists(const json::value_type& Json, const char* Key, T& RefValue)
 	}
 }
 
-void WorldArchive::Load(const std::filesystem::path& Path, World* World)
+void WorldArchive::Load(
+	const std::filesystem::path& Path,
+	World*						 World,
+	Asset::AssetManager*		 AssetManager)
 {
-	AssetManager::GetTextureCache().DestroyAll();
-	AssetManager::GetMeshCache().DestroyAll();
+	AssetManager->GetTextureRegistry().DestroyAll();
+	AssetManager->GetMeshRegistry().DestroyAll();
 
 	std::ifstream ifs(Path);
 	json		  Json;
@@ -238,8 +138,8 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 		const auto& JsonTextures = Json["Textures"];
 		for (auto iter = JsonTextures.begin(); iter != JsonTextures.end(); ++iter)
 		{
-			TextureImportOptions Options = {};
-			Options.Path				 = Application::ExecutableDirectory / iter.key();
+			Asset::TextureImportOptions Options = {};
+			Options.Path						= Application::ExecutableDirectory / iter.key();
 
 			if (auto& Value = iter.value(); Value.contains("Options"))
 			{
@@ -248,7 +148,7 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 				JsonGetIfExists<bool>(JsonOptions, "GenerateMips", Options.GenerateMips);
 			}
 
-			AssetManager::AsyncLoadImage(Options);
+			AssetManager->AsyncLoadImage(Options);
 		}
 	}
 
@@ -257,16 +157,17 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 		const auto& JsonMeshes = Json["Meshes"];
 		for (auto iter = JsonMeshes.begin(); iter != JsonMeshes.end(); ++iter)
 		{
-			MeshImportOptions Options = {};
-			Options.Path			  = Application::ExecutableDirectory / iter.key();
+			Asset::MeshImportOptions Options = {};
+			Options.Path					 = Application::ExecutableDirectory / iter.key();
 
 			auto& Value = iter.value();
 			if (Value.contains("Options"))
 			{
 				auto& JsonOptions = Value["Options"];
+				JsonGetIfExists<bool>(JsonOptions, "GenerateMeshlets", Options.GenerateMeshlets);
 			}
 
-			AssetManager::AsyncLoadMesh(Options);
+			AssetManager->AsyncLoadMesh(Options);
 		}
 	}
 
@@ -288,7 +189,7 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			if (Actor.HasComponent<SkyLightComponent>())
 			{
 				auto& SkyLight		  = Actor.GetComponent<SkyLightComponent>();
-				SkyLight.Handle.Type  = AssetType::Texture;
+				SkyLight.Handle.Type  = Asset::AssetType::Texture;
 				SkyLight.Handle.State = false;
 				SkyLight.Handle.Id	  = SkyLight.HandleId;
 			}
@@ -296,7 +197,7 @@ void WorldArchive::Load(const std::filesystem::path& Path, World* World)
 			if (Actor.HasComponent<StaticMeshComponent>())
 			{
 				auto& StaticMesh		= Actor.GetComponent<StaticMeshComponent>();
-				StaticMesh.Handle.Type	= AssetType::Mesh;
+				StaticMesh.Handle.Type	= Asset::AssetType::Mesh;
 				StaticMesh.Handle.State = false;
 				StaticMesh.Handle.Id	= StaticMesh.HandleId;
 			}

@@ -320,7 +320,7 @@ namespace RHI
 		ID3D12GraphicsCommandList4*									CommandList,
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& Inputs)
 	{
-		UINT64 Index = GetAccelerationStructureIndex();
+		UINT64 Index = AllocateAccelerationStructureIndex();
 
 		// Request build size information and suballocate the scratch and result buffers
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
@@ -470,7 +470,7 @@ namespace RHI
 		return AccelerationStructure.IsCompacted ? AccelerationStructure.ResultCompactedMemory.VirtualAddress : AccelerationStructure.ResultMemory.VirtualAddress;
 	}
 
-	UINT64 D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureIndex()
+	UINT64 D3D12RaytracingAccelerationStructureManager::AllocateAccelerationStructureIndex()
 	{
 		UINT64 NewIndex;
 		if (!IndexQueue.empty())

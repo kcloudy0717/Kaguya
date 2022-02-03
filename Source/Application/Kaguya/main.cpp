@@ -23,70 +23,7 @@
 #include "PathIntegratorDXR1_0.h"
 #include "PathIntegratorDXR1_1.h"
 
-namespace RenderCore
-{
-	extern RHI::D3D12Device* Device;
-	extern ShaderCompiler*	 Compiler;
-} // namespace RenderCore
-
-class D3D12RHIInitializer
-{
-public:
-	D3D12RHIInitializer(const RHI::DeviceOptions& Options);
-	~D3D12RHIInitializer();
-
-private:
-	std::unique_ptr<RHI::D3D12Device> Device;
-	std::unique_ptr<ShaderCompiler>	  Compiler;
-
-	bool ImGuiD3D12Initialized = false;
-};
-
-namespace RenderCore
-{
-	RHI::D3D12Device* Device   = nullptr;
-	ShaderCompiler*	  Compiler = nullptr;
-} // namespace RenderCore
-
-D3D12RHIInitializer::D3D12RHIInitializer(const RHI::DeviceOptions& Options)
-{
-	assert(!Device && !Compiler);
-
-	Device = std::make_unique<RHI::D3D12Device>(Options);
-
-	// First descriptor always reserved for imgui
-	UINT						ImGuiIndex		   = 0;
-	D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor = {};
-	Device->GetDevice()->GetResourceDescriptorHeap().Allocate(ImGuiCpuDescriptor, ImGuiGpuDescriptor, ImGuiIndex);
-
-	// Initialize ImGui for d3d12
-	ImGuiD3D12Initialized = ImGui_ImplDX12_Init(
-		Device->GetD3D12Device(),
-		1,
-		RHI::D3D12SwapChain::Format,
-		Device->GetDevice()->GetResourceDescriptorHeap(),
-		ImGuiCpuDescriptor,
-		ImGuiGpuDescriptor);
-
-	Compiler = std::make_unique<ShaderCompiler>();
-	if (Device->SupportsDynamicResources())
-	{
-		Compiler->SetShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6);
-	}
-
-	RenderCore::Device	 = Device.get();
-	RenderCore::Compiler = Compiler.get();
-}
-
-D3D12RHIInitializer::~D3D12RHIInitializer()
-{
-	Device->WaitIdle();
-	if (ImGuiD3D12Initialized)
-	{
-		ImGui_ImplDX12_Shutdown();
-	}
-}
+#include "Globals.h"
 
 class ImGuiContextManager
 {
@@ -214,8 +151,6 @@ public:
 
 	bool Initialize() override
 	{
-		AssetManager::Initialize(RenderCore::Device);
-
 		//WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
 
 		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
@@ -229,8 +164,6 @@ public:
 	void Shutdown() override
 	{
 		Renderer->OnDestroy();
-
-		AssetManager::Shutdown();
 	}
 
 	void Update() override
@@ -375,14 +308,15 @@ int main(int /*argc*/, char* /*argv*/[])
 	DeviceOptions.DynamicResources = true;
 	DeviceOptions.MeshShaders	   = true;
 	DeviceOptions.PsoCachePath	   = Application::ExecutableDirectory / "Pso.cache";
-	D3D12RHIInitializer D3D12RHIInitializer(DeviceOptions);
+	D3D12RHIInitializer		D3D12RHIInitializer(DeviceOptions);
+	AssetManagerInitializer AssetManagerInitializer;
 
-	World World;
+	World World(Kaguya::AssetManager);
 	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 
 	// DeferredRenderer Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);
 	// PathIntegratorDXR1_0 Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);
-	PathIntegratorDXR1_1 Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);
+	PathIntegratorDXR1_1 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

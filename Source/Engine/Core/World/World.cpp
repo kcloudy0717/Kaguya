@@ -4,7 +4,8 @@
 
 static const char* DefaultActorName = "Actor";
 
-World::World()
+World::World(Asset::AssetManager* AssetManager)
+	: AssetManager(AssetManager)
 {
 	Clear(true);
 }
@@ -103,17 +104,17 @@ void World::ResolveComponentDependencies()
 
 	// Refresh StaticMeshComponent
 	Registry.view<StaticMeshComponent>().each(
-		[](StaticMeshComponent& StaticMesh)
+		[this](StaticMeshComponent& StaticMesh)
 		{
 			{
 				auto Handle			= StaticMesh.Handle;
-				StaticMesh.Mesh		= AssetManager::GetMeshCache().GetValidAsset(Handle);
+				StaticMesh.Mesh		= AssetManager->GetMeshRegistry().GetValidAsset(Handle);
 				StaticMesh.HandleId = Handle.Id;
 			}
 
 			{
 				auto Handle	 = StaticMesh.Material.Albedo.Handle;
-				auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+				auto Texture = AssetManager->GetTextureRegistry().GetValidAsset(Handle);
 				if (Texture)
 				{
 					StaticMesh.Material.Albedo.HandleId	  = Handle.Id;
@@ -123,10 +124,11 @@ void World::ResolveComponentDependencies()
 		});
 
 	Registry.view<SkyLightComponent>().each(
-		[](SkyLightComponent& SkyLight)
+		[this](SkyLightComponent& SkyLight)
 		{
-			auto Handle	 = SkyLight.Handle;
-			auto Texture = AssetManager::GetTextureCache().GetValidAsset(Handle);
+			auto Handle		 = SkyLight.Handle;
+			auto Texture	 = AssetManager->GetTextureRegistry().GetValidAsset(Handle);
+			SkyLight.Texture = Texture;
 			if (Texture)
 			{
 				SkyLight.HandleId = Handle.Id;

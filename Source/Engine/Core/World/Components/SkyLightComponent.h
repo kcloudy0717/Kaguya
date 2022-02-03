@@ -1,13 +1,13 @@
 ﻿#pragma once
-#include "Core/Asset/Asset.h"
+#include "Core/Asset/IAsset.h"
 #include "Core/Asset/Texture.h"
 
 class SkyLightComponent
 {
 public:
-	AssetHandle Handle	 = {};
-	uint32_t	HandleId = UINT32_MAX;
-	Texture*	Texture	 = nullptr;
+	Asset::AssetHandle Handle	= {};
+	uint32_t		   HandleId = UINT32_MAX;
+	Asset::Texture*	   Texture	= nullptr;
 
 	DirectX::XMFLOAT3 I = { 1.0f, 1.0f, 1.0f }; // Intensity of the light
 

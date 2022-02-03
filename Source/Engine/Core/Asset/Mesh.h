@@ -1,86 +1,95 @@
 #pragma once
-#include "Asset.h"
+#include "IAsset.h"
 #include "Core/World/Vertex.h"
 #include "RHI/RHI.h"
 #include "Math/Math.h"
 #include <DirectXMesh.h>
 
-struct MeshImportOptions
+namespace Asset
 {
-	MeshImportOptions() { XMStoreFloat4x4(&Matrix, DirectX::XMMatrixIdentity()); }
-
-	std::filesystem::path Path;
-
-	Vec3f				Translation	 = { 0.0f, 0.0f, 0.0f };
-	Vec3f				Rotation	 = { 0.0f, 0.0f, 0.0f };
-	float				UniformScale = 1.0f;
-	DirectX::XMFLOAT4X4 Matrix;
-};
-
-class Mesh : public Asset
-{
-public:
-	void ComputeBoundingBox()
+	struct MeshImportOptions
 	{
-		DirectX::BoundingBox Box;
-		DirectX::BoundingBox::CreateFromPoints(Box, Vertices.size(), &Vertices[0].Position, sizeof(Vertex));
-		BoundingBox.Center	= Vec3f(Box.Center.x, Box.Center.y, Box.Center.z);
-		BoundingBox.Extents = Vec3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
-	}
+		MeshImportOptions()
+		{
+			XMStoreFloat4x4(&Matrix, DirectX::XMMatrixIdentity());
+		}
 
-	void UpdateInfo()
+		std::filesystem::path Path;
+
+		bool GenerateMeshlets = false;
+
+		Vec3f				Translation	 = { 0.0f, 0.0f, 0.0f };
+		Vec3f				Rotation	 = { 0.0f, 0.0f, 0.0f };
+		float				UniformScale = 1.0f;
+		DirectX::XMFLOAT4X4 Matrix;
+	};
+
+	class Mesh : public IAsset
 	{
-		VertexCount		 = static_cast<std::uint32_t>(Vertices.size());
-		IndexCount		 = static_cast<std::uint32_t>(Indices.size());
-		MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
-		VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
-		PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
-	}
+	public:
+		void ComputeBoundingBox()
+		{
+			DirectX::BoundingBox Box;
+			DirectX::BoundingBox::CreateFromPoints(Box, Vertices.size(), &Vertices[0].Position, sizeof(Vertex));
+			BoundingBox.Center	= Vec3f(Box.Center.x, Box.Center.y, Box.Center.z);
+			BoundingBox.Extents = Vec3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
+		}
 
-	void Release()
+		void UpdateInfo()
+		{
+			VertexCount		 = static_cast<std::uint32_t>(Vertices.size());
+			IndexCount		 = static_cast<std::uint32_t>(Indices.size());
+			MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
+			VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
+			PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
+		}
+
+		void Release()
+		{
+			decltype(Vertices)().swap(Vertices);
+			decltype(Indices)().swap(Indices);
+			decltype(Meshlets)().swap(Meshlets);
+			decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
+			decltype(PrimitiveIndices)().swap(PrimitiveIndices);
+		}
+
+		MeshImportOptions Options;
+
+		std::string Name;
+
+		std::uint32_t VertexCount	   = 0;
+		std::uint32_t IndexCount	   = 0;
+		std::uint32_t MeshletCount	   = 0;
+		std::uint32_t VertexIndexCount = 0;
+		std::uint32_t PrimitiveCount   = 0;
+
+		std::vector<Vertex>					  Vertices;
+		std::vector<uint32_t>				  Indices;
+		std::vector<DirectX::Meshlet>		  Meshlets;
+		std::vector<uint8_t>				  UniqueVertexIndices;
+		std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
+
+		BoundingBox BoundingBox;
+
+		RHI::D3D12Buffer			 VertexResource;
+		RHI::D3D12Buffer			 IndexResource;
+		RHI::D3D12Buffer			 MeshletResource;
+		RHI::D3D12Buffer			 UniqueVertexIndexResource;
+		RHI::D3D12Buffer			 PrimitiveIndexResource;
+		D3D12_GPU_VIRTUAL_ADDRESS	 AccelerationStructure; // Managed by D3D12RaytracingAccelerationStructureManager
+		RHI::D3D12RaytracingGeometry Blas;
+		UINT64						 BlasIndex	   = UINT64_MAX;
+		bool						 BlasValid	   = false;
+		bool						 BlasCompacted = false;
+
+		RHI::D3D12ShaderResourceView VertexView;
+		RHI::D3D12ShaderResourceView IndexView;
+	};
+
+	template<>
+	struct AssetTypeTraits<Mesh>
 	{
-		decltype(Vertices)().swap(Vertices);
-		decltype(Indices)().swap(Indices);
-		decltype(Meshlets)().swap(Meshlets);
-		decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
-		decltype(PrimitiveIndices)().swap(PrimitiveIndices);
-	}
-
-	MeshImportOptions Options;
-
-	std::string Name;
-
-	std::uint32_t VertexCount	   = 0;
-	std::uint32_t IndexCount	   = 0;
-	std::uint32_t MeshletCount	   = 0;
-	std::uint32_t VertexIndexCount = 0;
-	std::uint32_t PrimitiveCount   = 0;
-
-	std::vector<Vertex>					  Vertices;
-	std::vector<uint32_t>				  Indices;
-	std::vector<DirectX::Meshlet>		  Meshlets;
-	std::vector<uint8_t>				  UniqueVertexIndices;
-	std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
-
-	BoundingBox BoundingBox;
-
-	RHI::D3D12Buffer			 VertexResource;
-	RHI::D3D12Buffer			 IndexResource;
-	RHI::D3D12Buffer			 MeshletResource;
-	RHI::D3D12Buffer			 UniqueVertexIndexResource;
-	RHI::D3D12Buffer			 PrimitiveIndexResource;
-	D3D12_GPU_VIRTUAL_ADDRESS	 AccelerationStructure; // Managed by D3D12RaytracingAccelerationStructureManager
-	RHI::D3D12RaytracingGeometry Blas;
-	UINT64						 BlasIndex	   = UINT64_MAX;
-	bool						 BlasValid	   = false;
-	bool						 BlasCompacted = false;
-
-	RHI::D3D12ShaderResourceView VertexView;
-	RHI::D3D12ShaderResourceView IndexView;
-};
-
-template<>
-struct AssetTypeTraits<AssetType::Mesh>
-{
-	using Type = Mesh;
-};
+		static constexpr AssetType Enum = AssetType::Mesh;
+		using ApiType					= Mesh;
+	};
+} // namespace Asset

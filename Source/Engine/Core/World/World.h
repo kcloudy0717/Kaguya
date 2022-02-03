@@ -5,6 +5,11 @@
 #include "Math/Math.h"
 #include "RHI/RHI.h"
 
+namespace Asset
+{
+	class AssetManager;
+}
+
 enum EWorldState
 {
 	EWorldState_Render,
@@ -19,7 +24,7 @@ public:
 	static constexpr size_t LightLimit	  = 32;
 	static constexpr size_t MeshLimit	  = 8192;
 
-	World();
+	World(Asset::AssetManager* AssetManager);
 
 	[[nodiscard]] auto CreateActor(std::string_view Name = {}) -> Actor;
 	[[nodiscard]] auto GetMainCamera() -> Actor;
@@ -43,6 +48,8 @@ private:
 	void UpdateScripts(float DeltaTime);
 
 public:
+	Asset::AssetManager* AssetManager = nullptr;
+
 	EWorldState	   WorldState = EWorldState::EWorldState_Render;
 	entt::registry Registry;
 
@@ -101,96 +108,96 @@ void Actor::RemoveComponent()
 
 namespace Hlsl
 {
-struct Material
-{
-	unsigned int	  BSDFType;
-	DirectX::XMFLOAT3 BaseColor;
-	float			  Metallic;
-	float			  Subsurface;
-	float			  Specular;
-	float			  Roughness;
-	float			  SpecularTint;
-	float			  Anisotropic;
-	float			  Sheen;
-	float			  SheenTint;
-	float			  Clearcoat;
-	float			  ClearcoatGloss;
+	struct Material
+	{
+		unsigned int	  BSDFType;
+		DirectX::XMFLOAT3 BaseColor;
+		float			  Metallic;
+		float			  Subsurface;
+		float			  Specular;
+		float			  Roughness;
+		float			  SpecularTint;
+		float			  Anisotropic;
+		float			  Sheen;
+		float			  SheenTint;
+		float			  Clearcoat;
+		float			  ClearcoatGloss;
 
-	// Used by Glass BxDF
-	DirectX::XMFLOAT3 T;
-	float			  EtaA, EtaB;
+		// Used by Glass BxDF
+		DirectX::XMFLOAT3 T;
+		float			  EtaA, EtaB;
 
-	int Albedo;
-};
+		int Albedo;
+	};
 
-struct Light
-{
-	unsigned int	  Type;
-	DirectX::XMFLOAT3 Position;
-	DirectX::XMFLOAT4 Orientation;
-	float			  Width;
-	float			  Height;
-	DirectX::XMFLOAT3 Points[4]; // World-space points that are pre-computed on the Cpu so we don't have to compute them
-								 // in shader for every ray
+	struct Light
+	{
+		unsigned int	  Type;
+		DirectX::XMFLOAT3 Position;
+		DirectX::XMFLOAT4 Orientation;
+		float			  Width;
+		float			  Height;
+		DirectX::XMFLOAT3 Points[4]; // World-space points that are pre-computed on the Cpu so we don't have to compute them
+									 // in shader for every ray
 
-	DirectX::XMFLOAT3 I;
-};
+		DirectX::XMFLOAT3 I;
+	};
 
-struct Mesh
-{
-	// 64
-	DirectX::XMFLOAT4X4 Transform;
-	// 64
-	DirectX::XMFLOAT4X4 PreviousTransform;
+	struct Mesh
+	{
+		// 64
+		DirectX::XMFLOAT4X4 Transform;
+		// 64
+		DirectX::XMFLOAT4X4 PreviousTransform;
 
-	// 64
-	D3D12_VERTEX_BUFFER_VIEW  VertexBuffer;
-	D3D12_INDEX_BUFFER_VIEW	  IndexBuffer;
-	D3D12_GPU_VIRTUAL_ADDRESS Meshlets;
-	D3D12_GPU_VIRTUAL_ADDRESS UniqueVertexIndices;
-	D3D12_GPU_VIRTUAL_ADDRESS PrimitiveIndices;
-	D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
+		// 64
+		D3D12_VERTEX_BUFFER_VIEW  VertexBuffer;
+		D3D12_INDEX_BUFFER_VIEW	  IndexBuffer;
+		D3D12_GPU_VIRTUAL_ADDRESS Meshlets;
+		D3D12_GPU_VIRTUAL_ADDRESS UniqueVertexIndices;
+		D3D12_GPU_VIRTUAL_ADDRESS PrimitiveIndices;
+		D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
 
-	// 24
-	BoundingBox BoundingBox;
-	// 20
-	D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
+		// 24
+		BoundingBox BoundingBox;
+		// 20
+		D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 
-	// 20
-	unsigned int MaterialIndex;
-	unsigned int NumMeshlets;
-	unsigned int VertexView;
-	unsigned int IndexView;
-	unsigned int DEADBEEF2 = 0xDEADBEEF;
-};
-static_assert(sizeof(Mesh) == 256);
+		// 20
+		unsigned int MaterialIndex;
+		unsigned int NumMeshlets;
+		unsigned int VertexView;
+		unsigned int IndexView;
+		unsigned int DEADBEEF2 = 0xDEADBEEF;
+	};
+	static_assert(sizeof(Mesh) == 256);
 
-struct Camera
-{
-	float FoVY; // Degrees
-	float AspectRatio;
-	float NearZ;
-	float FarZ;
+	struct Camera
+	{
+		float FoVY; // Degrees
+		float AspectRatio;
+		float NearZ;
+		float FarZ;
 
-	float		 FocalLength;
-	float		 RelativeAperture;
-	unsigned int DEADBEEF0 = 0xDEADBEEF;
-	unsigned int DEADBEEF1 = 0xDEADBEEF;
+		float		 FocalLength;
+		float		 RelativeAperture;
+		unsigned int DEADBEEF0 = 0xDEADBEEF;
+		unsigned int DEADBEEF1 = 0xDEADBEEF;
 
-	DirectX::XMFLOAT4 Position;
+		DirectX::XMFLOAT4 Position;
 
-	DirectX::XMFLOAT4X4 View;
-	DirectX::XMFLOAT4X4 Projection;
-	DirectX::XMFLOAT4X4 ViewProjection;
+		DirectX::XMFLOAT4X4 View;
+		DirectX::XMFLOAT4X4 Projection;
+		DirectX::XMFLOAT4X4 ViewProjection;
 
-	DirectX::XMFLOAT4X4 InvView;
-	DirectX::XMFLOAT4X4 InvProjection;
-	DirectX::XMFLOAT4X4 InvViewProjection;
+		DirectX::XMFLOAT4X4 InvView;
+		DirectX::XMFLOAT4X4 InvProjection;
+		DirectX::XMFLOAT4X4 InvViewProjection;
 
-	DirectX::XMFLOAT4X4 PrevViewProjection;
+		DirectX::XMFLOAT4X4 PrevViewProjection;
 
-	Frustum Frustum;
-};
+		Frustum Frustum;
+	};
 } // namespace Hlsl
 
 inline Hlsl::Material GetHLSLMaterialDesc(const Material& Material)

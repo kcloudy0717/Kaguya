@@ -41,6 +41,7 @@ namespace RHI
 
 		void Upload(const std::vector<D3D12_SUBRESOURCE_DATA>& Subresources, ID3D12Resource* Resource);
 		void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* Resource);
+		void Upload(const void* Data, UINT64 SizeInBytes, ID3D12Resource* Resource);
 
 	private:
 		D3D12CommandQueue GraphicsQueue;

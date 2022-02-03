@@ -263,4 +263,14 @@ namespace RHI
 
 		TrackedResources.push_back(std::move(UploadResource));
 	}
+
+	void D3D12LinkedDevice::Upload(const void* Data, UINT64 SizeInBytes, ID3D12Resource* Resource)
+	{
+		D3D12_SUBRESOURCE_DATA SubresourceData = {
+			.pData		= Data,
+			.RowPitch	= static_cast<LONG_PTR>(SizeInBytes),
+			.SlicePitch = static_cast<LONG_PTR>(SizeInBytes),
+		};
+		Upload(SubresourceData, Resource);
+	}
 } // namespace RHI

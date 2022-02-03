@@ -3,7 +3,7 @@
 #include "Core/CoreDefines.h"
 #include "Core/World/World.h"
 
-#define RAYTRACING_INSTANCEMASK_ALL	   (0xff)
+#define RAYTRACING_INSTANCEMASK_ALL (0xff)
 
 class RaytracingAccelerationStructure
 {
@@ -35,7 +35,7 @@ public:
 
 	RHI::D3D12RaytracingScene		  TopLevelAccelerationStructure;
 	std::vector<StaticMeshComponent*> StaticMeshes;
-	std::set<Mesh*>					  ReferencedGeometries;
+	std::set<Asset::Mesh*>			  ReferencedGeometries;
 	UINT							  CurrentInstanceID							 = 0;
 	UINT							  CurrentInstanceContributionToHitGroupIndex = 0;
 

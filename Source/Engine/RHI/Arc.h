@@ -58,7 +58,10 @@ namespace RHI
 		{
 		}
 
-		~Arc() noexcept { InternalRelease(); }
+		~Arc()
+		{
+			InternalRelease();
+		}
 
 		Arc& operator=(std::nullptr_t) noexcept
 		{
@@ -117,23 +120,23 @@ namespace RHI
 
 		operator T*() const noexcept { return Ptr; }
 
-		T* Get() const noexcept { return Ptr; }
+		[[nodiscard]] T* Get() const noexcept { return Ptr; }
 
 		InterfaceType* operator->() const noexcept { return Ptr; }
 
-		T* const* GetAddressOf() const noexcept { return &Ptr; }
+		[[nodiscard]] T* const* GetAddressOf() const noexcept { return &Ptr; }
 
-		T** GetAddressOf() noexcept { return &Ptr; }
+		[[nodiscard]] T** GetAddressOf() noexcept { return &Ptr; }
 
-		T** ReleaseAndGetAddressOf() noexcept
+		[[nodiscard]] T** ReleaseAndGetAddressOf() noexcept
 		{
 			InternalRelease();
 			return &Ptr;
 		}
 
-		T** operator&() noexcept { return ReleaseAndGetAddressOf(); }
+		[[nodiscard]] T** operator&() noexcept { return ReleaseAndGetAddressOf(); }
 
-		T* Detach() noexcept { return std::exchange(Ptr, nullptr); }
+		[[nodiscard]] T* Detach() noexcept { return std::exchange(Ptr, nullptr); }
 
 		void Attach(InterfaceType* InterfacePtr) noexcept
 		{
