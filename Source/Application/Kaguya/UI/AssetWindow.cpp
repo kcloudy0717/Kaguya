@@ -72,6 +72,57 @@ void AssetWindow::OnRender()
 			}
 		}
 		{
+			if (ImGui::Button("Import Meshes"))
+			{
+				ImGui::OpenPopup("Meshes Options");
+			}
+
+			// Always center this window when appearing
+			const ImVec2 Center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+			ImGui::SetNextWindowPos(Center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+			if (ImGui::BeginPopupModal("Meshes Options", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::Checkbox("Generate Meshlets", &MeshOptions.GenerateMeshlets);
+
+				ImGui::InputFloat3("Translation", MeshOptions.Translation.data());
+				ImGui::InputFloat3("Rotation", MeshOptions.Rotation.data());
+				ImGui::InputFloat("Scale", &MeshOptions.UniformScale);
+				float Scale[3] = { MeshOptions.UniformScale, MeshOptions.UniformScale, MeshOptions.UniformScale };
+				ImGuizmo::RecomposeMatrixFromComponents(
+					MeshOptions.Translation.data(),
+					MeshOptions.Rotation.data(),
+					Scale,
+					reinterpret_cast<float*>(&MeshOptions.Matrix));
+
+				if (ImGui::Button("Browse...", ImVec2(120, 0)))
+				{
+					FilterDesc ComDlgFS[] = { // { L"Mesh Files", L"*.obj;*.stl;*.ply" },
+											  { L"All Files (*.*)", L"*.*" }
+					};
+
+					auto Paths = FileSystem::OpenDialogMultiple(ComDlgFS);
+					for (const auto& Path : Paths)
+					{
+						MeshOptions.Path = Path;
+						if (!MeshOptions.Path.empty())
+						{
+							Kaguya::AssetManager->AsyncLoadMesh(MeshOptions);
+						}
+					}
+					MeshOptions = {};
+
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SetItemDefaultFocus();
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel", ImVec2(120, 0)))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+		}
+		{
 			if (ImGui::Button("Import Texture"))
 			{
 				ImGui::OpenPopup("Texture Options");

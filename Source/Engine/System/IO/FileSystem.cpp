@@ -46,6 +46,64 @@ std::filesystem::path FileSystem::OpenDialog(std::span<FilterDesc> FilterSpecs)
 	return Path;
 }
 
+std::vector<std::filesystem::path> FileSystem::OpenDialogMultiple(std::span<FilterDesc> FilterSpecs)
+{
+	std::vector<COMDLG_FILTERSPEC> Specs(FilterSpecs.size());
+	for (size_t i = 0; i < Specs.size(); ++i)
+	{
+		Specs[i].pszName = FilterSpecs[i].Name;
+		Specs[i].pszSpec = FilterSpecs[i].Filter;
+	}
+
+	std::vector<std::filesystem::path> Paths;
+	ComPtr<IFileOpenDialog>			   FileOpen;
+	if (SUCCEEDED(CoCreateInstance(
+			CLSID_FileOpenDialog,
+			nullptr,
+			CLSCTX_ALL,
+			IID_PPV_ARGS(&FileOpen))))
+	{
+		FileOpen->SetFileTypes(static_cast<UINT>(Specs.size()), Specs.data());
+
+		DWORD Options;
+		if (SUCCEEDED(FileOpen->GetOptions(&Options)))
+		{
+			if (SUCCEEDED(FileOpen->SetOptions(Options | FOS_ALLOWMULTISELECT)))
+			{
+				if (SUCCEEDED(FileOpen->Show(nullptr)))
+				{
+					ComPtr<IShellItemArray> ItemArray;
+					if (SUCCEEDED(FileOpen->GetResults(&ItemArray)))
+					{
+						DWORD Count;
+						if (SUCCEEDED(ItemArray->GetCount(&Count)))
+						{
+							Paths.reserve(Count);
+
+							for (DWORD Index = 0; Index < Count; ++Index)
+							{
+								ComPtr<IShellItem> Item;
+								if (SUCCEEDED(ItemArray->GetItemAt(Index, &Item)))
+								{
+									PWSTR pszFilePath;
+									// Display the file name to the user.
+									if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+									{
+										Paths.emplace_back(pszFilePath);
+										CoTaskMemFree(pszFilePath);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return Paths;
+}
+
 std::filesystem::path FileSystem::SaveDialog(std::span<FilterDesc> FilterSpecs)
 {
 	std::vector<COMDLG_FILTERSPEC> Specs(FilterSpecs.size());
