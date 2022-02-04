@@ -61,7 +61,7 @@ This is a hobby project using DirectX 12 and DirectX RayTracing (DXR). This proj
 - [CMake](https://cmake.org/) Version 3.16 or up. Make sure the option "Add CMake to the system PATH for all users" during installation.
 - C++ 20
 
-1. Initialize submodules after you have cloned, obtain assets used by the project from here: [Assets](https://drive.google.com/drive/folders/1ySITDyVAiylAj6iqpWpnyJIxHXsbt4Zj?usp=sharing). use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
+1. Initialize submodules after you have cloned, obtain assets used by the project from here: [Assets](https://drive.google.com/drive/folders/1ySITDyVAiylAj6iqpWpnyJIxHXsbt4Zj?usp=sharing) and copy the Assets folder to the root repo folder. use `Setup.bat` to generate visual studio solution (Make sure you have CMake installed and is a environmental variable).
 
 2. When the project is build, all the assets and required dlls will be copied to the directory of the executable. There is a folder containing all the scenes in the asset directory for the showcase, those can be loaded from the context menu of the World window of the application's UI.
 
@@ -109,6 +109,7 @@ Thanks to Benedikt Bitterli for [rendering resources](https://benedikt-bitterli.
 ## Implementation details
 
 - ## Render Graph
+
   - https://media.contentapi.ea.com/content/dam/ea/seed/presentations/wihlidal-halcyonarchitecture-notes.pdf
   - https://www.gdcvault.com/play/1024612/FrameGraph-Extensible-Rendering-Architecture-in
   - https://levelup.gitconnected.com/organizing-gpu-work-with-directed-acyclic-graphs-f3fd5f2c2af3
