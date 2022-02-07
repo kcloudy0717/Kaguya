@@ -5,44 +5,32 @@ namespace System
 {
 	namespace Xml
 	{
-		struct SourceLocation
-		{
-			void Advance(char Character)
-			{
-				if (Character == '\n')
-				{
-					Line++;
-					Column = 0;
-				}
-				else if (Character == '\t')
-				{
-					Column += 4;
-				}
-				else
-				{
-					Column++;
-				}
-			}
-
-			int				 Line;
-			int				 Column;
-		};
-
 		struct XmlAttribute
 		{
 			std::string_view Name;
 			std::string_view Value;
-			SourceLocation	 Location;
 		};
 
 		struct XmlNode
 		{
-			std::string_view Tag;
-			bool			 IsQuestionMark;
-			SourceLocation	 Location;
+			template<typename TPredicate>
+			const XmlNode* GetChild(TPredicate Predicate)
+			{
+				for (const auto& Child : Children)
+				{
+					if (Predicate(Child))
+					{
+						return &Child;
+					}
+				}
+				return nullptr;
+			}
 
-			std::vector<XmlNode>	  Children;
+			bool					  IsProlog;
+			std::string_view		  Tag;
 			std::vector<XmlAttribute> Attributes;
+
+			std::vector<XmlNode> Children;
 		};
 	} // namespace Xml
 } // namespace System
