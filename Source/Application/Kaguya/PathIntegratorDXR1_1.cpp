@@ -4,6 +4,9 @@
 #include "Tonemap.h"
 #include "Bloom.h"
 
+static BloomSettings   g_Bloom;
+static TonemapSettings g_Tonemap;
+
 void PathIntegratorDXR1_1::Initialize()
 {
 	Shaders::Compile(Compiler);
@@ -68,6 +71,9 @@ void PathIntegratorDXR1_1::Render(World* World, RHI::D3D12CommandContext& Contex
 			&PathIntegratorState.MaxDepth,
 			&PathIntegratorState::MinimumDepth,
 			&PathIntegratorState::MaximumDepth);
+
+		ImGui::SliderFloat("Bloom Threshold", &g_Bloom.Threshold, 0.0f, 50.0f);
+		ImGui::SliderFloat("Bloom Intensity", &g_Tonemap.BloomIntensity, 0.0f, 50.0f);
 
 		ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
 		ImGui::Text("Samples Per Pixel: %u", 4u);
@@ -221,14 +227,14 @@ void PathIntegratorDXR1_1::Render(World* World, RHI::D3D12CommandContext& Contex
 	BloomInputParameters BloomInputArgs = {};
 	BloomInputArgs.Input				= PathTraceArgs.Output;
 	BloomInputArgs.Srv					= PathTraceArgs.Srv;
-	BloomParameters BloomArgs			= AddBloomPass(Graph, View, BloomInputArgs);
+	BloomParameters BloomArgs			= AddBloomPass(Graph, View, BloomInputArgs, g_Bloom);
 
 	TonemapInputParameters TonemapInputArgs = {};
 	TonemapInputArgs.Input					= PathTraceArgs.Output;
 	TonemapInputArgs.Srv					= PathTraceArgs.Srv;
 	TonemapInputArgs.BloomInput				= BloomArgs.Output1[1]; // Output1[1] contains final upsampled bloom texture
 	TonemapInputArgs.BloomInputSrv			= BloomArgs.Output1Srvs[1];
-	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, View, TonemapInputArgs);
+	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, View, TonemapInputArgs, g_Tonemap);
 
 	// After render graph execution, we need to read tonemap output as part of imgui pipeline that is not part of the graph, so graph will automatically apply
 	// resource barrier transition for us

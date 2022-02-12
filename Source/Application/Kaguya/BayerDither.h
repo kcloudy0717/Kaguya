@@ -34,21 +34,22 @@ static BayerDitherParameters AddBayerDitherPass(RHI::RenderGraph& Graph, const V
 	Graph.AddRenderPass("Bayer Dither")
 		.Read(Inputs.Input)
 		.Write(&BayerDitherArgs.Output)
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 struct Parameters
-					 {
-						 HlslTexture2D	 Input;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BayerDitherArgs.Uav);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				struct Parameters
+				{
+					HlslTexture2D	Input;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.Input	= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+				Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BayerDitherArgs.Uav);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BayerDither));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BayerDither));
-					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
-					 Context.Dispatch2D<8, 8>(View.Width, View.Height);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BayerDither));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BayerDither));
+				Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
+				Context.Dispatch2D<8, 8>(View.Width, View.Height);
+			});
 
 	return BayerDitherArgs;
 }

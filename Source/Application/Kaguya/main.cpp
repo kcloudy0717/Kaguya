@@ -317,7 +317,9 @@ int main(int /*argc*/, char* /*argv*/[])
 	World World(Kaguya::AssetManager);
 	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 
-	MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
+	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
+	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);
+	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
 
 	// DeferredRenderer Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);
 	// PathIntegratorDXR1_0 Renderer(RenderCore::Device, RenderCore::Compiler, &MainWindow);

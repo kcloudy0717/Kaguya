@@ -51,27 +51,28 @@ static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& Vie
 		.Read(Inputs.Input)
 		.Read(Inputs.BloomInput)
 		.Write(&TonemapArgs.Output)
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 struct Parameters
-					 {
-						 Vec2f			 InverseOutputSize;
-						 float			 BloomIntensity;
-						 HlslTexture2D	 Input;
-						 HlslTexture2D	 Bloom;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
-					 Args.BloomIntensity	= Settings.BloomIntensity;
-					 Args.Input				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Bloom				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
-					 Args.Output			= Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				struct Parameters
+				{
+					Vec2f			InverseOutputSize;
+					float			BloomIntensity;
+					HlslTexture2D	Input;
+					HlslTexture2D	Bloom;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
+				Args.BloomIntensity	   = Settings.BloomIntensity;
+				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+				Args.Bloom			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
+				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));
-					 Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
-					 Context.Dispatch2D<8, 8>(View.Width, View.Height);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));
+				Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
+				Context.Dispatch2D<8, 8>(View.Width, View.Height);
+			});
 
 	return TonemapArgs;
 }

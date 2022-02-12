@@ -20,8 +20,9 @@ std::vector<std::string> Tokenize(std::string String, std::regex Delimiter)
 
 using namespace System::Xml;
 
-static std::filesystem::path					 ParentPath;
-static std::unordered_map<std::string, Material> MaterialMap;
+static std::filesystem::path							   ParentPath;
+static std::unordered_map<std::string, Material>		   MaterialMap;
+static std::unordered_map<std::string, Asset::AssetHandle> TextureMap;
 
 struct PathIntegratorParameters
 {
@@ -82,6 +83,33 @@ f32 GetFloatProperty(const XmlNode* Parent, std::string_view Name, f32 DefaultVa
 	return DefaultValue;
 }
 
+std::string GetStringProperty(const XmlNode* Parent, std::string_view Name)
+{
+	if (const XmlNode* Property = Parent->GetChild(
+			[Name](const XmlNode& Node)
+			{
+				if (Node.Tag == "string")
+				{
+					if (auto Attribute = Node.GetAttributeByName("name");
+						Attribute)
+					{
+						return Attribute->Value == Name;
+					}
+				}
+				return false;
+			});
+		Property)
+	{
+		if (auto Attribute = Property->GetAttributeByName("value");
+			Attribute)
+		{
+			return std::string(Attribute->Value.begin(), Attribute->Value.end());
+		}
+	}
+
+	return {};
+}
+
 Vec3f GetRgbProperty(const XmlNode* Parent, std::string_view Name)
 {
 	if (const XmlNode* Property = Parent->GetChild(
@@ -117,12 +145,12 @@ Vec3f GetRgbProperty(const XmlNode* Parent, std::string_view Name)
 	return {};
 }
 
-std::string GetStringProperty(const XmlNode* Parent, std::string_view Name)
+Asset::AssetHandle GetTextureProperty(const XmlNode* Parent, std::string_view Name, Asset::AssetManager* AssetManager)
 {
 	if (const XmlNode* Property = Parent->GetChild(
 			[Name](const XmlNode& Node)
 			{
-				if (Node.Tag == "string")
+				if (Node.Tag == "texture")
 				{
 					if (auto Attribute = Node.GetAttributeByName("name");
 						Attribute)
@@ -134,10 +162,26 @@ std::string GetStringProperty(const XmlNode* Parent, std::string_view Name)
 			});
 		Property)
 	{
-		if (auto Attribute = Property->GetAttributeByName("value");
-			Attribute)
+		if (auto Attribute = Property->GetAttributeByName("type");
+			Attribute && Attribute->Value == "bitmap")
 		{
-			return std::string(Attribute->Value.begin(), Attribute->Value.end());
+			auto Path = GetStringProperty(Property, "filename");
+			if (!Path.empty())
+			{
+				if (auto Iter = TextureMap.find(Path); Iter != TextureMap.end())
+				{
+					return Iter->second;
+				}
+				else
+				{
+					Asset::TextureImportOptions Options;
+					Options.Path	 = ParentPath / Path;
+					Options.sRGB	 = true;
+					auto Handle		 = AssetManager->LoadTexture(Options);
+					TextureMap[Path] = Handle;
+					return Handle;
+				}
+			}
 		}
 	}
 
@@ -177,10 +221,6 @@ DirectX::XMFLOAT4X4 ParseTransformNode(const XmlNode* Node)
 			if (Child.Tag == "matrix")
 			{
 				DirectX::XMFLOAT4X4 World = GetMatrixFromAttribute(&Child);
-				/*World(3, 0) = -World(3, 0);
-				World(3, 1) = -World(3, 1);
-				World(3, 2) = -World(3, 2);*/
-
 				Matrix = XMLoadFloat4x4(&World) * Matrix;
 			}
 		}
@@ -191,7 +231,7 @@ DirectX::XMFLOAT4X4 ParseTransformNode(const XmlNode* Node)
 	return World;
 }
 
-Material ParseMaterial(const XmlNode* Node)
+Material ParseMaterial(const XmlNode* Node, Asset::AssetManager* AssetManager)
 {
 	const XmlNode* Bsdf = Node;
 	if (Node->Tag != "bsdf")
@@ -254,10 +294,17 @@ Material ParseMaterial(const XmlNode* Node)
 	}
 
 	Material Material;
+	if (BsdfType == "diffuse")
+	{
+		Vec3f Albedo		   = GetRgbProperty(Bsdf, "reflectance");
+		Material.BaseColor	   = { Albedo.x, Albedo.y, Albedo.z };
+		Material.Albedo.Handle = GetTextureProperty(Bsdf, "reflectance", AssetManager);
+	}
 	if (BsdfType == "plastic" || BsdfType == "roughplastic")
 	{
-		Vec3f Albedo	   = GetRgbProperty(Bsdf, "diffuseReflectance");
-		Material.BaseColor = { Albedo.x, Albedo.y, Albedo.z };
+		Vec3f Albedo		   = GetRgbProperty(Bsdf, "diffuseReflectance");
+		Material.BaseColor	   = { Albedo.x, Albedo.y, Albedo.z };
+		Material.Albedo.Handle = GetTextureProperty(Bsdf, "diffuseReflectance", AssetManager);
 	}
 	if (BsdfType == "thindielectric" || BsdfType == "dielectric" || BsdfType == "roughdielectric")
 	{
@@ -267,10 +314,10 @@ Material ParseMaterial(const XmlNode* Node)
 	}
 	if (BsdfType == "conductor")
 	{
-		Material.BSDFType  = EBSDFTypes::Disney;
-		Material.Metallic  = 1.0f;
-		Material.Specular  = 1.0f;
-		Material.Roughness = 0.0f;
+		Material.BSDFType = EBSDFTypes::Mirror;
+		//Material.Metallic  = 1.0f;
+		//Material.Specular  = 1.0f;
+		//Material.Roughness = 0.0f;
 	}
 
 	MaterialMap[Id] = Material;
@@ -316,11 +363,11 @@ void MitsubaLoader::ParseNode(const XmlNode* Node, Asset::AssetManager* AssetMan
 	}
 	if (Node->Tag == "bsdf")
 	{
-		ParseMaterial(Node);
+		ParseMaterial(Node, AssetManager);
 	}
 	if (Node->Tag == "shape")
 	{
-		Material Material = ParseMaterial(Node);
+		Material Material = ParseMaterial(Node, AssetManager);
 
 		auto Attribute = Node->GetAttributeByName("type");
 		if (Attribute)

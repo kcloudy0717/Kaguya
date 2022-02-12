@@ -34,21 +34,22 @@ static SobolParameters AddSobolPass(RHI::RenderGraph& Graph, const View& View, S
 	Graph.AddRenderPass("Sobol")
 		.Read(Inputs.Input)
 		.Write(&SobolArgs.Output)
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 struct Parameters
-					 {
-						 HlslTexture2D	 Input;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(SobolArgs.Uav);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				struct Parameters
+				{
+					HlslTexture2D	Input;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.Input	= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+				Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(SobolArgs.Uav);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Sobol));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Sobol));
-					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
-					 Context.Dispatch2D<8, 8>(View.Width, View.Height);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Sobol));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Sobol));
+				Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
+				Context.Dispatch2D<8, 8>(View.Width, View.Height);
+			});
 
 	return SobolArgs;
 }

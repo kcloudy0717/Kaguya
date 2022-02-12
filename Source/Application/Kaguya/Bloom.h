@@ -55,28 +55,29 @@ static void BlurUpsample(std::string_view Name, RHI::RenderGraph& Graph, BlurUps
 		.Read(Inputs.HighResInput)
 		.Read(Inputs.LowResInput)
 		.Write(Inputs.HighResOutput)
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 RHI::D3D12Texture* HighResInput = Registry.Get<RHI::D3D12Texture>(Inputs.HighResInput);
-					 struct Parameters
-					 {
-						 Vec2f			 InverseOutputSize;
-						 float			 UpsampleInterpolationFactor;
-						 HlslTexture2D	 HighRes;
-						 HlslTexture2D	 LowRes;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.InverseOutputSize			  = Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
-					 Args.UpsampleInterpolationFactor = UpsampleInterpolationFactor;
-					 Args.HighRes					  = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.HighResInputSrv);
-					 Args.LowRes					  = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.LowResInputSrv);
-					 Args.Output					  = Registry.Get<RHI::D3D12UnorderedAccessView>(Inputs.HighResOutputUav);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				RHI::D3D12Texture* HighResInput = Registry.Get<RHI::D3D12Texture>(Inputs.HighResInput);
+				struct Parameters
+				{
+					Vec2f			InverseOutputSize;
+					float			UpsampleInterpolationFactor;
+					HlslTexture2D	HighRes;
+					HlslTexture2D	LowRes;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.InverseOutputSize			 = Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
+				Args.UpsampleInterpolationFactor = UpsampleInterpolationFactor;
+				Args.HighRes					 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.HighResInputSrv);
+				Args.LowRes						 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.LowResInputSrv);
+				Args.Output						 = Registry.Get<RHI::D3D12UnorderedAccessView>(Inputs.HighResOutputUav);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
-					 Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
-					 Context.Dispatch2D<8, 8>(static_cast<UINT>(HighResInput->GetDesc().Width), HighResInput->GetDesc().Height);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomUpsampleBlur));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomUpsampleBlur));
+				Context->SetComputeRoot32BitConstants(0, 6, &Args, 0);
+				Context.Dispatch2D<8, 8>(static_cast<UINT>(HighResInput->GetDesc().Width), HighResInput->GetDesc().Height);
+			});
 }
 
 static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, BloomInputParameters Inputs, BloomSettings Settings = BloomSettings())
@@ -117,73 +118,76 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 	Graph.AddRenderPass("Bloom Mask")
 		.Read(Inputs.Input)
 		.Write(&BloomArgs.Output1[0])
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 struct Parameters
-					 {
-						 Vec2f			 InverseOutputSize;
-						 float			 Threshold;
-						 HlslTexture2D	 Input;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
-					 Args.Threshold			= Settings.Threshold;
-					 Args.Input				= Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
-					 Args.Output			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				struct Parameters
+				{
+					Vec2f			InverseOutputSize;
+					float			Threshold;
+					HlslTexture2D	Input;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
+				Args.Threshold		   = Settings.Threshold;
+				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
+				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomMask));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomMask));
-					 Context->SetComputeRoot32BitConstants(0, 5, &Args, 0);
-					 Context.Dispatch2D<8, 8>(kBloomWidth, kBloomHeight);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomMask));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomMask));
+				Context->SetComputeRoot32BitConstants(0, 5, &Args, 0);
+				Context.Dispatch2D<8, 8>(kBloomWidth, kBloomHeight);
+			});
 	Graph.AddRenderPass("Bloom Downsample")
 		.Read(BloomArgs.Output1[0])
 		.Write(&BloomArgs.Output2[0])
 		.Write(&BloomArgs.Output3[0])
 		.Write(&BloomArgs.Output4[0])
 		.Write(&BloomArgs.Output5[0])
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 struct Parameters
-					 {
-						 Vec2f			 InverseOutputSize;
-						 HlslTexture2D	 Bloom;
-						 HlslRWTexture2D Output1;
-						 HlslRWTexture2D Output2;
-						 HlslRWTexture2D Output3;
-						 HlslRWTexture2D Output4;
-					 } Args;
-					 Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
-					 Args.Bloom				= Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
-					 Args.Output1			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
-					 Args.Output2			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);
-					 Args.Output3			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0]);
-					 Args.Output4			= Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0]);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				struct Parameters
+				{
+					Vec2f			InverseOutputSize;
+					HlslTexture2D	Bloom;
+					HlslRWTexture2D Output1;
+					HlslRWTexture2D Output2;
+					HlslRWTexture2D Output3;
+					HlslRWTexture2D Output4;
+				} Args;
+				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
+				Args.Bloom			   = Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
+				Args.Output1		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
+				Args.Output2		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);
+				Args.Output3		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output4Uavs[0]);
+				Args.Output4		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[0]);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomDownsample));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomDownsample));
-					 Context->SetComputeRoot32BitConstants(0, 7, &Args, 0);
-					 Context.Dispatch2D<8, 8>(kBloomWidth / 2, kBloomHeight / 2);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomDownsample));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomDownsample));
+				Context->SetComputeRoot32BitConstants(0, 7, &Args, 0);
+				Context.Dispatch2D<8, 8>(kBloomWidth / 2, kBloomHeight / 2);
+			});
 	Graph.AddRenderPass("Bloom Blur")
 		.Read(BloomArgs.Output5[0])
 		.Write(&BloomArgs.Output5[1])
-		.Execute([=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 RHI::D3D12Texture* Output5a = Registry.Get<RHI::D3D12Texture>(BloomArgs.Output5[0]);
-					 struct Parameters
-					 {
-						 HlslTexture2D	 Input;
-						 HlslRWTexture2D Output;
-					 } Args;
-					 Args.Input	 = Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0]);
-					 Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1]);
+		.Execute(
+			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				RHI::D3D12Texture* Output5a = Registry.Get<RHI::D3D12Texture>(BloomArgs.Output5[0]);
+				struct Parameters
+				{
+					HlslTexture2D	Input;
+					HlslRWTexture2D Output;
+				} Args;
+				Args.Input	= Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output5Srvs[0]);
+				Args.Output = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output5Uavs[1]);
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));
-					 Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
-					 Context.Dispatch2D<8, 8>(static_cast<UINT>(Output5a->GetDesc().Width), Output5a->GetDesc().Height);
-				 });
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::BloomBlur));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::BloomBlur));
+				Context->SetComputeRoot32BitConstants(0, 2, &Args, 0);
+				Context.Dispatch2D<8, 8>(static_cast<UINT>(Output5a->GetDesc().Width), Output5a->GetDesc().Height);
+			});
 
 	BlurUpsampleInputParameters UpsampleArgs;
 
