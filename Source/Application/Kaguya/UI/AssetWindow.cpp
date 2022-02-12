@@ -56,7 +56,7 @@ void AssetWindow::OnRender()
 					MeshOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!MeshOptions.Path.empty())
 					{
-						Kaguya::AssetManager->AsyncLoadMesh(MeshOptions);
+						Kaguya::AssetManager->LoadMesh(MeshOptions);
 					}
 
 					MeshOptions = {};
@@ -106,7 +106,7 @@ void AssetWindow::OnRender()
 						MeshOptions.Path = Path;
 						if (!MeshOptions.Path.empty())
 						{
-							Kaguya::AssetManager->AsyncLoadMesh(MeshOptions);
+							Kaguya::AssetManager->LoadMesh(MeshOptions);
 						}
 					}
 					MeshOptions = {};
@@ -145,7 +145,7 @@ void AssetWindow::OnRender()
 					TextureOptions.Path = FileSystem::OpenDialog(ComDlgFS);
 					if (!TextureOptions.Path.empty())
 					{
-						Kaguya::AssetManager->AsyncLoadImage(TextureOptions);
+						Kaguya::AssetManager->LoadTexture(TextureOptions);
 					}
 
 					TextureOptions = {};

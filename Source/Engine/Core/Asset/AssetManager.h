@@ -31,12 +31,16 @@ namespace Asset
 
 		AssetType GetAssetTypeFromExtension(const std::filesystem::path& Path);
 
-		void AsyncLoadImage(const TextureImportOptions& Options);
-
-		void AsyncLoadMesh(const MeshImportOptions& Options);
+		auto LoadTexture(const TextureImportOptions& Options)
+		{
+			return TextureImporter.Import(this, Options);
+		}
+		auto LoadMesh(const MeshImportOptions& Options)
+		{
+			return MeshImporter.Import(this, Options);
+		}
 
 		void RequestUpload(Texture* Texture);
-
 		void RequestUpload(Mesh* Mesh);
 
 	private:

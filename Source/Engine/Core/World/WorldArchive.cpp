@@ -148,7 +148,7 @@ void WorldArchive::Load(
 				JsonGetIfExists<bool>(JsonOptions, "GenerateMips", Options.GenerateMips);
 			}
 
-			AssetManager->AsyncLoadImage(Options);
+			AssetManager->LoadTexture(Options);
 		}
 	}
 
@@ -167,7 +167,7 @@ void WorldArchive::Load(
 				JsonGetIfExists<bool>(JsonOptions, "GenerateMeshlets", Options.GenerateMeshlets);
 			}
 
-			AssetManager->AsyncLoadMesh(Options);
+			AssetManager->LoadMesh(Options);
 		}
 	}
 

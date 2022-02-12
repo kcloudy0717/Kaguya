@@ -183,13 +183,9 @@ namespace Asset
 	class MeshImporter : public AssetImporter
 	{
 	public:
-		MeshImporter()
-		{
-			SupportedExtensions.insert(L".fbx");
-			SupportedExtensions.insert(L".obj");
-		}
+		MeshImporter();
 
-		void Import(AssetManager* AssetManager, const MeshImportOptions& Options);
+		std::vector<AssetHandle> Import(AssetManager* AssetManager, const MeshImportOptions& Options);
 
 		void			   Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes);
 		std::vector<Mesh*> ImportExisting(AssetManager* AssetManager, const std::filesystem::path& BinaryPath, const MeshImportOptions& Options);
@@ -212,18 +208,8 @@ namespace Asset
 	class TextureImporter : public AssetImporter
 	{
 	public:
-		TextureImporter()
-		{
-			SupportedExtensions.insert(L".dds");
-			SupportedExtensions.insert(L".hdr");
-			SupportedExtensions.insert(L".tga");
-			SupportedExtensions.insert(L".bmp");
-			SupportedExtensions.insert(L".png");
-			SupportedExtensions.insert(L".gif");
-			SupportedExtensions.insert(L".tiff");
-			SupportedExtensions.insert(L".jpeg");
-		}
+		TextureImporter();
 
-		void Import(AssetManager* AssetManager, const TextureImportOptions& Options);
+		AssetHandle Import(AssetManager* AssetManager, const TextureImportOptions& Options);
 	};
 } // namespace Asset

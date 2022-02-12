@@ -294,7 +294,7 @@ void InspectorWindow::OnRender()
 						if (MaterialTexture.Texture)
 						{
 							ImGui::Button(MaterialTexture.Texture->Name.data());
-							Material.TextureIndices[Type] = MaterialTexture.Texture->SRV.GetIndex();
+							Material.TextureIndices[Type] = MaterialTexture.Texture->Srv.GetIndex();
 						}
 						else
 						{

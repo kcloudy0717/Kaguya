@@ -13,7 +13,7 @@ namespace System
 		{
 		}
 
-		XmlNode XmlReader::ParseRoot()
+		XmlNode XmlReader::ParseRootNode()
 		{
 			XmlNode RootNode = {};
 			while (!Eof())

@@ -9,6 +9,8 @@
 #include "UI/InspectorWindow.h"
 #include "UI/AssetWindow.h"
 
+#include "Globals.h"
+
 class RendererPresent : public RHI::IPresent
 {
 public:

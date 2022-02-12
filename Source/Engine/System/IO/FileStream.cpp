@@ -50,7 +50,7 @@ void FileStream::Reset()
 
 std::unique_ptr<std::byte[]> FileStream::ReadAll() const
 {
-	std::uint64_t FileSize = GetSizeInBytes();
+	u64 FileSize = GetSizeInBytes();
 
 	DWORD NumberOfBytesRead	  = 0;
 	DWORD NumberOfBytesToRead = static_cast<DWORD>(FileSize);

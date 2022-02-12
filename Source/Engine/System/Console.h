@@ -199,7 +199,7 @@ public:
 	{
 	}
 
-	bool Execute(TArgs Args)
+	bool Execute(TArgs Args) const
 	{
 		try
 		{

@@ -191,7 +191,7 @@ wil::unique_handle AsyncFileStream::InitializeHandle(
 		return dwDesiredAccess;
 	}();
 
-	wil::unique_handle Handle = wil::unique_handle(CreateFile(
+	auto Handle = wil::unique_handle(CreateFile(
 		Path.c_str(),
 		DesiredAccess,
 		0,

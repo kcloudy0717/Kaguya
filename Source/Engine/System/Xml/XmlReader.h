@@ -13,7 +13,7 @@ namespace System
 		public:
 			explicit XmlReader(FileStream& Stream);
 
-			XmlNode ParseRoot();
+			XmlNode ParseRootNode();
 
 		private:
 			static bool IsDigit(char Character);

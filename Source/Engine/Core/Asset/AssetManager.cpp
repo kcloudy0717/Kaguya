@@ -86,16 +86,6 @@ namespace Asset
 		return AssetType::Unknown;
 	}
 
-	void AssetManager::AsyncLoadImage(const TextureImportOptions& Options)
-	{
-		TextureImporter.Import(this, Options);
-	}
-
-	void AssetManager::AsyncLoadMesh(const MeshImportOptions& Options)
-	{
-		MeshImporter.Import(this, Options);
-	}
-
 	void AssetManager::UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device)
 	{
 		const auto& Metadata = AssetTexture->TexImage.GetMetadata();
@@ -135,7 +125,7 @@ namespace Asset
 		}
 
 		AssetTexture->DxTexture = RHI::D3D12Texture(Device, ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
-		AssetTexture->SRV		= RHI::D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
+		AssetTexture->Srv		= RHI::D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
 
 		std::vector<D3D12_SUBRESOURCE_DATA> Subresources(AssetTexture->TexImage.GetImageCount());
 		const auto							pImages = AssetTexture->TexImage.GetImages();

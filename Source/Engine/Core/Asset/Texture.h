@@ -17,10 +17,7 @@ namespace Asset
 	class Texture : public IAsset
 	{
 	public:
-		void Release()
-		{
-			TexImage.Release();
-		}
+		void Release();
 
 		TextureImportOptions Options;
 
@@ -31,7 +28,7 @@ namespace Asset
 		DirectX::ScratchImage TexImage;
 
 		RHI::D3D12Texture			 DxTexture;
-		RHI::D3D12ShaderResourceView SRV;
+		RHI::D3D12ShaderResourceView Srv;
 	};
 
 	template<>

@@ -27,41 +27,21 @@ namespace Asset
 	class Mesh : public IAsset
 	{
 	public:
-		void ComputeBoundingBox()
-		{
-			DirectX::BoundingBox Box;
-			DirectX::BoundingBox::CreateFromPoints(Box, Vertices.size(), &Vertices[0].Position, sizeof(Vertex));
-			BoundingBox.Center	= Vec3f(Box.Center.x, Box.Center.y, Box.Center.z);
-			BoundingBox.Extents = Vec3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
-		}
+		void ComputeBoundingBox();
 
-		void UpdateInfo()
-		{
-			VertexCount		 = static_cast<std::uint32_t>(Vertices.size());
-			IndexCount		 = static_cast<std::uint32_t>(Indices.size());
-			MeshletCount	 = static_cast<std::uint32_t>(Meshlets.size());
-			VertexIndexCount = static_cast<std::uint32_t>(UniqueVertexIndices.size());
-			PrimitiveCount	 = static_cast<std::uint32_t>(PrimitiveIndices.size());
-		}
+		void UpdateInfo();
 
-		void Release()
-		{
-			decltype(Vertices)().swap(Vertices);
-			decltype(Indices)().swap(Indices);
-			decltype(Meshlets)().swap(Meshlets);
-			decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
-			decltype(PrimitiveIndices)().swap(PrimitiveIndices);
-		}
+		void Release();
 
 		MeshImportOptions Options;
 
 		std::string Name;
 
-		std::uint32_t VertexCount	   = 0;
-		std::uint32_t IndexCount	   = 0;
-		std::uint32_t MeshletCount	   = 0;
-		std::uint32_t VertexIndexCount = 0;
-		std::uint32_t PrimitiveCount   = 0;
+		u32 VertexCount		 = 0;
+		u32 IndexCount		 = 0;
+		u32 MeshletCount	 = 0;
+		u32 VertexIndexCount = 0;
+		u32 PrimitiveCount	 = 0;
 
 		std::vector<Vertex>					  Vertices;
 		std::vector<uint32_t>				  Indices;
@@ -78,7 +58,7 @@ namespace Asset
 		RHI::D3D12Buffer			 PrimitiveIndexResource;
 		D3D12_GPU_VIRTUAL_ADDRESS	 AccelerationStructure; // Managed by D3D12RaytracingAccelerationStructureManager
 		RHI::D3D12RaytracingGeometry Blas;
-		UINT64						 BlasIndex	   = UINT64_MAX;
+		u64							 BlasIndex	   = UINT64_MAX;
 		bool						 BlasValid	   = false;
 		bool						 BlasCompacted = false;
 

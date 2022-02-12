@@ -118,7 +118,7 @@ void World::ResolveComponentDependencies()
 				if (Texture)
 				{
 					StaticMesh.Material.Albedo.HandleId	  = Handle.Id;
-					StaticMesh.Material.TextureIndices[0] = Texture->SRV.GetIndex();
+					StaticMesh.Material.TextureIndices[0] = Texture->Srv.GetIndex();
 				}
 			}
 		});
@@ -132,7 +132,7 @@ void World::ResolveComponentDependencies()
 			if (Texture)
 			{
 				SkyLight.HandleId = Handle.Id;
-				SkyLight.SRVIndex = Texture->SRV.GetIndex();
+				SkyLight.SRVIndex = Texture->Srv.GetIndex();
 			}
 			else
 			{

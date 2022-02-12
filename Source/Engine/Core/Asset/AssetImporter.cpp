@@ -11,7 +11,13 @@ namespace Asset
 {
 	static constexpr char AssetExtension[] = ".asset";
 
-	void MeshImporter::Import(AssetManager* AssetManager, const MeshImportOptions& Options)
+	MeshImporter::MeshImporter()
+	{
+		SupportedExtensions.insert(L".fbx");
+		SupportedExtensions.insert(L".obj");
+	}
+
+	std::vector<AssetHandle> MeshImporter::Import(AssetManager* AssetManager, const MeshImportOptions& Options)
 	{
 		std::filesystem::path BinaryPath = Options.Path;
 		BinaryPath.replace_extension(AssetExtension);
@@ -41,7 +47,7 @@ namespace Asset
 			{
 				LUNA_LOG(Asset, Error, "{} error: {}", __FUNCTION__, Importer.GetErrorString());
 				__debugbreak();
-				return;
+				return {};
 			}
 
 			Meshes.reserve(paiScene->mNumMeshes);
@@ -138,12 +144,16 @@ namespace Asset
 			Export(BinaryPath, Meshes);
 		}
 
+		std::vector<AssetHandle> Handles;
+		Handles.reserve(Meshes.size());
 		for (auto Mesh : Meshes)
 		{
+			Handles.push_back(Mesh->Handle);
 			Mesh->UpdateInfo();
 			Mesh->ComputeBoundingBox();
 			AssetManager->RequestUpload(Mesh);
 		}
+		return Handles;
 	}
 
 	void MeshImporter::Export(const std::filesystem::path& BinaryPath, const std::vector<Mesh*>& Meshes)
@@ -218,14 +228,24 @@ namespace Asset
 			Asset->Meshlets			   = std::move(Meshlets);
 			Asset->UniqueVertexIndices = std::move(UniqueVertexIndices);
 			Asset->PrimitiveIndices	   = std::move(PrimitiveIndices);
-
 			Asset->UpdateInfo();
 		}
-
 		return Meshes;
 	}
 
-	void TextureImporter::Import(AssetManager* AssetManager, const TextureImportOptions& Options)
+	TextureImporter::TextureImporter()
+	{
+		SupportedExtensions.insert(L".dds");
+		SupportedExtensions.insert(L".hdr");
+		SupportedExtensions.insert(L".tga");
+		SupportedExtensions.insert(L".bmp");
+		SupportedExtensions.insert(L".png");
+		SupportedExtensions.insert(L".gif");
+		SupportedExtensions.insert(L".tiff");
+		SupportedExtensions.insert(L".jpeg");
+	}
+
+	AssetHandle TextureImporter::Import(AssetManager* AssetManager, const TextureImportOptions& Options)
 	{
 		const auto& Path	  = Options.Path;
 		const auto	Extension = Path.extension().string();
@@ -283,5 +303,6 @@ namespace Asset
 		Asset->Name		  = Path.filename().string();
 		Asset->TexImage	  = std::move(OutImage);
 		AssetManager->RequestUpload(Asset);
+		return Asset->Handle;
 	}
 } // namespace Asset

@@ -169,53 +169,54 @@ void PathIntegratorDXR1_1::Render(World* World, RHI::D3D12CommandContext& Contex
 
 	Graph.AddRenderPass("Path Trace")
 		.Write(&PathTraceArgs.Output)
-		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
-				 {
-					 _declspec(align(256)) struct GlobalConstants
-					 {
-						 Hlsl::Camera Camera;
+		.Execute(
+			[=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
+			{
+				_declspec(align(256)) struct GlobalConstants
+				{
+					Hlsl::Camera Camera;
 
-						 // x, y = Resolution
-						 // z, w = 1 / Resolution
-						 DirectX::XMFLOAT4 Resolution;
+					// x, y = Resolution
+					// z, w = 1 / Resolution
+					DirectX::XMFLOAT4 Resolution;
 
-						 unsigned int NumLights;
-						 unsigned int TotalFrameCount;
+					unsigned int NumLights;
+					unsigned int TotalFrameCount;
 
-						 unsigned int MaxDepth;
-						 unsigned int NumAccumulatedSamples;
+					unsigned int MaxDepth;
+					unsigned int NumAccumulatedSamples;
 
-						 unsigned int RenderTarget;
+					unsigned int RenderTarget;
 
-						 float SkyIntensity;
+					float SkyIntensity;
 
-						 DirectX::XMUINT2 Dimensions;
-						 unsigned int	  AntiAliasing;
-						 int			  Sky;
-					 } g_GlobalConstants					 = {};
-					 g_GlobalConstants.Camera				 = GetHLSLCameraDesc(*World->ActiveCamera);
-					 g_GlobalConstants.Resolution			 = { static_cast<float>(View.Width), static_cast<float>(View.Height), 1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height) };
-					 g_GlobalConstants.NumLights			 = NumLights;
-					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
-					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
-					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
-					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
-					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
-					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
-					 g_GlobalConstants.Sky					 = World->ActiveSkyLight->SRVIndex;
+					DirectX::XMUINT2 Dimensions;
+					unsigned int	 AntiAliasing;
+					int				 Sky;
+				} g_GlobalConstants						= {};
+				g_GlobalConstants.Camera				= GetHLSLCameraDesc(*World->ActiveCamera);
+				g_GlobalConstants.Resolution			= { static_cast<float>(View.Width), static_cast<float>(View.Height), 1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height) };
+				g_GlobalConstants.NumLights				= NumLights;
+				g_GlobalConstants.TotalFrameCount		= FrameCounter++;
+				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
+				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
+				g_GlobalConstants.RenderTarget			= Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
+				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
+				g_GlobalConstants.Dimensions			= { View.Width, View.Height };
+				g_GlobalConstants.AntiAliasing			= PathIntegratorState.Antialiasing;
+				g_GlobalConstants.Sky					= World->ActiveSkyLight->SRVIndex;
 
-					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::RTX::PathTrace));
-					 Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::RTX::PathTrace));
-					 Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-					 Context->SetComputeRootDescriptorTable(1, AccelerationStructure.GetShaderResourceView().GetGpuHandle());
-					 Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
-					 Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
-					 Context->SetComputeRootShaderResourceView(4, Meshes.GetGpuVirtualAddress());
+				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::RTX::PathTrace));
+				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::RTX::PathTrace));
+				Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
+				Context->SetComputeRootDescriptorTable(1, AccelerationStructure.GetShaderResourceView().GetGpuHandle());
+				Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
+				Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
+				Context->SetComputeRootShaderResourceView(4, Meshes.GetGpuVirtualAddress());
 
-					 Context.Dispatch2D<16, 16>(View.Width, View.Height);
-					 Context.UAVBarrier(nullptr);
-				 });
+				Context.Dispatch2D<16, 16>(View.Width, View.Height);
+				Context.UAVBarrier(nullptr);
+			});
 
 	BloomInputParameters BloomInputArgs = {};
 	BloomInputArgs.Input				= PathTraceArgs.Output;
