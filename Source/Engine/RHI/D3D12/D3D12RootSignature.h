@@ -214,8 +214,22 @@ namespace RHI
 		[[nodiscard]] ID3D12RootSignature* GetApiHandle() const noexcept { return RootSignature.Get(); }
 		[[nodiscard]] UINT				   GetNumParameters() const noexcept { return NumParameters; }
 
+		[[nodiscard]] std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept;
+
+		[[nodiscard]] UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept;
+
 	private:
 		Arc<ID3D12RootSignature> RootSignature;
 		UINT					 NumParameters = 0;
+
+		// Need to know the number of descriptors per descriptor table
+		UINT NumDescriptorsPerTable[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
+
+		// A bit mask that represents the root parameter indices that are
+		// descriptor tables for CBV, UAV, and SRV
+		std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> ResourceDescriptorTableBitMask;
+		// A bit mask that represents the root parameter indices that are
+		// descriptor tables for Samplers
+		std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> SamplerTableBitMask;
 	};
 } // namespace RHI

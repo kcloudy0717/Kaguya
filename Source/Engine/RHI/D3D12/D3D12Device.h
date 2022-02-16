@@ -48,6 +48,7 @@ namespace RHI
 		[[nodiscard]] auto					GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
 		[[nodiscard]] auto					GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
 		[[nodiscard]] auto					GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
+		[[nodiscard]] auto					GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
 		[[nodiscard]] auto					GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
 		[[nodiscard]] auto					GetDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
 		[[nodiscard]] bool					AllowAsyncPsoCompilation() const noexcept;
@@ -132,6 +133,7 @@ namespace RHI
 		Arc<ID3D12Device>	  Device;
 		Arc<ID3D12Device1>	  Device1;
 		Arc<ID3D12Device5>	  Device5;
+		D3D12NodeMask		  AllNodeMask;
 		CD3DX12FeatureSupport FeatureSupport;
 		TDescriptorSizeCache  DescriptorSizeCache;
 
@@ -141,14 +143,13 @@ namespace RHI
 			~Dred();
 
 			Arc<ID3D12Fence>  DeviceRemovedFence;
-			HANDLE			  DeviceRemovedWaitHandle = nullptr;
+			HANDLE			  DeviceRemovedWaitHandle;
 			wil::unique_event DeviceRemovedEvent;
 		} Dred;
 
 		// Represents a single node
 		// TODO: Add Multi-Adapter support
 		D3D12LinkedDevice					  LinkedDevice;
-		D3D12Profiler						  Profiler;
 		std::unique_ptr<ThreadPool>			  PsoCompilationThreadPool;
 		std::unique_ptr<D3D12PipelineLibrary> Library;
 

@@ -2,7 +2,7 @@
 #include "D3D12Core.h"
 #include "D3D12Fence.h"
 #include "D3D12Resource.h"
-#include "D3D12DescriptorHeap.h"
+#include "D3D12Descriptor.h"
 
 namespace RHI
 {
@@ -53,6 +53,7 @@ namespace RHI
 			DXGI_FORMAT_R16G16B16A16_FLOAT
 		};
 
+		D3D12SwapChain() noexcept = default;
 		explicit D3D12SwapChain(
 			D3D12Device* Parent,
 			HWND		 HWnd);
@@ -94,9 +95,9 @@ namespace RHI
 		bool TearingSupport = false;
 		RECT WindowBounds	= {};
 
-		Arc<IDXGISwapChain4>					  SwapChain4;
-		std::array<D3D12Texture, BackBufferCount> BackBuffers;
-		D3D12DescriptorArray					  RenderTargetViews;
+		Arc<IDXGISwapChain4>  SwapChain4;
+		D3D12Texture		  BackBuffers[BackBufferCount];
+		D3D12RenderTargetView RenderTargetViews[BackBufferCount];
 
 		bool				  HDRSupport		= false;
 		bool				  EnableST2084		= false;

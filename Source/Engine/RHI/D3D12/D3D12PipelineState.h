@@ -123,29 +123,36 @@ namespace RHI
 		[[nodiscard]] RHI_PIPELINE_STATE_TYPE GetType() const noexcept { return Type; }
 
 	private:
-		AsyncAction Create(
+		static AsyncTask<Arc<ID3D12PipelineState>> Create(
+			D3D12Device*				 Device,
 			std::wstring				 Name,
 			RHI_PIPELINE_STATE_TYPE		 Type,
 			D3D12PipelineParserCallbacks Parser);
 
-		void CompileGraphicsPipeline(
+		static Arc<ID3D12PipelineState> CompileGraphicsPipeline(
+			D3D12Device*						Device,
 			const std::wstring&					Name,
 			const D3D12PipelineParserCallbacks& Parser);
 
-		void CompileMeshShaderPipeline(
+		static Arc<ID3D12PipelineState> CompileMeshShaderPipeline(
+			D3D12Device*						Device,
 			const std::wstring&					Name,
 			const D3D12PipelineParserCallbacks& Parser);
 
-		void CompileComputePipline(
+		static Arc<ID3D12PipelineState> CompileComputePipline(
+			D3D12Device*						Device,
 			const std::wstring&					Name,
 			const D3D12PipelineParserCallbacks& Parser);
 
-		void StorePipeline(const std::wstring& Name, ID3D12PipelineLibrary* Library);
+		static void StorePipeline(
+			D3D12Device*		 Device,
+			const std::wstring&	 Name,
+			ID3D12PipelineState* PipelineState);
 
 	private:
-		Arc<ID3D12PipelineState> PipelineState;
-		RHI_PIPELINE_STATE_TYPE	 Type;
-		mutable AsyncAction		 CompilationWork;
+		mutable Arc<ID3D12PipelineState>			PipelineState;
+		RHI_PIPELINE_STATE_TYPE						Type;
+		mutable AsyncTask<Arc<ID3D12PipelineState>> CompilationWork;
 	};
 
 	constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE RHITranslateD3D12(RHI_PRIMITIVE_TOPOLOGY Topology)

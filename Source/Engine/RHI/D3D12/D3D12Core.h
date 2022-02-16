@@ -58,6 +58,27 @@ namespace RHI
 		const HRESULT ErrorCode;
 	};
 
+	struct D3D12NodeMask
+	{
+		D3D12NodeMask() noexcept
+			: NodeMask(1)
+		{
+		}
+		constexpr D3D12NodeMask(UINT NodeMask)
+			: NodeMask(NodeMask)
+		{
+		}
+
+		operator UINT() const noexcept
+		{
+			return NodeMask;
+		}
+
+		static D3D12NodeMask FromIndex(u32 GpuIndex) { return { 1u << GpuIndex }; }
+
+		UINT NodeMask;
+	};
+
 	class D3D12Device;
 
 	class D3D12DeviceChild
@@ -283,5 +304,20 @@ namespace RHI
 		}
 
 		ID3D12Resource* Resource = nullptr;
+	};
+
+	template<RHI_PIPELINE_STATE_TYPE PsoType>
+	struct D3D12DynamicResourceTableTraits
+	{
+	};
+	template<>
+	struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Graphics>
+	{
+		static auto Bind() { return &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable; }
+	};
+	template<>
+	struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Compute>
+	{
+		static auto Bind() { return &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable; }
 	};
 } // namespace RHI

@@ -10,15 +10,23 @@ namespace RHI
 	class D3D12PipelineState;
 	class D3D12RaytracingPipelineState;
 	class D3D12RootSignature;
-	class D3D12RenderTarget;
+	class D3D12RenderTargetView;
+	class D3D12DepthStencilView;
 
 	class D3D12CommandContext : public D3D12LinkedDeviceChild
 	{
 	public:
-		D3D12CommandContext(
+		D3D12CommandContext() noexcept = default;
+		explicit D3D12CommandContext(
 			D3D12LinkedDevice*		 Parent,
 			RHID3D12CommandQueueType Type,
 			D3D12_COMMAND_LIST_TYPE	 CommandListType);
+
+		D3D12CommandContext(D3D12CommandContext&&) noexcept = default;
+		D3D12CommandContext& operator=(D3D12CommandContext&&) noexcept = default;
+
+		D3D12CommandContext(const D3D12CommandContext&) = delete;
+		D3D12CommandContext& operator=(const D3D12CommandContext&) = delete;
 
 		[[nodiscard]] D3D12CommandQueue*		  GetCommandQueue();
 		[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const noexcept;
@@ -64,10 +72,14 @@ namespace RHI
 			D3D12RootSignature* RootSignature);
 
 		void ClearRenderTarget(
-			D3D12RenderTarget* RenderTarget);
+			u32					   NumRenderTargetViews,
+			D3D12RenderTargetView* RenderTargetViews[],
+			D3D12DepthStencilView* DepthStencilView);
 
 		void SetRenderTarget(
-			D3D12RenderTarget* RenderTarget);
+			u32					   NumRenderTargetViews,
+			D3D12RenderTargetView* RenderTargetViews[],
+			D3D12DepthStencilView* DepthStencilView);
 
 		void SetViewport(
 			const RHIViewport& Viewport);
@@ -177,21 +189,6 @@ namespace RHI
 		}
 
 		template<RHI_PIPELINE_STATE_TYPE PsoType>
-		struct D3D12DynamicResourceTableTraits
-		{
-		};
-		template<>
-		struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Graphics>
-		{
-			static auto Bind() { return &ID3D12GraphicsCommandList::SetGraphicsRootDescriptorTable; }
-		};
-		template<>
-		struct D3D12DynamicResourceTableTraits<RHI_PIPELINE_STATE_TYPE::Compute>
-		{
-			static auto Bind() { return &ID3D12GraphicsCommandList::SetComputeRootDescriptorTable; }
-		};
-
-		template<RHI_PIPELINE_STATE_TYPE PsoType>
 		void SetDynamicResourceDescriptorTables(D3D12RootSignature* RootSignature);
 
 	private:
@@ -212,14 +209,12 @@ namespace RHI
 			struct
 			{
 				// Viewport
-				UINT		   NumViewports														   = 0;
-				D3D12_VIEWPORT Viewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+				UINT			 NumViewports														 = 0;
+				CD3DX12_VIEWPORT Viewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
 
 				// Scissor Rect
-				UINT	   NumScissorRects														  = 0;
-				D3D12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
-
-				D3D12RenderTarget* RenderTarget;
+				UINT		 NumScissorRects														= 0;
+				CD3DX12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
 			} Graphics;
 
 			struct
@@ -238,13 +233,7 @@ namespace RHI
 	public:
 		D3D12ScopedEventObject(
 			D3D12CommandContext& CommandContext,
-			std::string_view	 Name)
-			: ProfileBlock(CommandContext.GetGraphicsCommandList(), Name.data())
-#ifdef _DEBUG
-			, PixEvent(CommandContext.GetGraphicsCommandList(), 0, Name.data())
-#endif
-		{
-		}
+			std::string_view	 Name);
 
 	private:
 		D3D12ProfileBlock ProfileBlock;

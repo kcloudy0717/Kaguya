@@ -55,13 +55,26 @@ public:
 	AsyncTask(const AsyncTask&) = delete;
 	AsyncTask& operator=(const AsyncTask&) = delete;
 
+	[[nodiscard]] operator bool() const noexcept { return static_cast<bool>(Handle); }
+
 	[[nodiscard]] AsyncStatus GetStatus() const noexcept { return Handle.promise().GetStatus(); }
+
+	void operator()() const { Handle.resume(); }
 
 	void Resume() const { Handle.resume(); }
 
 	[[nodiscard]] bool Done() const noexcept { return Handle.done(); }
 
-	[[nodiscard]] auto Get() noexcept { return Handle.promise().Get(); }
+	void Wait() const noexcept
+	{
+		bool Succeeded = Handle.promise().Event.wait();
+		assert(Succeeded);
+	}
+
+	[[nodiscard]] auto Get() noexcept
+	{
+		return Handle.promise().Get();
+	}
 
 private:
 	void InternalDestroy()

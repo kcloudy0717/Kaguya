@@ -24,11 +24,11 @@ namespace RHI
 		: Device(InitializeDevice(Options))
 		, Device1(DeviceQueryInterface<ID3D12Device1>())
 		, Device5(DeviceQueryInterface<ID3D12Device5>())
+		, AllNodeMask(D3D12NodeMask::FromIndex(Device->GetNodeCount() - 1))
 		, FeatureSupport(InitializeFeatureSupport(Options))
 		, DescriptorSizeCache(InitializeDescriptorSizeCache())
 		, Dred(Device.Get())
-		, LinkedDevice(this)
-		, Profiler(1, Device.Get(), LinkedDevice.GetGraphicsQueue()->GetFrequency())
+		, LinkedDevice(this, D3D12NodeMask::FromIndex(0))
 		, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
 		, Library(!Options.PsoCachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.PsoCachePath) : nullptr)
 	{
@@ -113,12 +113,12 @@ namespace RHI
 
 	void D3D12Device::OnBeginFrame()
 	{
-		Profiler.OnBeginFrame();
+		LinkedDevice.OnBeginFrame();
 	}
 
 	void D3D12Device::OnEndFrame()
 	{
-		Profiler.OnEndFrame();
+		LinkedDevice.OnEndFrame();
 	}
 
 	void D3D12Device::BeginCapture(const std::filesystem::path& Path) const
@@ -187,15 +187,9 @@ namespace RHI
 					{
 						INT32 LastCompletedOp = static_cast<INT32>(*Node->pLastBreadcrumbValue);
 
-						LUNA_LOG(
-							D3D12RHI,
-							Error,
-							LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})",
-							L"[DRED]",
-							Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>",
-							Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>",
-							LastCompletedOp,
-							Node->BreadcrumbCount);
+						auto CommandListName  = Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>";
+						auto CommandQueueName = Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>";
+						LUNA_LOG(D3D12RHI, Error, LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})", L"[DRED]", CommandListName, CommandQueueName, LastCompletedOp, Node->BreadcrumbCount);
 
 						INT32 FirstOp = std::max(LastCompletedOp - 5, 0);
 						INT32 LastOp  = std::min(LastCompletedOp + 5, std::max(INT32(Node->BreadcrumbCount) - 1, 0));
@@ -215,13 +209,15 @@ namespace RHI
 					LUNA_LOG(D3D12RHI, Error, "[DRED] Active objects with VA ranges that match the faulting VA:");
 					for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node; Node = Node->pNext)
 					{
-						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>", GetDredAllocationTypeString(Node->AllocationType));
+						auto ObjectName = Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>";
+						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
 					}
 
 					LUNA_LOG(D3D12RHI, Error, "[DRED] Recent freed objects with VA ranges that match the faulting VA:");
 					for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadRecentFreedAllocationNode; Node; Node = Node->pNext)
 					{
-						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>", GetDredAllocationTypeString(Node->AllocationType));
+						auto ObjectName = Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>";
+						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
 					}
 				}
 			}
@@ -235,23 +231,15 @@ namespace RHI
 		// Enumerate hardware for an adapter that supports D3D12
 		Arc<IDXGIAdapter3> AdapterIterator;
 		UINT			   AdapterId = 0;
-		while (SUCCEEDED(Factory6->EnumAdapterByGpuPreference(
-			AdapterId,
-			DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-			IID_PPV_ARGS(AdapterIterator.ReleaseAndGetAddressOf()))))
+		while (SUCCEEDED(Factory6->EnumAdapterByGpuPreference(AdapterId, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(AdapterIterator.ReleaseAndGetAddressOf()))))
 		{
-			if (SUCCEEDED(D3D12CreateDevice(
-					AdapterIterator.Get(),
-					D3D_FEATURE_LEVEL_12_0,
-					__uuidof(ID3D12Device),
-					nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(AdapterIterator.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr)))
 			{
 				Adapter3 = std::move(AdapterIterator);
 				if (SUCCEEDED(Adapter3->GetDesc2(&AdapterDesc)))
 				{
 					LUNA_LOG(D3D12RHI, Info, "Adapter Vendor: {}", GetRHIVendorString(static_cast<RHI_VENDOR>(AdapterDesc.VendorId)));
 					LUNA_LOG(D3D12RHI, Info, L"Adapter: {}", AdapterDesc.Description);
-					LUNA_LOG(D3D12RHI, Info, L"\tDedicated Video Memory: {}", AdapterDesc.DedicatedVideoMemory);
 				}
 				break;
 			}
@@ -424,7 +412,7 @@ namespace RHI
 	}
 
 	D3D12Device::Dred::Dred(ID3D12Device* Device)
-		: DeviceRemovedWaitHandle(INVALID_HANDLE_VALUE)
+		: DeviceRemovedWaitHandle(INVALID_HANDLE_VALUE) // Don't need to call CloseHandle based on RegisterWaitForSingleObject doc
 	{
 		if (CVar_Dred)
 		{
@@ -437,13 +425,7 @@ namespace RHI
 			// to what happened.
 			VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
 
-			RegisterWaitForSingleObject(
-				&DeviceRemovedWaitHandle,
-				DeviceRemovedEvent.get(),
-				OnDeviceRemoved,
-				Device,
-				INFINITE,
-				0);
+			RegisterWaitForSingleObject(&DeviceRemovedWaitHandle, DeviceRemovedEvent.get(), OnDeviceRemoved, Device, INFINITE, 0);
 		}
 	}
 

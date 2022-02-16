@@ -9,6 +9,7 @@ namespace RHI
 	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 	{
 	public:
+		D3D12CommandAllocatorPool() noexcept = default;
 		explicit D3D12CommandAllocatorPool(
 			D3D12LinkedDevice*		Parent,
 			D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
@@ -34,12 +35,11 @@ namespace RHI
 
 	struct ResourceBarrierBatch
 	{
-		static constexpr UINT NumBatches = 64;
+		static constexpr UINT NumBatches = 16;
 
 		void Reset();
 
-		UINT Flush(
-			ID3D12GraphicsCommandList* GraphicsCommandList);
+		UINT Flush();
 
 		void Add(
 			const D3D12_RESOURCE_BARRIER& ResourceBarrier);
@@ -57,8 +57,9 @@ namespace RHI
 		void AddUAV(
 			D3D12Resource* Resource);
 
-		D3D12_RESOURCE_BARRIER ResourceBarriers[NumBatches] = {};
-		UINT				   NumResourceBarriers			= 0;
+		ID3D12GraphicsCommandList* GraphicsCommandList;
+		D3D12_RESOURCE_BARRIER	   ResourceBarriers[NumBatches] = {};
+		UINT					   NumResourceBarriers			= 0;
 	};
 
 	class D3D12ResourceStateTracker
@@ -91,11 +92,11 @@ namespace RHI
 			D3D12LinkedDevice*		Parent,
 			D3D12_COMMAND_LIST_TYPE Type);
 
-		// Non-copyable but movable
+		D3D12CommandListHandle(D3D12CommandListHandle&&) noexcept = default;
+		D3D12CommandListHandle& operator=(D3D12CommandListHandle&&) noexcept = default;
+
 		D3D12CommandListHandle(const D3D12CommandListHandle&) = delete;
 		D3D12CommandListHandle& operator=(const D3D12CommandListHandle&) = delete;
-		D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
-		D3D12CommandListHandle& operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept;
 
 		[[nodiscard]] ID3D12CommandList*		  GetCommandList() const noexcept { return GraphicsCommandList.Get(); }
 		[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const noexcept { return GraphicsCommandList.Get(); }

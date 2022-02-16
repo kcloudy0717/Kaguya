@@ -37,10 +37,14 @@ namespace RHI
 	public:
 		static constexpr UINT64 CpuAllocatorPageSize = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 
-		explicit D3D12LinearAllocator(D3D12LinkedDevice* Parent)
-			: D3D12LinkedDeviceChild(Parent)
-		{
-		}
+		D3D12LinearAllocator() noexcept = default;
+		explicit D3D12LinearAllocator(D3D12LinkedDevice* Parent);
+
+		D3D12LinearAllocator(D3D12LinearAllocator&&) noexcept = default;
+		D3D12LinearAllocator& operator=(D3D12LinearAllocator&&) noexcept = default;
+
+		D3D12LinearAllocator(const D3D12LinearAllocator&) = delete;
+		D3D12LinearAllocator& operator=(const D3D12LinearAllocator&) = delete;
 
 		// Versions all the current constant data with SyncHandle to ensure memory is not overriden when it GPU uses it
 		void Version(D3D12SyncHandle SyncHandle);

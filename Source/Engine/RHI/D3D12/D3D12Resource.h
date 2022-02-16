@@ -32,9 +32,9 @@ namespace RHI
 			D3D12_HEAP_PROPERTIES			 HeapProperties,
 			D3D12_RESOURCE_DESC				 Desc,
 			D3D12_RESOURCE_STATES			 InitialResourceState,
-			std::optional<D3D12_CLEAR_VALUE> ClearValue);
+			std::optional<D3D12_CLEAR_VALUE> ClearValue) const;
 
-		UINT CalculateNumSubresources();
+		UINT CalculateNumSubresources() const;
 
 	protected:
 		Arc<ID3D12Resource>				 Resource;
@@ -130,19 +130,6 @@ namespace RHI
 			std::optional<UINT> OptArraySlice = std::nullopt,
 			std::optional<UINT> OptMipSlice	  = std::nullopt,
 			std::optional<UINT> OptPlaneSlice = std::nullopt) const noexcept;
-
-		void CreateRenderTargetView(
-			D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView,
-			std::optional<UINT>			OptArraySlice = std::nullopt,
-			std::optional<UINT>			OptMipSlice	  = std::nullopt,
-			std::optional<UINT>			OptArraySize  = std::nullopt,
-			bool						sRGB		  = false) const;
-
-		void CreateDepthStencilView(
-			D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView,
-			std::optional<UINT>			OptArraySlice = std::nullopt,
-			std::optional<UINT>			OptMipSlice	  = std::nullopt,
-			std::optional<UINT>			OptArraySize  = std::nullopt) const;
 
 		[[nodiscard]] bool IsCubemap() const noexcept { return Cubemap; }
 

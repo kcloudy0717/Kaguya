@@ -13,7 +13,6 @@
 #include "D3D12/D3D12Descriptor.h"
 #include "D3D12/D3D12SwapChain.h"
 #include "D3D12/D3D12Fence.h"
-#include "D3D12/D3D12RenderTarget.h"
 #include "D3D12/D3D12Raytracing.h"
 #include "D3D12/D3D12CommandSignature.h"
 

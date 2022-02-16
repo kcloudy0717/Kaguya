@@ -155,6 +155,57 @@ namespace RHI
 		VERIFY_D3D12_API(Result);
 
 		// Create the root signature
-		VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(0, SerializedRootSignatureBlob->GetBufferPointer(), SerializedRootSignatureBlob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
+		VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateRootSignature(
+			Parent->GetAllNodeMask(),
+			SerializedRootSignatureBlob->GetBufferPointer(),
+			SerializedRootSignatureBlob->GetBufferSize(),
+			IID_PPV_ARGS(&RootSignature)));
+
+		for (UINT i = 0; i < ApiDesc.Desc_1_1.NumParameters; ++i)
+		{
+			const D3D12_ROOT_PARAMETER1& RootParameter = ApiDesc.Desc_1_1.pParameters[i];
+			if (RootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+			{
+				const D3D12_ROOT_DESCRIPTOR_TABLE1& DescriptorTable1 = RootParameter.DescriptorTable;
+
+				// Don't care about the rest, just the first range is enough
+				switch (DescriptorTable1.pDescriptorRanges[0].RangeType)
+				{
+				case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+				case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+				case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+					ResourceDescriptorTableBitMask.set(i, true);
+					break;
+				case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+					SamplerTableBitMask.set(i, true);
+					break;
+				}
+
+				// Calculate total number of descriptors in the descriptor table.
+				for (UINT j = 0; j < DescriptorTable1.NumDescriptorRanges; ++j)
+				{
+					NumDescriptorsPerTable[i] += DescriptorTable1.pDescriptorRanges[j].NumDescriptors;
+				}
+			}
+		}
+	}
+
+	std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> D3D12RootSignature::GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
+	{
+		switch (Type)
+		{
+		case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+			return ResourceDescriptorTableBitMask;
+		case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+			return SamplerTableBitMask;
+		default:
+			return {};
+		}
+	}
+
+	UINT D3D12RootSignature::GetNumDescriptors(UINT RootParameterIndex) const noexcept
+	{
+		assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		return NumDescriptorsPerTable[RootParameterIndex];
 	}
 } // namespace RHI

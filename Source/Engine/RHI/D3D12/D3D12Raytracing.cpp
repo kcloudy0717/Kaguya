@@ -80,7 +80,7 @@ namespace RHI
 	Arc<ID3D12Resource> D3D12RaytracingMemoryPage::InitializeResource(UINT64 PageSize, D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState)
 	{
 		Arc<ID3D12Resource>	  Resource;
-		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType);
+		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask());
 		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 		if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
@@ -428,7 +428,7 @@ namespace RHI
 				D3D12_RANGE Range = {};
 				Range.Begin		  = Offset;
 				Range.End		  = Offset + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-				D3D12ScopedMap(
+				D3D12ScopedMap ScopedMap(
 					CompactedResource,
 					0,
 					Range,
@@ -440,8 +440,7 @@ namespace RHI
 						memcpy(&Desc, &ByteData[Offset], sizeof(Desc));
 
 						// Suballocate the gpu memory needed for compaction copy
-						AccelerationStructure.ResultCompactedMemory =
-							ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
+						AccelerationStructure.ResultCompactedMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
 
 						AccelerationStructure.CompactedSizeInBytes = AccelerationStructure.ResultCompactedMemory.Size;
 						TotalCompactedMemory += AccelerationStructure.ResultCompactedMemory.Size;

@@ -41,6 +41,11 @@ namespace RHI
 		Offset = 0;
 	}
 
+	D3D12LinearAllocator::D3D12LinearAllocator(D3D12LinkedDevice* Parent)
+		: D3D12LinkedDeviceChild(Parent)
+	{
+	}
+
 	void D3D12LinearAllocator::Version(D3D12SyncHandle SyncHandle)
 	{
 		if (!CurrentPage)
@@ -104,7 +109,7 @@ namespace RHI
 
 	std::unique_ptr<D3D12LinearAllocatorPage> D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) const
 	{
-		auto HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		auto HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD, Parent->GetNodeMask(), Parent->GetNodeMask());
 		auto ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
 		Arc<ID3D12Resource> Resource;

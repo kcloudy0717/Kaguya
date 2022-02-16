@@ -112,11 +112,14 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Core.Transform);
 				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
 
-				Mesh.VertexBuffer		 = VertexBuffer.GetVertexBufferView();
-				Mesh.IndexBuffer		 = IndexBuffer.GetIndexBufferView();
-				Mesh.Meshlets			 = StaticMesh.Mesh->MeshletResource.GetGpuVirtualAddress();
-				Mesh.UniqueVertexIndices = StaticMesh.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
-				Mesh.PrimitiveIndices	 = StaticMesh.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
+				Mesh.VertexBuffer = VertexBuffer.GetVertexBufferView();
+				Mesh.IndexBuffer  = IndexBuffer.GetIndexBufferView();
+				if (StaticMesh.Mesh->Options.GenerateMeshlets)
+				{
+					Mesh.Meshlets			 = StaticMesh.Mesh->MeshletResource.GetGpuVirtualAddress();
+					Mesh.UniqueVertexIndices = StaticMesh.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
+					Mesh.PrimitiveIndices	 = StaticMesh.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
+				}
 
 				Mesh.MaterialIndex = NumMaterials;
 				Mesh.NumMeshlets   = StaticMesh.Mesh->MeshletCount;
@@ -176,6 +179,7 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 
 		AsyncCompute.Open();
 		{
+			D3D12ScopedEvent(AsyncCompute, "Gpu Frustum Culling");
 #if USE_MESH_SHADERS
 			AsyncCompute.SetPipelineState(Registry.GetPipelineState(PipelineStates::IndirectCullMeshShader));
 #else
@@ -203,7 +207,11 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 		RHI::RgResourceHandle Normal;
 		RHI::RgResourceHandle Motion;
 		RHI::RgResourceHandle Depth;
-		RHI::RgResourceHandle RenderTarget;
+
+		RHI::RgResourceHandle AlbedoRtv;
+		RHI::RgResourceHandle NormalRtv;
+		RHI::RgResourceHandle MotionRtv;
+		RHI::RgResourceHandle Dsv;
 
 		RHI::RgResourceHandle AlbedoSrv;
 		RHI::RgResourceHandle NormalSrv;
@@ -239,13 +247,11 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowDepthStencil()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
-	GBufferArgs.RenderTarget = Graph.Create<RHI::D3D12RenderTarget>(
-		"GBuffer",
-		RHI::RgRenderTargetDesc()
-			.AddRenderTarget(GBufferArgs.Albedo, false)
-			.AddRenderTarget(GBufferArgs.Normal, false)
-			.AddRenderTarget(GBufferArgs.Motion, false)
-			.SetDepthStencil(GBufferArgs.Depth));
+
+	GBufferArgs.AlbedoRtv = Graph.Create<RHI::D3D12RenderTargetView>("AlbedoRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Albedo).AsRtv(false));
+	GBufferArgs.NormalRtv = Graph.Create<RHI::D3D12RenderTargetView>("NormalRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsRtv(false));
+	GBufferArgs.MotionRtv = Graph.Create<RHI::D3D12RenderTargetView>("MotionRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsRtv(false));
+	GBufferArgs.Dsv		  = Graph.Create<RHI::D3D12DepthStencilView>("Dsv", RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsDsv());
 
 	GBufferArgs.AlbedoSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Albedo Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Albedo).AsTextureSrv());
 	GBufferArgs.NormalSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Normal Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsTextureSrv());
@@ -270,9 +276,15 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
 					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
 
-					 D3D12RenderTarget* RenderTarget = Registry.Get<D3D12RenderTarget>(GBufferArgs.RenderTarget);
-					 Context.ClearRenderTarget(RenderTarget);
-					 Context.SetRenderTarget(RenderTarget);
+					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.AlbedoRtv),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.NormalRtv),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.MotionRtv)
+					 };
+					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
+
+					 Context.ClearRenderTarget(3, RenderTargetViews, DepthStencilView);
+					 Context.SetRenderTarget(3, RenderTargetViews, DepthStencilView);
 
 					 Context->ExecuteIndirect(
 						 CommandSignature,
@@ -301,9 +313,15 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
 					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
 
-					 RHI::D3D12RenderTarget* RenderTarget = Registry.Get<RHI::D3D12RenderTarget>(GBufferArgs.RenderTarget);
-					 Context.ClearRenderTarget(RenderTarget);
-					 Context.SetRenderTarget(RenderTarget);
+					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.AlbedoRtv),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.NormalRtv),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.MotionRtv)
+					 };
+					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
+
+					 Context.ClearRenderTarget(3, RenderTargetViews, DepthStencilView);
+					 Context.SetRenderTarget(3, RenderTargetViews, DepthStencilView);
 
 					 Context->ExecuteIndirect(
 						 CommandSignature,

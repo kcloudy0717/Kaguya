@@ -33,7 +33,7 @@ void Renderer::OnRender(World* World)
 
 	if (ImGui::Begin("GPU Timing"))
 	{
-		for (const auto& iter : RHI::D3D12Profiler::Data)
+		for (const auto& iter : Device->GetDevice()->GetProfiler()->Data)
 		{
 			for (INT i = 0; i < iter.Depth; ++i)
 			{

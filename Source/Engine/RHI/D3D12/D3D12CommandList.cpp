@@ -37,8 +37,7 @@ namespace RHI
 		NumResourceBarriers = 0;
 	}
 
-	UINT ResourceBarrierBatch::Flush(
-		ID3D12GraphicsCommandList* GraphicsCommandList)
+	UINT ResourceBarrierBatch::Flush()
 	{
 		if (NumResourceBarriers > 0)
 		{
@@ -53,6 +52,10 @@ namespace RHI
 	{
 		assert(NumResourceBarriers < NumBatches);
 		ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
+		if (NumResourceBarriers == NumBatches)
+		{
+			Flush();
+		}
 	}
 
 	void ResourceBarrierBatch::AddTransition(
@@ -111,47 +114,13 @@ namespace RHI
 		: D3D12LinkedDeviceChild(Parent)
 		, Type(Type)
 	{
-		VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(1, Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(GraphicsCommandList.ReleaseAndGetAddressOf())));
-		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList4.ReleaseAndGetAddressOf()));
-		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(GraphicsCommandList6.ReleaseAndGetAddressOf()));
+		VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(Parent->GetNodeMask(), Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&GraphicsCommandList)));
+		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList4));
+		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList6));
 #ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
-		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(DebugCommandList.ReleaseAndGetAddressOf()));
+		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&DebugCommandList));
 #endif
-	}
-
-	D3D12CommandListHandle::D3D12CommandListHandle(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept
-		: D3D12LinkedDeviceChild(std::exchange(D3D12CommandListHandle.Parent, {}))
-		, Type(D3D12CommandListHandle.Type)
-		, GraphicsCommandList(std::exchange(D3D12CommandListHandle.GraphicsCommandList, {}))
-		, GraphicsCommandList4(std::exchange(D3D12CommandListHandle.GraphicsCommandList4, {}))
-		, GraphicsCommandList6(std::exchange(D3D12CommandListHandle.GraphicsCommandList6, {}))
-#ifdef D3D12_DEBUG_RESOURCE_STATES
-		, DebugCommandList(std::exchange(D3D12CommandListHandle.DebugCommandList, {}))
-#endif
-		, ResourceStateTracker(std::move(D3D12CommandListHandle.ResourceStateTracker))
-		, ResourceBarrierBatch(std::move(D3D12CommandListHandle.ResourceBarrierBatch))
-	{
-	}
-
-	D3D12CommandListHandle& D3D12CommandListHandle::operator=(D3D12CommandListHandle&& D3D12CommandListHandle) noexcept
-	{
-		if (this == &D3D12CommandListHandle)
-		{
-			return *this;
-		}
-
-		Parent				 = std::exchange(D3D12CommandListHandle.Parent, {});
-		Type				 = D3D12CommandListHandle.Type;
-		GraphicsCommandList	 = std::exchange(D3D12CommandListHandle.GraphicsCommandList, {});
-		GraphicsCommandList4 = std::exchange(D3D12CommandListHandle.GraphicsCommandList4, {});
-		GraphicsCommandList6 = std::exchange(D3D12CommandListHandle.GraphicsCommandList6, {});
-#ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
-		DebugCommandList = std::exchange(D3D12CommandListHandle.DebugCommandList, {});
-#endif
-		ResourceStateTracker = std::move(D3D12CommandListHandle.ResourceStateTracker);
-		ResourceBarrierBatch = std::move(D3D12CommandListHandle.ResourceBarrierBatch);
-
-		return *this;
+		ResourceBarrierBatch.GraphicsCommandList = GraphicsCommandList.Get();
 	}
 
 	void D3D12CommandListHandle::Open(ID3D12CommandAllocator* CommandAllocator)
@@ -206,6 +175,7 @@ namespace RHI
 					i++;
 				}
 			}
+			// Apply barrier at subresource level
 			else
 			{
 				D3D12_RESOURCE_STATES StateKnown = ResourceState.GetSubresourceState(Subresource);
@@ -235,7 +205,7 @@ namespace RHI
 
 	void D3D12CommandListHandle::FlushResourceBarriers()
 	{
-		ResourceBarrierBatch.Flush(GraphicsCommandList.Get());
+		ResourceBarrierBatch.Flush();
 	}
 
 	bool D3D12CommandListHandle::AssertResourceState(
@@ -259,8 +229,6 @@ namespace RHI
 		std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers;
 		ResourceBarriers.reserve(PendingResourceBarriers.size());
 
-		D3D12_RESOURCE_BARRIER Desc = {};
-		Desc.Type					= D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		for (const auto& [Resource, State, Subresource] : PendingResourceBarriers)
 		{
 			CResourceState& ResourceState = Resource->GetResourceState();

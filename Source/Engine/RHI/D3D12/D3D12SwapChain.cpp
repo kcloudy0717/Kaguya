@@ -9,7 +9,6 @@ namespace RHI
 		: D3D12DeviceChild(Parent)
 		, WindowHandle(HWnd)
 		, SwapChain4(InitializeSwapChain())
-		, RenderTargetViews(Parent->GetDevice()->GetRtvAllocator().Allocate(BackBufferCount))
 		, Fence(Parent, 0, D3D12_FENCE_FLAG_NONE)
 	{
 		// Check display HDR support and initialize ST.2084 support to match the display's support.
@@ -140,7 +139,7 @@ namespace RHI
 	D3D12SwapChainResource D3D12SwapChain::GetCurrentBackBufferResource()
 	{
 		UINT BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
-		return { GetBackBuffer(BackBufferIndex), RenderTargetViews[BackBufferIndex] };
+		return { GetBackBuffer(BackBufferIndex), RenderTargetViews[BackBufferIndex].GetCpuHandle() };
 	}
 
 	D3D12_VIEWPORT D3D12SwapChain::GetViewport() const noexcept
@@ -248,18 +247,7 @@ namespace RHI
 	{
 		for (UINT i = 0; i < BackBufferCount; ++i)
 		{
-			D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {
-				.Format		   = Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D	   = {
-					.MipSlice	= 0,
-					.PlaneSlice = 0 }
-			};
-
-			GetParentDevice()->GetD3D12Device()->CreateRenderTargetView(
-				BackBuffers[i].GetResource(),
-				&ViewDesc,
-				RenderTargetViews[i]);
+			RenderTargetViews[i] = D3D12RenderTargetView(GetParentDevice()->GetDevice(), &BackBuffers[i]);
 		}
 	}
 } // namespace RHI

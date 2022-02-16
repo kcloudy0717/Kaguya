@@ -83,6 +83,7 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 #include <map>
 #include <unordered_map>
 #include <queue>
+#include <bitset>
 
 #define VERIFY_D3D12_API(expr)                                 \
 	do                                                         \

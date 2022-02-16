@@ -41,7 +41,8 @@ namespace RHI
 		this->Graph = Graph;
 		Buffers.resize(Graph->Buffers.size());
 		Textures.resize(Graph->Textures.size());
-		RenderTargets.resize(Graph->RenderTargets.size());
+		RenderTargetViews.resize(Graph->RenderTargetViews.size());
+		DepthStencilViews.resize(Graph->DepthStencilViews.size());
 		ShaderResourceViews.resize(Graph->ShaderResourceViews.size());
 		UnorderedAccessViews.resize(Graph->UnorderedAccessViews.size());
 
@@ -135,38 +136,44 @@ namespace RHI
 			Textures[i].GetResource()->SetName(Name.data());
 		}
 
-		for (size_t i = 0; i < Graph->RenderTargets.size(); ++i)
+		for (size_t i = 0; i < Graph->RenderTargetViews.size(); ++i)
 		{
-			const auto& RgRt = Graph->RenderTargets[i];
+			const auto&		 RgView = Graph->RenderTargetViews[i];
+			RgResourceHandle Handle = RgView.Desc.Resource;
 
-			D3D12RenderTargetDesc ApiDesc = {};
+			D3D12RenderTargetView& RenderTargetView = RenderTargetViews[i];
 
-			for (UINT j = 0; j < RgRt.Desc.NumRenderTargets; ++j)
+			std::optional<UINT> ArraySlice = RgView.Desc.RgRtv.ArraySlice != -1 ? RgView.Desc.RgRtv.ArraySlice : std::optional<UINT>{};
+			std::optional<UINT> MipSlice   = RgView.Desc.RgRtv.MipSlice != -1 ? RgView.Desc.RgRtv.MipSlice : std::optional<UINT>{};
+			std::optional<UINT> ArraySize  = RgView.Desc.RgRtv.ArraySize != -1 ? RgView.Desc.RgRtv.ArraySize : std::optional<UINT>{};
+			if (Handle.IsImported())
 			{
-				RgResourceHandle Handle = RgRt.Desc.RenderTargets[j];
-				if (Handle.IsImported())
-				{
-					ApiDesc.AddRenderTarget(GetImportedResource(Handle), RgRt.Desc.sRGB[j]);
-				}
-				else
-				{
-					ApiDesc.AddRenderTarget(Get<D3D12Texture>(Handle), RgRt.Desc.sRGB[j]);
-				}
+				RenderTargetView = D3D12RenderTargetView(Device->GetDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
-			if (RgRt.Desc.DepthStencil.IsValid())
+			else
 			{
-				RgResourceHandle Handle = RgRt.Desc.DepthStencil;
-				if (Handle.IsImported())
-				{
-					ApiDesc.SetDepthStencil(GetImportedResource(Handle));
-				}
-				else
-				{
-					ApiDesc.SetDepthStencil(Get<D3D12Texture>(Handle));
-				}
+				RenderTargetView = D3D12RenderTargetView(Device->GetDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
+		}
 
-			RenderTargets[i] = D3D12RenderTarget(Device->GetDevice(), ApiDesc);
+		for (size_t i = 0; i < Graph->DepthStencilViews.size(); ++i)
+		{
+			const auto&		 RgView = Graph->DepthStencilViews[i];
+			RgResourceHandle Handle = RgView.Desc.Resource;
+
+			D3D12DepthStencilView& DepthStencilView = DepthStencilViews[i];
+
+			std::optional<UINT> ArraySlice = RgView.Desc.RgDsv.ArraySlice != -1 ? RgView.Desc.RgDsv.ArraySlice : std::optional<UINT>{};
+			std::optional<UINT> MipSlice   = RgView.Desc.RgDsv.MipSlice != -1 ? RgView.Desc.RgDsv.MipSlice : std::optional<UINT>{};
+			std::optional<UINT> ArraySize  = RgView.Desc.RgDsv.ArraySize != -1 ? RgView.Desc.RgDsv.ArraySize : std::optional<UINT>{};
+			if (Handle.IsImported())
+			{
+				DepthStencilView = D3D12DepthStencilView(Device->GetDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize);
+			}
+			else
+			{
+				DepthStencilView = D3D12DepthStencilView(Device->GetDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize);
+			}
 		}
 
 		for (size_t i = 0; i < ShaderResourceViews.size(); ++i)

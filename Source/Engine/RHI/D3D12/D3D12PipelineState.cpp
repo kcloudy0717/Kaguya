@@ -48,28 +48,28 @@ namespace RHI
 	{
 		D3D12PipelineParserCallbacks Parser;
 		RHIParsePipelineStream(Desc, &Parser);
-		CompilationWork = Create(Name, Parser.Type, Parser);
+		CompilationWork = Create(Parent, Name, Parser.Type, Parser);
 	}
 
 	ID3D12PipelineState* D3D12PipelineState::GetApiHandle() const noexcept
 	{
 		if (CompilationWork)
 		{
-			CompilationWork.Wait();
+			PipelineState	= CompilationWork.Get();
 			CompilationWork = nullptr;
 		}
 		return PipelineState.Get();
 	}
 
-	AsyncAction D3D12PipelineState::Create(
+	AsyncTask<Arc<ID3D12PipelineState>> D3D12PipelineState::Create(
+		D3D12Device*				 Device,
 		std::wstring				 Name,
 		RHI_PIPELINE_STATE_TYPE		 Type,
 		D3D12PipelineParserCallbacks Parser)
 	{
-		D3D12Device* Parent = GetParentDevice();
-		if (Parent->AllowAsyncPsoCompilation())
+		if (Device->AllowAsyncPsoCompilation())
 		{
-			co_await awaitable_CompilePsoThread{ Parent };
+			co_await awaitable_CompilePsoThread{ Device };
 		}
 		else
 		{
@@ -80,25 +80,25 @@ namespace RHI
 		{
 			if (!Parser.MS)
 			{
-				CompileGraphicsPipeline(Name, Parser);
+				co_return CompileGraphicsPipeline(Device, Name, Parser);
 			}
 			else
 			{
-				CompileMeshShaderPipeline(Name, Parser);
+				co_return CompileMeshShaderPipeline(Device, Name, Parser);
 			}
 		}
 		else if (Type == RHI_PIPELINE_STATE_TYPE::Compute)
 		{
-			CompileComputePipline(Name, Parser);
+			co_return CompileComputePipline(Device, Name, Parser);
 		}
-
-		VERIFY_D3D12_API(PipelineState->SetName(Name.data()));
 	}
 
-	void D3D12PipelineState::CompileGraphicsPipeline(
+	Arc<ID3D12PipelineState> D3D12PipelineState::CompileGraphicsPipeline(
+		D3D12Device*						Device,
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
+		Arc<ID3D12PipelineState>		   PipelineState;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
 			.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
 			.VS					   = RHITranslateD3D12(Parser.VS),
@@ -117,39 +117,35 @@ namespace RHI
 			.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
 			.DSVFormat			   = Parser.RenderTargetState.DSFormat,
 			.SampleDesc			   = DefaultSampleDesc(),
-			.NodeMask			   = 0,
+			.NodeMask			   = Device->GetAllNodeMask(),
 			.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
 			.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
 		};
 		memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
 
-		if (GetParentDevice()->GetPipelineLibrary())
+		if (Device->GetPipelineLibrary())
 		{
-			ID3D12PipelineLibrary1* PipelineLibrary1 = GetParentDevice()->GetPipelineLibrary()->GetLibrary1();
+			ID3D12PipelineLibrary1* PipelineLibrary1 = Device->GetPipelineLibrary()->GetLibrary1();
 			HRESULT					Result			 = PipelineLibrary1->LoadGraphicsPipeline(Name.data(), &Desc, IID_PPV_ARGS(&PipelineState));
 			if (Result == E_INVALIDARG)
 			{
-				VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateGraphicsPipelineState(
-					&Desc,
-					IID_PPV_ARGS(&PipelineState)));
-
-				StorePipeline(Name, PipelineLibrary1);
+				VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateGraphicsPipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
+				StorePipeline(Device, Name, PipelineState.Get());
 			}
 		}
 		else
 		{
-			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateGraphicsPipelineState(
-				&Desc,
-				IID_PPV_ARGS(&PipelineState)));
+			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateGraphicsPipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
+		return PipelineState;
 	}
 
-	void D3D12PipelineState::CompileMeshShaderPipeline(
+	Arc<ID3D12PipelineState> D3D12PipelineState::CompileMeshShaderPipeline(
+		D3D12Device*						Device,
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
-		// TODO: Amplification Shader
-
+		Arc<ID3D12PipelineState>			   PipelineState;
 		D3DX12_MESH_SHADER_PIPELINE_STATE_DESC Desc = {
 			.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
 			.MS					   = RHITranslateD3D12(Parser.MS),
@@ -162,7 +158,7 @@ namespace RHI
 			.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
 			.DSVFormat			   = Parser.RenderTargetState.DSFormat,
 			.SampleDesc			   = DefaultSampleDesc(),
-			.NodeMask			   = 0,
+			.NodeMask			   = Device->GetAllNodeMask(),
 			.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
 			.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
 		};
@@ -173,60 +169,65 @@ namespace RHI
 		StreamDesc.pPipelineStateSubobjectStream	= &Stream;
 		StreamDesc.SizeInBytes						= sizeof(Stream);
 
-		if (GetParentDevice()->GetPipelineLibrary())
+		if (Device->GetPipelineLibrary())
 		{
-			ID3D12PipelineLibrary1* PipelineLibrary1 = GetParentDevice()->GetPipelineLibrary()->GetLibrary1();
+			ID3D12PipelineLibrary1* PipelineLibrary1 = Device->GetPipelineLibrary()->GetLibrary1();
 			HRESULT					Result			 = PipelineLibrary1->LoadPipeline(Name.data(), &StreamDesc, IID_PPV_ARGS(&PipelineState));
 			if (Result == E_INVALIDARG)
 			{
-				VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
-				StorePipeline(Name, PipelineLibrary1);
+				VERIFY_D3D12_API(Device->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
+				StorePipeline(Device, Name, PipelineState.Get());
 			}
 		}
 		else
 		{
-			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
+			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
 		}
+		return PipelineState;
 	}
 
-	void D3D12PipelineState::CompileComputePipline(
+	Arc<ID3D12PipelineState> D3D12PipelineState::CompileComputePipline(
+		D3D12Device*						Device,
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
+		Arc<ID3D12PipelineState>		  PipelineState;
 		D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {};
 		Desc.pRootSignature					   = Parser.RootSignature->GetApiHandle();
 		Desc.CS								   = RHITranslateD3D12(Parser.CS);
-		Desc.NodeMask						   = 0;
+		Desc.NodeMask						   = Device->GetAllNodeMask();
 		Desc.CachedPSO						   = D3D12_CACHED_PIPELINE_STATE();
 		Desc.Flags							   = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-		if (GetParentDevice()->GetPipelineLibrary())
+		if (Device->GetPipelineLibrary())
 		{
-			ID3D12PipelineLibrary1* PipelineLibrary1 = GetParentDevice()->GetPipelineLibrary()->GetLibrary1();
+			ID3D12PipelineLibrary1* PipelineLibrary1 = Device->GetPipelineLibrary()->GetLibrary1();
 			HRESULT					Result			 = PipelineLibrary1->LoadComputePipeline(Name.data(), &Desc, IID_PPV_ARGS(&PipelineState));
 			if (Result == E_INVALIDARG)
 			{
-				VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
-				StorePipeline(Name, PipelineLibrary1);
+				VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
+				StorePipeline(Device, Name, PipelineState.Get());
 			}
 		}
 		else
 		{
-			VERIFY_D3D12_API(GetParentDevice()->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
+			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
+		return PipelineState;
 	}
 
 	void D3D12PipelineState::StorePipeline(
-		const std::wstring&	   Name,
-		ID3D12PipelineLibrary* Library)
+		D3D12Device*		 Device,
+		const std::wstring&	 Name,
+		ID3D12PipelineState* PipelineState)
 	{
-		HRESULT Result = Library->StorePipeline(Name.data(), PipelineState.Get());
+		HRESULT Result = Device->GetPipelineLibrary()->GetLibrary1()->StorePipeline(Name.data(), PipelineState);
 		if (Result == E_INVALIDARG)
 		{
 			// A PSO with the specified name already exists in the library.
 			// If that is the case, we invalidate disk cache, so when next time app
 			// starts, pipeline library will be renewed with the updated PSOs.
-			GetParentDevice()->GetPipelineLibrary()->InvalidateDiskCache();
+			Device->GetPipelineLibrary()->InvalidateDiskCache();
 		}
 		else
 		{

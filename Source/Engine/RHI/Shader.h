@@ -1,5 +1,7 @@
 #pragma once
 #include <wrl/client.h>
+#include <map>
+
 #include "dxcapi.h"
 #include "d3d12shader.h"
 #include "RHICore.h"

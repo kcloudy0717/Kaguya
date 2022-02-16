@@ -8,10 +8,20 @@ namespace RHI
 	class D3D12CommandQueue : public D3D12LinkedDeviceChild
 	{
 	public:
-		explicit D3D12CommandQueue(D3D12LinkedDevice* Parent, RHID3D12CommandQueueType Type);
+		D3D12CommandQueue() noexcept = default;
+		explicit D3D12CommandQueue(
+			D3D12LinkedDevice*		 Parent,
+			RHID3D12CommandQueueType Type);
+
+		D3D12CommandQueue(D3D12CommandQueue&&) noexcept = default;
+		D3D12CommandQueue& operator=(D3D12CommandQueue&&) noexcept = default;
+
+		D3D12CommandQueue(const D3D12CommandQueue&) noexcept = delete;
+		D3D12CommandQueue& operator=(const D3D12CommandQueue&) noexcept = delete;
 
 		[[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const noexcept { return CommandQueue.Get(); }
-		[[nodiscard]] UINT64			  GetFrequency() const noexcept { return Frequency; }
+		[[nodiscard]] bool				  SupportTimestamps() const noexcept { return Frequency.has_value(); }
+		[[nodiscard]] UINT64			  GetFrequency() const noexcept { return Frequency.value_or(0); }
 
 		[[nodiscard]] UINT64 Signal();
 
@@ -31,14 +41,12 @@ namespace RHI
 
 	private:
 		Arc<ID3D12CommandQueue> InitializeCommandQueue();
-		UINT64					InitializeTimestampFrequency();
 
 		[[nodiscard]] bool ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle);
 
 	private:
 		D3D12_COMMAND_LIST_TYPE CommandListType;
 		Arc<ID3D12CommandQueue> CommandQueue;
-		UINT64					Frequency;
 		D3D12Fence				Fence;
 		D3D12SyncHandle			SyncHandle;
 
@@ -46,19 +54,21 @@ namespace RHI
 		D3D12CommandAllocatorPool	ResourceBarrierCommandAllocatorPool;
 		Arc<ID3D12CommandAllocator> ResourceBarrierCommandAllocator;
 		D3D12CommandListHandle		ResourceBarrierCommandListHandle;
+
+		std::optional<UINT64> Frequency;
 	};
 
 	inline D3D12_COMMAND_LIST_TYPE RHITranslateD3D12(RHID3D12CommandQueueType Type)
 	{
 		// clang-format off
-	switch (Type)
-	{
-		using enum RHID3D12CommandQueueType;
-	case Direct:		return D3D12_COMMAND_LIST_TYPE_DIRECT;
-	case AsyncCompute:	return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-	case Copy1:			return D3D12_COMMAND_LIST_TYPE_COPY;
-	case Copy2:			return D3D12_COMMAND_LIST_TYPE_COPY;
-	}
+		switch (Type)
+		{
+			using enum RHID3D12CommandQueueType;
+		case Direct:		return D3D12_COMMAND_LIST_TYPE_DIRECT;
+		case AsyncCompute:	return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		case Copy1:			return D3D12_COMMAND_LIST_TYPE_COPY;
+		case Copy2:			return D3D12_COMMAND_LIST_TYPE_COPY;
+		}
 		// clang-format on
 		return D3D12_COMMAND_LIST_TYPE();
 	}
@@ -66,14 +76,14 @@ namespace RHI
 	inline LPCWSTR GetCommandQueueTypeString(RHID3D12CommandQueueType Type)
 	{
 		// clang-format off
-	switch (Type)
-	{
-		using enum RHID3D12CommandQueueType;
-	case Direct:		return L"3D";
-	case AsyncCompute:	return L"Async Compute";
-	case Copy1:			return L"Copy 1";
-	case Copy2:			return L"Copy 2";
-	}
+		switch (Type)
+		{
+			using enum RHID3D12CommandQueueType;
+		case Direct:		return L"3D";
+		case AsyncCompute:	return L"Async Compute";
+		case Copy1:			return L"Copy 1";
+		case Copy2:			return L"Copy 2";
+		}
 		// clang-format on
 		return L"<unknown>";
 	}
@@ -81,14 +91,14 @@ namespace RHI
 	inline LPCWSTR GetCommandQueueTypeFenceString(RHID3D12CommandQueueType Type)
 	{
 		// clang-format off
-	switch (Type)
-	{
-		using enum RHID3D12CommandQueueType;
-	case Direct:		return L"3D Fence";
-	case AsyncCompute:	return L"Async Compute Fence";
-	case Copy1:			return L"Copy 1 Fence";
-	case Copy2:			return L"Copy 2 Fence";
-	}
+		switch (Type)
+		{
+			using enum RHID3D12CommandQueueType;
+		case Direct:		return L"3D Fence";
+		case AsyncCompute:	return L"Async Compute Fence";
+		case Copy1:			return L"Copy 1 Fence";
+		case Copy2:			return L"Copy 2 Fence";
+		}
 		// clang-format on
 		return L"<unknown>";
 	}

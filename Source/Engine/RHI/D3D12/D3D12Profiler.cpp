@@ -1,13 +1,9 @@
 #include "D3D12Profiler.h"
+#include "D3D12LinkedDevice.h"
 
 namespace RHI
 {
-	D3D12EventNode	D3D12EventGraph::RootNode	 = D3D12EventNode(-1, "", nullptr);
-	D3D12EventNode* D3D12EventGraph::CurrentNode = &D3D12EventGraph::RootNode;
-
-	static D3D12Profiler* g_Profiler = nullptr;
-
-	void UpdateProfileData(ProfileData& Data, UINT64 GpuFrequency, UINT64 StartTime, UINT64 EndTime)
+	void UpdateProfileData(ProfileData& Data, UINT64 StartTime, UINT64 EndTime)
 	{
 		Data.QueryFinished = false;
 
@@ -15,7 +11,7 @@ namespace RHI
 		if (EndTime > StartTime)
 		{
 			UINT64 Delta = EndTime - StartTime;
-			Time		 = (static_cast<double>(Delta) / static_cast<double>(GpuFrequency)) * 1000.0;
+			Time		 = (static_cast<double>(Delta) / static_cast<double>(Data.Frequency)) * 1000.0;
 		}
 
 		Data.TimeSamples[Data.Sample] = Time;
@@ -39,11 +35,11 @@ namespace RHI
 		}
 	}
 
-	void D3D12EventNode::StartTiming(ID3D12GraphicsCommandList* CommandList)
+	void D3D12EventNode::StartTiming(D3D12CommandQueue* CommandQueue, ID3D12GraphicsCommandList* CommandList)
 	{
 		if (CommandList)
 		{
-			Index = g_Profiler->StartProfile(CommandList, Name.data(), Depth);
+			Index = Profiler->StartProfile(CommandList, Name.data(), Depth, CommandQueue->GetFrequency());
 		}
 	}
 
@@ -51,36 +47,32 @@ namespace RHI
 	{
 		if (CommandList)
 		{
-			g_Profiler->EndProfile(CommandList, std::exchange(Index, UINT_MAX));
+			Profiler->EndProfile(CommandList, std::exchange(Index, UINT_MAX));
 		}
 	}
 
-	std::span<ProfileData> D3D12Profiler::Data = {};
-
 	D3D12Profiler::D3D12Profiler(
-		UINT		  FrameLatency,
-		ID3D12Device* Device,
-		UINT64		  Frequency)
-		: FrameLatency(FrameLatency)
-		, Frequency(Frequency)
+		D3D12LinkedDevice* Parent,
+		UINT			   FrameLatency)
+		: D3D12LinkedDeviceChild(Parent)
+		, FrameLatency(FrameLatency)
 		, Profiles(MaxProfiles)
 		, NumProfiles(0)
 		, FrameIndex(0)
+		, RootNode(this, -1, "", nullptr)
+		, CurrentNode(&RootNode)
 	{
-		assert(!g_Profiler);
-		g_Profiler = this;
-
 		D3D12_QUERY_HEAP_DESC QueryHeapDesc = {
 			.Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
 			.Count	  = MaxProfiles * 2,
-			.NodeMask = 0
+			.NodeMask = Parent->GetNodeMask()
 		};
-		VERIFY_D3D12_API(Device->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
+		VERIFY_D3D12_API(Parent->GetDevice()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
 		QueryHeap->SetName(L"Timestamp Query Heap");
 
-		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK);
+		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK, Parent->GetNodeMask(), Parent->GetNodeMask());
 		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(MaxProfiles) * FrameLatency * 2 * sizeof(UINT64));
-		VERIFY_D3D12_API(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&QueryReadback)));
+		VERIFY_D3D12_API(Parent->GetDevice()->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&QueryReadback)));
 		QueryReadback->SetName(L"Timestamp Query Readback");
 	}
 
@@ -95,7 +87,7 @@ namespace RHI
 			{
 				UINT64 StartTime = FrameQueryData[i * 2 + 0];
 				UINT64 EndTime	 = FrameQueryData[i * 2 + 1];
-				UpdateProfileData(Profiles[i], Frequency, StartTime, EndTime);
+				UpdateProfileData(Profiles[i], StartTime, EndTime);
 			}
 
 			Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
@@ -112,10 +104,24 @@ namespace RHI
 		Data	   = {};
 	}
 
+	void D3D12Profiler::PushEventNode(D3D12CommandQueue* CommandQueue, const std::string& Name, ID3D12GraphicsCommandList* CommandList)
+	{
+		assert(CommandQueue->SupportTimestamps());
+		CurrentNode = CurrentNode->GetChild(Name);
+		CurrentNode->StartTiming(CommandQueue, CommandList);
+	}
+
+	void D3D12Profiler::PopEventNode(ID3D12GraphicsCommandList* CommandList)
+	{
+		CurrentNode->EndTiming(CommandList);
+		CurrentNode = CurrentNode->Parent;
+	}
+
 	UINT D3D12Profiler::StartProfile(
 		ID3D12GraphicsCommandList* CommandList,
 		const char*				   Name,
-		INT						   Depth)
+		INT						   Depth,
+		UINT64					   Frequency)
 	{
 		assert(NumProfiles < MaxProfiles);
 		UINT ProfileIdx			  = NumProfiles++;
@@ -131,7 +137,8 @@ namespace RHI
 
 		ProfileData.QueryStarted = true;
 
-		ProfileData.Depth = Depth;
+		ProfileData.Depth	  = Depth;
+		ProfileData.Frequency = Frequency;
 
 		return ProfileIdx;
 	}
@@ -159,14 +166,15 @@ namespace RHI
 		ProfileData.QueryFinished = true;
 	}
 
-	D3D12ProfileBlock::D3D12ProfileBlock(ID3D12GraphicsCommandList* CommandList, const char* Name)
-		: CommandList(CommandList)
+	D3D12ProfileBlock::D3D12ProfileBlock(D3D12Profiler* Profiler, D3D12CommandQueue* CommandQueue, ID3D12GraphicsCommandList* CommandList, const char* Name)
+		: Profiler(Profiler)
+		, CommandList(CommandList)
 	{
-		D3D12EventGraph::PushEventNode(Name, CommandList);
+		Profiler->PushEventNode(CommandQueue, Name, CommandList);
 	}
 
 	D3D12ProfileBlock::~D3D12ProfileBlock()
 	{
-		D3D12EventGraph::PopEventNode(CommandList);
+		Profiler->PopEventNode(CommandList);
 	}
 } // namespace RHI

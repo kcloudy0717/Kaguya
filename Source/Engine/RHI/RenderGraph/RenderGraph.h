@@ -194,9 +194,13 @@ namespace RHI
 			{
 				return Textures;
 			}
-			else if constexpr (std::is_same_v<T, D3D12RenderTarget>)
+			else if constexpr (std::is_same_v<T, D3D12RenderTargetView>)
 			{
-				return RenderTargets;
+				return RenderTargetViews;
+			}
+			else if constexpr (std::is_same_v<T, D3D12DepthStencilView>)
+			{
+				return DepthStencilViews;
 			}
 			else if constexpr (std::is_same_v<T, D3D12ShaderResourceView>)
 			{
@@ -216,11 +220,12 @@ namespace RHI
 
 		std::vector<D3D12Texture*> ImportedTextures;
 
-		std::vector<RgBuffer>		Buffers;
-		std::vector<RgTexture>		Textures;
-		std::vector<RgRenderTarget> RenderTargets;
-		std::vector<RgView>			ShaderResourceViews;
-		std::vector<RgView>			UnorderedAccessViews;
+		std::vector<RgBuffer>  Buffers;
+		std::vector<RgTexture> Textures;
+		std::vector<RgView>	   RenderTargetViews;
+		std::vector<RgView>	   DepthStencilViews;
+		std::vector<RgView>	   ShaderResourceViews;
+		std::vector<RgView>	   UnorderedAccessViews;
 
 		std::vector<RenderPass*> RenderPasses;
 		RenderPass*				 ProloguePass;

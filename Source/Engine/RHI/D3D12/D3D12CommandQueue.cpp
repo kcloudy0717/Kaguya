@@ -7,7 +7,6 @@ namespace RHI
 		: D3D12LinkedDeviceChild(Parent)
 		, CommandListType(RHITranslateD3D12(Type))
 		, CommandQueue(InitializeCommandQueue())
-		, Frequency(InitializeTimestampFrequency())
 		, Fence(Parent->GetParentDevice(), 0, D3D12_FENCE_FLAG_NONE)
 		, ResourceBarrierCommandAllocatorPool(Parent, CommandListType)
 		, ResourceBarrierCommandAllocator(ResourceBarrierCommandAllocatorPool.RequestCommandAllocator())
@@ -17,6 +16,11 @@ namespace RHI
 		CommandQueue->SetName(GetCommandQueueTypeString(Type));
 		Fence.Get()->SetName(GetCommandQueueTypeFenceString(Type));
 #endif
+		UINT64 Frequency = 0;
+		if (SUCCEEDED(CommandQueue->GetTimestampFrequency(&Frequency)))
+		{
+			this->Frequency = Frequency;
+		}
 	}
 
 	UINT64 D3D12CommandQueue::Signal()
@@ -91,23 +95,15 @@ namespace RHI
 
 	Arc<ID3D12CommandQueue> D3D12CommandQueue::InitializeCommandQueue()
 	{
-		constexpr UINT			 NodeMask = 0;
 		Arc<ID3D12CommandQueue>	 CommandQueue;
 		D3D12_COMMAND_QUEUE_DESC Desc = {
 			.Type	  = CommandListType,
 			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 			.Flags	  = D3D12_COMMAND_QUEUE_FLAG_NONE,
-			.NodeMask = NodeMask
+			.NodeMask = Parent->GetNodeMask()
 		};
 		VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
 		return CommandQueue;
-	}
-
-	UINT64 D3D12CommandQueue::InitializeTimestampFrequency()
-	{
-		UINT64 Frequency = 0;
-		CommandQueue->GetTimestampFrequency(&Frequency);
-		return Frequency;
 	}
 
 	bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle)

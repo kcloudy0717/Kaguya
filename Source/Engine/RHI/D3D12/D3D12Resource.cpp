@@ -100,7 +100,7 @@ namespace RHI
 		D3D12_HEAP_PROPERTIES			 HeapProperties,
 		D3D12_RESOURCE_DESC				 Desc,
 		D3D12_RESOURCE_STATES			 InitialResourceState,
-		std::optional<D3D12_CLEAR_VALUE> ClearValue)
+		std::optional<D3D12_CLEAR_VALUE> ClearValue) const
 	{
 		D3D12_CLEAR_VALUE* OptimizedClearValue = ClearValue.has_value() ? &(*ClearValue) : nullptr;
 
@@ -115,7 +115,7 @@ namespace RHI
 		return Resource;
 	}
 
-	UINT D3D12Resource::CalculateNumSubresources()
+	UINT D3D12Resource::CalculateNumSubresources() const
 	{
 		if (Desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
@@ -128,7 +128,7 @@ namespace RHI
 	D3D12ASBuffer::D3D12ASBuffer(D3D12LinkedDevice* Parent, UINT64 SizeInBytes)
 		: D3D12Resource(
 			  Parent,
-			  CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			  CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT, Parent->GetNodeMask(), Parent->GetNodeMask()),
 			  CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
 			  D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 			  std::nullopt)
@@ -148,7 +148,7 @@ namespace RHI
 		D3D12_RESOURCE_FLAGS ResourceFlags)
 		: D3D12Resource(
 			  Parent,
-			  CD3DX12_HEAP_PROPERTIES(HeapType),
+			  CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask()),
 			  CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, ResourceFlags),
 			  ResourceStateDeterminer(CD3DX12_RESOURCE_DESC::Buffer(SizeInBytes, ResourceFlags), HeapType).InferInitialState(),
 			  std::nullopt)
@@ -184,7 +184,7 @@ namespace RHI
 
 	D3D12_GPU_VIRTUAL_ADDRESS D3D12Buffer::GetGpuVirtualAddress(UINT Index) const
 	{
-		return Resource->GetGPUVirtualAddress() + Index * Stride;
+		return Resource->GetGPUVirtualAddress() + static_cast<UINT64>(Index) * Stride;
 	}
 
 	D3D12Texture::D3D12Texture(
@@ -202,7 +202,7 @@ namespace RHI
 		bool							 Cubemap /*= false*/)
 		: D3D12Resource(
 			  Parent,
-			  CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			  CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT, Parent->GetNodeMask(), Parent->GetNodeMask()),
 			  Desc,
 			  ResourceStateDeterminer(Desc, D3D12_HEAP_TYPE_DEFAULT).InferInitialState(),
 			  ClearValue)
@@ -220,102 +220,5 @@ namespace RHI
 		UINT MipSlice	= OptMipSlice.value_or(0);
 		UINT PlaneSlice = OptPlaneSlice.value_or(0);
 		return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, Desc.MipLevels, Desc.DepthOrArraySize);
-	}
-
-	void D3D12Texture::CreateRenderTargetView(
-		D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetView,
-		std::optional<UINT>			OptArraySlice /*= std::nullopt*/,
-		std::optional<UINT>			OptMipSlice /*= std::nullopt*/,
-		std::optional<UINT>			OptArraySize /*= std::nullopt*/,
-		bool						sRGB /*= false*/) const
-	{
-		UINT ArraySlice = OptArraySlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-		UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
-
-		D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {};
-		RenderTargetViewDesc.Format						   = sRGB ? D3D12RHIUtils::MakeSRGB(Desc.Format) : Desc.Format;
-
-		// TODO: Add 1D/3D support
-		switch (Desc.Dimension)
-		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				RenderTargetViewDesc.ViewDimension					= D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				RenderTargetViewDesc.Texture2DArray.MipSlice		= MipSlice;
-				RenderTargetViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
-				RenderTargetViewDesc.Texture2DArray.ArraySize		= ArraySize;
-				RenderTargetViewDesc.Texture2DArray.PlaneSlice		= 0;
-			}
-			else
-			{
-				RenderTargetViewDesc.ViewDimension		  = D3D12_RTV_DIMENSION_TEXTURE2D;
-				RenderTargetViewDesc.Texture2D.MipSlice	  = MipSlice;
-				RenderTargetViewDesc.Texture2D.PlaneSlice = 0;
-			}
-			break;
-
-		default:
-			break;
-		}
-		GetParentLinkedDevice()->GetDevice()->CreateRenderTargetView(
-			Resource.Get(),
-			&RenderTargetViewDesc,
-			RenderTargetView);
-	}
-
-	void D3D12Texture::CreateDepthStencilView(
-		D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView,
-		std::optional<UINT>			OptArraySlice /*= std::nullopt*/,
-		std::optional<UINT>			OptMipSlice /*= std::nullopt*/,
-		std::optional<UINT>			OptArraySize /*= std::nullopt*/) const
-	{
-		UINT ArraySlice = OptArraySlice.value_or(0);
-		UINT MipSlice	= OptMipSlice.value_or(0);
-		UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {};
-		DepthStencilViewDesc.Format						   = [](DXGI_FORMAT Format)
-		{
-			// TODO: Add more
-			switch (Format)
-			{
-			case DXGI_FORMAT_R32_TYPELESS:
-				return DXGI_FORMAT_D32_FLOAT;
-			default:
-				return Format;
-			};
-		}(Desc.Format);
-		DepthStencilViewDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-		switch (Desc.Dimension)
-		{
-		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-			if (Desc.DepthOrArraySize > 1)
-			{
-				DepthStencilViewDesc.ViewDimension					= D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-				DepthStencilViewDesc.Texture2DArray.MipSlice		= MipSlice;
-				DepthStencilViewDesc.Texture2DArray.FirstArraySlice = ArraySlice;
-				DepthStencilViewDesc.Texture2DArray.ArraySize		= ArraySize;
-			}
-			else
-			{
-				DepthStencilViewDesc.ViewDimension		= D3D12_DSV_DIMENSION_TEXTURE2D;
-				DepthStencilViewDesc.Texture2D.MipSlice = MipSlice;
-			}
-			break;
-
-		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
-			assert(false && "Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
-			break;
-
-		default:
-			break;
-		}
-		GetParentLinkedDevice()->GetDevice()->CreateDepthStencilView(
-			Resource.Get(),
-			&DepthStencilViewDesc,
-			DepthStencilView);
 	}
 } // namespace RHI

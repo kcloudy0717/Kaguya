@@ -72,9 +72,13 @@ namespace RHI
 			{
 				return Textures;
 			}
-			else if constexpr (std::is_same_v<T, D3D12RenderTarget>)
+			else if constexpr (std::is_same_v<T, D3D12RenderTargetView>)
 			{
-				return RenderTargets;
+				return RenderTargetViews;
+			}
+			else if constexpr (std::is_same_v<T, D3D12DepthStencilView>)
+			{
+				return DepthStencilViews;
 			}
 			else if constexpr (std::is_same_v<T, D3D12ShaderResourceView>)
 			{
@@ -94,7 +98,8 @@ namespace RHI
 
 		std::vector<D3D12Buffer>			  Buffers;
 		std::vector<D3D12Texture>			  Textures;
-		std::vector<D3D12RenderTarget>		  RenderTargets;
+		std::vector<D3D12RenderTargetView>	  RenderTargetViews;
+		std::vector<D3D12DepthStencilView>	  DepthStencilViews;
 		std::vector<D3D12ShaderResourceView>  ShaderResourceViews;
 		std::vector<D3D12UnorderedAccessView> UnorderedAccessViews;
 	};
