@@ -207,9 +207,16 @@ namespace RHI
 	class D3D12RootSignature final : public D3D12DeviceChild
 	{
 	public:
+		D3D12RootSignature() noexcept = default;
 		explicit D3D12RootSignature(
 			D3D12Device*	   Parent,
 			RootSignatureDesc& Desc);
+
+		D3D12RootSignature(D3D12RootSignature&&) noexcept = default;
+		D3D12RootSignature& operator=(D3D12RootSignature&&) noexcept = default;
+
+		D3D12RootSignature(const D3D12RootSignature&) = delete;
+		D3D12RootSignature& operator=(const D3D12RootSignature&) = delete;
 
 		[[nodiscard]] ID3D12RootSignature* GetApiHandle() const noexcept { return RootSignature.Get(); }
 		[[nodiscard]] UINT				   GetNumParameters() const noexcept { return NumParameters; }

@@ -31,16 +31,16 @@ namespace RHI
 		std::vector<T> Array;
 	};
 
-	using RootSignatureRegistry			  = RgRegistry<std::unique_ptr<D3D12RootSignature>, RgResourceType::RootSignature>;
-	using PipelineStateRegistry			  = RgRegistry<std::unique_ptr<D3D12PipelineState>, RgResourceType::PipelineState>;
-	using RaytracingPipelineStateRegistry = RgRegistry<std::unique_ptr<D3D12RaytracingPipelineState>, RgResourceType::RaytracingPipelineState>;
+	using RootSignatureRegistry			  = RgRegistry<D3D12RootSignature, RgResourceType::RootSignature>;
+	using PipelineStateRegistry			  = RgRegistry<D3D12PipelineState, RgResourceType::PipelineState>;
+	using RaytracingPipelineStateRegistry = RgRegistry<D3D12RaytracingPipelineState, RgResourceType::RaytracingPipelineState>;
 
 	class RenderGraphRegistry
 	{
 	public:
-		[[nodiscard]] auto CreateRootSignature(std::unique_ptr<D3D12RootSignature>&& RootSignature) -> RgResourceHandle;
-		[[nodiscard]] auto CreatePipelineState(std::unique_ptr<D3D12PipelineState>&& PipelineState) -> RgResourceHandle;
-		[[nodiscard]] auto CreateRaytracingPipelineState(std::unique_ptr<D3D12RaytracingPipelineState>&& RaytracingPipelineState) -> RgResourceHandle;
+		[[nodiscard]] auto CreateRootSignature(D3D12RootSignature&& RootSignature) -> RgResourceHandle;
+		[[nodiscard]] auto CreatePipelineState(D3D12PipelineState&& PipelineState) -> RgResourceHandle;
+		[[nodiscard]] auto CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState) -> RgResourceHandle;
 
 		D3D12RootSignature*			  GetRootSignature(RgResourceHandle Handle);
 		D3D12PipelineState*			  GetPipelineState(RgResourceHandle Handle);

@@ -114,10 +114,17 @@ namespace RHI
 	class D3D12PipelineState : public D3D12DeviceChild
 	{
 	public:
+		D3D12PipelineState() noexcept = default;
 		explicit D3D12PipelineState(
 			D3D12Device*				   Parent,
 			std::wstring				   Name,
 			const PipelineStateStreamDesc& Desc);
+
+		D3D12PipelineState(D3D12PipelineState&&) noexcept = default;
+		D3D12PipelineState& operator=(D3D12PipelineState&&) noexcept = default;
+
+		D3D12PipelineState(const D3D12RootSignature&) = delete;
+		D3D12PipelineState& operator=(const D3D12PipelineState&) = delete;
 
 		[[nodiscard]] ID3D12PipelineState*	  GetApiHandle() const noexcept;
 		[[nodiscard]] RHI_PIPELINE_STATE_TYPE GetType() const noexcept { return Type; }
@@ -444,9 +451,16 @@ namespace RHI
 	class D3D12RaytracingPipelineState : public D3D12DeviceChild
 	{
 	public:
+		D3D12RaytracingPipelineState() noexcept = default;
 		explicit D3D12RaytracingPipelineState(
 			D3D12Device*				 Parent,
 			RaytracingPipelineStateDesc& Desc);
+
+		D3D12RaytracingPipelineState(D3D12RaytracingPipelineState&&) noexcept = default;
+		D3D12RaytracingPipelineState& operator=(D3D12RaytracingPipelineState&&) noexcept = default;
+
+		D3D12RaytracingPipelineState(const D3D12RaytracingPipelineState&) = delete;
+		D3D12RaytracingPipelineState& operator=(const D3D12RaytracingPipelineState&) = delete;
 
 		[[nodiscard]] ID3D12StateObject* GetApiHandle() const { return StateObject.Get(); }
 		[[nodiscard]] void*				 GetShaderIdentifier(std::wstring_view ExportName) const;

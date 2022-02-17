@@ -68,18 +68,18 @@ namespace RHI
 
 		void WaitIdle();
 
-		[[nodiscard]] std::unique_ptr<D3D12RootSignature> CreateRootSignature(RootSignatureDesc& Desc);
+		[[nodiscard]] D3D12RootSignature CreateRootSignature(RootSignatureDesc& Desc);
 
 		template<typename PipelineStateStream>
-		[[nodiscard]] std::unique_ptr<D3D12PipelineState> CreatePipelineState(std::wstring Name, PipelineStateStream& Stream)
+		[[nodiscard]] D3D12PipelineState CreatePipelineState(std::wstring Name, PipelineStateStream& Stream)
 		{
 			PipelineStateStreamDesc Desc;
 			Desc.SizeInBytes				   = sizeof(Stream);
 			Desc.pPipelineStateSubobjectStream = &Stream;
-			return std::make_unique<D3D12PipelineState>(this, Name, Desc);
+			return D3D12PipelineState(this, Name, Desc);
 		}
 
-		[[nodiscard]] std::unique_ptr<D3D12RaytracingPipelineState> CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc);
+		[[nodiscard]] D3D12RaytracingPipelineState CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc);
 
 	private:
 		using TDescriptorSizeCache = std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>;

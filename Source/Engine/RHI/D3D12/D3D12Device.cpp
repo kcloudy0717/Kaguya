@@ -141,7 +141,7 @@ namespace RHI
 		LinkedDevice.WaitIdle();
 	}
 
-	std::unique_ptr<D3D12RootSignature> D3D12Device::CreateRootSignature(RootSignatureDesc& Desc)
+	D3D12RootSignature D3D12Device::CreateRootSignature(RootSignatureDesc& Desc)
 	{
 		if (!Desc.IsLocal())
 		{
@@ -150,12 +150,12 @@ namespace RHI
 			AddBindlessParameterToDesc(Desc);
 		}
 
-		return std::make_unique<D3D12RootSignature>(this, Desc);
+		return D3D12RootSignature(this, Desc);
 	}
 
-	std::unique_ptr<D3D12RaytracingPipelineState> D3D12Device::CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc)
+	D3D12RaytracingPipelineState D3D12Device::CreateRaytracingPipelineState(RaytracingPipelineStateDesc& Desc)
 	{
-		return std::make_unique<D3D12RaytracingPipelineState>(this, Desc);
+		return D3D12RaytracingPipelineState(this, Desc);
 	}
 
 	void D3D12Device::ReportLiveObjects()

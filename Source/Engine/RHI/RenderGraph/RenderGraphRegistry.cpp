@@ -3,34 +3,34 @@
 
 namespace RHI
 {
-	auto RenderGraphRegistry::CreateRootSignature(std::unique_ptr<D3D12RootSignature>&& RootSignature) -> RgResourceHandle
+	auto RenderGraphRegistry::CreateRootSignature(D3D12RootSignature&& RootSignature) -> RgResourceHandle
 	{
-		return RootSignatureRegistry.Add(std::forward<std::unique_ptr<D3D12RootSignature>>(RootSignature));
+		return RootSignatureRegistry.Add(std::forward<D3D12RootSignature>(RootSignature));
 	}
 
-	auto RenderGraphRegistry::CreatePipelineState(std::unique_ptr<D3D12PipelineState>&& PipelineState) -> RgResourceHandle
+	auto RenderGraphRegistry::CreatePipelineState(D3D12PipelineState&& PipelineState) -> RgResourceHandle
 	{
-		return PipelineStateRegistry.Add(std::forward<std::unique_ptr<D3D12PipelineState>>(PipelineState));
+		return PipelineStateRegistry.Add(std::forward<D3D12PipelineState>(PipelineState));
 	}
 
-	auto RenderGraphRegistry::CreateRaytracingPipelineState(std::unique_ptr<D3D12RaytracingPipelineState>&& RaytracingPipelineState) -> RgResourceHandle
+	auto RenderGraphRegistry::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState) -> RgResourceHandle
 	{
-		return RaytracingPipelineStateRegistry.Add(std::forward<std::unique_ptr<D3D12RaytracingPipelineState>>(RaytracingPipelineState));
+		return RaytracingPipelineStateRegistry.Add(std::forward<D3D12RaytracingPipelineState>(RaytracingPipelineState));
 	}
 
 	D3D12RootSignature* RenderGraphRegistry::GetRootSignature(RgResourceHandle Handle)
 	{
-		return RootSignatureRegistry.GetResource(Handle)->get();
+		return RootSignatureRegistry.GetResource(Handle);
 	}
 
 	D3D12PipelineState* RenderGraphRegistry::GetPipelineState(RgResourceHandle Handle)
 	{
-		return PipelineStateRegistry.GetResource(Handle)->get();
+		return PipelineStateRegistry.GetResource(Handle);
 	}
 
 	D3D12RaytracingPipelineState* RenderGraphRegistry::GetRaytracingPipelineState(RgResourceHandle Handle)
 	{
-		return RaytracingPipelineStateRegistry.GetResource(Handle)->get();
+		return RaytracingPipelineStateRegistry.GetResource(Handle);
 	}
 
 	void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Device)
