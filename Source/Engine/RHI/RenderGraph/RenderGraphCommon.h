@@ -91,7 +91,7 @@ namespace RHI
 			return *this;
 		}
 
-		RgTextureDesc& SetExtent(u32 Width, u32 Height, u32 DepthOrArraySize)
+		RgTextureDesc& SetExtent(u32 Width, u32 Height, u32 DepthOrArraySize = 1)
 		{
 			this->Width			   = Width;
 			this->Height		   = Height;

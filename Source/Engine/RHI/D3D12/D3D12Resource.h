@@ -18,6 +18,12 @@ namespace RHI
 			D3D12_RESOURCE_STATES			 InitialResourceState,
 			std::optional<D3D12_CLEAR_VALUE> ClearValue);
 
+		D3D12Resource(D3D12Resource&&) noexcept = default;
+		D3D12Resource& operator=(D3D12Resource&&) noexcept = default;
+
+		D3D12Resource(const D3D12Resource&) = delete;
+		D3D12Resource& operator=(const D3D12Resource&) = delete;
+
 		[[nodiscard]] ID3D12Resource*			 GetResource() const { return Resource.Get(); }
 		[[nodiscard]] D3D12_CLEAR_VALUE			 GetClearValue() const noexcept { return ClearValue.has_value() ? *ClearValue : D3D12_CLEAR_VALUE{}; }
 		[[nodiscard]] const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }
@@ -39,9 +45,9 @@ namespace RHI
 	protected:
 		Arc<ID3D12Resource>				 Resource;
 		std::optional<D3D12_CLEAR_VALUE> ClearValue;
-		D3D12_RESOURCE_DESC				 Desc;
-		UINT8							 PlaneCount;
-		UINT							 NumSubresources;
+		D3D12_RESOURCE_DESC				 Desc = {};
+		UINT8							 PlaneCount = 0;
+		UINT							 NumSubresources = 0;
 		CResourceState					 ResourceState;
 	};
 
@@ -66,10 +72,6 @@ namespace RHI
 			UINT				 Stride,
 			D3D12_HEAP_TYPE		 HeapType,
 			D3D12_RESOURCE_FLAGS ResourceFlags);
-		~D3D12Buffer();
-
-		// Call this for upload heap to map a cpu pointer
-		void Initialize();
 
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const;
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress(UINT Index) const;
@@ -107,9 +109,10 @@ namespace RHI
 		}
 
 	private:
-		D3D12_HEAP_TYPE HeapType		  = {};
-		UINT			Stride			  = 0;
-		BYTE*			CpuVirtualAddress = nullptr;
+		D3D12_HEAP_TYPE	   HeapType = {};
+		UINT			   Stride	= 0;
+		D3D12ScopedPointer ScopedPointer; // Upload heap
+		BYTE*			   CpuVirtualAddress = nullptr;
 	};
 
 	class D3D12Texture : public D3D12Resource

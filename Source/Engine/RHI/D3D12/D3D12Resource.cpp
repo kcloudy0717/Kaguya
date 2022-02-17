@@ -154,27 +154,11 @@ namespace RHI
 			  std::nullopt)
 		, HeapType(HeapType)
 		, Stride(Stride)
+		, ScopedPointer(HeapType == D3D12_HEAP_TYPE_UPLOAD ? Resource.Get() : nullptr)
+		// We do not need to unmap until we are done with the resource.  However, we must not write to
+		// the resource while it is in use by the GPU (so we must use synchronization techniques).
+		, CpuVirtualAddress(ScopedPointer.Address)
 	{
-	}
-
-	D3D12Buffer::~D3D12Buffer()
-	{
-		if (CpuVirtualAddress)
-		{
-			Resource->Unmap(0, nullptr);
-			CpuVirtualAddress = nullptr;
-		}
-	}
-
-	void D3D12Buffer::Initialize()
-	{
-		if (HeapType == D3D12_HEAP_TYPE_UPLOAD)
-		{
-			VERIFY_D3D12_API(Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress)));
-
-			// We do not need to unmap until we are done with the resource.  However, we must not write to
-			// the resource while it is in use by the GPU (so we must use synchronization techniques).
-		}
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS D3D12Buffer::GetGpuVirtualAddress() const

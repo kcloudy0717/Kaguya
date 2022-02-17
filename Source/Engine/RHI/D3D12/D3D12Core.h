@@ -306,6 +306,47 @@ namespace RHI
 		ID3D12Resource* Resource = nullptr;
 	};
 
+	struct D3D12ScopedPointer
+	{
+		D3D12ScopedPointer() noexcept = default;
+		D3D12ScopedPointer(ID3D12Resource* Resource)
+			: Resource(Resource)
+		{
+			if (Resource)
+			{
+				HRESULT Result = Resource->Map(0, nullptr, reinterpret_cast<void**>(&Address));
+				if (FAILED(Result))
+				{
+					Resource = nullptr;
+				}
+			}
+		}
+		D3D12ScopedPointer(D3D12ScopedPointer&& D3D12ScopedPointer) noexcept
+			: Resource(std::exchange(D3D12ScopedPointer.Resource, {}))
+			, Address(std::exchange(D3D12ScopedPointer.Address, nullptr))
+		{
+		}
+		D3D12ScopedPointer& operator=(D3D12ScopedPointer&& D3D12ScopedPointer) noexcept
+		{
+			if (this != &D3D12ScopedPointer)
+			{
+				Resource = std::exchange(D3D12ScopedPointer.Resource, {});
+				Address	 = std::exchange(D3D12ScopedPointer.Address, nullptr);
+			}
+			return *this;
+		}
+		~D3D12ScopedPointer()
+		{
+			if (Resource)
+			{
+				Resource->Unmap(0, nullptr);
+			}
+		}
+
+		ID3D12Resource* Resource = nullptr;
+		BYTE*			Address	 = nullptr;
+	};
+
 	template<RHI_PIPELINE_STATE_TYPE PsoType>
 	struct D3D12DynamicResourceTableTraits
 	{

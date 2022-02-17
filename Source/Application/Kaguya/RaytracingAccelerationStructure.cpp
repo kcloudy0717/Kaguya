@@ -11,17 +11,13 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Devic
 	Manager = RHI::D3D12RaytracingAccelerationStructureManager(Device->GetDevice(), 6 * 1024 * 1024);
 
 	Null = RHI::D3D12ShaderResourceView(Device->GetDevice(), nullptr);
-}
 
-void RaytracingAccelerationStructure::Initialize()
-{
 	InstanceDescs = RHI::D3D12Buffer(
 		Device->GetDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * NumInstances,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	InstanceDescs.Initialize();
 }
 
 void RaytracingAccelerationStructure::Reset()

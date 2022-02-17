@@ -507,7 +507,6 @@ namespace RHI
 
 		SBTBuffer		= D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
 		SBTUploadBuffer = D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
-		SBTUploadBuffer.Initialize();
 		CpuData = std::make_unique<BYTE[]>(SizeInBytes);
 	}
 

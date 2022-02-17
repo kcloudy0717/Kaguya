@@ -11,8 +11,6 @@ public:
 	RaytracingAccelerationStructure() noexcept = default;
 	RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups, size_t NumInstances);
 
-	void Initialize();
-
 	const RHI::D3D12ShaderResourceView& GetShaderResourceView() const { return IsValid() ? SRV : Null; }
 
 	[[nodiscard]] bool IsValid() const noexcept { return !TopLevelAccelerationStructure.empty(); }

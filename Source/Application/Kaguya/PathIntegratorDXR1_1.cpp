@@ -14,7 +14,6 @@ void PathIntegratorDXR1_1::Initialize()
 	PipelineStates::Compile(Device, Registry);
 
 	AccelerationStructure = RaytracingAccelerationStructure(Device, 1, World::MeshLimit);
-	AccelerationStructure.Initialize();
 
 	Materials = RHI::D3D12Buffer(
 		Device->GetDevice(),
@@ -22,7 +21,6 @@ void PathIntegratorDXR1_1::Initialize()
 		sizeof(Hlsl::Material),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	Materials.Initialize();
 	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
 
 	Lights = RHI::D3D12Buffer(
@@ -31,7 +29,6 @@ void PathIntegratorDXR1_1::Initialize()
 		sizeof(Hlsl::Light),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	Lights.Initialize();
 	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
 
 	Meshes = RHI::D3D12Buffer(
@@ -40,7 +37,6 @@ void PathIntegratorDXR1_1::Initialize()
 		sizeof(Hlsl::Mesh),
 		D3D12_HEAP_TYPE_UPLOAD,
 		D3D12_RESOURCE_FLAG_NONE);
-	Meshes.Initialize();
 	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
 
 	HlslMeshes.resize(World::MeshLimit);
