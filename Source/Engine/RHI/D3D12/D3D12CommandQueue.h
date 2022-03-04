@@ -57,49 +57,4 @@ namespace RHI
 
 		std::optional<UINT64> Frequency;
 	};
-
-	inline D3D12_COMMAND_LIST_TYPE RHITranslateD3D12(RHID3D12CommandQueueType Type)
-	{
-		// clang-format off
-		switch (Type)
-		{
-			using enum RHID3D12CommandQueueType;
-		case Direct:		return D3D12_COMMAND_LIST_TYPE_DIRECT;
-		case AsyncCompute:	return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		case Copy1:			[[fallthrough]];
-		case Copy2:			return D3D12_COMMAND_LIST_TYPE_COPY;
-		}
-		// clang-format on
-		return D3D12_COMMAND_LIST_TYPE();
-	}
-
-	inline LPCWSTR GetCommandQueueTypeString(RHID3D12CommandQueueType Type)
-	{
-		// clang-format off
-		switch (Type)
-		{
-			using enum RHID3D12CommandQueueType;
-		case Direct:		return L"3D";
-		case AsyncCompute:	return L"Async Compute";
-		case Copy1:			return L"Copy 1";
-		case Copy2:			return L"Copy 2";
-		}
-		// clang-format on
-		return L"<unknown>";
-	}
-
-	inline LPCWSTR GetCommandQueueTypeFenceString(RHID3D12CommandQueueType Type)
-	{
-		// clang-format off
-		switch (Type)
-		{
-			using enum RHID3D12CommandQueueType;
-		case Direct:		return L"3D Fence";
-		case AsyncCompute:	return L"Async Compute Fence";
-		case Copy1:			return L"Copy 1 Fence";
-		case Copy2:			return L"Copy 2 Fence";
-		}
-		// clang-format on
-		return L"<unknown>";
-	}
 } // namespace RHI
