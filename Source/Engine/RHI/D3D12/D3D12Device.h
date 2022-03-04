@@ -42,17 +42,17 @@ namespace RHI
 
 		void CreateDxgiFactory(bool Debug);
 
-		[[nodiscard]] auto					GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
-		[[nodiscard]] auto					GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
-		[[nodiscard]] auto					GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
-		[[nodiscard]] auto					GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
-		[[nodiscard]] auto					GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
-		[[nodiscard]] auto					GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
-		[[nodiscard]] auto					GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
-		[[nodiscard]] auto					GetDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
-		[[nodiscard]] bool					AllowAsyncPsoCompilation() const noexcept;
-		[[nodiscard]] ThreadPool*			GetPsoCompilationThreadPool() const noexcept { return PsoCompilationThreadPool.get(); }
-		[[nodiscard]] D3D12PipelineLibrary* GetPipelineLibrary() const noexcept { return Library.get(); }
+		[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
+		[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
+		[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
+		[[nodiscard]] auto GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
+		[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
+		[[nodiscard]] auto GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
+		[[nodiscard]] auto GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
+		[[nodiscard]] auto GetDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
+		[[nodiscard]] bool AllowAsyncPsoCompilation() const noexcept;
+		[[nodiscard]] auto GetPsoCompilationThreadPool() const noexcept -> ThreadPool* { return PsoCompilationThreadPool.get(); }
+		[[nodiscard]] auto GetPipelineLibrary() const noexcept -> D3D12PipelineLibrary* { return Library.get(); }
 
 		[[nodiscard]] bool SupportsWaveIntrinsics() const noexcept;
 		[[nodiscard]] bool SupportsRaytracing() const noexcept;
