@@ -23,7 +23,7 @@ void* FileStream::GetHandle() const noexcept
 	return Handle.get();
 }
 
-std::uint64_t FileStream::GetSizeInBytes() const noexcept
+u64 FileStream::GetSizeInBytes() const noexcept
 {
 	LARGE_INTEGER FileSize = {};
 	if (GetFileSizeEx(Handle.get(), &FileSize))

@@ -14,14 +14,14 @@ u64 MemoryMappedFile::GetCurrentFileSize() const noexcept
 	return CurrentFileSize;
 }
 
-MemoryMappedView MemoryMappedFile::CreateView()
+MemoryMappedView MemoryMappedFile::CreateView() const noexcept
 {
 	constexpr DWORD DesiredAccess = FILE_MAP_ALL_ACCESS;
 	LPVOID			View		  = MapViewOfFile(FileMapping.get(), DesiredAccess, 0, 0, CurrentFileSize);
 	return MemoryMappedView(static_cast<std::byte*>(View), CurrentFileSize);
 }
 
-MemoryMappedView MemoryMappedFile::CreateView(u32 Offset, u64 SizeInBytes)
+MemoryMappedView MemoryMappedFile::CreateView(u32 Offset, u64 SizeInBytes) const noexcept
 {
 	constexpr DWORD DesiredAccess = FILE_MAP_ALL_ACCESS;
 	LPVOID			View		  = MapViewOfFile(FileMapping.get(), DesiredAccess, 0, Offset, SizeInBytes);

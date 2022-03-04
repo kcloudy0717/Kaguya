@@ -61,6 +61,7 @@ namespace RHI
 		: D3D12DeviceChild(Parent)
 	{
 		D3D12_COMMAND_SIGNATURE_DESC Desc = Builder.Build();
+		Desc.NodeMask					  = Parent->GetAllNodeMask();
 
 		VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateCommandSignature(&Desc, RootSignature, IID_PPV_ARGS(&CommandSignature)));
 	}

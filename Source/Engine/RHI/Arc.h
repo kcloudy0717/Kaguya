@@ -174,8 +174,7 @@ namespace RHI
 		unsigned long InternalRelease() noexcept
 		{
 			unsigned long RefCount = 0;
-			T*			  Temp	   = Ptr;
-			if (Temp)
+			if (T* Temp = Ptr; Temp)
 			{
 				Ptr		 = nullptr;
 				RefCount = Temp->Release();

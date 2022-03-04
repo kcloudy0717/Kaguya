@@ -137,6 +137,7 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateGraphicsPipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
+		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 
@@ -183,6 +184,7 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
 		}
+		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 
@@ -213,6 +215,7 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
+		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 

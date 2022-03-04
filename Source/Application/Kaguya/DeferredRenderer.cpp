@@ -219,10 +219,10 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 	GBufferArgs.Albedo = Graph.Create<RHI::D3D12Texture>(
 		"Albedo",
 		RHI::RgTextureDesc()
-			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
+			.SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
+			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, Color)));
 	GBufferArgs.Normal = Graph.Create<RHI::D3D12Texture>(
 		"Normal",
 		RHI::RgTextureDesc()

@@ -189,7 +189,7 @@ namespace RHI
 				nullptr,
 				Type);
 
-			(CommandList->*D3D12DynamicResourceTableTraits<PsoType>::Bind())(RootParameterIndex, DestGpuHandle);
+			(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameterIndex, DestGpuHandle);
 
 			// Offset current descriptor handles.
 			DestCpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);

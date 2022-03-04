@@ -15,8 +15,8 @@ public:
 
 	[[nodiscard]] u64 GetCurrentFileSize() const noexcept;
 
-	[[nodiscard]] MemoryMappedView CreateView();
-	[[nodiscard]] MemoryMappedView CreateView(u32 Offset, u64 SizeInBytes);
+	[[nodiscard]] MemoryMappedView CreateView() const noexcept;
+	[[nodiscard]] MemoryMappedView CreateView(u32 Offset, u64 SizeInBytes) const noexcept;
 
 	// Invoking GrowMapping can cause any associated MemoryMappedView to be undefined.
 	// Make sure to call CreateView again on any associated views

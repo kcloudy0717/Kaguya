@@ -16,7 +16,7 @@ static ConsoleVariable CVar_Dred(
 static ConsoleVariable CVar_AsyncPsoCompilation(
 	"D3D12.AsyncPsoCompile",
 	"Enables asynchronous pipeline state object compilation",
-	false);
+	true);
 
 namespace RHI
 {
