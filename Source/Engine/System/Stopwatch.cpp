@@ -1,11 +1,23 @@
 #include "Stopwatch.h"
 
-Stopwatch::Stopwatch() noexcept
+i64 Stopwatch::Frequency = []()
 {
 	LARGE_INTEGER Frequency = {};
 	QueryPerformanceFrequency(&Frequency);
-	Period = 1.0 / static_cast<double>(Frequency.QuadPart);
-	QueryPerformanceCounter(&StartTime);
+	return Frequency.QuadPart;
+}();
+
+i64 Stopwatch::GetTimestamp()
+{
+	LARGE_INTEGER Timestamp = {};
+	QueryPerformanceCounter(&Timestamp);
+	return Timestamp.QuadPart;
+}
+
+Stopwatch::Stopwatch() noexcept
+	: StartTime(GetTimestamp())
+	, Period(1.0 / static_cast<double>(Frequency))
+{
 }
 
 double Stopwatch::GetDeltaTime() const noexcept
@@ -17,28 +29,32 @@ double Stopwatch::GetTotalTime() const noexcept
 {
 	if (Paused)
 	{
-		return static_cast<double>((StopTime.QuadPart - PausedTime.QuadPart) - TotalTime.QuadPart) * Period;
+		return static_cast<double>((StopTime - PausedTime) - TotalTime) * Period;
 	}
-	return static_cast<double>((CurrentTime.QuadPart - PausedTime.QuadPart) - TotalTime.QuadPart) * Period;
+	return static_cast<double>((CurrentTime - PausedTime) - TotalTime) * Period;
 }
 
 double Stopwatch::GetTotalTimePrecise() const noexcept
 {
-	LARGE_INTEGER Now = {};
-	QueryPerformanceCounter(&Now);
-	return static_cast<double>(Now.QuadPart - StartTime.QuadPart) * Period;
+	i64 Now = GetTimestamp();
+	return static_cast<double>(Now - StartTime) * Period;
+}
+
+bool Stopwatch::IsPaused() const noexcept
+{
+	return Paused;
 }
 
 void Stopwatch::Resume() noexcept
 {
-	QueryPerformanceCounter(&CurrentTime);
+	CurrentTime = GetTimestamp();
 	if (Paused)
 	{
-		PausedTime.QuadPart += (CurrentTime.QuadPart - StopTime.QuadPart);
+		PausedTime += (CurrentTime - StopTime);
 
-		PreviousTime	  = CurrentTime;
-		StopTime.QuadPart = 0;
-		Paused			  = false;
+		PreviousTime = CurrentTime;
+		StopTime	 = 0;
+		Paused		 = false;
 	}
 }
 
@@ -46,9 +62,9 @@ void Stopwatch::Pause() noexcept
 {
 	if (!Paused)
 	{
-		QueryPerformanceCounter(&CurrentTime);
-		StopTime = CurrentTime;
-		Paused	 = true;
+		CurrentTime = GetTimestamp();
+		StopTime	= CurrentTime;
+		Paused		= true;
 	}
 }
 
@@ -59,9 +75,9 @@ void Stopwatch::Signal() noexcept
 		DeltaTime = 0.0;
 		return;
 	}
-	QueryPerformanceCounter(&CurrentTime);
+	CurrentTime = GetTimestamp();
 
-	DeltaTime = static_cast<double>(CurrentTime.QuadPart - PreviousTime.QuadPart) * Period;
+	DeltaTime = static_cast<double>(CurrentTime - PreviousTime) * Period;
 
 	PreviousTime = CurrentTime;
 
@@ -76,10 +92,10 @@ void Stopwatch::Signal() noexcept
 
 void Stopwatch::Restart() noexcept
 {
-	QueryPerformanceCounter(&CurrentTime);
-	TotalTime		  = CurrentTime;
-	PreviousTime	  = CurrentTime;
-	StopTime.QuadPart = 0;
-	Paused			  = false;
+	CurrentTime	 = GetTimestamp();
+	TotalTime	 = CurrentTime;
+	PreviousTime = CurrentTime;
+	StopTime	 = 0;
+	Paused		 = false;
 	Resume();
 }
