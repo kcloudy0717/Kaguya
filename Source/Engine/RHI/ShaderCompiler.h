@@ -5,7 +5,7 @@
 class DxcException : public Exception
 {
 public:
-	DxcException(const char* File, int Line, HRESULT ErrorCode)
+	DxcException(std::string_view File, int Line, HRESULT ErrorCode)
 		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{

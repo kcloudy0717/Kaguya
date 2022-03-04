@@ -1,7 +1,7 @@
 #include "Exception.h"
 #include <sstream>
 
-Exception::Exception(const char* File, int Line)
+Exception::Exception(std::string_view File, int Line)
 	: File(File)
 	, Line(Line)
 {

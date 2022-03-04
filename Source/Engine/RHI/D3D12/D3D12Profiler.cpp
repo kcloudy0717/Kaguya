@@ -104,7 +104,7 @@ namespace RHI
 		Data	   = {};
 	}
 
-	void D3D12Profiler::PushEventNode(D3D12CommandQueue* CommandQueue, const std::string& Name, ID3D12GraphicsCommandList* CommandList)
+	void D3D12Profiler::PushEventNode(D3D12CommandQueue* CommandQueue, std::string_view Name, ID3D12GraphicsCommandList* CommandList)
 	{
 		assert(CommandQueue->SupportTimestamps());
 		CurrentNode = CurrentNode->GetChild(Name);
@@ -117,11 +117,7 @@ namespace RHI
 		CurrentNode = CurrentNode->Parent;
 	}
 
-	UINT D3D12Profiler::StartProfile(
-		ID3D12GraphicsCommandList* CommandList,
-		const char*				   Name,
-		INT						   Depth,
-		UINT64					   Frequency)
+	UINT D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, std::string_view Name, INT Depth, UINT64 Frequency)
 	{
 		assert(NumProfiles < MaxProfiles);
 		UINT ProfileIdx			  = NumProfiles++;
@@ -143,9 +139,7 @@ namespace RHI
 		return ProfileIdx;
 	}
 
-	void D3D12Profiler::EndProfile(
-		ID3D12GraphicsCommandList* CommandList,
-		UINT					   Index)
+	void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index)
 	{
 		assert(Index < NumProfiles);
 
@@ -166,7 +160,11 @@ namespace RHI
 		ProfileData.QueryFinished = true;
 	}
 
-	D3D12ProfileBlock::D3D12ProfileBlock(D3D12Profiler* Profiler, D3D12CommandQueue* CommandQueue, ID3D12GraphicsCommandList* CommandList, const char* Name)
+	D3D12ProfileBlock::D3D12ProfileBlock(
+		D3D12Profiler*			   Profiler,
+		D3D12CommandQueue*		   CommandQueue,
+		ID3D12GraphicsCommandList* CommandList,
+		std::string_view		   Name)
 		: Profiler(Profiler)
 		, CommandList(CommandList)
 	{

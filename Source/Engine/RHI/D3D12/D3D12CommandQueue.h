@@ -66,7 +66,7 @@ namespace RHI
 			using enum RHID3D12CommandQueueType;
 		case Direct:		return D3D12_COMMAND_LIST_TYPE_DIRECT;
 		case AsyncCompute:	return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-		case Copy1:			return D3D12_COMMAND_LIST_TYPE_COPY;
+		case Copy1:			[[fallthrough]];
 		case Copy2:			return D3D12_COMMAND_LIST_TYPE_COPY;
 		}
 		// clang-format on

@@ -40,7 +40,7 @@ void Renderer::OnRender(World* World)
 				ImGui::Text("    ");
 				ImGui::SameLine();
 			}
-			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name, iter.AverageTime, iter.MaxTime);
+			ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name.data(), iter.AverageTime, iter.MaxTime);
 			ImGui::SameLine();
 			ImGui::NewLine();
 		}

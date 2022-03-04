@@ -3,7 +3,7 @@
 
 namespace RHI
 {
-	D3D12Exception::D3D12Exception(const char* File, int Line, HRESULT ErrorCode)
+	D3D12Exception::D3D12Exception(std::string_view File, int Line, HRESULT ErrorCode)
 		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{

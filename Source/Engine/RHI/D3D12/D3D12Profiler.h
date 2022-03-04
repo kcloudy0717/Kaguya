@@ -21,7 +21,7 @@ namespace RHI
 	{
 		static constexpr UINT64 FilterSize = 64;
 
-		const char* Name = nullptr;
+		std::string_view Name;
 
 		bool QueryStarted  = false;
 		bool QueryFinished = false;
@@ -42,10 +42,10 @@ namespace RHI
 	struct D3D12EventNode
 	{
 		D3D12EventNode() noexcept = default;
-		explicit D3D12EventNode(D3D12Profiler* Profiler, INT Depth, std::string Name, D3D12EventNode* Parent)
+		explicit D3D12EventNode(D3D12Profiler* Profiler, INT Depth, std::string_view Name, D3D12EventNode* Parent)
 			: Profiler(Profiler)
 			, Depth(Depth)
-			, Name(std::move(Name))
+			, Name(Name)
 			, Parent(Parent)
 		{
 		}
@@ -59,7 +59,7 @@ namespace RHI
 			Lut.clear();
 		}
 
-		D3D12EventNode* GetChild(const std::string& Name)
+		D3D12EventNode* GetChild(std::string_view Name)
 		{
 			if (auto Iterator = Lut.find(Name);
 				Iterator != Lut.end())
@@ -76,13 +76,13 @@ namespace RHI
 		void StartTiming(D3D12CommandQueue* CommandQueue, ID3D12GraphicsCommandList* CommandList);
 		void EndTiming(ID3D12GraphicsCommandList* CommandList);
 
-		D3D12Profiler*									 Profiler;
-		INT												 Depth;
-		std::string										 Name;
-		UINT											 Index = UINT_MAX;
-		D3D12EventNode*									 Parent;
-		std::vector<D3D12EventNode*>					 Children;
-		std::unordered_map<std::string, D3D12EventNode*> Lut;
+		D3D12Profiler*										  Profiler;
+		INT													  Depth;
+		std::string_view									  Name;
+		UINT												  Index = UINT_MAX;
+		D3D12EventNode*										  Parent;
+		std::vector<D3D12EventNode*>						  Children;
+		std::unordered_map<std::string_view, D3D12EventNode*> Lut;
 	};
 
 	class D3D12Profiler : public D3D12LinkedDeviceChild
@@ -104,7 +104,7 @@ namespace RHI
 		void OnBeginFrame();
 		void OnEndFrame();
 
-		void PushEventNode(D3D12CommandQueue* CommandQueue, const std::string& Name, ID3D12GraphicsCommandList* CommandList);
+		void PushEventNode(D3D12CommandQueue* CommandQueue, std::string_view Name, ID3D12GraphicsCommandList* CommandList);
 		void PopEventNode(ID3D12GraphicsCommandList* CommandList);
 
 	public:
@@ -112,15 +112,8 @@ namespace RHI
 		std::span<ProfileData> Data;
 
 	private:
-		UINT StartProfile(
-			ID3D12GraphicsCommandList* CommandList,
-			const char*				   Name,
-			INT						   Depth,
-			UINT64					   Frequency);
-
-		void EndProfile(
-			ID3D12GraphicsCommandList* CommandList,
-			UINT					   Index);
+		UINT StartProfile(ID3D12GraphicsCommandList* CommandList, std::string_view Name, INT Depth, UINT64 Frequency);
+		void EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index);
 
 	private:
 		UINT					 FrameLatency;
@@ -143,7 +136,7 @@ namespace RHI
 			D3D12Profiler*			   Profiler,
 			D3D12CommandQueue*		   CommandQueue,
 			ID3D12GraphicsCommandList* CommandList,
-			const char*				   Name);
+			std::string_view		   Name);
 		~D3D12ProfileBlock();
 
 	private:

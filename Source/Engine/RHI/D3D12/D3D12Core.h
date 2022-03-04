@@ -49,7 +49,7 @@ namespace RHI
 	class D3D12Exception : public Exception
 	{
 	public:
-		D3D12Exception(const char* File, int Line, HRESULT ErrorCode);
+		D3D12Exception(std::string_view File, int Line, HRESULT ErrorCode);
 
 		const char* GetErrorType() const noexcept override;
 		std::string GetError() const override;

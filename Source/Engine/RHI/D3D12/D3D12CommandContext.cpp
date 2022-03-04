@@ -356,8 +356,10 @@ namespace RHI
 		(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::SamplerDescriptorTable + Offset, SamplerDescriptor);
 	}
 
-	D3D12ScopedEventObject::D3D12ScopedEventObject(D3D12CommandContext& CommandContext, std::string_view Name)
-		: ProfileBlock(CommandContext.GetParentLinkedDevice()->GetProfiler(), CommandContext.GetCommandQueue(), CommandContext.GetGraphicsCommandList(), Name.data())
+	D3D12ScopedEventObject::D3D12ScopedEventObject(
+		D3D12CommandContext& CommandContext,
+		std::string_view	 Name)
+		: ProfileBlock(CommandContext.GetParentLinkedDevice()->GetProfiler(), CommandContext.GetCommandQueue(), CommandContext.GetGraphicsCommandList(), Name)
 #ifdef _DEBUG
 		, PixEvent(CommandContext.GetGraphicsCommandList(), 0, Name.data())
 #endif
