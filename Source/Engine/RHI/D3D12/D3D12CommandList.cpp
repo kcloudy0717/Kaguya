@@ -32,54 +32,6 @@ namespace RHI
 		CommandAllocatorPool.ReturnToPool(std::move(CommandAllocator), SyncHandle);
 	}
 
-	void ResourceBarrierBatch::Reset()
-	{
-		NumResourceBarriers = 0;
-	}
-
-	UINT ResourceBarrierBatch::Flush()
-	{
-		if (NumResourceBarriers > 0)
-		{
-			GraphicsCommandList->ResourceBarrier(NumResourceBarriers, ResourceBarriers);
-			Reset();
-		}
-		return NumResourceBarriers;
-	}
-
-	void ResourceBarrierBatch::Add(
-		const D3D12_RESOURCE_BARRIER& ResourceBarrier)
-	{
-		assert(NumResourceBarriers < NumBatches);
-		ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
-		if (NumResourceBarriers == NumBatches)
-		{
-			Flush();
-		}
-	}
-
-	void ResourceBarrierBatch::AddTransition(
-		D3D12Resource*		  Resource,
-		D3D12_RESOURCE_STATES StateBefore,
-		D3D12_RESOURCE_STATES StateAfter,
-		UINT				  Subresource /*= D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES*/)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
-	}
-
-	void ResourceBarrierBatch::AddAliasing(
-		D3D12Resource* BeforeResource,
-		D3D12Resource* AfterResource)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::Aliasing(BeforeResource->GetResource(), AfterResource->GetResource()));
-	}
-
-	void ResourceBarrierBatch::AddUAV(
-		D3D12Resource* Resource)
-	{
-		Add(CD3DX12_RESOURCE_BARRIER::UAV(Resource ? Resource->GetResource() : nullptr));
-	}
-
 	std::vector<PendingResourceBarrier>& D3D12ResourceStateTracker::GetPendingResourceBarriers()
 	{
 		return PendingResourceBarriers;
@@ -120,16 +72,16 @@ namespace RHI
 #ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&DebugCommandList));
 #endif
-		ResourceBarrierBatch.GraphicsCommandList = GraphicsCommandList.Get();
 	}
 
-	void D3D12CommandListHandle::Open(ID3D12CommandAllocator* CommandAllocator)
+	void D3D12CommandListHandle::Open(
+		ID3D12CommandAllocator* CommandAllocator)
 	{
 		VERIFY_D3D12_API(GraphicsCommandList->Reset(CommandAllocator, nullptr));
 
 		// Reset resource state tracking and resource barriers
 		ResourceStateTracker.Reset();
-		ResourceBarrierBatch.Reset();
+		NumResourceBarriers = 0;
 	}
 
 	void D3D12CommandListHandle::Close()
@@ -169,7 +121,7 @@ namespace RHI
 				{
 					if (SubresourceState != State)
 					{
-						ResourceBarrierBatch.AddTransition(Resource, SubresourceState, State, i);
+						AddTransition(Resource, SubresourceState, State, i);
 					}
 
 					i++;
@@ -181,7 +133,7 @@ namespace RHI
 				D3D12_RESOURCE_STATES StateKnown = ResourceState.GetSubresourceState(Subresource);
 				if (StateKnown != State)
 				{
-					ResourceBarrierBatch.AddTransition(Resource, StateKnown, State, Subresource);
+					AddTransition(Resource, StateKnown, State, Subresource);
 				}
 			}
 		}
@@ -194,18 +146,22 @@ namespace RHI
 		D3D12Resource* BeforeResource,
 		D3D12Resource* AfterResource)
 	{
-		ResourceBarrierBatch.AddAliasing(BeforeResource, AfterResource);
+		AddAliasing(BeforeResource, AfterResource);
 	}
 
 	void D3D12CommandListHandle::UAVBarrier(
 		D3D12Resource* Resource)
 	{
-		ResourceBarrierBatch.AddUAV(Resource);
+		AddUAV(Resource);
 	}
 
 	void D3D12CommandListHandle::FlushResourceBarriers()
 	{
-		ResourceBarrierBatch.Flush();
+		if (NumResourceBarriers > 0)
+		{
+			GraphicsCommandList->ResourceBarrier(NumResourceBarriers, ResourceBarriers);
+			NumResourceBarriers = 0;
+		}
 	}
 
 	bool D3D12CommandListHandle::AssertResourceState(
@@ -252,5 +208,38 @@ namespace RHI
 		}
 
 		return ResourceBarriers;
+	}
+
+	void D3D12CommandListHandle::Add(
+		const D3D12_RESOURCE_BARRIER& ResourceBarrier)
+	{
+		assert(NumResourceBarriers < NumBatches);
+		ResourceBarriers[NumResourceBarriers++] = ResourceBarrier;
+		if (NumResourceBarriers == NumBatches)
+		{
+			FlushResourceBarriers();
+		}
+	}
+
+	void D3D12CommandListHandle::AddTransition(
+		D3D12Resource*		  Resource,
+		D3D12_RESOURCE_STATES StateBefore,
+		D3D12_RESOURCE_STATES StateAfter,
+		UINT				  Subresource /*= D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES*/)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::Transition(Resource->GetResource(), StateBefore, StateAfter, Subresource));
+	}
+
+	void D3D12CommandListHandle::AddAliasing(
+		D3D12Resource* BeforeResource,
+		D3D12Resource* AfterResource)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::Aliasing(BeforeResource->GetResource(), AfterResource->GetResource()));
+	}
+
+	void D3D12CommandListHandle::AddUAV(
+		D3D12Resource* Resource)
+	{
+		Add(CD3DX12_RESOURCE_BARRIER::UAV(Resource ? Resource->GetResource() : nullptr));
 	}
 } // namespace RHI

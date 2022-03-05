@@ -33,35 +33,6 @@ namespace RHI
 		UINT				  Subresource;
 	};
 
-	struct ResourceBarrierBatch
-	{
-		static constexpr UINT NumBatches = 16;
-
-		void Reset();
-
-		UINT Flush();
-
-		void Add(
-			const D3D12_RESOURCE_BARRIER& ResourceBarrier);
-
-		void AddTransition(
-			D3D12Resource*		  Resource,
-			D3D12_RESOURCE_STATES StateBefore,
-			D3D12_RESOURCE_STATES StateAfter,
-			UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
-		void AddAliasing(
-			D3D12Resource* BeforeResource,
-			D3D12Resource* AfterResource);
-
-		void AddUAV(
-			D3D12Resource* Resource);
-
-		ID3D12GraphicsCommandList* GraphicsCommandList;
-		D3D12_RESOURCE_BARRIER	   ResourceBarriers[NumBatches] = {};
-		UINT					   NumResourceBarriers			= 0;
-	};
-
 	class D3D12ResourceStateTracker
 	{
 	public:
@@ -104,7 +75,9 @@ namespace RHI
 		[[nodiscard]] ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const noexcept { return GraphicsCommandList6.Get(); }
 		ID3D12GraphicsCommandList*				  operator->() const noexcept { return GetGraphicsCommandList(); }
 
-		void Open(ID3D12CommandAllocator* CommandAllocator);
+		void Open(
+			ID3D12CommandAllocator* CommandAllocator);
+
 		void Close();
 
 		void TransitionBarrier(
@@ -130,8 +103,27 @@ namespace RHI
 		// Resolve resource barriers that are needed before this command list is executed
 		std::vector<D3D12_RESOURCE_BARRIER> ResolveResourceBarriers();
 
+		// Resource barrier helpers
+		void Add(
+			const D3D12_RESOURCE_BARRIER& ResourceBarrier);
+
+		void AddTransition(
+			D3D12Resource*		  Resource,
+			D3D12_RESOURCE_STATES StateBefore,
+			D3D12_RESOURCE_STATES StateAfter,
+			UINT				  Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+		void AddAliasing(
+			D3D12Resource* BeforeResource,
+			D3D12Resource* AfterResource);
+
+		void AddUAV(
+			D3D12Resource* Resource);
+
 	private:
 		friend class D3D12CommandQueue;
+
+		static constexpr UINT NumBatches = 16;
 
 		D3D12_COMMAND_LIST_TYPE			Type;
 		Arc<ID3D12GraphicsCommandList>	GraphicsCommandList;
@@ -141,6 +133,7 @@ namespace RHI
 		Arc<ID3D12DebugCommandList> DebugCommandList;
 #endif
 		D3D12ResourceStateTracker ResourceStateTracker;
-		ResourceBarrierBatch	  ResourceBarrierBatch;
+		D3D12_RESOURCE_BARRIER	  ResourceBarriers[NumBatches] = {};
+		UINT					  NumResourceBarriers		   = 0;
 	};
 } // namespace RHI
