@@ -22,6 +22,6 @@ public:
 
 	virtual void OnWindowClose(Window* Window) = 0;
 
-	virtual void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height) = 0;
-	virtual void OnWindowMove(Window* Window, std::int32_t x, std::int32_t y)			 = 0;
+	virtual void OnWindowResize(Window* Window, int Width, int Height) = 0;
+	virtual void OnWindowMove(Window* Window, int X, int Y)			   = 0;
 };

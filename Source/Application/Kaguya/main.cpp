@@ -246,7 +246,7 @@ public:
 		}
 	}
 
-	void OnWindowResize(Window* Window, std::int32_t Width, std::int32_t Height) override
+	void OnWindowResize(Window* Window, int Width, int Height) override
 	{
 		Window->Resize(Width, Height);
 		if (Window == MainWindow)
@@ -258,13 +258,13 @@ public:
 		}
 	}
 
-	void OnWindowMove(Window* Window, std::int32_t x, std::int32_t y) override
+	void OnWindowMove(Window* Window, int X, int Y) override
 	{
 		if (Window == MainWindow)
 		{
 			if (Renderer)
 			{
-				Renderer->OnMove(x, y);
+				Renderer->OnMove(X, Y);
 			}
 		}
 	}
