@@ -2,6 +2,8 @@
 
 using Microsoft::WRL::ComPtr;
 
+DEFINE_LOG_CATEGORY(Dxc);
+
 #define VERIFY_DXC_API(expr)                            \
 	do                                                  \
 	{                                                   \
@@ -147,6 +149,12 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	std::wstring_view			  Profile,
 	const std::vector<DxcDefine>& ShaderDefines) const
 {
+	ScopedTimer Timer(
+		[&](i64 Milliseconds)
+		{
+			LUNA_LOG(Dxc, Info, L"{} compiled in {}ms", Path.c_str(), Milliseconds);
+		});
+
 	ShaderCompilationResult Result = {};
 
 	std::filesystem::path PdbPath = Path;
@@ -223,7 +231,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		}
 
 		// Save pdb
-		FileStream	 Stream(PdbPath / Result.PdbName, FileMode::Create, FileAccess::Write);
+		FileStream	 Stream(PdbPath, FileMode::Create, FileAccess::Write);
 		BinaryWriter Writer(Stream);
 		Writer.Write(Result.Pdb->GetBufferPointer(), Result.Pdb->GetBufferSize());
 	}

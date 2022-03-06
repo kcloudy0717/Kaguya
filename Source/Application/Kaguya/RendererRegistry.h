@@ -52,13 +52,11 @@ struct Shaders
 
 	static void Compile(ShaderCompiler* Compiler)
 	{
-		const auto& ExecutableDirectory = Application::ExecutableDirectory;
-
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			RTX::PathTrace = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/PathTrace1_1.hlsl",
+				L"Shaders/PathTrace1_1.hlsl",
 				Options);
 		}
 
@@ -67,14 +65,14 @@ struct Shaders
 			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::FullScreenTriangle = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Vertex,
-				ExecutableDirectory / L"Shaders/FullScreenTriangle.hlsl",
+				L"Shaders/FullScreenTriangle.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_VSEntryPoint);
 			VS::GBuffer = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Vertex,
-				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
+				L"Shaders/GBuffer.hlsl",
 				Options);
 		}
 
@@ -83,7 +81,7 @@ struct Shaders
 			ShaderCompileOptions Options(g_MSEntryPoint);
 			MS::Meshlet = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Mesh,
-				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
+				L"Shaders/Meshlet.ms.hlsl",
 				Options);
 		}
 
@@ -92,14 +90,14 @@ struct Shaders
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::GBuffer = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Pixel,
-				ExecutableDirectory / L"Shaders/GBuffer.hlsl",
+				L"Shaders/GBuffer.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::Meshlet = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Pixel,
-				ExecutableDirectory / L"Shaders/Meshlet.ms.hlsl",
+				L"Shaders/Meshlet.ms.hlsl",
 				Options);
 		}
 
@@ -108,63 +106,63 @@ struct Shaders
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCull = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/IndirectCull.hlsl",
+				L"Shaders/IndirectCull.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::IndirectCullMeshShaders = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/IndirectCullMeshShader.hlsl",
+				L"Shaders/IndirectCullMeshShader.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::BloomMask = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/Bloom/BloomMask.hlsl",
+				L"Shaders/Bloom/BloomMask.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::BloomDownsample = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/Bloom/BloomDownsample.hlsl",
+				L"Shaders/Bloom/BloomDownsample.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::BloomBlur = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/Bloom/BloomBlur.hlsl",
+				L"Shaders/Bloom/BloomBlur.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::BloomUpsampleBlur = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/Bloom/BloomUpsampleBlur.hlsl",
+				L"Shaders/Bloom/BloomUpsampleBlur.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::Tonemap = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/PostprocessComposition.hlsl",
+				L"Shaders/PostprocessComposition.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::BayerDither = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/BayerDither.hlsl",
+				L"Shaders/BayerDither.hlsl",
 				Options);
 		}
 		{
 			ShaderCompileOptions Options(g_CSEntryPoint);
 			CS::Sobol = Compiler->CompileShader(
 				RHI_SHADER_TYPE::Compute,
-				ExecutableDirectory / L"Shaders/Sobol.hlsl",
+				L"Shaders/Sobol.hlsl",
 				Options);
 		}
 	}
@@ -176,9 +174,7 @@ struct Libraries
 
 	static void Compile(ShaderCompiler* Compiler)
 	{
-		const auto& ExecutableDirectory = Application::ExecutableDirectory;
-
-		PathTrace = Compiler->CompileLibrary(ExecutableDirectory / L"Shaders/PathTrace.hlsl");
+		PathTrace = Compiler->CompileLibrary(L"Shaders/PathTrace.hlsl");
 	}
 };
 

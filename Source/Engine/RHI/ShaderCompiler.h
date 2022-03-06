@@ -2,6 +2,8 @@
 #include "Shader.h"
 #include "System/System.h"
 
+DECLARE_LOG_CATEGORY(Dxc);
+
 class DxcException : public Exception
 {
 public:

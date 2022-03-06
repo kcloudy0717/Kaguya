@@ -98,6 +98,12 @@ namespace RHI
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
+		ScopedTimer Timer(
+			[&](i64 Milliseconds)
+			{
+				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+			});
+
 		Arc<ID3D12PipelineState>		   PipelineState;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
 			.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
@@ -137,7 +143,6 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateGraphicsPipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
-		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 
@@ -146,6 +151,12 @@ namespace RHI
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
+		ScopedTimer Timer(
+			[&](i64 Milliseconds)
+			{
+				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+			});
+
 		Arc<ID3D12PipelineState>			   PipelineState;
 		D3DX12_MESH_SHADER_PIPELINE_STATE_DESC Desc = {
 			.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
@@ -184,7 +195,6 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreatePipelineState(&StreamDesc, IID_PPV_ARGS(&PipelineState)));
 		}
-		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 
@@ -193,6 +203,12 @@ namespace RHI
 		const std::wstring&					Name,
 		const D3D12PipelineParserCallbacks& Parser)
 	{
+		ScopedTimer Timer(
+			[&](i64 Milliseconds)
+			{
+				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+			});
+
 		Arc<ID3D12PipelineState>		  PipelineState;
 		D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {};
 		Desc.pRootSignature					   = Parser.RootSignature->GetApiHandle();
@@ -215,7 +231,6 @@ namespace RHI
 		{
 			VERIFY_D3D12_API(Device->GetD3D12Device5()->CreateComputePipelineState(&Desc, IID_PPV_ARGS(&PipelineState)));
 		}
-		LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {}", GetCurrentThreadId(), Name);
 		return PipelineState;
 	}
 

@@ -51,6 +51,7 @@ add_executable(
 set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 if (MSVC)
+	set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:${PROJECTNAME}>)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()

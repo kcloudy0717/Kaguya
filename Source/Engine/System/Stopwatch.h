@@ -32,3 +32,25 @@ private:
 
 	bool Paused = false;
 };
+
+template<typename TCallback>
+class ScopedTimer
+{
+public:
+	ScopedTimer(TCallback&& Callback)
+		: Callback(std::move(Callback))
+		, Start(Stopwatch::GetTimestamp())
+	{
+	}
+	~ScopedTimer()
+	{
+		i64 End				   = Stopwatch::GetTimestamp();
+		i64 Elapsed			   = End - Start;
+		i64 ElapsedMilliseconds = Elapsed * 1000 / Stopwatch::Frequency;
+		Callback(ElapsedMilliseconds);
+	}
+
+private:
+	TCallback Callback;
+	i64		  Start;
+};

@@ -1,6 +1,5 @@
 #pragma once
 #include "D3D12Core.h"
-#include "D3D12CommandQueue.h"
 
 //=================================================================================================
 //
@@ -15,6 +14,7 @@
 
 namespace RHI
 {
+	class D3D12CommandQueue;
 	class D3D12Profiler;
 
 	struct ProfileData
