@@ -321,9 +321,9 @@ int main(int /*argc*/, char* /*argv*/[])
 	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);
 	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
 
-	//DeferredRenderer Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
+	DeferredRenderer Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
 	//PathIntegratorDXR1_0 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
-	PathIntegratorDXR1_1 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
+	//PathIntegratorDXR1_1 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
 
 	Editor.MainWindow = &MainWindow;
 	Editor.World	  = &World;

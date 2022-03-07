@@ -132,7 +132,7 @@ namespace RHI
 			}
 
 			Textures[i]		  = D3D12Texture(Device->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
-			std::wstring Name = std::wstring(RHITexture.Name.begin(), RHITexture.Name.end());
+			std::wstring Name = std::wstring(RHITexture.Desc.Name.begin(), RHITexture.Desc.Name.end());
 			Textures[i].GetResource()->SetName(Name.data());
 		}
 

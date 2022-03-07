@@ -132,7 +132,7 @@ namespace RHI
 		}
 
 		template<typename T>
-		auto Create(std::string_view Name, const typename RgResourceTraits<T>::Desc& Desc) -> RgResourceHandle
+		auto Create(const typename RgResourceTraits<T>::Desc& Desc) -> RgResourceHandle
 		{
 			auto& Container = GetContainer<T>();
 
@@ -145,7 +145,6 @@ namespace RHI
 			};
 
 			auto& Resource	= Container.emplace_back();
-			Resource.Name	= Name;
 			Resource.Handle = Handle;
 			Resource.Desc	= Desc;
 			return Handle;
@@ -175,10 +174,8 @@ namespace RHI
 		{
 			switch (Handle.Type)
 			{
-			case RgResourceType::Buffer:
-				return Buffers[Handle.Id].Name;
 			case RgResourceType::Texture:
-				return Textures[Handle.Id].Name;
+				return Textures[Handle.Id].Desc.Name;
 			}
 			return "<unknown>";
 		}

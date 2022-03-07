@@ -103,11 +103,11 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 			ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
 
 			RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
-			Record.ShaderIdentifier									= RaytracingPipelineStates::g_DefaultSID;
-			Record.RootArguments.MaterialIndex						= static_cast<UINT>(i);
-			Record.RootArguments.Padding							= 0xDEADBEEF;
-			Record.RootArguments.VertexBuffer						= VertexBuffer->GetGPUVirtualAddress();
-			Record.RootArguments.IndexBuffer						= IndexBuffer->GetGPUVirtualAddress();
+			Record.ShaderIdentifier										 = RaytracingPipelineStates::g_DefaultSID;
+			Record.RootArguments.MaterialIndex							 = static_cast<UINT>(i);
+			Record.RootArguments.Padding								 = 0xDEADBEEF;
+			Record.RootArguments.VertexBuffer							 = VertexBuffer->GetGPUVirtualAddress();
+			Record.RootArguments.IndexBuffer							 = IndexBuffer->GetGPUVirtualAddress();
 
 			HitGroupShaderTable->AddShaderRecord(Record);
 		}
@@ -158,21 +158,12 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 		RHI::RgResourceHandle OutputUav;
 	} PathTraceArgs;
 	PathTraceArgs.Output = Graph.Create<RHI::D3D12Texture>(
-		"Path Trace Output",
-		RHI::RgTextureDesc()
+		RHI::RgTextureDesc("Path Trace Output")
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowUnorderedAccess());
-	PathTraceArgs.OutputSrv = Graph.Create<RHI::D3D12ShaderResourceView>(
-		"Path Trace Output Srv",
-		RHI::RgViewDesc()
-			.SetResource(PathTraceArgs.Output)
-			.AsTextureSrv());
-	PathTraceArgs.OutputUav = Graph.Create<RHI::D3D12UnorderedAccessView>(
-		"Path Trace Output Uav",
-		RHI::RgViewDesc()
-			.SetResource(PathTraceArgs.Output)
-			.AsTextureUav());
+	PathTraceArgs.OutputSrv = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
+	PathTraceArgs.OutputUav = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass(
 			 "Path Trace")
@@ -239,5 +230,5 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 
 	Graph.Execute(Context);
 
-	Viewport	  = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
+	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }

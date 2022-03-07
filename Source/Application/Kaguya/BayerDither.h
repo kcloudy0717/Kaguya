@@ -27,9 +27,9 @@ static BayerDitherParameters AddBayerDitherPass(RHI::RenderGraph& Graph, const V
 
 	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	BayerDitherArgs.Output = Graph.Create<RHI::D3D12Texture>("Bayer Dither Output", RHI::RgTextureDesc().SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
-	BayerDitherArgs.Srv	   = Graph.Create<RHI::D3D12ShaderResourceView>("Bayer Dither Srv", RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureSrv());
-	BayerDitherArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>("Bayer Dither Uav", RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureUav());
+	BayerDitherArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bayer Dither Output").SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	BayerDitherArgs.Srv	   = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureSrv());
+	BayerDitherArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Bayer Dither")
 		.Read(Inputs.Input)

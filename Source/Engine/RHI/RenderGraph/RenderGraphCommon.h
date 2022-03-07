@@ -79,6 +79,12 @@ namespace RHI
 
 	struct RgTextureDesc
 	{
+		RgTextureDesc() noexcept = default;
+		RgTextureDesc(std::string_view Name)
+			: Name(Name)
+		{
+		}
+
 		RgTextureDesc& SetFormat(DXGI_FORMAT Format)
 		{
 			this->Format = Format;
@@ -129,6 +135,7 @@ namespace RHI
 			return *this;
 		}
 
+		std::string_view				 Name;
 		DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
 		RgTextureType					 Type				 = RgTextureType::Texture2D;
 		u32								 Width				 = 1;
@@ -268,7 +275,6 @@ namespace RHI
 
 	struct RgResource
 	{
-		std::string_view Name;
 		RgResourceHandle Handle;
 	};
 

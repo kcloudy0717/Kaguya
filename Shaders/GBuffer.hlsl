@@ -10,8 +10,8 @@ struct GlobalConstants
 {
 	Camera Camera;
 
-    uint NumMeshes;
-    uint NumLights;
+	uint NumMeshes;
+	uint NumLights;
 };
 
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b1, space0);
@@ -22,8 +22,8 @@ StructuredBuffer<Mesh>	   g_Meshes : register(t2, space0);
 
 struct MRT
 {
-	float4 Albedo : SV_Target0;
-	float4 Normal : SV_Target1;
+	float4 Normal : SV_Target0;
+	uint   MaterialIndex : SV_Target1;
 	float2 Motion : SV_Target2;
 };
 
@@ -60,21 +60,14 @@ VertexAttributes VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOO
 
 MRT PSMain(VertexAttributes input)
 {
-	Mesh	 mesh	  = g_Meshes[MeshIndex];
-	Material material = g_Materials[mesh.MaterialIndex];
-	if (material.Albedo != -1)
-	{
-		Texture2D Albedo   = HLSL_TEXTURE2D(material.Albedo);
-		material.baseColor = Albedo.Sample(g_SamplerAnisotropicWrap, input.TexCoord).rgb;
-	}
-
+	Mesh   mesh			  = g_Meshes[MeshIndex];
 	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;
 	float3 previousPosNDC = input.PrevPosition.xyz / input.PrevPosition.w;
 	float2 velocity		  = currentPosNDC.xy - previousPosNDC.xy;
 
 	MRT mrt;
-	mrt.Albedo = float4(material.baseColor, 1.0f);
-	mrt.Normal = float4(input.N, 1.0f);
-	mrt.Motion = velocity;
+	mrt.Normal		  = float4(input.N, 1.0f);
+	mrt.MaterialIndex = mesh.MaterialIndex;
+	mrt.Motion		  = velocity;
 	return mrt;
 }

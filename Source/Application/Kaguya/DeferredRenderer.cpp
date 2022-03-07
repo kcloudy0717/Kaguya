@@ -81,7 +81,7 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 	if (ImGui::Begin("Renderer"))
 	{
 		ImGui::Text("Deferred Renderer");
-		constexpr const char* View[] = { "Albedo", "Normal", "Motion", "Depth" };
+		constexpr const char* View[] = { "Normal", "Material Id", "Motion", "Depth" };
 		ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
 	}
 	ImGui::End();
@@ -200,60 +200,56 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 
 	struct GBufferParameters
 	{
-		RHI::RgResourceHandle Albedo;
 		RHI::RgResourceHandle Normal;
+		RHI::RgResourceHandle MaterialId;
 		RHI::RgResourceHandle Motion;
 		RHI::RgResourceHandle Depth;
 
-		RHI::RgResourceHandle AlbedoRtv;
-		RHI::RgResourceHandle NormalRtv;
-		RHI::RgResourceHandle MotionRtv;
+		RHI::RgResourceHandle RtvNormal;
+		RHI::RgResourceHandle RtvMaterialId;
+		RHI::RgResourceHandle RtvMotion;
 		RHI::RgResourceHandle Dsv;
 
-		RHI::RgResourceHandle AlbedoSrv;
-		RHI::RgResourceHandle NormalSrv;
-		RHI::RgResourceHandle MotionSrv;
-		RHI::RgResourceHandle DepthSrv;
+		RHI::RgResourceHandle SrvNormal;
+		RHI::RgResourceHandle SrvMaterialId;
+		RHI::RgResourceHandle SrvMotion;
+		RHI::RgResourceHandle SrvDepth;
 	} GBufferArgs;
 	FLOAT Color[]	   = { 0, 0, 0, 0 };
-	GBufferArgs.Albedo = Graph.Create<RHI::D3D12Texture>(
-		"Albedo",
-		RHI::RgTextureDesc()
-			.SetFormat(DXGI_FORMAT_R8G8B8A8_UNORM)
-			.SetExtent(View.Width, View.Height, 1)
-			.AllowRenderTarget()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R8G8B8A8_UNORM, Color)));
 	GBufferArgs.Normal = Graph.Create<RHI::D3D12Texture>(
-		"Normal",
-		RHI::RgTextureDesc()
+		RHI::RgTextureDesc("Normal")
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
+	GBufferArgs.MaterialId = Graph.Create<RHI::D3D12Texture>(
+		RHI::RgTextureDesc("Material Id")
+			.SetFormat(DXGI_FORMAT_R32_UINT)
+			.SetExtent(View.Width, View.Height, 1)
+			.AllowRenderTarget()
+			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32_UINT, Color)));
 	GBufferArgs.Motion = Graph.Create<RHI::D3D12Texture>(
-		"Motion",
-		RHI::RgTextureDesc()
+		RHI::RgTextureDesc("Motion")
 			.SetFormat(DXGI_FORMAT_R16G16_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowRenderTarget()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
 	GBufferArgs.Depth = Graph.Create<RHI::D3D12Texture>(
-		"Depth",
-		RHI::RgTextureDesc()
+		RHI::RgTextureDesc("Depth")
 			.SetFormat(DXGI_FORMAT_D32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowDepthStencil()
 			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
 
-	GBufferArgs.AlbedoRtv = Graph.Create<RHI::D3D12RenderTargetView>("AlbedoRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Albedo).AsRtv(false));
-	GBufferArgs.NormalRtv = Graph.Create<RHI::D3D12RenderTargetView>("NormalRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsRtv(false));
-	GBufferArgs.MotionRtv = Graph.Create<RHI::D3D12RenderTargetView>("MotionRtv", RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsRtv(false));
-	GBufferArgs.Dsv		  = Graph.Create<RHI::D3D12DepthStencilView>("Dsv", RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsDsv());
+	GBufferArgs.RtvNormal	  = Graph.Create<RHI::D3D12RenderTargetView>(RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsRtv(false));
+	GBufferArgs.RtvMaterialId = Graph.Create<RHI::D3D12RenderTargetView>(RHI::RgViewDesc().SetResource(GBufferArgs.MaterialId).AsRtv(false));
+	GBufferArgs.RtvMotion	  = Graph.Create<RHI::D3D12RenderTargetView>(RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsRtv(false));
+	GBufferArgs.Dsv			  = Graph.Create<RHI::D3D12DepthStencilView>(RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsDsv());
 
-	GBufferArgs.AlbedoSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Albedo Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Albedo).AsTextureSrv());
-	GBufferArgs.NormalSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Normal Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsTextureSrv());
-	GBufferArgs.MotionSrv = Graph.Create<RHI::D3D12ShaderResourceView>("Motion Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsTextureSrv());
-	GBufferArgs.DepthSrv  = Graph.Create<RHI::D3D12ShaderResourceView>("Depth Srv", RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsTextureSrv());
+	GBufferArgs.SrvNormal	  = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsTextureSrv());
+	GBufferArgs.SrvMaterialId = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(GBufferArgs.MaterialId).AsTextureSrv());
+	GBufferArgs.SrvMotion	  = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(GBufferArgs.Motion).AsTextureSrv());
+	GBufferArgs.SrvDepth	  = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(GBufferArgs.Depth).AsTextureSrv());
 
 #if USE_MESH_SHADERS
 	Graph.AddRenderPass("GBuffer (Mesh Shaders)")
@@ -293,8 +289,8 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 				 });
 #else
 	Graph.AddRenderPass("GBuffer")
-		.Write(&GBufferArgs.Albedo)
 		.Write(&GBufferArgs.Normal)
+		.Write(&GBufferArgs.MaterialId)
 		.Write(&GBufferArgs.Motion)
 		.Write(&GBufferArgs.Depth)
 		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
@@ -311,9 +307,9 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
 
 					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.AlbedoRtv),
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.NormalRtv),
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.MotionRtv)
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvNormal),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvMaterialId),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvMotion)
 					 };
 					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
 
@@ -331,15 +327,15 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 #endif //
 
 	RHI::RgResourceHandle Views[] = {
-		GBufferArgs.AlbedoSrv,
-		GBufferArgs.NormalSrv,
-		GBufferArgs.MotionSrv,
-		GBufferArgs.DepthSrv,
+		GBufferArgs.SrvNormal,
+		GBufferArgs.SrvMaterialId,
+		GBufferArgs.SrvMotion,
+		GBufferArgs.SrvDepth,
 	};
 
 	Graph.GetEpiloguePass()
-		.Read(GBufferArgs.Albedo)
 		.Read(GBufferArgs.Normal)
+		.Read(GBufferArgs.MaterialId)
 		.Read(GBufferArgs.Motion)
 		.Read(GBufferArgs.Depth);
 
