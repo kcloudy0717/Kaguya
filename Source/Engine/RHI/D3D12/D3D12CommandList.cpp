@@ -14,7 +14,7 @@ namespace RHI
 
 	Arc<ID3D12CommandAllocator> D3D12CommandAllocatorPool::RequestCommandAllocator()
 	{
-		auto CreateCommandAllocator = [this]()
+		auto CreateCommandAllocator = [this]
 		{
 			Arc<ID3D12CommandAllocator> CommandAllocator;
 			VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
@@ -95,18 +95,14 @@ namespace RHI
 		D3D12_RESOURCE_STATES State,
 		UINT				  Subresource /*= D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES*/)
 	{
-		// TODO: There might be some logic and cases here im missing, come back and edit if anything goes boom
-
 		CResourceState& ResourceState = ResourceStateTracker.GetResourceState(Resource);
 		// First use on the command list
 		if (ResourceState.IsUnknown())
 		{
-			PendingResourceBarrier PendingResourceBarrier = {
+			ResourceStateTracker.Add(PendingResourceBarrier{
 				.Resource	 = Resource,
 				.State		 = State,
-				.Subresource = Subresource
-			};
-			ResourceStateTracker.Add(PendingResourceBarrier);
+				.Subresource = Subresource });
 		}
 		// Known state within the command list
 		else
@@ -138,7 +134,7 @@ namespace RHI
 			}
 		}
 
-		// Update resource state, potentially change state tracking mode
+		// Update command list resource state
 		ResourceState.SetSubresourceState(Subresource, State);
 	}
 

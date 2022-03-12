@@ -4,12 +4,30 @@
 
 namespace RHI
 {
+	static Arc<ID3D12DescriptorHeap> CreateDescriptorHeap(
+		ID3D12Device*				Device,
+		D3D12_DESCRIPTOR_HEAP_TYPE	Type,
+		u32							NumDescriptors,
+		D3D12_DESCRIPTOR_HEAP_FLAGS Flags,
+		u32							NodeMask)
+	{
+		Arc<ID3D12DescriptorHeap>  DescriptorHeap;
+		D3D12_DESCRIPTOR_HEAP_DESC Desc = {
+			.Type			= Type,
+			.NumDescriptors = NumDescriptors,
+			.Flags			= Flags,
+			.NodeMask		= NodeMask
+		};
+		VERIFY_D3D12_API(Device->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
+		return DescriptorHeap;
+	}
+
 	D3D12DescriptorHeap::D3D12DescriptorHeap(
 		D3D12LinkedDevice*		   Parent,
 		D3D12_DESCRIPTOR_HEAP_TYPE Type,
 		UINT					   NumDescriptors)
 		: D3D12LinkedDeviceChild(Parent)
-		, DescriptorHeap(InitializeDescriptorHeap(Type, NumDescriptors))
+		, DescriptorHeap(CreateDescriptorHeap(Parent->GetDevice(), Type, NumDescriptors, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, Parent->GetNodeMask()))
 		, Desc(DescriptorHeap->GetDesc())
 		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
 		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
@@ -44,19 +62,109 @@ namespace RHI
 		return CD3DX12_GPU_DESCRIPTOR_HANDLE(GpuBaseAddress, static_cast<INT>(Index), DescriptorSize);
 	}
 
-	Arc<ID3D12DescriptorHeap> D3D12DescriptorHeap::InitializeDescriptorHeap(
-		D3D12_DESCRIPTOR_HEAP_TYPE Type,
-		UINT					   NumDescriptors)
+	CDescriptorHeapManager::CDescriptorHeapManager(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT PageSize)
+		: D3D12LinkedDeviceChild(Parent)
+		, Desc({ Type,
+				 PageSize,
+				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+				 Parent->GetNodeMask() })
+		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
 	{
-		Arc<ID3D12DescriptorHeap>  DescriptorHeap;
-		D3D12_DESCRIPTOR_HEAP_DESC Desc = {
-			.Type			= Type,
-			.NumDescriptors = NumDescriptors,
-			.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			.NodeMask		= Parent->GetNodeMask()
-		};
-		VERIFY_D3D12_API(Parent->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
-		return DescriptorHeap;
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE CDescriptorHeapManager::AllocateHeapSlot(UINT& OutDescriptorHeapIndex)
+	{
+		MutexGuard Guard(Mutex);
+
+		if (FreeHeaps.empty())
+		{
+			AllocateHeap(); // throw( _com_error )
+		}
+		assert(!FreeHeaps.empty());
+		UINT		Index	  = FreeHeaps.front();
+		SHeapEntry& HeapEntry = Heaps[Index];
+		assert(!HeapEntry.FreeList.empty());
+		SFreeRange&					Range = *HeapEntry.FreeList.begin();
+		D3D12_CPU_DESCRIPTOR_HANDLE Ret	  = { Range.Start };
+		Range.Start += DescriptorSize;
+
+		if (Range.Start == Range.End)
+		{
+			HeapEntry.FreeList.pop_front();
+			if (HeapEntry.FreeList.empty())
+			{
+				FreeHeaps.pop_front();
+			}
+		}
+		OutDescriptorHeapIndex = Index;
+		return Ret;
+	}
+
+	void CDescriptorHeapManager::FreeHeapSlot(D3D12_CPU_DESCRIPTOR_HANDLE Offset, UINT DescriptorHeapIndex) noexcept
+	{
+		MutexGuard Guard(Mutex);
+		try
+		{
+			assert(DescriptorHeapIndex < Heaps.size());
+			SHeapEntry& HeapEntry = Heaps[DescriptorHeapIndex];
+
+			SFreeRange NewRange = {
+				Offset.ptr,
+				Offset.ptr + DescriptorSize
+			};
+
+			bool bFound = false;
+			for (auto Iter = HeapEntry.FreeList.begin(), End = HeapEntry.FreeList.end();
+				 Iter != End && !bFound;
+				 ++Iter)
+			{
+				SFreeRange& Range = *Iter;
+				assert(Range.Start <= Range.End);
+				if (Range.Start == Offset.ptr + DescriptorSize)
+				{
+					Range.Start = Offset.ptr;
+					bFound		= true;
+				}
+				else if (Range.End == Offset.ptr)
+				{
+					Range.End += DescriptorSize;
+					bFound = true;
+				}
+				else
+				{
+					assert(Range.End < Offset.ptr || Range.Start > Offset.ptr);
+					if (Range.Start > Offset.ptr)
+					{
+						HeapEntry.FreeList.insert(Iter, NewRange); // throw( bad_alloc )
+						bFound = true;
+					}
+				}
+			}
+
+			if (!bFound)
+			{
+				if (HeapEntry.FreeList.empty())
+				{
+					FreeHeaps.push_back(DescriptorHeapIndex); // throw( bad_alloc )
+				}
+				HeapEntry.FreeList.push_back(NewRange); // throw( bad_alloc )
+			}
+		}
+		catch (std::bad_alloc&)
+		{
+			// Do nothing - there will be slots that can no longer be reclaimed.
+		}
+	}
+
+	void CDescriptorHeapManager::AllocateHeap()
+	{
+		SHeapEntry NewEntry;
+		VERIFY_D3D12_API(Parent->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&NewEntry.DescriptorHeap)));
+		D3D12_CPU_DESCRIPTOR_HANDLE HeapBase = NewEntry.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		NewEntry.FreeList.push_back({ HeapBase.ptr, HeapBase.ptr + Desc.NumDescriptors * DescriptorSize }); // throw( bad_alloc )
+
+		Heaps.emplace_back(std::move(NewEntry));				  // throw( bad_alloc )
+		FreeHeaps.push_back(static_cast<UINT>(Heaps.size() - 1)); // throw( bad_alloc )
 	}
 
 	D3D12OnlineDescriptorHeap::D3D12OnlineDescriptorHeap(
@@ -69,7 +177,7 @@ namespace RHI
 				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 				 Parent->GetNodeMask() })
 		, NumDescriptors(NumDescriptors)
-		, DescriptorHeap(InitializeDescriptorHeap(Type, NumDescriptors))
+		, DescriptorHeap(CreateDescriptorHeap(Parent->GetDevice(), Type, NumDescriptors, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, Parent->GetNodeMask()))
 		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
 		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
 		, GraphicsHandleCache(Parent, Type)
@@ -257,125 +365,5 @@ namespace RHI
 			GpuBaseAddress,
 			CommandList);
 		this->NumDescriptors -= NumDescriptorsCommitted;
-	}
-
-	Arc<ID3D12DescriptorHeap> D3D12OnlineDescriptorHeap::InitializeDescriptorHeap(
-		D3D12_DESCRIPTOR_HEAP_TYPE Type,
-		UINT					   NumDescriptors)
-	{
-		Arc<ID3D12DescriptorHeap>  DescriptorHeap;
-		D3D12_DESCRIPTOR_HEAP_DESC Desc = {
-			.Type			= Type,
-			.NumDescriptors = NumDescriptors,
-			.Flags			= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			.NodeMask		= Parent->GetNodeMask()
-		};
-		VERIFY_D3D12_API(Parent->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&DescriptorHeap)));
-		return DescriptorHeap;
-	}
-
-	CDescriptorHeapManager::CDescriptorHeapManager(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT PageSize)
-		: D3D12LinkedDeviceChild(Parent)
-		, Desc({ Type,
-				 PageSize,
-				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-				 Parent->GetNodeMask() })
-		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
-	{
-	}
-
-	D3D12_CPU_DESCRIPTOR_HANDLE CDescriptorHeapManager::AllocateHeapSlot(UINT& OutDescriptorHeapIndex)
-	{
-		MutexGuard Guard(Mutex);
-
-		if (FreeHeaps.empty())
-		{
-			AllocateHeap(); // throw( _com_error )
-		}
-		assert(!FreeHeaps.empty());
-		UINT		Index	  = FreeHeaps.front();
-		SHeapEntry& HeapEntry = Heaps[Index];
-		assert(!HeapEntry.FreeList.empty());
-		SFreeRange&					Range = *HeapEntry.FreeList.begin();
-		D3D12_CPU_DESCRIPTOR_HANDLE Ret	  = { Range.Start };
-		Range.Start += DescriptorSize;
-
-		if (Range.Start == Range.End)
-		{
-			HeapEntry.FreeList.pop_front();
-			if (HeapEntry.FreeList.empty())
-			{
-				FreeHeaps.pop_front();
-			}
-		}
-		OutDescriptorHeapIndex = Index;
-		return Ret;
-	}
-
-	void CDescriptorHeapManager::FreeHeapSlot(D3D12_CPU_DESCRIPTOR_HANDLE Offset, UINT DescriptorHeapIndex) noexcept
-	{
-		MutexGuard Guard(Mutex);
-		try
-		{
-			assert(DescriptorHeapIndex < Heaps.size());
-			SHeapEntry& HeapEntry = Heaps[DescriptorHeapIndex];
-
-			SFreeRange NewRange = {
-				Offset.ptr,
-				Offset.ptr + DescriptorSize
-			};
-
-			bool bFound = false;
-			for (auto Iter = HeapEntry.FreeList.begin(), End = HeapEntry.FreeList.end();
-				 Iter != End && !bFound;
-				 ++Iter)
-			{
-				SFreeRange& Range = *Iter;
-				assert(Range.Start <= Range.End);
-				if (Range.Start == Offset.ptr + DescriptorSize)
-				{
-					Range.Start = Offset.ptr;
-					bFound		= true;
-				}
-				else if (Range.End == Offset.ptr)
-				{
-					Range.End += DescriptorSize;
-					bFound = true;
-				}
-				else
-				{
-					assert(Range.End < Offset.ptr || Range.Start > Offset.ptr);
-					if (Range.Start > Offset.ptr)
-					{
-						HeapEntry.FreeList.insert(Iter, NewRange); // throw( bad_alloc )
-						bFound = true;
-					}
-				}
-			}
-
-			if (!bFound)
-			{
-				if (HeapEntry.FreeList.empty())
-				{
-					FreeHeaps.push_back(DescriptorHeapIndex); // throw( bad_alloc )
-				}
-				HeapEntry.FreeList.push_back(NewRange); // throw( bad_alloc )
-			}
-		}
-		catch (std::bad_alloc&)
-		{
-			// Do nothing - there will be slots that can no longer be reclaimed.
-		}
-	}
-
-	void CDescriptorHeapManager::AllocateHeap()
-	{
-		SHeapEntry NewEntry;
-		VERIFY_D3D12_API(Parent->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&NewEntry.DescriptorHeap)));
-		D3D12_CPU_DESCRIPTOR_HANDLE HeapBase = NewEntry.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		NewEntry.FreeList.push_back({ HeapBase.ptr, HeapBase.ptr + Desc.NumDescriptors * DescriptorSize }); // throw( bad_alloc )
-
-		Heaps.emplace_back(std::move(NewEntry));				  // throw( bad_alloc )
-		FreeHeaps.push_back(static_cast<UINT>(Heaps.size() - 1)); // throw( bad_alloc )
 	}
 } // namespace RHI

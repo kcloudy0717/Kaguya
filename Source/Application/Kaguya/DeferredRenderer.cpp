@@ -9,7 +9,7 @@ void DeferredRenderer::Initialize()
 	PipelineStates::Compile(Device, Registry);
 
 #if USE_MESH_SHADERS
-	CommandSignatureDesc Builder(6, sizeof(CommandSignatureParams));
+	RHI::CommandSignatureDesc Builder(6, sizeof(CommandSignatureParams));
 	Builder.AddConstant(0, 0, 1);
 	Builder.AddShaderResourceView(1);
 	Builder.AddShaderResourceView(2);
@@ -25,7 +25,7 @@ void DeferredRenderer::Initialize()
 #endif
 
 #if USE_MESH_SHADERS
-	CommandSignature = D3D12CommandSignature(
+	CommandSignature = RHI::D3D12CommandSignature(
 		Device,
 		Builder,
 		Registry.GetRootSignature(RootSignatures::Meshlet)->GetApiHandle());
@@ -42,7 +42,7 @@ void DeferredRenderer::Initialize()
 		sizeof(CommandSignatureParams),
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	UAV = RHI::D3D12UnorderedAccessView(Device->GetDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
+	IndirectCommandBufferUav = RHI::D3D12UnorderedAccessView(Device->GetDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
 
 	Materials = RHI::D3D12Buffer(
 		Device->GetDevice(),
@@ -186,7 +186,7 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 
 			AsyncCompute.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
 			AsyncCompute->SetComputeRootShaderResourceView(1, Meshes.GetGpuVirtualAddress());
-			AsyncCompute->SetComputeRootDescriptorTable(2, UAV.GetGpuHandle());
+			AsyncCompute->SetComputeRootDescriptorTable(2, IndirectCommandBufferUav.GetGpuHandle());
 
 			AsyncCompute.Dispatch1D<128>(NumMeshes);
 		}
@@ -253,11 +253,11 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 
 #if USE_MESH_SHADERS
 	Graph.AddRenderPass("GBuffer (Mesh Shaders)")
-		.Write(&GBufferArgs.Albedo)
 		.Write(&GBufferArgs.Normal)
+		.Write(&GBufferArgs.MaterialId)
 		.Write(&GBufferArgs.Motion)
 		.Write(&GBufferArgs.Depth)
-		.Execute([=, this](RenderGraphRegistry& Registry, D3D12CommandContext& Context)
+		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Meshlet));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::Meshlet));
@@ -270,9 +270,9 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
 
 					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.AlbedoRtv),
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.NormalRtv),
-						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.MotionRtv)
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvNormal),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvMaterialId),
+						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvMotion)
 					 };
 					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
 

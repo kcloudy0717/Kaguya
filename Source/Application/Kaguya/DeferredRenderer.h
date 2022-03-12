@@ -43,7 +43,7 @@ private:
 	RHI::D3D12CommandSignature CommandSignature;
 
 	RHI::D3D12Buffer			  IndirectCommandBuffer;
-	RHI::D3D12UnorderedAccessView UAV;
+	RHI::D3D12UnorderedAccessView IndirectCommandBufferUav;
 
 	std::vector<StaticMeshComponent*> StaticMeshes;
 	std::vector<Hlsl::Mesh>			  HlslMeshes;

@@ -53,11 +53,6 @@ namespace RHI
 		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(UINT Index) const noexcept;
 
 	private:
-		Arc<ID3D12DescriptorHeap> InitializeDescriptorHeap(
-			D3D12_DESCRIPTOR_HEAP_TYPE Type,
-			UINT					   NumDescriptors);
-
-	private:
 		Arc<ID3D12DescriptorHeap>	DescriptorHeap;
 		D3D12_DESCRIPTOR_HEAP_DESC	Desc;
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
@@ -188,11 +183,6 @@ namespace RHI
 
 		void CommitGraphicsRootDescriptorTables(ID3D12GraphicsCommandList* CommandList);
 		void CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CommandList);
-
-	private:
-		Arc<ID3D12DescriptorHeap> InitializeDescriptorHeap(
-			D3D12_DESCRIPTOR_HEAP_TYPE Type,
-			UINT					   NumDescriptors);
 
 	private:
 		const D3D12_DESCRIPTOR_HEAP_DESC Desc;

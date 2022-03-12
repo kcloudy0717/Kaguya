@@ -1,11 +1,9 @@
 #pragma once
 #include "D3D12Core.h"
+#include "D3D12Resource.h"
 
 namespace RHI
 {
-	class D3D12Resource;
-	class D3D12CommandQueue;
-
 	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 	{
 	public:

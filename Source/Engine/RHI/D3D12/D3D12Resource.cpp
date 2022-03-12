@@ -3,10 +3,10 @@
 
 namespace RHI
 {
-	// Is this even a word?
+	// Helper struct used to infer optimal resource state
 	struct ResourceStateDeterminer
 	{
-		ResourceStateDeterminer(const D3D12_RESOURCE_DESC& Desc, D3D12_HEAP_TYPE HeapType)
+		ResourceStateDeterminer(const D3D12_RESOURCE_DESC& Desc, D3D12_HEAP_TYPE HeapType) noexcept
 			: ShaderResource((Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
 			, DepthStencil((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
 			, RenderTarget((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
@@ -19,7 +19,7 @@ namespace RHI
 		{
 		}
 
-		[[nodiscard]] D3D12_RESOURCE_STATES InferInitialState() const
+		[[nodiscard]] D3D12_RESOURCE_STATES InferInitialState() const noexcept
 		{
 			if (Buffer)
 			{
@@ -63,6 +63,45 @@ namespace RHI
 		bool DeviceLocal;
 		bool ReadbackResource;
 	};
+
+	CResourceState::CResourceState(u32 NumSubresources)
+		: SubresourceStates(NumSubresources)
+	{
+	}
+
+	D3D12_RESOURCE_STATES CResourceState::GetSubresourceState(u32 Subresource) const
+	{
+		if (TrackingMode == ETrackingMode::PerResource)
+		{
+			return ResourceState;
+		}
+
+		return SubresourceStates[Subresource];
+	}
+
+	void CResourceState::SetSubresourceState(u32 Subresource, D3D12_RESOURCE_STATES State)
+	{
+		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
+		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceStates.size() == 1)
+		{
+			TrackingMode  = ETrackingMode::PerResource;
+			ResourceState = State;
+		}
+		else
+		{
+			// If we previous tracked resource per resource level, we need to update all
+			// all subresource states before proceeding
+			if (TrackingMode == ETrackingMode::PerResource)
+			{
+				TrackingMode = ETrackingMode::PerSubresource;
+				for (auto& SubresourceState : SubresourceStates)
+				{
+					SubresourceState = ResourceState;
+				}
+			}
+			SubresourceStates[Subresource] = State;
+		}
+	}
 
 	D3D12Resource::D3D12Resource(
 		D3D12LinkedDevice*	  Parent,

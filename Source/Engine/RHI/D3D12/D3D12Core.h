@@ -152,46 +152,6 @@ namespace RHI
 		UINT64		Value = 0;
 	};
 
-	// https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking
-	class CResourceState
-	{
-	public:
-		enum class ETrackingMode
-		{
-			PerResource,
-			PerSubresource
-		};
-
-		CResourceState() noexcept
-			: TrackingMode(ETrackingMode::PerResource)
-			, ResourceState(D3D12_RESOURCE_STATE_UNINITIALIZED)
-		{
-		}
-		explicit CResourceState(UINT NumSubresources)
-			: CResourceState()
-		{
-			SubresourceStates.resize(NumSubresources);
-		}
-
-		[[nodiscard]] auto begin() const noexcept { return SubresourceStates.begin(); }
-		[[nodiscard]] auto end() const noexcept { return SubresourceStates.end(); }
-
-		[[nodiscard]] bool IsUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
-		[[nodiscard]] bool IsUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
-
-		// Returns true if all subresources have the same state
-		[[nodiscard]] bool IsUniform() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
-
-		[[nodiscard]] D3D12_RESOURCE_STATES GetSubresourceState(UINT Subresource) const;
-
-		void SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State);
-
-	private:
-		ETrackingMode					   TrackingMode;
-		D3D12_RESOURCE_STATES			   ResourceState;
-		std::vector<D3D12_RESOURCE_STATES> SubresourceStates;
-	};
-
 	template<typename TResourceType>
 	class CFencePool
 	{
@@ -314,8 +274,7 @@ namespace RHI
 		{
 			if (Resource)
 			{
-				HRESULT Result = Resource->Map(0, nullptr, reinterpret_cast<void**>(&Address));
-				if (FAILED(Result))
+				if (FAILED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Address))))
 				{
 					Resource = nullptr;
 				}

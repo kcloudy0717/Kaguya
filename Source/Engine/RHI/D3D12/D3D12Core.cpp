@@ -76,7 +76,7 @@ namespace RHI
 
 	D3D12SyncHandle::operator bool() const noexcept
 	{
-		return Fence != nullptr;
+		return !!Fence;
 	}
 
 	auto D3D12SyncHandle::GetValue() const noexcept -> UINT64
@@ -95,39 +95,5 @@ namespace RHI
 	{
 		assert(static_cast<bool>(*this));
 		Fence->HostWaitForValue(Value);
-	}
-
-	D3D12_RESOURCE_STATES CResourceState::GetSubresourceState(UINT Subresource) const
-	{
-		if (TrackingMode == ETrackingMode::PerResource)
-		{
-			return ResourceState;
-		}
-
-		return SubresourceStates[Subresource];
-	}
-
-	void CResourceState::SetSubresourceState(UINT Subresource, D3D12_RESOURCE_STATES State)
-	{
-		// If setting all subresources, or the resource only has a single subresource, set the per-resource state
-		if (Subresource == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES || SubresourceStates.size() == 1)
-		{
-			TrackingMode  = ETrackingMode::PerResource;
-			ResourceState = State;
-		}
-		else
-		{
-			// If we previous tracked resource per resource level, we need to update all
-			// all subresource states before proceeding
-			if (TrackingMode == ETrackingMode::PerResource)
-			{
-				TrackingMode = ETrackingMode::PerSubresource;
-				for (auto& SubresourceState : SubresourceStates)
-				{
-					SubresourceState = ResourceState;
-				}
-			}
-			SubresourceStates[Subresource] = State;
-		}
 	}
 } // namespace RHI

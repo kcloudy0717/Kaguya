@@ -126,8 +126,7 @@ namespace RHI
 		D3D12PipelineState(const D3D12RootSignature&) = delete;
 		D3D12PipelineState& operator=(const D3D12PipelineState&) = delete;
 
-		[[nodiscard]] ID3D12PipelineState*	  GetApiHandle() const noexcept;
-		[[nodiscard]] RHI_PIPELINE_STATE_TYPE GetType() const noexcept { return Type; }
+		[[nodiscard]] ID3D12PipelineState* GetApiHandle() const noexcept;
 
 	private:
 		static AsyncTask<Arc<ID3D12PipelineState>> Create(
@@ -158,7 +157,6 @@ namespace RHI
 
 	private:
 		mutable Arc<ID3D12PipelineState>			PipelineState;
-		RHI_PIPELINE_STATE_TYPE						Type;
 		mutable AsyncTask<Arc<ID3D12PipelineState>> CompilationWork;
 	};
 
@@ -435,7 +433,7 @@ namespace RHI
 		D3D12_STATE_OBJECT_DESC Build();
 
 	private:
-		std::vector<std::wstring_view> BuildShaderExportList() const;
+		[[nodiscard]] std::vector<std::wstring_view> BuildShaderExportList() const;
 
 	private:
 		CD3DX12_STATE_OBJECT_DESC Desc;

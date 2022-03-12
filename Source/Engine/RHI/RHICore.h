@@ -185,8 +185,8 @@ enum class RHI_FACTOR
 	OneMinusSrcAlpha,	 // One minus the pixel-shader output alpha value
 	DstAlpha,			 // The render-target alpha value
 	OneMinusDstAlpha,	 // One minus the render-target alpha value
-	BlendFactor,		 // Constant color, set using Desc#SetBlendFactor()
-	OneMinusBlendFactor, // One minus constant color, set using Desc#SetBlendFactor()
+	BlendFactor,		 // Constant color, set using CommandList
+	OneMinusBlendFactor, // One minus constant color, set using CommandList
 	SrcAlphaSaturate,	 // (f, f, f, 1), where f = min(pixel shader output alpha, 1 - render-target pixel alpha)
 	Src1Color,			 // Fragment-shader output color 1
 	OneMinusSrc1Color,	 // One minus pixel-shader output color 1

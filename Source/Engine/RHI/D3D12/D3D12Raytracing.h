@@ -1,6 +1,5 @@
 #pragma once
 #include "D3D12Core.h"
-#include "D3D12LinkedDevice.h"
 #include "D3D12Resource.h"
 
 namespace RHI
@@ -38,8 +37,8 @@ namespace RHI
 	};
 
 	// https://developer.nvidia.com/blog/rtx-best-practices/
-	// We should rebuild the TLAS rather than update, It’s just easier to manage in most circumstances, and the cost savings
-	// to refit likely aren’t worth sacrificing quality of TLAS.
+	// We should rebuild the TLAS rather than update, Itï¿½s just easier to manage in most circumstances, and the cost savings
+	// to refit likely arenï¿½t worth sacrificing quality of TLAS.
 	class D3D12RaytracingScene
 	{
 	public:

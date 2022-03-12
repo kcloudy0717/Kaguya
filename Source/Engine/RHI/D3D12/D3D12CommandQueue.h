@@ -29,8 +29,8 @@ namespace RHI
 
 		void HostWaitForValue(UINT64 FenceValue);
 
-		void Wait(D3D12CommandQueue* CommandQueue);
-		void WaitForSyncHandle(const D3D12SyncHandle& SyncHandle);
+		void Wait(D3D12CommandQueue* CommandQueue) const;
+		void WaitForSyncHandle(const D3D12SyncHandle& SyncHandle) const;
 
 		void WaitIdle() { HostWaitForValue(Signal()); }
 
@@ -40,8 +40,6 @@ namespace RHI
 			bool					WaitForCompletion);
 
 	private:
-		Arc<ID3D12CommandQueue> InitializeCommandQueue();
-
 		[[nodiscard]] bool ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle);
 
 	private:

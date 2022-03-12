@@ -1,4 +1,5 @@
 #include "D3D12Raytracing.h"
+#include "D3D12LinkedDevice.h"
 
 namespace RHI
 {

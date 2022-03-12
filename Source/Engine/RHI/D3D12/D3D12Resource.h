@@ -3,6 +3,38 @@
 
 namespace RHI
 {
+	// https://microsoft.github.io/DirectX-Specs/d3d/CPUEfficiency.html#subresource-state-tracking
+	class CResourceState
+	{
+	public:
+		enum class ETrackingMode
+		{
+			PerResource,
+			PerSubresource
+		};
+
+		CResourceState() noexcept = default;
+		explicit CResourceState(u32 NumSubresources);
+
+		[[nodiscard]] auto begin() const noexcept { return SubresourceStates.begin(); }
+		[[nodiscard]] auto end() const noexcept { return SubresourceStates.end(); }
+
+		[[nodiscard]] bool IsUninitialized() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNINITIALIZED; }
+		[[nodiscard]] bool IsUnknown() const noexcept { return ResourceState == D3D12_RESOURCE_STATE_UNKNOWN; }
+
+		// Returns true if all subresources have the same state
+		[[nodiscard]] bool IsUniform() const noexcept { return TrackingMode == ETrackingMode::PerResource; }
+
+		[[nodiscard]] D3D12_RESOURCE_STATES GetSubresourceState(u32 Subresource) const;
+
+		void SetSubresourceState(u32 Subresource, D3D12_RESOURCE_STATES State);
+
+	private:
+		ETrackingMode					   TrackingMode	 = ETrackingMode::PerResource;
+		D3D12_RESOURCE_STATES			   ResourceState = D3D12_RESOURCE_STATE_UNINITIALIZED;
+		std::vector<D3D12_RESOURCE_STATES> SubresourceStates;
+	};
+
 	class D3D12Resource : public D3D12LinkedDeviceChild
 	{
 	public:
