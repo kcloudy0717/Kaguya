@@ -29,7 +29,7 @@ public:
 	UINT			  NumHitGroups = 0;
 	size_t			  NumInstances = 0;
 
-	RHI::D3D12RaytracingAccelerationStructureManager Manager;
+	RHI::D3D12RaytracingManager Manager;
 
 	RHI::D3D12RaytracingScene		  TopLevelAccelerationStructure;
 	std::vector<StaticMeshComponent*> StaticMeshes;

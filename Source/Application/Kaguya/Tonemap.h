@@ -43,7 +43,7 @@ static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& Vie
 
 	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	TonemapArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Tonemap Output").SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	TonemapArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Tonemap Output").SetFormat(Format).SetExtent(View.Width, View.Height, 1).SetAllowUnorderedAccess());
 	TonemapArgs.Srv	   = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(TonemapArgs.Output).AsTextureSrv());
 	TonemapArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(TonemapArgs.Output).AsTextureUav());
 

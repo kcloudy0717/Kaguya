@@ -14,7 +14,6 @@ namespace RHI
 		{
 			RgResourceHandle Handle = {};
 			Handle.Type				= Type;
-			Handle.State			= 1;
 			Handle.Version			= 0;
 			Handle.Id				= Array.size();
 			Array.emplace_back(std::forward<TArgs>(Args)...);
@@ -91,11 +90,15 @@ namespace RHI
 		}
 
 	private:
+		bool IsViewDirty(const RgView& View);
+
+	private:
 		RenderGraph*					Graph = nullptr;
 		RootSignatureRegistry			RootSignatureRegistry;
 		PipelineStateRegistry			PipelineStateRegistry;
 		RaytracingPipelineStateRegistry RaytracingPipelineStateRegistry;
 
+		// Cached desc table based on resource handle to prevent unnecessary recreation of resources
 		robin_hood::unordered_map<RgResourceHandle, RgBufferDesc>  BufferDescTable;
 		robin_hood::unordered_map<RgResourceHandle, RgTextureDesc> TextureDescTable;
 		robin_hood::unordered_map<RgResourceHandle, RgViewDesc>	   ViewDescTable;

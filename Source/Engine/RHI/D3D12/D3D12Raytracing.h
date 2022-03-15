@@ -37,8 +37,8 @@ namespace RHI
 	};
 
 	// https://developer.nvidia.com/blog/rtx-best-practices/
-	// We should rebuild the TLAS rather than update, It�s just easier to manage in most circumstances, and the cost savings
-	// to refit likely aren�t worth sacrificing quality of TLAS.
+	// We should rebuild the TLAS rather than update, It's just easier to manage in most circumstances, and the cost savings
+	// to refit likely aren't worth sacrificing quality of TLAS.
 	class D3D12RaytracingScene
 	{
 	public:
@@ -48,8 +48,11 @@ namespace RHI
 			RaytracingInstanceDescs.reserve(Size);
 		}
 
-		auto begin() noexcept { return RaytracingInstanceDescs.begin(); }
-		auto end() noexcept { return RaytracingInstanceDescs.end(); }
+		[[nodiscard]] auto begin() noexcept { return RaytracingInstanceDescs.begin(); }
+		[[nodiscard]] auto end() noexcept { return RaytracingInstanceDescs.end(); }
+
+		[[nodiscard]] auto begin() const noexcept { return RaytracingInstanceDescs.begin(); }
+		[[nodiscard]] auto end() const noexcept { return RaytracingInstanceDescs.end(); }
 
 		[[nodiscard]] size_t size() const noexcept { return RaytracingInstanceDescs.size(); }
 		[[nodiscard]] bool	 empty() const noexcept { return RaytracingInstanceDescs.empty(); }
@@ -102,13 +105,7 @@ namespace RHI
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetAddress() const noexcept { return VirtualAddress; }
 
 	private:
-		Arc<ID3D12Resource> InitializeResource(
-			UINT64				  PageSize,
-			D3D12_HEAP_TYPE		  HeapType,
-			D3D12_RESOURCE_STATES InitialResourceState);
-
-	private:
-		friend class D3D12RaytracingMemoryAllocator;
+		friend class D3D12RaytracingAllocator;
 
 		Arc<ID3D12Resource>		  Resource;
 		UINT64					  PageSize		 = 0;
@@ -119,11 +116,11 @@ namespace RHI
 		UINT64								 NumSubBlocks  = 0;
 	};
 
-	class D3D12RaytracingMemoryAllocator : public D3D12LinkedDeviceChild
+	class D3D12RaytracingAllocator : public D3D12LinkedDeviceChild
 	{
 	public:
-		D3D12RaytracingMemoryAllocator() noexcept = default;
-		D3D12RaytracingMemoryAllocator(
+		D3D12RaytracingAllocator() noexcept = default;
+		explicit D3D12RaytracingAllocator(
 			D3D12LinkedDevice*	  Parent,
 			D3D12_HEAP_TYPE		  HeapType,
 			D3D12_RESOURCE_STATES InitialResourceState,
@@ -136,7 +133,7 @@ namespace RHI
 
 		void Release(RaytracingMemorySection* Section);
 
-		UINT64 GetSize();
+		UINT64 GetSize() const noexcept;
 
 	private:
 		void CreatePage(UINT64 PageSize);
@@ -169,17 +166,20 @@ namespace RHI
 		D3D12SyncHandle			SyncHandle;
 	};
 
-	class D3D12RaytracingAccelerationStructureManager : public D3D12LinkedDeviceChild
+	class D3D12RaytracingManager : public D3D12LinkedDeviceChild
 	{
 	public:
-		D3D12RaytracingAccelerationStructureManager() noexcept = default;
-		explicit D3D12RaytracingAccelerationStructureManager(
+		D3D12RaytracingManager() noexcept = default;
+		explicit D3D12RaytracingManager(
 			D3D12LinkedDevice* Parent,
 			UINT64			   PageSize);
 
 		UINT64 Build(
 			ID3D12GraphicsCommandList4*									CommandList,
 			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& Inputs);
+
+		void Release(
+			UINT64 Index);
 
 		void Copy(
 			ID3D12GraphicsCommandList4* CommandList);
@@ -192,17 +192,14 @@ namespace RHI
 			UINT64			AccelerationStructureIndex,
 			D3D12SyncHandle SyncHandle);
 
-		D3D12_GPU_VIRTUAL_ADDRESS GetAccelerationStructureAddress(
+		D3D12_GPU_VIRTUAL_ADDRESS GetAddress(
 			UINT64 AccelerationStructureIndex);
 
 	private:
-		UINT64 AllocateAccelerationStructureIndex();
-
-		void ReleaseAccelerationStructure(UINT64 Index);
+		UINT64 AllocateASIndex();
+		void   ReleaseASIndex(UINT64 Index);
 
 	private:
-		UINT64 PageSize = 0;
-
 		UINT64 TotalUncompactedMemory = 0;
 		UINT64 TotalCompactedMemory	  = 0;
 
@@ -210,11 +207,11 @@ namespace RHI
 		std::queue<UINT64>						IndexQueue;
 		UINT64									Index = 0;
 
-		D3D12RaytracingMemoryAllocator ScratchPool;
-		D3D12RaytracingMemoryAllocator ResultPool;
-		D3D12RaytracingMemoryAllocator ResultCompactedPool;
-		D3D12RaytracingMemoryAllocator CompactedSizeGpuPool;
-		D3D12RaytracingMemoryAllocator CompactedSizeCpuPool;
+		D3D12RaytracingAllocator ScratchPool;
+		D3D12RaytracingAllocator ResultPool;
+		D3D12RaytracingAllocator ResultCompactedPool;
+		D3D12RaytracingAllocator CompactedSizeGpuPool;
+		D3D12RaytracingAllocator CompactedSizeCpuPool;
 	};
 
 	// ========== Miss shader table indexing ==========

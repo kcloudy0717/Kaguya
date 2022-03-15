@@ -126,31 +126,31 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 		RHI::RgResourceHandle SrvMotion;
 		RHI::RgResourceHandle SrvDepth;
 	} GBufferArgs;
-	FLOAT Color[]	   = { 0, 0, 0, 0 };
-	GBufferArgs.Normal = Graph.Create<RHI::D3D12Texture>(
-		RHI::RgTextureDesc("Normal")
-			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
-			.SetExtent(View.Width, View.Height, 1)
-			.AllowRenderTarget()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32G32B32A32_FLOAT, Color)));
+	constexpr f32 Color[] = { 0, 0, 0, 0 };
+	GBufferArgs.Normal	  = Graph.Create<RHI::D3D12Texture>(
+		   RHI::RgTextureDesc("Normal")
+			   .SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
+			   .SetExtent(View.Width, View.Height, 1)
+			   .SetAllowRenderTarget()
+			   .SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.MaterialId = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Material Id")
 			.SetFormat(DXGI_FORMAT_R32_UINT)
 			.SetExtent(View.Width, View.Height, 1)
-			.AllowRenderTarget()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R32_UINT, Color)));
+			.SetAllowRenderTarget()
+			.SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.Motion = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Motion")
 			.SetFormat(DXGI_FORMAT_R16G16_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
-			.AllowRenderTarget()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_R16G16_FLOAT, Color)));
+			.SetAllowRenderTarget()
+			.SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.Depth = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Depth")
 			.SetFormat(DXGI_FORMAT_D32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
-			.AllowDepthStencil()
-			.SetClearValue(CD3DX12_CLEAR_VALUE(DXGI_FORMAT_D32_FLOAT, 1.0f, 0xFF)));
+			.SetAllowDepthStencil()
+			.SetClearValue(RHI::RgClearValue(1.0f, 0xff)));
 
 	GBufferArgs.RtvNormal	  = Graph.Create<RHI::D3D12RenderTargetView>(RHI::RgViewDesc().SetResource(GBufferArgs.Normal).AsRtv(false));
 	GBufferArgs.RtvMaterialId = Graph.Create<RHI::D3D12RenderTargetView>(RHI::RgViewDesc().SetResource(GBufferArgs.MaterialId).AsRtv(false));

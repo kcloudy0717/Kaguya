@@ -88,16 +88,16 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 	BloomParameters BloomArgs;
 
 	constexpr DXGI_FORMAT Format = DXGI_FORMAT_R11G11B10_FLOAT;
-	BloomArgs.Output1[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 1a").SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
-	BloomArgs.Output1[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 1b").SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).AllowUnorderedAccess());
-	BloomArgs.Output2[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 2a").SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
-	BloomArgs.Output2[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 2b").SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).AllowUnorderedAccess());
-	BloomArgs.Output3[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 3a").SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
-	BloomArgs.Output3[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 3b").SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).AllowUnorderedAccess());
-	BloomArgs.Output4[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 4a").SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
-	BloomArgs.Output4[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 4b").SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).AllowUnorderedAccess());
-	BloomArgs.Output5[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 5a").SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
-	BloomArgs.Output5[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 5b").SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).AllowUnorderedAccess());
+	BloomArgs.Output1[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 1a").SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output1[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 1b").SetFormat(Format).SetExtent(kBloomWidth, kBloomHeight, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output2[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 2a").SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output2[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 2b").SetFormat(Format).SetExtent(kBloomWidth / 2, kBloomHeight / 2, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output3[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 3a").SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output3[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 3b").SetFormat(Format).SetExtent(kBloomWidth / 4, kBloomHeight / 4, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output4[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 4a").SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output4[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 4b").SetFormat(Format).SetExtent(kBloomWidth / 8, kBloomHeight / 8, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output5[0]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 5a").SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).SetAllowUnorderedAccess());
+	BloomArgs.Output5[1]		 = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Bloom Output 5b").SetFormat(Format).SetExtent(kBloomWidth / 16, kBloomHeight / 16, 1).SetAllowUnorderedAccess());
 
 	for (size_t i = 0; i < 2; ++i)
 	{

@@ -37,14 +37,12 @@ namespace RHI
 		void Invalidate()
 		{
 			Type	= RgResourceType::Unknown;
-			State	= 0;
 			Flags	= RG_RESOURCE_FLAG_NONE;
 			Version = 0;
 			Id		= UINT_MAX;
 		}
 
-		RgResourceType	Type	: 14; // 14 bit to represent type, might remove some bits from this and give it to version
-		u64				State	: 1;  // 1 bit to represent state of the handle, true = ready to use, vice versa
+		RgResourceType	Type	: 15; // 14 bit to represent type, might remove some bits from this and give it to version
 		RgResourceFlags Flags	: 1;
 		u64				Version : 16; // 16 bits to represent version should be more than enough, we can always just increase bit used if is not enough
 		u64				Id		: 32; // 32 bit unsigned int
@@ -78,12 +76,49 @@ namespace RHI
 		TextureCube
 	};
 
+	struct RgDepthStencilValue
+	{
+		f32 Depth;
+		u8	Stencil;
+	};
+
+	struct RgClearValue
+	{
+		RgClearValue() noexcept = default;
+		constexpr RgClearValue(const f32 Color[4])
+		{
+			this->Color[0] = Color[0];
+			this->Color[1] = Color[1];
+			this->Color[2] = Color[2];
+			this->Color[3] = Color[3];
+		}
+		constexpr RgClearValue(f32 Depth, u8 Stencil)
+			: DepthStencil{ Depth, Stencil }
+		{
+		}
+
+		union
+		{
+			f32					Color[4];
+			RgDepthStencilValue DepthStencil;
+		};
+	};
+
 	struct RgTextureDesc
 	{
 		RgTextureDesc() noexcept = default;
 		RgTextureDesc(std::string_view Name)
 			: Name(Name)
 		{
+		}
+
+		[[nodiscard]] bool operator==(const RgTextureDesc& RgTextureDesc) const noexcept
+		{
+			return memcmp(this, &RgTextureDesc, sizeof(RgTextureDesc)) == 0;
+		}
+		[[nodiscard]] bool operator!=(const RgTextureDesc& RgTextureDesc) const noexcept
+		{
+			return !(*this == RgTextureDesc);
 		}
 
 		RgTextureDesc& SetFormat(DXGI_FORMAT Format)
@@ -112,41 +147,41 @@ namespace RHI
 			return *this;
 		}
 
-		RgTextureDesc& AllowRenderTarget()
+		RgTextureDesc& SetAllowRenderTarget()
 		{
-			RenderTarget = true;
+			AllowRenderTarget = true;
 			return *this;
 		}
 
-		RgTextureDesc& AllowDepthStencil()
+		RgTextureDesc& SetAllowDepthStencil()
 		{
-			DepthStencil = true;
+			AllowDepthStencil = true;
 			return *this;
 		}
 
-		RgTextureDesc& AllowUnorderedAccess()
+		RgTextureDesc& SetAllowUnorderedAccess()
 		{
-			UnorderedAccess = true;
+			AllowUnorderedAccess = true;
 			return *this;
 		}
 
-		RgTextureDesc& SetClearValue(D3D12_CLEAR_VALUE ClearValue)
+		RgTextureDesc& SetClearValue(const RgClearValue& ClearValue)
 		{
-			this->OptimizedClearValue = ClearValue;
+			this->ClearValue = ClearValue;
 			return *this;
 		}
 
-		std::string_view				 Name;
-		DXGI_FORMAT						 Format				 = DXGI_FORMAT_UNKNOWN;
-		RgTextureType					 Type				 = RgTextureType::Texture2D;
-		u32								 Width				 = 1;
-		u32								 Height				 = 1;
-		u32								 DepthOrArraySize	 = 1;
-		u16								 MipLevels			 = 1;
-		bool							 RenderTarget		 = false;
-		bool							 DepthStencil		 = false;
-		bool							 UnorderedAccess	 = false;
-		std::optional<D3D12_CLEAR_VALUE> OptimizedClearValue = std::nullopt;
+		std::string_view Name;
+		DXGI_FORMAT		 Format				  = DXGI_FORMAT_UNKNOWN;
+		RgTextureType	 Type				  = RgTextureType::Texture2D;
+		u32				 Width				  = 1;
+		u32				 Height				  = 1;
+		u32				 DepthOrArraySize	  = 1;
+		u16				 MipLevels			  = 1;
+		bool			 AllowRenderTarget	  = false;
+		bool			 AllowDepthStencil	  = false;
+		bool			 AllowUnorderedAccess = false;
+		RgClearValue	 ClearValue			  = {};
 	};
 
 	enum class RgViewType
@@ -202,9 +237,18 @@ namespace RHI
 
 	struct RgViewDesc
 	{
+		[[nodiscard]] bool operator==(const RgViewDesc& RgViewDesc) const noexcept
+		{
+			return memcmp(this, &RgViewDesc, sizeof(RgViewDesc)) == 0;
+		}
+		[[nodiscard]] bool operator!=(const RgViewDesc& RgViewDesc) const noexcept
+		{
+			return !(*this == RgViewDesc);
+		}
+
 		RgViewDesc& SetResource(RgResourceHandle Resource)
 		{
-			this->Resource = Resource;
+			this->AssociatedResource = Resource;
 			return *this;
 		}
 
@@ -261,7 +305,7 @@ namespace RHI
 			return *this;
 		}
 
-		RgResourceHandle Resource;
+		RgResourceHandle AssociatedResource;
 		RgViewType		 Type;
 		union
 		{

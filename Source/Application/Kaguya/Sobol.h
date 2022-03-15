@@ -27,7 +27,7 @@ static SobolParameters AddSobolPass(RHI::RenderGraph& Graph, const View& View, S
 
 	constexpr DXGI_FORMAT Format = RHI::D3D12SwapChain::Format;
 
-	SobolArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Sobol Output").SetFormat(Format).SetExtent(View.Width, View.Height, 1).AllowUnorderedAccess());
+	SobolArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Sobol Output").SetFormat(Format).SetExtent(View.Width, View.Height, 1).SetAllowUnorderedAccess());
 	SobolArgs.Srv	 = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(SobolArgs.Output).AsTextureSrv());
 	SobolArgs.Uav	 = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(SobolArgs.Output).AsTextureUav());
 

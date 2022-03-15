@@ -27,4 +27,12 @@ namespace Asset
 		decltype(UniqueVertexIndices)().swap(UniqueVertexIndices);
 		decltype(PrimitiveIndices)().swap(PrimitiveIndices);
 	}
+
+	void Mesh::ResetRaytracingInfo()
+	{
+		AccelerationStructure = {};
+		BlasIndex			  = UINT64_MAX;
+		BlasValid			  = false;
+		BlasCompacted		  = false;
+	}
 } // namespace Asset

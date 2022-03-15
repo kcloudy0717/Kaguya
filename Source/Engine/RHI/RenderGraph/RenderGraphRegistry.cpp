@@ -35,9 +35,6 @@ namespace RHI
 
 	void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Device)
 	{
-		ShaderResourceViews.clear();
-		UnorderedAccessViews.clear();
-
 		this->Graph = Graph;
 		Buffers.resize(Graph->Buffers.size());
 		Textures.resize(Graph->Textures.size());
@@ -46,44 +43,51 @@ namespace RHI
 		ShaderResourceViews.resize(Graph->ShaderResourceViews.size());
 		UnorderedAccessViews.resize(Graph->UnorderedAccessViews.size());
 
+		// This is used to check to see if any view associated with the texture needs to be updated in case if texture is dirty
+		// The view does not check for this, so do it here manually
+		robin_hood::unordered_set<RgResourceHandle> TextureDirtyHandles;
+
 		for (size_t i = 0; i < Graph->Textures.size(); ++i)
 		{
-			auto& RHITexture = Graph->Textures[i];
+			const auto&		 RgTexture = Graph->Textures[i];
+			RgResourceHandle Handle	   = RgTexture.Handle;
+			assert(!Handle.IsImported());
 
-			RgResourceHandle& Handle = RHITexture.Handle;
-			auto			  Iter	 = TextureDescTable.find(Handle);
+			bool TextureDirty = false;
+			auto Iter		  = TextureDescTable.find(Handle);
 			if (Iter == TextureDescTable.end())
 			{
+				TextureDirty = true;
 			}
-
-			assert(!Handle.IsImported());
-			const RgTextureDesc& Desc = RHITexture.Desc;
-
-			if (Handle.State)
+			else
 			{
-				if (!Textures[i].GetResource() || Desc.Width != Textures[i].GetDesc().Width || Desc.Height != Textures[i].GetDesc().Height)
-				{
-					Handle.State = false;
-				}
-				else
-				{
-					continue;
-				}
+				TextureDirty = Iter->second != RgTexture.Desc;
 			}
-			Handle.State = true;
+			TextureDescTable[Handle] = RgTexture.Desc;
 
-			D3D12_RESOURCE_DESC	 ResourceDesc  = {};
-			D3D12_RESOURCE_FLAGS ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
+			if (!TextureDirty)
+			{
+				continue;
+			}
 
-			if (Desc.RenderTarget)
+			TextureDirtyHandles.insert(Handle);
+			const RgTextureDesc& Desc = RgTexture.Desc;
+
+			D3D12_RESOURCE_DESC				 ResourceDesc  = {};
+			D3D12_RESOURCE_FLAGS			 ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
+			std::optional<D3D12_CLEAR_VALUE> ClearValue	   = std::nullopt;
+
+			if (Desc.AllowRenderTarget)
 			{
 				ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+				ClearValue = CD3DX12_CLEAR_VALUE(Desc.Format, Desc.ClearValue.Color);
 			}
-			if (Desc.DepthStencil)
+			if (Desc.AllowDepthStencil)
 			{
 				ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+				ClearValue = CD3DX12_CLEAR_VALUE(Desc.Format, Desc.ClearValue.DepthStencil.Depth, Desc.ClearValue.DepthStencil.Stencil);
 			}
-			if (Desc.UnorderedAccess)
+			if (Desc.AllowUnorderedAccess)
 			{
 				ResourceFlags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 			}
@@ -91,123 +95,91 @@ namespace RHI
 			switch (Desc.Type)
 			{
 			case RgTextureType::Texture2D:
-				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-					Desc.Format,
-					Desc.Width,
-					Desc.Height,
-					1,
-					Desc.MipLevels,
-					1,
-					0,
-					ResourceFlags);
+				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(Desc.Format, Desc.Width, Desc.Height, 1, Desc.MipLevels, 1, 0, ResourceFlags);
 				break;
 			case RgTextureType::Texture2DArray:
-				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-					Desc.Format,
-					Desc.Width,
-					Desc.Height,
-					Desc.DepthOrArraySize,
-					Desc.MipLevels,
-					1,
-					0,
-					ResourceFlags);
+				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(Desc.Format, Desc.Width, Desc.Height, Desc.DepthOrArraySize, Desc.MipLevels, 1, 0, ResourceFlags);
 				break;
 			case RgTextureType::Texture3D:
-				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex3D(
-					Desc.Format,
-					Desc.Width,
-					Desc.Height,
-					Desc.DepthOrArraySize,
-					Desc.MipLevels,
-					ResourceFlags);
+				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex3D(Desc.Format, Desc.Width, Desc.Height, Desc.DepthOrArraySize, Desc.MipLevels, ResourceFlags);
 				break;
 			case RgTextureType::TextureCube:
-				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-					Desc.Format,
-					Desc.Width,
-					Desc.Height,
-					Desc.DepthOrArraySize,
-					Desc.MipLevels,
-					1,
-					0,
-					ResourceFlags);
+				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(Desc.Format, Desc.Width, Desc.Height, Desc.DepthOrArraySize, Desc.MipLevels, 1, 0, ResourceFlags);
 				break;
 			default:
 				break;
 			}
 
-			Textures[i]		  = D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, Desc.OptimizedClearValue);
-			std::wstring Name = std::wstring(RHITexture.Desc.Name.begin(), RHITexture.Desc.Name.end());
+			Textures[i]		  = D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, ClearValue);
+			std::wstring Name = std::wstring(RgTexture.Desc.Name.begin(), RgTexture.Desc.Name.end());
 			Textures[i].GetResource()->SetName(Name.data());
 		}
 
 		for (size_t i = 0; i < Graph->RenderTargetViews.size(); ++i)
 		{
-			const auto&		 RgView = Graph->RenderTargetViews[i];
-			RgResourceHandle Handle = RgView.Desc.Resource;
-
-			D3D12RenderTargetView& RenderTargetView = RenderTargetViews[i];
+			const auto& RgView = Graph->RenderTargetViews[i];
+			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
+			{
+				continue;
+			}
 
 			std::optional<UINT> ArraySlice = RgView.Desc.RgRtv.ArraySlice != -1 ? RgView.Desc.RgRtv.ArraySlice : std::optional<UINT>{};
 			std::optional<UINT> MipSlice   = RgView.Desc.RgRtv.MipSlice != -1 ? RgView.Desc.RgRtv.MipSlice : std::optional<UINT>{};
 			std::optional<UINT> ArraySize  = RgView.Desc.RgRtv.ArraySize != -1 ? RgView.Desc.RgRtv.ArraySize : std::optional<UINT>{};
-			if (Handle.IsImported())
+			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				RenderTargetView = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RenderTargetViews[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
 			else
 			{
-				RenderTargetView = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RenderTargetViews[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
 		}
 
 		for (size_t i = 0; i < Graph->DepthStencilViews.size(); ++i)
 		{
-			const auto&		 RgView = Graph->DepthStencilViews[i];
-			RgResourceHandle Handle = RgView.Desc.Resource;
-
-			D3D12DepthStencilView& DepthStencilView = DepthStencilViews[i];
+			const auto& RgView = Graph->DepthStencilViews[i];
+			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
+			{
+				continue;
+			}
 
 			std::optional<UINT> ArraySlice = RgView.Desc.RgDsv.ArraySlice != -1 ? RgView.Desc.RgDsv.ArraySlice : std::optional<UINT>{};
 			std::optional<UINT> MipSlice   = RgView.Desc.RgDsv.MipSlice != -1 ? RgView.Desc.RgDsv.MipSlice : std::optional<UINT>{};
 			std::optional<UINT> ArraySize  = RgView.Desc.RgDsv.ArraySize != -1 ? RgView.Desc.RgDsv.ArraySize : std::optional<UINT>{};
-			if (Handle.IsImported())
+			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				DepthStencilView = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize);
+				DepthStencilViews[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
 			}
 			else
 			{
-				DepthStencilView = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize);
+				DepthStencilViews[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
 			}
 		}
 
-		for (size_t i = 0; i < ShaderResourceViews.size(); ++i)
+		for (size_t i = 0; i < Graph->ShaderResourceViews.size(); ++i)
 		{
-			const auto& RgSrv = Graph->ShaderResourceViews[i];
+			const auto& RgView = Graph->ShaderResourceViews[i];
+			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
+			{
+				continue;
+			}
 
-			switch (RgSrv.Desc.Type)
+			switch (RgView.Desc.Type)
 			{
 			case RgViewType::BufferSrv:
 			{
-				ShaderResourceViews[i] = D3D12ShaderResourceView(
-					Device->GetLinkedDevice(),
-					Get<D3D12Buffer>(RgSrv.Desc.Resource),
-					RgSrv.Desc.BufferSrv.Raw,
-					RgSrv.Desc.BufferSrv.FirstElement,
-					RgSrv.Desc.BufferSrv.NumElements);
+				ShaderResourceViews[i] = D3D12ShaderResourceView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferSrv.Raw, RgView.Desc.BufferSrv.FirstElement, RgView.Desc.BufferSrv.NumElements);
 			}
 			break;
 
 			case RgViewType::TextureSrv:
 			{
-				std::optional<UINT> MostDetailedMip = RgSrv.Desc.TextureSrv.MostDetailedMip != -1 ? RgSrv.Desc.TextureSrv.MostDetailedMip : std::optional<UINT>{};
-				std::optional<UINT> MipLevels		= RgSrv.Desc.TextureSrv.MipLevels != -1 ? RgSrv.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
-				ShaderResourceViews[i]				= D3D12ShaderResourceView(
-					 Device->GetLinkedDevice(),
-					 Get<D3D12Texture>(RgSrv.Desc.Resource),
-					 RgSrv.Desc.TextureSrv.sRGB,
-					 MostDetailedMip,
-					 MipLevels);
+				D3D12Texture*		Resource		= Get<D3D12Texture>(RgView.Desc.AssociatedResource);
+				bool				sRGB			= RgView.Desc.TextureSrv.sRGB;
+				std::optional<UINT> MostDetailedMip = RgView.Desc.TextureSrv.MostDetailedMip != -1 ? RgView.Desc.TextureSrv.MostDetailedMip : std::optional<UINT>{};
+				std::optional<UINT> MipLevels		= RgView.Desc.TextureSrv.MipLevels != -1 ? RgView.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
+				ShaderResourceViews[i]				= D3D12ShaderResourceView(Device->GetLinkedDevice(), Resource, sRGB, MostDetailedMip, MipLevels);
 			}
 			break;
 
@@ -216,31 +188,28 @@ namespace RHI
 			}
 		}
 
-		for (size_t i = 0; i < UnorderedAccessViews.size(); ++i)
+		for (size_t i = 0; i < Graph->UnorderedAccessViews.size(); ++i)
 		{
-			const auto& RgUav = Graph->UnorderedAccessViews[i];
+			const auto& RgView = Graph->UnorderedAccessViews[i];
+			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
+			{
+				continue;
+			}
 
-			switch (RgUav.Desc.Type)
+			switch (RgView.Desc.Type)
 			{
 			case RgViewType::BufferUav:
 			{
-				UnorderedAccessViews[i] = D3D12UnorderedAccessView(
-					Device->GetLinkedDevice(),
-					Get<D3D12Buffer>(RgUav.Desc.Resource),
-					RgUav.Desc.BufferUav.NumElements,
-					RgUav.Desc.BufferUav.CounterOffsetInBytes);
+				UnorderedAccessViews[i] = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferUav.NumElements, RgView.Desc.BufferUav.CounterOffsetInBytes);
 			}
 			break;
 
 			case RgViewType::TextureUav:
 			{
-				std::optional<UINT> ArraySlice = RgUav.Desc.TextureUav.ArraySlice != -1 ? RgUav.Desc.TextureUav.ArraySlice : std::optional<UINT>{};
-				std::optional<UINT> MipSlice   = RgUav.Desc.TextureUav.MipSlice != -1 ? RgUav.Desc.TextureUav.MipSlice : std::optional<UINT>{};
-				UnorderedAccessViews[i]		   = D3D12UnorderedAccessView(
-					   Device->GetLinkedDevice(),
-					   Get<D3D12Texture>(RgUav.Desc.Resource),
-					   ArraySlice,
-					   MipSlice);
+				D3D12Texture*		Resource   = Get<D3D12Texture>(RgView.Desc.AssociatedResource);
+				std::optional<UINT> ArraySlice = RgView.Desc.TextureUav.ArraySlice != -1 ? RgView.Desc.TextureUav.ArraySlice : std::optional<UINT>{};
+				std::optional<UINT> MipSlice   = RgView.Desc.TextureUav.MipSlice != -1 ? RgView.Desc.TextureUav.MipSlice : std::optional<UINT>{};
+				UnorderedAccessViews[i]		   = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Resource, ArraySlice, MipSlice);
 			}
 			break;
 
@@ -254,5 +223,23 @@ namespace RHI
 	{
 		assert(Handle.IsImported());
 		return Graph->ImportedTextures[Handle.Id];
+	}
+
+	bool RenderGraphRegistry::IsViewDirty(const RgView& View)
+	{
+		RgResourceHandle Handle = View.Handle; // View andle
+
+		bool ViewDirty;
+		auto Iter = ViewDescTable.find(Handle);
+		if (Iter == ViewDescTable.end())
+		{
+			ViewDirty = true;
+		}
+		else
+		{
+			ViewDirty = Iter->second != View.Desc;
+		}
+		ViewDescTable[Handle] = View.Desc;
+		return ViewDirty;
 	}
 } // namespace RHI

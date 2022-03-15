@@ -164,21 +164,21 @@ namespace RHI
 	{
 		assert(Resource.Type == RgResourceType::Texture);
 		assert(Resource.Id < Textures.size());
-		return Textures[Resource.Id].Desc.RenderTarget;
+		return Textures[Resource.Id].Desc.AllowRenderTarget;
 	}
 
 	bool RenderGraph::AllowDepthStencil(RgResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == RgResourceType::Texture);
 		assert(Resource.Id < Textures.size());
-		return Textures[Resource.Id].Desc.DepthStencil;
+		return Textures[Resource.Id].Desc.AllowDepthStencil;
 	}
 
 	bool RenderGraph::AllowUnorderedAccess(RgResourceHandle Resource) const noexcept
 	{
 		assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
 		// TODO: Buffer
-		return Textures[Resource.Id].Desc.UnorderedAccess;
+		return Textures[Resource.Id].Desc.AllowUnorderedAccess;
 	}
 
 	void RenderGraph::Setup()

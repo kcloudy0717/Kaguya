@@ -84,9 +84,9 @@ namespace RHI
 		std::string_view Name;
 		size_t			 TopologicalIndex = 0;
 
-		std::unordered_set<RgResourceHandle> Reads;
-		std::unordered_set<RgResourceHandle> Writes;
-		std::unordered_set<RgResourceHandle> ReadWrites;
+		robin_hood::unordered_set<RgResourceHandle> Reads;
+		robin_hood::unordered_set<RgResourceHandle> Writes;
+		robin_hood::unordered_set<RgResourceHandle> ReadWrites;
 
 		ExecuteCallback Callback;
 	};
@@ -102,8 +102,8 @@ namespace RHI
 		std::vector<RenderPass*> RenderPasses;
 
 		// Apply barriers at a dependency level to reduce redudant barriers
-		std::unordered_set<RgResourceHandle> Reads;
-		std::unordered_set<RgResourceHandle> Writes;
+		robin_hood::unordered_set<RgResourceHandle> Reads;
+		robin_hood::unordered_set<RgResourceHandle> Writes;
 	};
 
 	class RenderGraph
@@ -120,7 +120,6 @@ namespace RHI
 		{
 			RgResourceHandle Handle = {
 				.Type	 = RgResourceType::Texture,
-				.State	 = 1,
 				.Flags	 = RG_RESOURCE_FLAG_IMPORTED,
 				.Version = 0,
 				.Id		 = ImportedTextures.size()
@@ -138,7 +137,6 @@ namespace RHI
 
 			RgResourceHandle Handle = {
 				.Type	 = RgResourceTraits<T>::Enum,
-				.State	 = 1,
 				.Flags	 = RG_RESOURCE_FLAG_NONE,
 				.Version = 0,
 				.Id		 = Container.size()

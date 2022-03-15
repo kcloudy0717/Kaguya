@@ -72,34 +72,32 @@ namespace RHI
 		D3D12_HEAP_TYPE		  HeapType,
 		D3D12_RESOURCE_STATES InitialResourceState)
 		: D3D12LinkedDeviceChild(Parent)
-		, Resource(InitializeResource(PageSize, HeapType, InitialResourceState))
+		, Resource([&]
+				   {
+					   Arc<ID3D12Resource>	 Resource;
+					   D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask());
+					   D3D12_RESOURCE_DESC	 ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
+
+					   if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
+					   {
+						   ResourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					   }
+
+					   VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommittedResource(
+						   &HeapProperties,
+						   D3D12_HEAP_FLAG_NONE,
+						   &ResourceDesc,
+						   InitialResourceState,
+						   nullptr,
+						   IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
+					   return Resource;
+				   }())
 		, PageSize(PageSize)
 		, VirtualAddress(Resource->GetGPUVirtualAddress())
 	{
 	}
 
-	Arc<ID3D12Resource> D3D12RaytracingMemoryPage::InitializeResource(UINT64 PageSize, D3D12_HEAP_TYPE HeapType, D3D12_RESOURCE_STATES InitialResourceState)
-	{
-		Arc<ID3D12Resource>	  Resource;
-		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask());
-		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
-
-		if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
-		{
-			ResourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		}
-
-		VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommittedResource(
-			&HeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&ResourceDesc,
-			InitialResourceState,
-			nullptr,
-			IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
-		return Resource;
-	}
-
-	D3D12RaytracingMemoryAllocator::D3D12RaytracingMemoryAllocator(
+	D3D12RaytracingAllocator::D3D12RaytracingAllocator(
 		D3D12LinkedDevice*	  Parent,
 		D3D12_HEAP_TYPE		  HeapType,
 		D3D12_RESOURCE_STATES InitialResourceState,
@@ -113,14 +111,13 @@ namespace RHI
 	{
 	}
 
-	RaytracingMemorySection D3D12RaytracingMemoryAllocator::Allocate(UINT64 SizeInBytes)
+	RaytracingMemorySection D3D12RaytracingAllocator::Allocate(UINT64 SizeInBytes)
 	{
 		// Align allocation
 		const UINT64 AlignedSizeInBytes = D3D12RHIUtils::AlignUp(SizeInBytes, Alignment);
 
 		if (Pages.empty())
 		{
-			// Do not suballocate if the memory request is larger than the block size
 			CreatePage(AlignedSizeInBytes > DefaultPageSize ? AlignedSizeInBytes : DefaultPageSize);
 		}
 
@@ -128,6 +125,7 @@ namespace RHI
 
 		RaytracingMemorySection Section;
 
+		// Do not suballocate if the memory request is larger than the block size
 		if (AlignedSizeInBytes > DefaultPageSize)
 		{
 			CreatePage(AlignedSizeInBytes);
@@ -197,7 +195,7 @@ namespace RHI
 		return Section;
 	}
 
-	void D3D12RaytracingMemoryAllocator::Release(RaytracingMemorySection* Section)
+	void D3D12RaytracingAllocator::Release(RaytracingMemorySection* Section)
 	{
 		for (size_t i = 0; i < Pages.size(); ++i)
 		{
@@ -229,7 +227,7 @@ namespace RHI
 		}
 	}
 
-	UINT64 D3D12RaytracingMemoryAllocator::GetSize()
+	UINT64 D3D12RaytracingAllocator::GetSize() const noexcept
 	{
 		UINT64 Size = 0;
 		for (const auto& Page : Pages)
@@ -239,12 +237,12 @@ namespace RHI
 		return Size;
 	}
 
-	void D3D12RaytracingMemoryAllocator::CreatePage(UINT64 PageSize)
+	void D3D12RaytracingAllocator::CreatePage(UINT64 PageSize)
 	{
 		Pages.emplace_back(std::make_unique<D3D12RaytracingMemoryPage>(GetParentLinkedDevice(), PageSize, HeapType, InitialResourceState));
 	}
 
-	bool D3D12RaytracingMemoryAllocator::FindFreeSubBlock(
+	bool D3D12RaytracingAllocator::FindFreeSubBlock(
 		D3D12RaytracingMemoryPage* Page,
 		RaytracingMemorySection*   OutMemorySection,
 		UINT64					   SizeInBytes)
@@ -304,11 +302,10 @@ namespace RHI
 		return FoundFreeSubBlock;
 	}
 
-	D3D12RaytracingAccelerationStructureManager::D3D12RaytracingAccelerationStructureManager(
+	D3D12RaytracingManager::D3D12RaytracingManager(
 		D3D12LinkedDevice* Parent,
 		UINT64			   PageSize)
 		: D3D12LinkedDeviceChild(Parent)
-		, PageSize(PageSize)
 		, ScratchPool(Parent, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON, PageSize, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
 		, ResultPool(Parent, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, PageSize, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
 		, ResultCompactedPool(Parent, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, PageSize, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT)
@@ -317,11 +314,11 @@ namespace RHI
 	{
 	}
 
-	UINT64 D3D12RaytracingAccelerationStructureManager::Build(
+	UINT64 D3D12RaytracingManager::Build(
 		ID3D12GraphicsCommandList4*									CommandList,
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& Inputs)
 	{
-		UINT64 Index = AllocateAccelerationStructureIndex();
+		UINT64 Index = AllocateASIndex();
 
 		// Request build size information and suballocate the scratch and result buffers
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
@@ -371,7 +368,22 @@ namespace RHI
 		return Index;
 	}
 
-	void D3D12RaytracingAccelerationStructureManager::Copy(
+	void D3D12RaytracingManager::Release(
+		UINT64 Index)
+	{
+		D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[Index];
+
+		TotalCompactedMemory -= AccelerationStructure.CompactedSizeInBytes;
+		TotalUncompactedMemory -= AccelerationStructure.ResultSize;
+
+		if (!AccelerationStructure.ScratchMemory.IsFree)
+		{
+			ScratchPool.Release(&AccelerationStructure.ScratchMemory);
+		}
+		////if (!AccelerationStructure.ResultMemory)
+	}
+
+	void D3D12RaytracingManager::Copy(
 		ID3D12GraphicsCommandList4* CommandList)
 	{
 		const auto& GpuPages = CompactedSizeGpuPool.GetPages();
@@ -400,7 +412,7 @@ namespace RHI
 		CommandList->ResourceBarrier(NumBarriers, Barriers);
 	}
 
-	void D3D12RaytracingAccelerationStructureManager::Compact(
+	void D3D12RaytracingManager::Compact(
 		ID3D12GraphicsCommandList4* CommandList,
 		UINT64						AccelerationStructureIndex)
 	{
@@ -456,21 +468,21 @@ namespace RHI
 		}
 	}
 
-	void D3D12RaytracingAccelerationStructureManager::SetSyncHandle(
+	void D3D12RaytracingManager::SetSyncHandle(
 		UINT64			AccelerationStructureIndex,
 		D3D12SyncHandle SyncHandle)
 	{
 		AccelerationStructures[AccelerationStructureIndex].SyncHandle = SyncHandle;
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS D3D12RaytracingAccelerationStructureManager::GetAccelerationStructureAddress(
+	D3D12_GPU_VIRTUAL_ADDRESS D3D12RaytracingManager::GetAddress(
 		UINT64 AccelerationStructureIndex)
 	{
 		const D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[AccelerationStructureIndex];
 		return AccelerationStructure.IsCompacted ? AccelerationStructure.ResultCompactedMemory.VirtualAddress : AccelerationStructure.ResultMemory.VirtualAddress;
 	}
 
-	UINT64 D3D12RaytracingAccelerationStructureManager::AllocateAccelerationStructureIndex()
+	UINT64 D3D12RaytracingManager::AllocateASIndex()
 	{
 		UINT64 NewIndex;
 		if (!IndexQueue.empty())
@@ -486,7 +498,7 @@ namespace RHI
 		return NewIndex;
 	}
 
-	void D3D12RaytracingAccelerationStructureManager::ReleaseAccelerationStructure(UINT64 Index)
+	void D3D12RaytracingManager::ReleaseASIndex(UINT64 Index)
 	{
 		IndexQueue.push(Index);
 		AccelerationStructures[Index] = {};
@@ -508,7 +520,7 @@ namespace RHI
 
 		SBTBuffer		= D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
 		SBTUploadBuffer = D3D12Buffer(Device, SizeInBytes, 0, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
-		CpuData = std::make_unique<BYTE[]>(SizeInBytes);
+		CpuData			= std::make_unique<BYTE[]>(SizeInBytes);
 	}
 
 	void D3D12RaytracingShaderBindingTable::WriteToGpu(ID3D12GraphicsCommandList* CommandList) const
@@ -544,11 +556,11 @@ namespace RHI
 		Desc.RayGenerationShaderRecord = { .StartAddress = BaseAddress + RayGenerationShaderTableOffset + RayGenerationShaderIndex * RayGenerationShaderRecordStride,
 										   .SizeInBytes	 = RayGenerationShaderTableSizeInBytes };
 		Desc.MissShaderTable		   = { .StartAddress  = BaseAddress + MissShaderTableOffset + BaseMissShaderIndex * MissShaderRecordStride,
-								   .SizeInBytes	  = MissShaderTableSizeInBytes,
-								   .StrideInBytes = MissShaderRecordStride };
+										   .SizeInBytes	  = MissShaderTableSizeInBytes,
+										   .StrideInBytes = MissShaderRecordStride };
 		Desc.HitGroupTable			   = { .StartAddress  = BaseAddress + HitGroupShaderTableOffset,
-							   .SizeInBytes	  = HitGroupShaderTableSizeInBytes,
-							   .StrideInBytes = HitGroupShaderRecordStride };
+										   .SizeInBytes	  = HitGroupShaderTableSizeInBytes,
+										   .StrideInBytes = HitGroupShaderRecordStride };
 		return Desc;
 	}
 } // namespace RHI

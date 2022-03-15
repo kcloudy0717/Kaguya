@@ -124,7 +124,7 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 		RHI::RgTextureDesc("Path Trace Output")
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
-			.AllowUnorderedAccess());
+			.SetAllowUnorderedAccess());
 	PathTraceArgs.Srv = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
 	PathTraceArgs.Uav = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 

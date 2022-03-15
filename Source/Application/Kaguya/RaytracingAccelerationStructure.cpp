@@ -8,7 +8,7 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Devic
 {
 	StaticMeshes.reserve(NumInstances);
 
-	Manager = RHI::D3D12RaytracingAccelerationStructureManager(Device->GetLinkedDevice(), 6 * 1024 * 1024);
+	Manager = RHI::D3D12RaytracingManager(Device->GetLinkedDevice(), 6 * 1024 * 1024);
 
 	Null = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), nullptr);
 
@@ -83,7 +83,7 @@ void RaytracingAccelerationStructure::Build(RHI::D3D12CommandContext& Context)
 
 	for (auto Geometry : ReferencedGeometries)
 	{
-		Geometry->AccelerationStructure = Manager.GetAccelerationStructureAddress(Geometry->BlasIndex);
+		Geometry->AccelerationStructure = Manager.GetAddress(Geometry->BlasIndex);
 	}
 
 	D3D12ScopedEvent(Context, "TLAS");
