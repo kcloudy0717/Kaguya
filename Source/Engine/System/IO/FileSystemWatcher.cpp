@@ -11,7 +11,7 @@ FileSystemWatcher::FileSystemWatcher(const std::filesystem::path& Path)
 		  FILE_FLAG_BACKUP_SEMANTICS,
 		  nullptr))
 	, Thread(
-		  [this]()
+		  [this]
 		  {
 			  this->Watch();
 		  })

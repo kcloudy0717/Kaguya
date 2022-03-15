@@ -8,12 +8,12 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Devic
 {
 	StaticMeshes.reserve(NumInstances);
 
-	Manager = RHI::D3D12RaytracingAccelerationStructureManager(Device->GetDevice(), 6 * 1024 * 1024);
+	Manager = RHI::D3D12RaytracingAccelerationStructureManager(Device->GetLinkedDevice(), 6 * 1024 * 1024);
 
-	Null = RHI::D3D12ShaderResourceView(Device->GetDevice(), nullptr);
+	Null = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), nullptr);
 
 	InstanceDescs = RHI::D3D12Buffer(
-		Device->GetDevice(),
+		Device->GetLinkedDevice(),
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * NumInstances,
 		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -102,7 +102,7 @@ void RaytracingAccelerationStructure::Build(RHI::D3D12CommandContext& Context)
 	{
 		// TLAS Scratch
 		TlasScratch = RHI::D3D12Buffer(
-			Device->GetDevice(),
+			Device->GetLinkedDevice(),
 			ScratchSize,
 			0,
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -112,8 +112,8 @@ void RaytracingAccelerationStructure::Build(RHI::D3D12CommandContext& Context)
 	if (!TlasResult.GetResource() || TlasResult.GetDesc().Width < ResultSize)
 	{
 		// TLAS Result
-		TlasResult = RHI::D3D12ASBuffer(Device->GetDevice(), ResultSize);
-		SRV		   = RHI::D3D12ShaderResourceView(Device->GetDevice(), &TlasResult);
+		TlasResult = RHI::D3D12ASBuffer(Device->GetLinkedDevice(), ResultSize);
+		SRV		   = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), &TlasResult);
 	}
 
 	// Create the description for each instance

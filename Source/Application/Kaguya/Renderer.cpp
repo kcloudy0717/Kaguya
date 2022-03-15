@@ -10,18 +10,17 @@ Renderer::Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* M
 {
 }
 
-void Renderer::OnInitialize()
-{
-	Initialize();
-}
-
-void Renderer::OnDestroy()
+Renderer::~Renderer()
 {
 	Device->WaitIdle();
-	Destroy();
 }
 
-void Renderer::OnRender(World* World)
+void Renderer::OnRenderOptions()
+{
+	RenderOptions();
+}
+
+void Renderer::OnRender(World* World, WorldRenderView* WorldRenderView)
 {
 	/*static bool CaptureOnce = false;
 	if (!CaptureOnce)
@@ -33,7 +32,7 @@ void Renderer::OnRender(World* World)
 
 	if (ImGui::Begin("GPU Timing"))
 	{
-		for (const auto& iter : Device->GetDevice()->GetProfiler()->Data)
+		for (const auto& iter : Device->GetLinkedDevice()->GetProfiler()->Data)
 		{
 			for (INT i = 0; i < iter.Depth; ++i)
 			{
@@ -47,7 +46,7 @@ void Renderer::OnRender(World* World)
 	}
 	ImGui::End();
 
-	RHI::D3D12CommandContext& Context = Device->GetDevice()->GetCommandContext();
+	RHI::D3D12CommandContext& Context = Device->GetLinkedDevice()->GetCommandContext();
 	Context.Open();
 	{
 		ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
@@ -78,7 +77,7 @@ void Renderer::OnRender(World* World)
 			World->ActiveCamera->AspectRatio = static_cast<float>(View.Width) / static_cast<float>(View.Height);
 
 			D3D12ScopedEvent(Context, "Render");
-			this->Render(World, Context);
+			this->Render(World, WorldRenderView, Context);
 
 			// Viewport must be valid after Render
 			assert(Viewport);

@@ -15,12 +15,11 @@ struct PathIntegratorState
 class PathIntegratorDXR1_0 final : public Renderer
 {
 public:
-	using Renderer::Renderer;
+	PathIntegratorDXR1_0(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
 
 private:
-	void Initialize() override;
-	void Destroy() override;
-	void Render(World* World, RHI::D3D12CommandContext& Context) override;
+	void RenderOptions() override;
+	void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) override;
 
 private:
 	RaytracingAccelerationStructure AccelerationStructure;
@@ -30,13 +29,6 @@ private:
 	UINT FrameCounter		= 0;
 
 	PathIntegratorState PathIntegratorState;
-	// FSRState			FSRState;
-
-	RHI::D3D12Buffer Materials;
-	Hlsl::Material*	 pMaterial = nullptr;
-	RHI::D3D12Buffer Lights;
-	Hlsl::Light*	 pLights	  = nullptr;
-	UINT			 NumMaterials = 0, NumLights = 0;
 
 	// Pad local root arguments explicitly
 	struct RootArgument

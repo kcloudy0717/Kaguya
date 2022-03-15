@@ -185,7 +185,7 @@ namespace RHI
 		{
 			Arc<ID3D12Resource> Resource;
 			VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&Resource)));
-			BackBuffers[i] = D3D12Texture(GetParentDevice()->GetDevice(), std::move(Resource), D3D12_RESOURCE_STATE_PRESENT);
+			BackBuffers[i] = D3D12Texture(GetParentDevice()->GetLinkedDevice(), std::move(Resource), D3D12_RESOURCE_STATE_PRESENT);
 		}
 
 		CreateRenderTargetViews();
@@ -201,14 +201,14 @@ namespace RHI
 		}
 		Present.PostPresent();
 
-		UINT64 ValueToWaitFor = Fence.Signal(GetParentDevice()->GetDevice()->GetGraphicsQueue());
+		UINT64 ValueToWaitFor = Fence.Signal(GetParentDevice()->GetLinkedDevice()->GetGraphicsQueue());
 		SyncHandle			  = D3D12SyncHandle(&Fence, ValueToWaitFor);
 	}
 
 	Arc<IDXGISwapChain4> D3D12SwapChain::InitializeSwapChain()
 	{
 		IDXGIFactory6*		Factory		 = GetParentDevice()->GetDxgiFactory6();
-		ID3D12CommandQueue* CommandQueue = GetParentDevice()->GetDevice()->GetGraphicsQueue()->GetCommandQueue();
+		ID3D12CommandQueue* CommandQueue = GetParentDevice()->GetLinkedDevice()->GetGraphicsQueue()->GetCommandQueue();
 
 		// Check tearing support
 		BOOL AllowTearing = FALSE;
@@ -247,7 +247,7 @@ namespace RHI
 	{
 		for (UINT i = 0; i < BackBufferCount; ++i)
 		{
-			RenderTargetViews[i] = D3D12RenderTargetView(GetParentDevice()->GetDevice(), &BackBuffers[i]);
+			RenderTargetViews[i] = D3D12RenderTargetView(GetParentDevice()->GetLinkedDevice(), &BackBuffers[i]);
 		}
 	}
 } // namespace RHI

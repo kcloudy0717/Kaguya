@@ -14,11 +14,11 @@ public:
 		const std::filesystem::path& Path,
 		FileMode					 Mode);
 
-	AsyncFileStream(const AsyncFileStream&) = delete;
-	AsyncFileStream& operator=(const AsyncFileStream&) = delete;
-
 	AsyncFileStream(AsyncFileStream&&) noexcept = default;
 	AsyncFileStream& operator=(AsyncFileStream&&) noexcept = default;
+
+	AsyncFileStream(const AsyncFileStream&) = delete;
+	AsyncFileStream& operator=(const AsyncFileStream&) = delete;
 
 	[[nodiscard]] void* GetHandle() const noexcept;
 	[[nodiscard]] u64	GetSizeInBytes() const noexcept;

@@ -2,7 +2,8 @@
 
 #include "RendererRegistry.h"
 
-void DeferredRenderer::Initialize()
+DeferredRenderer::DeferredRenderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
+	: Renderer(Device, Compiler, MainWindow)
 {
 	Shaders::Compile(Compiler);
 	RootSignatures::Compile(Device, Registry);
@@ -37,109 +38,23 @@ void DeferredRenderer::Initialize()
 #endif
 
 	IndirectCommandBuffer = RHI::D3D12Buffer(
-		Device->GetDevice(),
+		Device->GetLinkedDevice(),
 		CommandBufferCounterOffset + sizeof(UINT64),
 		sizeof(CommandSignatureParams),
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	IndirectCommandBufferUav = RHI::D3D12UnorderedAccessView(Device->GetDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
-
-	Materials = RHI::D3D12Buffer(
-		Device->GetDevice(),
-		sizeof(Hlsl::Material) * World::MaterialLimit,
-		sizeof(Hlsl::Material),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
-	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
-
-	Lights = RHI::D3D12Buffer(
-		Device->GetDevice(),
-		sizeof(Hlsl::Light) * World::LightLimit,
-		sizeof(Hlsl::Light),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
-	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
-
-	Meshes = RHI::D3D12Buffer(
-		Device->GetDevice(),
-		sizeof(Hlsl::Mesh) * World::MeshLimit,
-		sizeof(Hlsl::Mesh),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
-	pMeshes = Meshes.GetCpuVirtualAddress<Hlsl::Mesh>();
-
-	StaticMeshes.reserve(World::MeshLimit);
-	HlslMeshes.resize(World::MeshLimit);
+	IndirectCommandBufferUav = RHI::D3D12UnorderedAccessView(Device->GetLinkedDevice(), &IndirectCommandBuffer, World::MeshLimit, CommandBufferCounterOffset);
 }
 
-void DeferredRenderer::Destroy()
+void DeferredRenderer::RenderOptions()
 {
+	constexpr const char* View[] = { "Normal", "Material Id", "Motion", "Depth" };
+	ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
 }
 
-void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
+void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context)
 {
-	if (ImGui::Begin("Renderer"))
-	{
-		ImGui::Text("Deferred Renderer");
-		constexpr const char* View[] = { "Normal", "Material Id", "Motion", "Depth" };
-		ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
-	}
-	ImGui::End();
-
-	StaticMeshes.clear();
-
-	NumMaterials = NumLights = NumMeshes = 0;
-	World->Registry.view<CoreComponent, StaticMeshComponent>().each(
-		[&](CoreComponent& Core, StaticMeshComponent& StaticMesh)
-		{
-			if (StaticMesh.Mesh)
-			{
-				RHI::D3D12Buffer& VertexBuffer = StaticMesh.Mesh->VertexResource;
-				RHI::D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
-
-				D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
-				DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->IndexCount;
-				DrawIndexedArguments.InstanceCount				  = 1;
-				DrawIndexedArguments.StartIndexLocation			  = 0;
-				DrawIndexedArguments.BaseVertexLocation			  = 0;
-				DrawIndexedArguments.StartInstanceLocation		  = 0;
-
-				pMaterial[NumMaterials] = GetHLSLMaterialDesc(StaticMesh.Material);
-
-				Hlsl::Mesh Mesh		   = GetHLSLMeshDesc(Core.Transform);
-				Mesh.PreviousTransform = HlslMeshes[NumMeshes].Transform;
-
-				Mesh.VertexBuffer = VertexBuffer.GetVertexBufferView();
-				Mesh.IndexBuffer  = IndexBuffer.GetIndexBufferView();
-				if (StaticMesh.Mesh->Options.GenerateMeshlets)
-				{
-					Mesh.Meshlets			 = StaticMesh.Mesh->MeshletResource.GetGpuVirtualAddress();
-					Mesh.UniqueVertexIndices = StaticMesh.Mesh->UniqueVertexIndexResource.GetGpuVirtualAddress();
-					Mesh.PrimitiveIndices	 = StaticMesh.Mesh->PrimitiveIndexResource.GetGpuVirtualAddress();
-				}
-
-				Mesh.MaterialIndex = NumMaterials;
-				Mesh.NumMeshlets   = StaticMesh.Mesh->MeshletCount;
-
-				Mesh.BoundingBox = StaticMesh.Mesh->BoundingBox;
-
-				Mesh.DrawIndexedArguments = DrawIndexedArguments;
-
-				HlslMeshes[NumMeshes] = Mesh;
-
-				StaticMeshes.push_back(&StaticMesh);
-
-				++NumMaterials;
-				++NumMeshes;
-			}
-		});
-	World->Registry.view<CoreComponent, LightComponent>().each(
-		[&](CoreComponent& Core, LightComponent& Light)
-		{
-			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
-		});
-	std::memcpy(pMeshes, HlslMeshes.data(), sizeof(Hlsl::Mesh) * World::MeshLimit);
-
+	WorldRenderView->Update(World, nullptr);
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
 		World->WorldState = EWorldState_Render;
@@ -153,25 +68,21 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 		unsigned int NumLights;
 	} g_GlobalConstants			= {};
 	g_GlobalConstants.Camera	= GetHLSLCameraDesc(*World->ActiveCamera);
-	g_GlobalConstants.NumMeshes = NumMeshes;
-	g_GlobalConstants.NumLights = NumLights;
-
-	// Work flow is as following:
-	// Copy Queue -> Compute Queue -> Graphics Queue
-	// Workloads are executed asynchronously
-
-	RHI::D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
-	Copy.Open();
-	{
-		Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
-	}
-	Copy.Close();
-	RHI::D3D12SyncHandle CopySyncHandle = Copy.Execute(false);
+	g_GlobalConstants.NumMeshes = WorldRenderView->NumMeshes;
+	g_GlobalConstants.NumLights = WorldRenderView->NumLights;
 
 	RHI::D3D12SyncHandle ComputeSyncHandle;
-	if (NumMeshes > 0)
+	if (WorldRenderView->NumMeshes > 0)
 	{
-		RHI::D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
+		RHI::D3D12CommandContext& Copy = Device->GetLinkedDevice()->GetCopyContext1();
+		Copy.Open();
+		{
+			Copy.ResetCounter(&IndirectCommandBuffer, CommandBufferCounterOffset);
+		}
+		Copy.Close();
+		RHI::D3D12SyncHandle CopySyncHandle = Copy.Execute(false);
+
+		RHI::D3D12CommandContext& AsyncCompute = Device->GetLinkedDevice()->GetAsyncComputeCommandContext();
 		AsyncCompute.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
 
 		AsyncCompute.Open();
@@ -185,10 +96,10 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 			AsyncCompute.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::IndirectCull));
 
 			AsyncCompute.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-			AsyncCompute->SetComputeRootShaderResourceView(1, Meshes.GetGpuVirtualAddress());
+			AsyncCompute->SetComputeRootShaderResourceView(1, WorldRenderView->Meshes.GetGpuVirtualAddress());
 			AsyncCompute->SetComputeRootDescriptorTable(2, IndirectCommandBufferUav.GetGpuHandle());
 
-			AsyncCompute.Dispatch1D<128>(NumMeshes);
+			AsyncCompute.Dispatch1D<128>(WorldRenderView->NumMeshes);
 		}
 		AsyncCompute.Close();
 		ComputeSyncHandle = AsyncCompute.Execute(false);
@@ -298,9 +209,9 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::GBuffer));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::GBuffer));
 					 Context.SetGraphicsConstantBuffer(1, sizeof(GlobalConstants), &g_GlobalConstants);
-					 Context->SetGraphicsRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
-					 Context->SetGraphicsRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
-					 Context->SetGraphicsRootShaderResourceView(4, Meshes.GetGpuVirtualAddress());
+					 Context->SetGraphicsRootShaderResourceView(2, WorldRenderView->Materials.GetGpuVirtualAddress());
+					 Context->SetGraphicsRootShaderResourceView(3, WorldRenderView->Lights.GetGpuVirtualAddress());
+					 Context->SetGraphicsRootShaderResourceView(4, WorldRenderView->Meshes.GetGpuVirtualAddress());
 
 					 Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
@@ -313,8 +224,8 @@ void DeferredRenderer::Render(World* World, RHI::D3D12CommandContext& Context)
 					 };
 					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
 
-					 Context.ClearRenderTarget(3, RenderTargetViews, DepthStencilView);
-					 Context.SetRenderTarget(3, RenderTargetViews, DepthStencilView);
+					 Context.ClearRenderTarget(RenderTargetViews, DepthStencilView);
+					 Context.SetRenderTarget(RenderTargetViews, DepthStencilView);
 
 					 Context->ExecuteIndirect(
 						 CommandSignature,

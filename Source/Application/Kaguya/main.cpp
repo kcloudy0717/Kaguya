@@ -140,6 +140,13 @@ void ImguiMessageCallback(void* Context, HWND HWnd, UINT Message, WPARAM WParam,
 	ImGui_ImplWin32_WndProcHandler(HWnd, Message, WParam, LParam);
 }
 
+enum class RENDER_PATH
+{
+	DeferredRenderer,
+	PathIntegratorDXR1_0,
+	PathIntegratorDXR1_1,
+};
+
 class Editor final
 	: public Application
 	, public IApplicationMessageHandler
@@ -154,19 +161,19 @@ public:
 
 	bool Initialize() override
 	{
-		//WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
+		// WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
 
 		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
 
-		Renderer->OnInitialize();
+		CreateRenderPath();
 
 		return true;
 	}
 
 	void Shutdown() override
 	{
-		Renderer->OnDestroy();
+		Renderer.reset();
 	}
 
 	void Update() override
@@ -176,16 +183,23 @@ public:
 		ImGui_ImplDX12_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
-		ImGuizmo::BeginFrame();
-
 		ImGui::DockSpaceOverViewport();
-
 		ImGui::ShowDemoWindow();
-
+		ImGuizmo::BeginFrame();
 		ImGuizmo::AllowAxisFlip(false);
+		if (ImGui::Begin("Render Path"))
+		{
+			constexpr const char* View[] = { "Deferred Renderer", "Path Integrator DXR1.0", "Path Integrator DXR1.1" };
+			if (ImGui::Combo("View", &RenderPath, View, static_cast<int>(std::size(View))))
+			{
+				CreateRenderPath();
+			}
+			Renderer->OnRenderOptions();
+		}
+		ImGui::End();
 
 		World->Update(DeltaTime);
-		Renderer->OnRender(World);
+		Renderer->OnRender(World, WorldRenderView);
 	}
 
 	void OnKeyDown(unsigned char KeyCode, bool IsRepeat) override
@@ -269,11 +283,30 @@ public:
 		}
 	}
 
+	void CreateRenderPath()
+	{
+		Renderer.reset();
+		if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::DeferredRenderer)
+		{
+			Renderer = std::make_unique<DeferredRenderer>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+		}
+		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_0)
+		{
+			Renderer = std::make_unique<PathIntegratorDXR1_0>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+		}
+		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_1)
+		{
+			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+		}
+	}
+
 	Stopwatch Stopwatch;
 	Window*	  MainWindow = nullptr;
 
-	World*	  World	   = nullptr;
-	Renderer* Renderer = nullptr;
+	World*					  World			  = nullptr;
+	WorldRenderView*		  WorldRenderView = nullptr;
+	std::unique_ptr<Renderer> Renderer		  = nullptr;
+	int						  RenderPath	  = 0;
 
 	float DeltaTime;
 };
@@ -314,19 +347,20 @@ int main(int /*argc*/, char* /*argv*/[])
 	D3D12RHIInitializer		D3D12RHIInitializer(DeviceOptions);
 	AssetManagerInitializer AssetManagerInitializer;
 
-	World World(Kaguya::AssetManager);
+	World			World(Kaguya::AssetManager);
+	WorldRenderView WorldRenderView(Kaguya::Device->GetLinkedDevice());
+
 	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 
-	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
-	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);
-	//MitsubaLoader::Load(Application::ExecutableDirectory / "Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
+	// MitsubaLoader::Load("Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
+	// MitsubaLoader::Load("Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);
+	// MitsubaLoader::Load("Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
 
-	DeferredRenderer Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
-	//PathIntegratorDXR1_0 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
-	//PathIntegratorDXR1_1 Renderer(Kaguya::Device, Kaguya::Compiler, &MainWindow);
-
-	Editor.MainWindow = &MainWindow;
-	Editor.World	  = &World;
-	Editor.Renderer	  = &Renderer;
+	Editor.MainWindow	   = &MainWindow;
+	Editor.World		   = &World;
+	Editor.WorldRenderView = &WorldRenderView;
+	// Editor.RenderPath	   = static_cast<int>(RENDER_PATH::DeferredRenderer);
+	// Editor.RenderPath	   = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_0);
+	Editor.RenderPath = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_1);
 	Editor.Run();
 }

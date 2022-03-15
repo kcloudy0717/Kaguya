@@ -120,8 +120,8 @@ namespace RHI
 		std::vector<ProfileData> Profiles;
 		UINT					 NumProfiles;
 		UINT					 FrameIndex;
-		Arc<ID3D12QueryHeap>	 QueryHeap;
-		Arc<ID3D12Resource>		 QueryReadback;
+		Arc<ID3D12QueryHeap>	 TimestampQueryHeap;
+		Arc<ID3D12Resource>		 TimestampQueryReadback;
 
 		// Event Graph
 		friend struct D3D12EventNode;

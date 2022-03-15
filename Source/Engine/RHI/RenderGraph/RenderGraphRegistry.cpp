@@ -51,6 +51,11 @@ namespace RHI
 			auto& RHITexture = Graph->Textures[i];
 
 			RgResourceHandle& Handle = RHITexture.Handle;
+			auto			  Iter	 = TextureDescTable.find(Handle);
+			if (Iter == TextureDescTable.end())
+			{
+			}
+
 			assert(!Handle.IsImported());
 			const RgTextureDesc& Desc = RHITexture.Desc;
 
@@ -131,7 +136,7 @@ namespace RHI
 				break;
 			}
 
-			Textures[i]		  = D3D12Texture(Device->GetDevice(), ResourceDesc, Desc.OptimizedClearValue);
+			Textures[i]		  = D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, Desc.OptimizedClearValue);
 			std::wstring Name = std::wstring(RHITexture.Desc.Name.begin(), RHITexture.Desc.Name.end());
 			Textures[i].GetResource()->SetName(Name.data());
 		}
@@ -148,11 +153,11 @@ namespace RHI
 			std::optional<UINT> ArraySize  = RgView.Desc.RgRtv.ArraySize != -1 ? RgView.Desc.RgRtv.ArraySize : std::optional<UINT>{};
 			if (Handle.IsImported())
 			{
-				RenderTargetView = D3D12RenderTargetView(Device->GetDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RenderTargetView = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
 			else
 			{
-				RenderTargetView = D3D12RenderTargetView(Device->GetDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RenderTargetView = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
 			}
 		}
 
@@ -168,11 +173,11 @@ namespace RHI
 			std::optional<UINT> ArraySize  = RgView.Desc.RgDsv.ArraySize != -1 ? RgView.Desc.RgDsv.ArraySize : std::optional<UINT>{};
 			if (Handle.IsImported())
 			{
-				DepthStencilView = D3D12DepthStencilView(Device->GetDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize);
+				DepthStencilView = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(Handle), ArraySlice, MipSlice, ArraySize);
 			}
 			else
 			{
-				DepthStencilView = D3D12DepthStencilView(Device->GetDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize);
+				DepthStencilView = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(Handle), ArraySlice, MipSlice, ArraySize);
 			}
 		}
 
@@ -185,7 +190,7 @@ namespace RHI
 			case RgViewType::BufferSrv:
 			{
 				ShaderResourceViews[i] = D3D12ShaderResourceView(
-					Device->GetDevice(),
+					Device->GetLinkedDevice(),
 					Get<D3D12Buffer>(RgSrv.Desc.Resource),
 					RgSrv.Desc.BufferSrv.Raw,
 					RgSrv.Desc.BufferSrv.FirstElement,
@@ -198,7 +203,7 @@ namespace RHI
 				std::optional<UINT> MostDetailedMip = RgSrv.Desc.TextureSrv.MostDetailedMip != -1 ? RgSrv.Desc.TextureSrv.MostDetailedMip : std::optional<UINT>{};
 				std::optional<UINT> MipLevels		= RgSrv.Desc.TextureSrv.MipLevels != -1 ? RgSrv.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
 				ShaderResourceViews[i]				= D3D12ShaderResourceView(
-					 Device->GetDevice(),
+					 Device->GetLinkedDevice(),
 					 Get<D3D12Texture>(RgSrv.Desc.Resource),
 					 RgSrv.Desc.TextureSrv.sRGB,
 					 MostDetailedMip,
@@ -220,7 +225,7 @@ namespace RHI
 			case RgViewType::BufferUav:
 			{
 				UnorderedAccessViews[i] = D3D12UnorderedAccessView(
-					Device->GetDevice(),
+					Device->GetLinkedDevice(),
 					Get<D3D12Buffer>(RgUav.Desc.Resource),
 					RgUav.Desc.BufferUav.NumElements,
 					RgUav.Desc.BufferUav.CounterOffsetInBytes);
@@ -232,7 +237,7 @@ namespace RHI
 				std::optional<UINT> ArraySlice = RgUav.Desc.TextureUav.ArraySlice != -1 ? RgUav.Desc.TextureUav.ArraySlice : std::optional<UINT>{};
 				std::optional<UINT> MipSlice   = RgUav.Desc.TextureUav.MipSlice != -1 ? RgUav.Desc.TextureUav.MipSlice : std::optional<UINT>{};
 				UnorderedAccessViews[i]		   = D3D12UnorderedAccessView(
-					   Device->GetDevice(),
+					   Device->GetLinkedDevice(),
 					   Get<D3D12Texture>(RgUav.Desc.Resource),
 					   ArraySlice,
 					   MipSlice);

@@ -37,22 +37,19 @@ class Renderer
 {
 public:
 	Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
-	virtual ~Renderer() = default;
+	virtual ~Renderer();
 
-	void OnInitialize();
+	void OnRenderOptions();
 
-	void OnDestroy();
-
-	void OnRender(World* World);
+	void OnRender(World* World, WorldRenderView* WorldRenderView);
 
 	void OnResize(uint32_t Width, uint32_t Height);
 
 	void OnMove(std::int32_t x, std::int32_t y);
 
 protected:
-	virtual void Initialize()											 = 0;
-	virtual void Destroy()												 = 0;
-	virtual void Render(World* World, RHI::D3D12CommandContext& Context) = 0;
+	virtual void RenderOptions() = 0;
+	virtual void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) = 0;
 
 protected:
 	RHI::D3D12Device*	Device	   = nullptr;

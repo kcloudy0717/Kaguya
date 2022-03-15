@@ -19,9 +19,10 @@ namespace RHI
 		D3D12CommandQueue(const D3D12CommandQueue&) noexcept = delete;
 		D3D12CommandQueue& operator=(const D3D12CommandQueue&) noexcept = delete;
 
-		[[nodiscard]] ID3D12CommandQueue* GetCommandQueue() const noexcept { return CommandQueue.Get(); }
-		[[nodiscard]] bool				  SupportTimestamps() const noexcept { return Frequency.has_value(); }
-		[[nodiscard]] UINT64			  GetFrequency() const noexcept { return Frequency.value_or(0); }
+		[[nodiscard]] D3D12_COMMAND_LIST_TYPE GetType() const noexcept { return CommandListType; }
+		[[nodiscard]] ID3D12CommandQueue*	  GetCommandQueue() const noexcept { return CommandQueue.Get(); }
+		[[nodiscard]] bool					  SupportTimestamps() const noexcept { return Frequency.has_value(); }
+		[[nodiscard]] UINT64				  GetFrequency() const noexcept { return Frequency.value_or(0); }
 
 		[[nodiscard]] UINT64 Signal();
 
@@ -36,11 +37,11 @@ namespace RHI
 
 		D3D12SyncHandle ExecuteCommandLists(
 			UINT					NumCommandListHandles,
-			D3D12CommandListHandle* CommandListHandles,
+			D3D12CommandListHandle* CommandListHandles[],
 			bool					WaitForCompletion);
 
 	private:
-		[[nodiscard]] bool ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle);
+		[[nodiscard]] bool ResolveResourceBarrierCommandList(D3D12CommandListHandle* CommandListHandle);
 
 	private:
 		D3D12_COMMAND_LIST_TYPE CommandListType;

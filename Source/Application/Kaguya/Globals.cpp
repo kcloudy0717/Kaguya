@@ -18,14 +18,14 @@ D3D12RHIInitializer::D3D12RHIInitializer(const RHI::DeviceOptions& Options)
 	UINT						ImGuiIndex		   = 0;
 	D3D12_CPU_DESCRIPTOR_HANDLE ImGuiCpuDescriptor = {};
 	D3D12_GPU_DESCRIPTOR_HANDLE ImGuiGpuDescriptor = {};
-	Device->GetDevice()->GetResourceDescriptorHeap().Allocate(ImGuiCpuDescriptor, ImGuiGpuDescriptor, ImGuiIndex);
+	Device->GetLinkedDevice()->GetResourceDescriptorHeap().Allocate(ImGuiCpuDescriptor, ImGuiGpuDescriptor, ImGuiIndex);
 
 	// Initialize ImGui for d3d12
 	ImGuiD3D12Initialized = ImGui_ImplDX12_Init(
 		Device->GetD3D12Device(),
 		1,
 		RHI::D3D12SwapChain::Format,
-		Device->GetDevice()->GetResourceDescriptorHeap(),
+		Device->GetLinkedDevice()->GetResourceDescriptorHeap(),
 		ImGuiCpuDescriptor,
 		ImGuiGpuDescriptor);
 

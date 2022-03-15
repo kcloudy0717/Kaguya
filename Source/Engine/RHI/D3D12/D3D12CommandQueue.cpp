@@ -3,7 +3,9 @@
 
 namespace RHI
 {
-	D3D12CommandQueue::D3D12CommandQueue(D3D12LinkedDevice* Parent, RHID3D12CommandQueueType Type)
+	D3D12CommandQueue::D3D12CommandQueue(
+		D3D12LinkedDevice*		 Parent,
+		RHID3D12CommandQueueType Type)
 		: D3D12LinkedDeviceChild(Parent)
 		, CommandListType(RHITranslateD3D12(Type))
 		, CommandQueue([&]
@@ -64,7 +66,7 @@ namespace RHI
 
 	D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
 		UINT					NumCommandListHandles,
-		D3D12CommandListHandle* CommandListHandles,
+		D3D12CommandListHandle* CommandListHandles[],
 		bool					WaitForCompletion)
 	{
 		UINT			   NumCommandLists		 = 0;
@@ -74,7 +76,7 @@ namespace RHI
 		// Resolve resource barriers
 		for (UINT i = 0; i < NumCommandListHandles; ++i)
 		{
-			D3D12CommandListHandle& CommandListHandle = CommandListHandles[i];
+			D3D12CommandListHandle* CommandListHandle = CommandListHandles[i];
 
 			if (ResolveResourceBarrierCommandList(CommandListHandle))
 			{
@@ -82,7 +84,7 @@ namespace RHI
 				NumBarrierCommandList++;
 			}
 
-			CommandLists[NumCommandLists++] = CommandListHandle.GetCommandList();
+			CommandLists[NumCommandLists++] = CommandListHandle->GetCommandList();
 		}
 
 		CommandQueue->ExecuteCommandLists(NumCommandLists, CommandLists);
@@ -104,9 +106,9 @@ namespace RHI
 		return SyncHandle;
 	}
 
-	bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle& CommandListHandle)
+	bool D3D12CommandQueue::ResolveResourceBarrierCommandList(D3D12CommandListHandle* CommandListHandle)
 	{
-		std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle.ResolveResourceBarriers();
+		std::vector<D3D12_RESOURCE_BARRIER> ResourceBarriers = CommandListHandle->ResolveResourceBarriers();
 
 		bool AnyResolved = !ResourceBarriers.empty();
 		if (AnyResolved)

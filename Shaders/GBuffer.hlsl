@@ -47,7 +47,7 @@ VertexAttributes VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOO
 
 	output.CurrPosition = mul(float4(Position, 1.0f), mesh.Transform);
 	output.CurrPosition = mul(output.CurrPosition, g_GlobalConstants.Camera.ViewProjection);
-	output.PrevPosition = mul(float4(Position, 1.0f), mesh.PreviousTransform);
+	output.PrevPosition = mul(float4(Position, 1.0f), mesh.Transform);
 	output.PrevPosition = mul(output.PrevPosition, g_GlobalConstants.Camera.PrevViewProjection);
 	output.TexCoord		= TextureCoord;
 	output.N			= normalize(mul(Normal, (float3x3)mesh.Transform));

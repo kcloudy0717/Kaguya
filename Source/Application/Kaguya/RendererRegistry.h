@@ -377,7 +377,7 @@ struct PipelineStates
 
 			RenderTargetState RenderTargetState;
 			RenderTargetState.RTFormats[0]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32_UINT;
 			RenderTargetState.RTFormats[2]	   = DXGI_FORMAT_R16G16_FLOAT;
 			RenderTargetState.NumRenderTargets = 3;
 			RenderTargetState.DSFormat		   = DXGI_FORMAT_D32_FLOAT;

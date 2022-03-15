@@ -2,8 +2,13 @@
 #include "RendererRegistry.h"
 
 #include "Tonemap.h"
+#include "Bloom.h"
 
-void PathIntegratorDXR1_0::Initialize()
+static BloomSettings   g_Bloom;
+static TonemapSettings g_Tonemap;
+
+PathIntegratorDXR1_0::PathIntegratorDXR1_0(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
+	: Renderer(Device, Compiler, MainWindow)
 {
 	Shaders::Compile(Compiler);
 	Libraries::Compile(Compiler);
@@ -12,22 +17,6 @@ void PathIntegratorDXR1_0::Initialize()
 	RaytracingPipelineStates::Compile(Device, Registry);
 
 	AccelerationStructure = RaytracingAccelerationStructure(Device, 1, World::MeshLimit);
-
-	Materials = RHI::D3D12Buffer(
-		Device->GetDevice(),
-		sizeof(Hlsl::Material) * World::MaterialLimit,
-		sizeof(Hlsl::Material),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
-	pMaterial = Materials.GetCpuVirtualAddress<Hlsl::Material>();
-
-	Lights = RHI::D3D12Buffer(
-		Device->GetDevice(),
-		sizeof(Hlsl::Light) * World::LightLimit,
-		sizeof(Hlsl::Light),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
-	pLights = Lights.GetCpuVirtualAddress<Hlsl::Light>();
 
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
@@ -38,132 +27,106 @@ void PathIntegratorDXR1_0::Initialize()
 
 	HitGroupShaderTable = ShaderBindingTable.AddHitGroupShaderTable<RootArgument>(World::MeshLimit);
 
-	ShaderBindingTable.Generate(Device->GetDevice());
+	ShaderBindingTable.Generate(Device->GetLinkedDevice());
 }
 
-void PathIntegratorDXR1_0::Destroy()
-{
-}
-
-void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Context)
+void PathIntegratorDXR1_0::RenderOptions()
 {
 	bool ResetPathIntegrator = false;
 
-	if (ImGui::Begin("Renderer"))
+	if (ImGui::Button("Restore Defaults"))
 	{
-		ImGui::Text("Path Integrator (DXR 1.0)");
-		if (ImGui::Button("Restore Defaults"))
-		{
-			PathIntegratorState = {};
-			ResetPathIntegrator = true;
-		}
-
-		ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
-		ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
-		ResetPathIntegrator |= ImGui::SliderScalar(
-			"Max Depth",
-			ImGuiDataType_U32,
-			&PathIntegratorState.MaxDepth,
-			&PathIntegratorState::MinimumDepth,
-			&PathIntegratorState::MaximumDepth);
-
-		ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
-		ImGui::Text("Samples Per Pixel: %u", 4u);
-	}
-	ImGui::End();
-
-	NumMaterials = NumLights = 0;
-	AccelerationStructure.Reset();
-	World->Registry.view<CoreComponent, StaticMeshComponent>().each(
-		[&](CoreComponent& Core, StaticMeshComponent& StaticMeshComponent)
-		{
-			if (StaticMeshComponent.Mesh)
-			{
-				AccelerationStructure.AddInstance(Core.Transform, &StaticMeshComponent);
-				pMaterial[NumMaterials++] = GetHLSLMaterialDesc(StaticMeshComponent.Material);
-			}
-		});
-	World->Registry.view<CoreComponent, LightComponent>().each(
-		[&](CoreComponent& Core, LightComponent& Light)
-		{
-			pLights[NumLights++] = GetHLSLLightDesc(Core.Transform, Light);
-		});
-
-	RHI::D3D12SyncHandle CopySyncHandle;
-	if (AccelerationStructure.IsValid())
-	{
-		RHI::D3D12CommandContext& Copy = Device->GetDevice()->GetCopyContext1();
-		Copy.Open();
-
-		// Update shader table
-		HitGroupShaderTable->Reset();
-		for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.StaticMeshes))
-		{
-			ID3D12Resource* VertexBuffer = MeshRenderer->Mesh->VertexResource.GetResource();
-			ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
-
-			RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
-			Record.ShaderIdentifier										 = RaytracingPipelineStates::g_DefaultSID;
-			Record.RootArguments.MaterialIndex							 = static_cast<UINT>(i);
-			Record.RootArguments.Padding								 = 0xDEADBEEF;
-			Record.RootArguments.VertexBuffer							 = VertexBuffer->GetGPUVirtualAddress();
-			Record.RootArguments.IndexBuffer							 = IndexBuffer->GetGPUVirtualAddress();
-
-			HitGroupShaderTable->AddShaderRecord(Record);
-		}
-
-		ShaderBindingTable.WriteToGpu(Copy.GetGraphicsCommandList());
-
-		Copy.Close();
-
-		CopySyncHandle = Copy.Execute(false);
-	}
-
-	RHI::D3D12SyncHandle ASBuildSyncHandle;
-	if (AccelerationStructure.IsValid())
-	{
-		RHI::D3D12CommandContext& AsyncCompute = Device->GetDevice()->GetAsyncComputeCommandContext();
-		AsyncCompute.Open();
-		{
-			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
-			AccelerationStructure.Build(AsyncCompute);
-		}
-		AsyncCompute.Close();
-
-		ASBuildSyncHandle = AsyncCompute.Execute(false);
-
-		AccelerationStructure.PostBuild(ASBuildSyncHandle);
-	}
-
-	if (World->WorldState & EWorldState::EWorldState_Update)
-	{
-		World->WorldState	= EWorldState_Render;
+		PathIntegratorState = {};
 		ResetPathIntegrator = true;
 	}
 
-	Context.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
-	Context.GetCommandQueue()->WaitForSyncHandle(ASBuildSyncHandle);
+	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
+	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
+	ResetPathIntegrator |= ImGui::SliderScalar(
+		"Max Depth",
+		ImGuiDataType_U32,
+		&PathIntegratorState.MaxDepth,
+		&PathIntegratorState::MinimumDepth,
+		&PathIntegratorState::MaximumDepth);
+
+	ImGui::SliderFloat("Bloom Threshold", &g_Bloom.Threshold, 0.0f, 50.0f);
+	ImGui::SliderFloat("Bloom Intensity", &g_Tonemap.BloomIntensity, 0.0f, 50.0f);
 
 	if (ResetPathIntegrator)
 	{
 		NumTemporalSamples = 0;
 	}
 
+	ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
+	ImGui::Text("Samples Per Pixel: %u", 4u);
+}
+
+void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context)
+{
+	WorldRenderView->Update(World, &AccelerationStructure);
+	if (World->WorldState & EWorldState::EWorldState_Update)
+	{
+		World->WorldState  = EWorldState_Render;
+		NumTemporalSamples = 0;
+	}
+
+	RHI::D3D12SyncHandle CopySyncHandle, ASBuildSyncHandle;
+	if (AccelerationStructure.IsValid())
+	{
+		RHI::D3D12CommandContext& Copy = Device->GetLinkedDevice()->GetCopyContext1();
+		Copy.Open();
+		{
+			// Update shader table
+			HitGroupShaderTable->Reset();
+			for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.StaticMeshes))
+			{
+				ID3D12Resource* VertexBuffer = MeshRenderer->Mesh->VertexResource.GetResource();
+				ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
+
+				RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
+				Record.ShaderIdentifier										 = RaytracingPipelineStates::g_DefaultSID;
+				Record.RootArguments.MaterialIndex							 = static_cast<UINT>(i);
+				Record.RootArguments.Padding								 = 0xDEADBEEF;
+				Record.RootArguments.VertexBuffer							 = VertexBuffer->GetGPUVirtualAddress();
+				Record.RootArguments.IndexBuffer							 = IndexBuffer->GetGPUVirtualAddress();
+
+				HitGroupShaderTable->AddShaderRecord(Record);
+			}
+			ShaderBindingTable.WriteToGpu(Copy.GetGraphicsCommandList());
+		}
+		Copy.Close();
+		CopySyncHandle = Copy.Execute(false);
+
+		RHI::D3D12CommandContext& AsyncCompute = Device->GetLinkedDevice()->GetAsyncComputeCommandContext();
+		AsyncCompute.Open();
+		{
+			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
+			AccelerationStructure.Build(AsyncCompute);
+		}
+		AsyncCompute.Close();
+		ASBuildSyncHandle = AsyncCompute.Execute(false);
+
+		AccelerationStructure.PostBuild(ASBuildSyncHandle);
+	}
+
+	Context.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
+	Context.GetCommandQueue()->WaitForSyncHandle(ASBuildSyncHandle);
+
 	RHI::RenderGraph Graph(Allocator, Registry);
 
 	struct PathTraceParameters
 	{
 		RHI::RgResourceHandle Output;
-		RHI::RgResourceHandle OutputSrv;
-		RHI::RgResourceHandle OutputUav;
+		RHI::RgResourceHandle Srv;
+		RHI::RgResourceHandle Uav;
 	} PathTraceArgs;
 	PathTraceArgs.Output = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Path Trace Output")
 			.SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
 			.SetExtent(View.Width, View.Height, 1)
 			.AllowUnorderedAccess());
-	PathTraceArgs.OutputSrv = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
-	PathTraceArgs.OutputUav = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
+	PathTraceArgs.Srv = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
+	PathTraceArgs.Uav = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass(
 			 "Path Trace")
@@ -193,11 +156,11 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 					 } g_GlobalConstants					 = {};
 					 g_GlobalConstants.Camera				 = GetHLSLCameraDesc(*World->ActiveCamera);
 					 g_GlobalConstants.Resolution			 = { static_cast<float>(View.Width), static_cast<float>(View.Height), 1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height) };
-					 g_GlobalConstants.NumLights			 = NumLights;
+					 g_GlobalConstants.NumLights			 = WorldRenderView->NumLights;
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
 					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
-					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.OutputUav)->GetIndex();
+					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
 					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
 					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
 					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
@@ -206,8 +169,8 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RaytracingPipelineStates::GlobalRS));
 					 Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
 					 Context->SetComputeRootDescriptorTable(1, AccelerationStructure.GetShaderResourceView().GetGpuHandle());
-					 Context->SetComputeRootShaderResourceView(2, Materials.GetGpuVirtualAddress());
-					 Context->SetComputeRootShaderResourceView(3, Lights.GetGpuVirtualAddress());
+					 Context->SetComputeRootShaderResourceView(2, WorldRenderView->Materials.GetGpuVirtualAddress());
+					 Context->SetComputeRootShaderResourceView(3, WorldRenderView->Lights.GetGpuVirtualAddress());
 
 					 D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
 					 Desc.Width					   = View.Width;
@@ -218,10 +181,17 @@ void PathIntegratorDXR1_0::Render(World* World, RHI::D3D12CommandContext& Contex
 					 Context.UAVBarrier(nullptr);
 				 });
 
+	BloomInputParameters BloomInputArgs = {};
+	BloomInputArgs.Input				= PathTraceArgs.Output;
+	BloomInputArgs.Srv					= PathTraceArgs.Srv;
+	BloomParameters BloomArgs			= AddBloomPass(Graph, View, BloomInputArgs, g_Bloom);
+
 	TonemapInputParameters TonemapInputArgs = {};
 	TonemapInputArgs.Input					= PathTraceArgs.Output;
-	TonemapInputArgs.Srv					= PathTraceArgs.OutputSrv;
-	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, View, TonemapInputArgs);
+	TonemapInputArgs.Srv					= PathTraceArgs.Srv;
+	TonemapInputArgs.BloomInput				= BloomArgs.Output1[1]; // Output1[1] contains final upsampled bloom texture
+	TonemapInputArgs.BloomInputSrv			= BloomArgs.Output1Srvs[1];
+	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, View, TonemapInputArgs, g_Tonemap);
 
 	// After render graph execution, we need to read tonemap output as part of imgui pipeline that is not part of the graph, so graph will automatically apply
 	// resource barrier transition for us

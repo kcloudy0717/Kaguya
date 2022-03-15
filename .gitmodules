@@ -16,3 +16,6 @@
 [submodule "Dependencies/wil"]
 	path = Dependencies/wil
 	url = https://github.com/microsoft/wil.git
+[submodule "Dependencies/robin-hood-hashing"]
+	path = Dependencies/robin-hood-hashing
+	url = https://github.com/martinus/robin-hood-hashing.git

@@ -13,11 +13,11 @@ public:
 		const std::filesystem::path& Path,
 		FileMode					 Mode);
 
-	FileStream(const FileStream&) = delete;
-	FileStream& operator=(const FileStream&) = delete;
-
 	FileStream(FileStream&&) noexcept = default;
 	FileStream& operator=(FileStream&&) noexcept = default;
+
+	FileStream(const FileStream&) = delete;
+	FileStream& operator=(const FileStream&) = delete;
 
 	[[nodiscard]] void* GetHandle() const noexcept;
 	[[nodiscard]] u64	GetSizeInBytes() const noexcept;

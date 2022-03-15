@@ -67,19 +67,19 @@ namespace RHI
 			.Count	  = MaxProfiles * 2,
 			.NodeMask = Parent->GetNodeMask()
 		};
-		VERIFY_D3D12_API(Parent->GetDevice()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&QueryHeap)));
-		QueryHeap->SetName(L"Timestamp Query Heap");
+		VERIFY_D3D12_API(Parent->GetDevice()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&TimestampQueryHeap)));
+		TimestampQueryHeap->SetName(L"Timestamp Query Heap");
 
 		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK, Parent->GetNodeMask(), Parent->GetNodeMask());
 		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(MaxProfiles) * FrameLatency * 2 * sizeof(UINT64));
-		VERIFY_D3D12_API(Parent->GetDevice()->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&QueryReadback)));
-		QueryReadback->SetName(L"Timestamp Query Readback");
+		VERIFY_D3D12_API(Parent->GetDevice()->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&TimestampQueryReadback)));
+		TimestampQueryReadback->SetName(L"Timestamp Query Readback");
 	}
 
 	void D3D12Profiler::OnBeginFrame()
 	{
 		UINT64* QueryData = nullptr;
-		if (SUCCEEDED(QueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
+		if (SUCCEEDED(TimestampQueryReadback->Map(0, nullptr, reinterpret_cast<void**>(&QueryData))))
 		{
 			const UINT64* FrameQueryData = QueryData + static_cast<UINT64>(FrameIndex) * static_cast<UINT64>(MaxProfiles) * 2;
 
@@ -92,7 +92,7 @@ namespace RHI
 
 			Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
 
-			QueryReadback->Unmap(0, nullptr);
+			TimestampQueryReadback->Unmap(0, nullptr);
 		}
 
 		NumProfiles = 0;
@@ -129,7 +129,7 @@ namespace RHI
 
 		// Insert the start timestamp
 		UINT StartQueryIdx = ProfileIdx * 2;
-		CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartQueryIdx);
+		CommandList->EndQuery(TimestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartQueryIdx);
 
 		ProfileData.QueryStarted = true;
 
@@ -150,11 +150,11 @@ namespace RHI
 		// Insert the end timestamp
 		UINT StartIndex = Index * 2 + 0;
 		UINT EndIndex	= Index * 2 + 1;
-		CommandList->EndQuery(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndIndex);
+		CommandList->EndQuery(TimestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, EndIndex);
 
 		// Resolve the data
 		UINT64 AlignedDestinationBufferOffset = (FrameIndex * MaxProfiles * 2 + StartIndex) * sizeof(UINT64);
-		CommandList->ResolveQueryData(QueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartIndex, 2, QueryReadback.Get(), AlignedDestinationBufferOffset);
+		CommandList->ResolveQueryData(TimestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartIndex, 2, TimestampQueryReadback.Get(), AlignedDestinationBufferOffset);
 
 		ProfileData.QueryStarted  = false;
 		ProfileData.QueryFinished = true;

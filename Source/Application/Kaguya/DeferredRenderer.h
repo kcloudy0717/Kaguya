@@ -7,12 +7,11 @@
 class DeferredRenderer final : public Renderer
 {
 public:
-	using Renderer::Renderer;
+	DeferredRenderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
 
 private:
-	void Initialize() override;
-	void Destroy() override;
-	void Render(World* World, RHI::D3D12CommandContext& Context) override;
+	void RenderOptions() override;
+	void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) override;
 
 private:
 #pragma pack(push, 4)
@@ -44,18 +43,6 @@ private:
 
 	RHI::D3D12Buffer			  IndirectCommandBuffer;
 	RHI::D3D12UnorderedAccessView IndirectCommandBufferUav;
-
-	std::vector<StaticMeshComponent*> StaticMeshes;
-	std::vector<Hlsl::Mesh>			  HlslMeshes;
-
-	RHI::D3D12Buffer Materials;
-	Hlsl::Material*	 pMaterial = nullptr;
-	RHI::D3D12Buffer Lights;
-	Hlsl::Light*	 pLights = nullptr;
-	RHI::D3D12Buffer Meshes;
-	Hlsl::Mesh*		 pMeshes = nullptr;
-
-	u32 NumMaterials = 0, NumLights = 0, NumMeshes = 0;
 
 	int ViewMode = 0;
 };

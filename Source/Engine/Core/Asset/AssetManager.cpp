@@ -9,7 +9,7 @@ namespace Asset
 		Thread = std::jthread(
 			[=]()
 			{
-				RHI::D3D12LinkedDevice* LinkedDevice = Device->GetDevice();
+				RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
 
 				while (true)
 				{
@@ -188,7 +188,7 @@ namespace Asset
 
 	void AssetManager::RequestUpload(Texture* Texture)
 	{
-		//D3D12LinkedDevice* Device = RenderCore::Device->GetDevice();
+		//D3D12LinkedDevice* Device = RenderCore::Device->GetLinkedDevice();
 		//Device->BeginResourceUpload();
 		//UploadTexture(Texture, Device);
 		//Device->EndResourceUpload(true);
@@ -205,7 +205,7 @@ namespace Asset
 
 	void AssetManager::RequestUpload(Mesh* Mesh)
 	{
-		//D3D12LinkedDevice* Device = RenderCore::Device->GetDevice();
+		//D3D12LinkedDevice* Device = RenderCore::Device->GetLinkedDevice();
 		//Device->BeginResourceUpload();
 		//UploadMesh(Mesh, Device);
 		//Device->EndResourceUpload(true);

@@ -96,6 +96,10 @@ namespace RHI
 		PipelineStateRegistry			PipelineStateRegistry;
 		RaytracingPipelineStateRegistry RaytracingPipelineStateRegistry;
 
+		robin_hood::unordered_map<RgResourceHandle, RgBufferDesc>  BufferDescTable;
+		robin_hood::unordered_map<RgResourceHandle, RgTextureDesc> TextureDescTable;
+		robin_hood::unordered_map<RgResourceHandle, RgViewDesc>	   ViewDescTable;
+
 		std::vector<D3D12Buffer>			  Buffers;
 		std::vector<D3D12Texture>			  Textures;
 		std::vector<D3D12RenderTargetView>	  RenderTargetViews;

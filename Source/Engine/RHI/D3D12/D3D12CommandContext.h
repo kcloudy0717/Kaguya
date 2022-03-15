@@ -72,14 +72,12 @@ namespace RHI
 			D3D12RootSignature* RootSignature);
 
 		void ClearRenderTarget(
-			u32					   NumRenderTargetViews,
-			D3D12RenderTargetView* RenderTargetViews[],
-			D3D12DepthStencilView* DepthStencilView);
+			std::span<D3D12RenderTargetView*> RenderTargetViews,
+			D3D12DepthStencilView*			  DepthStencilView);
 
 		void SetRenderTarget(
-			u32					   NumRenderTargetViews,
-			D3D12RenderTargetView* RenderTargetViews[],
-			D3D12DepthStencilView* DepthStencilView);
+			std::span<D3D12RenderTargetView*> RenderTargetViews,
+			D3D12DepthStencilView*			  DepthStencilView);
 
 		void SetViewport(
 			const RHIViewport& Viewport);
@@ -209,12 +207,12 @@ namespace RHI
 			struct
 			{
 				// Viewport
-				UINT			 NumViewports														 = 0;
-				CD3DX12_VIEWPORT Viewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+				UINT		   NumViewports														   = 0;
+				D3D12_VIEWPORT Viewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
 
 				// Scissor Rect
-				UINT		 NumScissorRects														= 0;
-				CD3DX12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
+				UINT	   NumScissorRects														  = 0;
+				D3D12_RECT ScissorRects[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE] = {};
 			} Graphics;
 
 			struct

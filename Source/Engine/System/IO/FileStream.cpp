@@ -169,7 +169,7 @@ wil::unique_handle FileStream::InitializeHandle(
 {
 	VerifyArguments();
 
-	DWORD CreationDisposition = [Mode]()
+	DWORD CreationDisposition = [Mode]
 	{
 		DWORD dwCreationDisposition = 0;
 		// clang-format off
@@ -185,7 +185,7 @@ wil::unique_handle FileStream::InitializeHandle(
 		return dwCreationDisposition;
 	}();
 
-	DWORD DesiredAccess = [Access]()
+	DWORD DesiredAccess = [Access]
 	{
 		DWORD dwDesiredAccess = 0;
 		// clang-format off

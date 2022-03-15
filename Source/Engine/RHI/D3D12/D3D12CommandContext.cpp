@@ -71,7 +71,8 @@ namespace RHI
 
 	D3D12SyncHandle D3D12CommandContext::Execute(bool WaitForCompletion)
 	{
-		D3D12SyncHandle SyncHandle = GetCommandQueue()->ExecuteCommandLists(1, &CommandListHandle, WaitForCompletion);
+		D3D12CommandListHandle* Handles[]  = { &CommandListHandle };
+		D3D12SyncHandle			SyncHandle = GetCommandQueue()->ExecuteCommandLists(1, Handles, WaitForCompletion);
 
 		// Release the command allocator so it can be reused.
 		CommandAllocatorPool.DiscardCommandAllocator(std::exchange(CommandAllocator, nullptr), SyncHandle);
@@ -163,14 +164,13 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::ClearRenderTarget(
-		u32					   NumRenderTargetViews,
-		D3D12RenderTargetView* RenderTargetViews[],
-		D3D12DepthStencilView* DepthStencilView)
+		std::span<D3D12RenderTargetView*> RenderTargetViews,
+		D3D12DepthStencilView*			  DepthStencilView)
 	{
-		for (u32 i = 0; i < NumRenderTargetViews; ++i)
+		for (const auto RenderTargetView : RenderTargetViews)
 		{
-			D3D12_CLEAR_VALUE ClearValue = RenderTargetViews[i]->GetResource()->GetClearValue();
-			CommandListHandle->ClearRenderTargetView(RenderTargetViews[i]->GetCpuHandle(), ClearValue.Color, 0, nullptr);
+			D3D12_CLEAR_VALUE ClearValue = RenderTargetView->GetResource()->GetClearValue();
+			CommandListHandle->ClearRenderTargetView(RenderTargetView->GetCpuHandle(), ClearValue.Color, 0, nullptr);
 		}
 		if (DepthStencilView)
 		{
@@ -183,14 +183,12 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::SetRenderTarget(
-		u32					   NumRenderTargetViews,
-		D3D12RenderTargetView* RenderTargetViews[],
-		D3D12DepthStencilView* DepthStencilView)
+		std::span<D3D12RenderTargetView*> RenderTargetViews,
+		D3D12DepthStencilView*			  DepthStencilView)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE pRenderTargetDescriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilDescriptor											 = {};
-
-		for (u32 i = 0; i < NumRenderTargetViews; ++i)
+		for (size_t i = 0; i < RenderTargetViews.size(); ++i)
 		{
 			pRenderTargetDescriptors[i] = RenderTargetViews[i]->GetCpuHandle();
 		}
@@ -198,8 +196,7 @@ namespace RHI
 		{
 			DepthStencilDescriptor = DepthStencilView->GetCpuHandle();
 		}
-
-		CommandListHandle->OMSetRenderTargets(NumRenderTargetViews, pRenderTargetDescriptors, FALSE, DepthStencilView ? &DepthStencilDescriptor : nullptr);
+		CommandListHandle->OMSetRenderTargets(static_cast<UINT>(RenderTargetViews.size()), pRenderTargetDescriptors, FALSE, DepthStencilView ? &DepthStencilDescriptor : nullptr);
 	}
 
 	void D3D12CommandContext::SetViewport(
@@ -364,5 +361,7 @@ namespace RHI
 		, PixEvent(CommandContext.GetGraphicsCommandList(), 0, Name.data())
 #endif
 	{
+		// Copy queue profiling currently not supported
+		assert(CommandContext.GetCommandQueue()->GetType() != D3D12_COMMAND_LIST_TYPE_COPY);
 	}
 } // namespace RHI
