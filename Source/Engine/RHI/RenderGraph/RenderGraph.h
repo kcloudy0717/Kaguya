@@ -1,13 +1,11 @@
 #pragma once
 #include <cassert>
 #include <stack>
-#include <unordered_set>
 
+#include "System.h"
 #include "RHI/RHI.h"
 #include "RenderGraphRegistry.h"
 #include "DgmlBuilder.h"
-
-#include "System/Delegate.h"
 
 namespace RHI
 {

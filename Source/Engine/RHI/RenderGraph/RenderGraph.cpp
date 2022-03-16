@@ -62,7 +62,6 @@ namespace RHI
 		for (auto Read : Reads)
 		{
 			D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
 			if (RenderGraph->AllowUnorderedAccess(Read))
 			{
 				ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
@@ -74,7 +73,6 @@ namespace RHI
 		for (auto Write : Writes)
 		{
 			D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
-
 			if (RenderGraph->AllowRenderTarget(Write))
 			{
 				WriteState |= D3D12_RESOURCE_STATE_RENDER_TARGET;

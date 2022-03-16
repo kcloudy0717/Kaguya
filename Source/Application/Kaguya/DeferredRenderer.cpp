@@ -49,7 +49,7 @@ DeferredRenderer::DeferredRenderer(RHI::D3D12Device* Device, ShaderCompiler* Com
 void DeferredRenderer::RenderOptions()
 {
 	constexpr const char* View[] = { "Normal", "Material Id", "Motion", "Depth" };
-	ImGui::Combo("View", &ViewMode, View, static_cast<int>(std::size(View)));
+	ImGui::Combo("GBuffer View", &ViewMode, View, static_cast<int>(std::size(View)));
 }
 
 void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context)

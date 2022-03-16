@@ -190,7 +190,7 @@ public:
 		if (ImGui::Begin("Render Path"))
 		{
 			constexpr const char* View[] = { "Deferred Renderer", "Path Integrator DXR1.0", "Path Integrator DXR1.1" };
-			if (ImGui::Combo("View", &RenderPath, View, static_cast<int>(std::size(View))))
+			if (ImGui::Combo("Render Path", &RenderPath, View, static_cast<int>(std::size(View))))
 			{
 				CreateRenderPath();
 			}
@@ -298,6 +298,12 @@ public:
 		{
 			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, Kaguya::Compiler, MainWindow);
 		}
+		// Hack: Reset raytracing info after render path is reset to ensure no BLAS are left
+		Kaguya::AssetManager->GetMeshRegistry().EnumerateAsset(
+			[](Asset::AssetHandle Handle, Asset::Mesh* Mesh)
+			{
+				Mesh->ResetRaytracingInfo();
+			});
 	}
 
 	Stopwatch Stopwatch;

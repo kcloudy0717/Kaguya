@@ -29,3 +29,5 @@
 #include "Async/AsyncTask.h"
 
 #include "Xml/XmlReader.h"
+
+#include <robin_hood.h>

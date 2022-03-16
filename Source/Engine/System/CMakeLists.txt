@@ -30,5 +30,6 @@ set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 target_include_directories(${PROJECTNAME} PUBLIC "${SYSTEM_DIR}")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/wil/include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/spdlog/include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/robin-hood-hashing/src/include")
 
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/google/cityhash")

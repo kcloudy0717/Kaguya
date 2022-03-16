@@ -1,4 +1,5 @@
 #pragma once
+#include "System/System.h"
 #include "RHI/RHI.h"
 #include "Core/CoreDefines.h"
 #include "Core/World/World.h"
@@ -31,11 +32,11 @@ public:
 
 	RHI::D3D12RaytracingManager Manager;
 
-	RHI::D3D12RaytracingScene		  TopLevelAccelerationStructure;
-	std::vector<StaticMeshComponent*> StaticMeshes;
-	std::set<Asset::Mesh*>			  ReferencedGeometries;
-	UINT							  CurrentInstanceID							 = 0;
-	UINT							  CurrentInstanceContributionToHitGroupIndex = 0;
+	RHI::D3D12RaytracingScene				TopLevelAccelerationStructure;
+	std::vector<StaticMeshComponent*>		StaticMeshes;
+	robin_hood::unordered_set<Asset::Mesh*> ReferencedGeometries;
+	UINT									CurrentInstanceID						   = 0;
+	UINT									CurrentInstanceContributionToHitGroupIndex = 0;
 
 	RHI::D3D12Buffer   TlasScratch;
 	RHI::D3D12ASBuffer TlasResult;
