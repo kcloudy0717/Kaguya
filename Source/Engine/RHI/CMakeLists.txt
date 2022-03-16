@@ -27,6 +27,8 @@ target_link_libraries(${PROJECTNAME} PRIVATE System)
 # Public include/linking for now until a RHI abstraction is build on top of it
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/AgilitySDK/Include")
+target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectStorage/Include")
+target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/DirectStorage/Bin/x64/dstorage.lib)
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/WinPixEventRuntime/Include")
 target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.lib)
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
@@ -40,6 +42,9 @@ add_custom_command(
 	COMMAND ${CMAKE_COMMAND} -E copy 
 		${DEPDIR}/dxc/dxcompiler.dll
 		${DEPDIR}/dxc/dxil.dll
+
+		${DEPDIR}/DirectStorage/Bin/x64/dstorage.dll
+		${DEPDIR}/DirectStorage/Bin/x64/dstoragecore.dll
 
 		${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.dll
 

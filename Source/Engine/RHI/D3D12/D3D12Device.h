@@ -47,6 +47,8 @@ namespace RHI
 		[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
 		[[nodiscard]] auto GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
 		[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
+		[[nodiscard]] auto GetDStorageFactory() const noexcept -> IDStorageFactory* { return DStorageFactory.Get(); }
+		[[nodiscard]] auto GetDStorageQueue() const noexcept -> IDStorageQueue* { return DStorageQueueFile.Get(); }
 		[[nodiscard]] auto GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
 		[[nodiscard]] auto GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
 		[[nodiscard]] auto GetLinkedDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
@@ -129,9 +131,13 @@ namespace RHI
 		Arc<IDXGIAdapter3> Adapter3;
 		DXGI_ADAPTER_DESC2 AdapterDesc = {};
 
-		Arc<ID3D12Device>	  Device;
-		Arc<ID3D12Device1>	  Device1;
-		Arc<ID3D12Device5>	  Device5;
+		Arc<ID3D12Device>  Device;
+		Arc<ID3D12Device1> Device1;
+		Arc<ID3D12Device5> Device5;
+
+		Arc<IDStorageFactory> DStorageFactory;
+		Arc<IDStorageQueue>	  DStorageQueueFile;
+
 		D3D12NodeMask		  AllNodeMask;
 		CD3DX12FeatureSupport FeatureSupport;
 		TDescriptorSizeCache  DescriptorSizeCache;

@@ -66,6 +66,9 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 #pragma comment(lib, "d3d12.lib")
 #include <pix3.h>
 
+// DirectStorage
+#include "dstorage.h"
+
 #include <cstddef>
 #include <cassert>
 

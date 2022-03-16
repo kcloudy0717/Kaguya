@@ -32,6 +32,17 @@ namespace RHI
 		, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
 		, Library(!Options.PsoCachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.PsoCachePath) : nullptr)
 	{
+		VERIFY_D3D12_API(DStorageGetFactory(IID_PPV_ARGS(&DStorageFactory)));
+
+		DSTORAGE_QUEUE_DESC QueueDesc = {
+			.SourceType = DSTORAGE_REQUEST_SOURCE_FILE,
+			.Capacity	= DSTORAGE_MAX_QUEUE_CAPACITY,
+			.Priority	= DSTORAGE_PRIORITY_NORMAL,
+			.Name		= "DStorageQueue: File",
+			.Device		= Device.Get()
+		};
+		VERIFY_D3D12_API(DStorageFactory->CreateQueue(&QueueDesc, IID_PPV_ARGS(&DStorageQueueFile)));
+
 		Arc<ID3D12InfoQueue> InfoQueue;
 		if (SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(&InfoQueue))))
 		{

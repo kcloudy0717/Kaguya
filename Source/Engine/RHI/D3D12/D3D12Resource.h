@@ -77,8 +77,8 @@ namespace RHI
 	protected:
 		Arc<ID3D12Resource>				 Resource;
 		std::optional<D3D12_CLEAR_VALUE> ClearValue;
-		D3D12_RESOURCE_DESC				 Desc = {};
-		UINT8							 PlaneCount = 0;
+		D3D12_RESOURCE_DESC				 Desc			 = {};
+		UINT8							 PlaneCount		 = 0;
 		UINT							 NumSubresources = 0;
 		CResourceState					 ResourceState;
 	};
