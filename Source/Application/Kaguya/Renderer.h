@@ -36,7 +36,11 @@ public:
 class Renderer
 {
 public:
-	Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
+	Renderer(
+		RHI::D3D12Device*	 Device,
+		RHI::D3D12SwapChain* SwapChain,
+		ShaderCompiler*		 Compiler,
+		Window*				 MainWindow);
 	virtual ~Renderer();
 
 	void OnRenderOptions();
@@ -48,14 +52,14 @@ public:
 	void OnMove(std::int32_t x, std::int32_t y);
 
 protected:
-	virtual void RenderOptions() = 0;
+	virtual void RenderOptions()																		   = 0;
 	virtual void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) = 0;
 
 protected:
-	RHI::D3D12Device*	Device	   = nullptr;
-	ShaderCompiler*		Compiler   = nullptr;
-	Window*				MainWindow = nullptr;
-	RHI::D3D12SwapChain SwapChain;
+	RHI::D3D12Device*	 Device		= nullptr;
+	RHI::D3D12SwapChain* SwapChain	= nullptr;
+	ShaderCompiler*		 Compiler	= nullptr;
+	Window*				 MainWindow = nullptr;
 
 	RHI::RenderGraphAllocator Allocator;
 	RHI::RenderGraphRegistry  Registry;

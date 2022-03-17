@@ -7,8 +7,12 @@
 static BloomSettings   g_Bloom;
 static TonemapSettings g_Tonemap;
 
-PathIntegratorDXR1_0::PathIntegratorDXR1_0(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
-	: Renderer(Device, Compiler, MainWindow)
+PathIntegratorDXR1_0::PathIntegratorDXR1_0(
+	RHI::D3D12Device*	 Device,
+	RHI::D3D12SwapChain* SwapChain,
+	ShaderCompiler*		 Compiler,
+	Window*				 MainWindow)
+	: Renderer(Device, SwapChain, Compiler, MainWindow)
 {
 	Shaders::Compile(Compiler);
 	Libraries::Compile(Compiler);

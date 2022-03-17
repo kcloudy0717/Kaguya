@@ -1,12 +1,16 @@
 #include "Renderer.h"
 #include "RendererRegistry.h"
 
-Renderer::Renderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
+Renderer::Renderer(
+	RHI::D3D12Device*	 Device,
+	RHI::D3D12SwapChain* SwapChain,
+	ShaderCompiler*		 Compiler,
+	Window*				 MainWindow)
 	: Device(Device)
+	, SwapChain(SwapChain)
 	, Compiler(Compiler)
 	, MainWindow(MainWindow)
-	, SwapChain(Device, MainWindow->GetWindowHandle())
-	, Allocator(64 * 1024)
+	, Allocator(65536)
 {
 }
 
@@ -115,7 +119,7 @@ void Renderer::OnRender(World* World, WorldRenderView* WorldRenderView)
 		InspectorWindow.SetContext(World, WorldWindow.GetSelectedActor());
 		InspectorWindow.Render();
 
-		auto [pRenderTarget, RenderTargetView] = SwapChain.GetCurrentBackBufferResource();
+		auto [pRenderTarget, RenderTargetView] = SwapChain->GetCurrentBackBufferResource();
 
 		auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 			pRenderTarget->GetResource(),
@@ -123,8 +127,8 @@ void Renderer::OnRender(World* World, WorldRenderView* WorldRenderView)
 			D3D12_RESOURCE_STATE_RENDER_TARGET);
 		Context->ResourceBarrier(1, &Barrier);
 		{
-			D3D12_VIEWPORT Viewport	   = SwapChain.GetViewport();
-			D3D12_RECT	   ScissorRect = SwapChain.GetScissorRect();
+			D3D12_VIEWPORT Viewport	   = SwapChain->GetViewport();
+			D3D12_RECT	   ScissorRect = SwapChain->GetScissorRect();
 
 			Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			Context->RSSetViewports(1, &Viewport);
@@ -150,7 +154,7 @@ void Renderer::OnRender(World* World, WorldRenderView* WorldRenderView)
 	Context.Close();
 
 	RendererPresent Present(Context);
-	SwapChain.Present(true, Present);
+	SwapChain->Present(true, Present);
 
 	Device->OnEndFrame();
 	++FrameIndex;
@@ -163,10 +167,10 @@ void Renderer::OnRender(World* World, WorldRenderView* WorldRenderView)
 
 void Renderer::OnResize(uint32_t Width, uint32_t Height)
 {
-	SwapChain.Resize(Width, Height);
+	SwapChain->Resize(Width, Height);
 }
 
 void Renderer::OnMove(std::int32_t x, std::int32_t y)
 {
-	SwapChain.DisplayHDRSupport();
+	SwapChain->DisplayHDRSupport();
 }

@@ -4,7 +4,11 @@
 class PathIntegratorDXR1_1 final : public Renderer
 {
 public:
-	PathIntegratorDXR1_1(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow);
+	PathIntegratorDXR1_1(
+		RHI::D3D12Device*	 Device,
+		RHI::D3D12SwapChain* SwapChain,
+		ShaderCompiler*		 Compiler,
+		Window*				 MainWindow);
 
 private:
 	void RenderOptions() override;

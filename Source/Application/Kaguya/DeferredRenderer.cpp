@@ -2,8 +2,12 @@
 
 #include "RendererRegistry.h"
 
-DeferredRenderer::DeferredRenderer(RHI::D3D12Device* Device, ShaderCompiler* Compiler, Window* MainWindow)
-	: Renderer(Device, Compiler, MainWindow)
+DeferredRenderer::DeferredRenderer(
+	RHI::D3D12Device*	 Device,
+	RHI::D3D12SwapChain* SwapChain,
+	ShaderCompiler*		 Compiler,
+	Window*				 MainWindow)
+	: Renderer(Device, SwapChain, Compiler, MainWindow)
 {
 	Shaders::Compile(Compiler);
 	RootSignatures::Compile(Device, Registry);

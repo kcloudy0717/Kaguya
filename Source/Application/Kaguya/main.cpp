@@ -288,15 +288,15 @@ public:
 		Renderer.reset();
 		if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::DeferredRenderer)
 		{
-			Renderer = std::make_unique<DeferredRenderer>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<DeferredRenderer>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
 		}
 		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_0)
 		{
-			Renderer = std::make_unique<PathIntegratorDXR1_0>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<PathIntegratorDXR1_0>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
 		}
 		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_1)
 		{
-			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
 		}
 		// Hack: Reset raytracing info after render path is reset to ensure no BLAS are left
 		Kaguya::AssetManager->GetMeshRegistry().EnumerateAsset(
@@ -308,6 +308,8 @@ public:
 
 	Stopwatch Stopwatch;
 	Window*	  MainWindow = nullptr;
+
+	RHI::D3D12SwapChain* SwapChain = nullptr;
 
 	World*					  World			  = nullptr;
 	WorldRenderView*		  WorldRenderView = nullptr;
@@ -353,6 +355,8 @@ int main(int /*argc*/, char* /*argv*/[])
 	D3D12RHIInitializer		D3D12RHIInitializer(DeviceOptions);
 	AssetManagerInitializer AssetManagerInitializer;
 
+	RHI::D3D12SwapChain SwapChain(Kaguya::Device, MainWindow.GetWindowHandle());
+
 	World			World(Kaguya::AssetManager);
 	WorldRenderView WorldRenderView(Kaguya::Device->GetLinkedDevice());
 
@@ -363,6 +367,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	// MitsubaLoader::Load("Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
 
 	Editor.MainWindow	   = &MainWindow;
+	Editor.SwapChain	   = &SwapChain;
 	Editor.World		   = &World;
 	Editor.WorldRenderView = &WorldRenderView;
 	// Editor.RenderPath	   = static_cast<int>(RENDER_PATH::DeferredRenderer);
