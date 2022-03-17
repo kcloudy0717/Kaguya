@@ -43,8 +43,7 @@ namespace RHI
 		// If ResourceState was just created, its state is uninitialized
 		if (ResourceState.IsUninitialized())
 		{
-			ResourceState = CResourceState(Resource->GetNumSubresources());
-			ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_UNKNOWN);
+			ResourceState = CResourceState(Resource->GetNumSubresources(), D3D12_RESOURCE_STATE_UNKNOWN);
 		}
 		return ResourceState;
 	}

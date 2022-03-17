@@ -14,7 +14,7 @@ namespace RHI
 		};
 
 		CResourceState() noexcept = default;
-		explicit CResourceState(u32 NumSubresources);
+		explicit CResourceState(u32 NumSubresources, D3D12_RESOURCE_STATES InitialResourceState);
 
 		[[nodiscard]] auto begin() const noexcept { return SubresourceStates.begin(); }
 		[[nodiscard]] auto end() const noexcept { return SubresourceStates.end(); }

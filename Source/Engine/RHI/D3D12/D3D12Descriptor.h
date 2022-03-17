@@ -24,12 +24,12 @@ namespace RHI
 		[[nodiscard]] bool DoesNotOverlap(const CSubresourceSubset& CSubresourceSubset) const noexcept;
 
 	protected:
-		UINT16 BeginArray; // Also used to store Tex3D slices.
-		UINT16 EndArray;   // End - Begin == Array Slices
-		UINT8  BeginMip;
-		UINT8  EndMip; // End - Begin == Mip Levels
-		UINT8  BeginPlane;
-		UINT8  EndPlane;
+		UINT16 BeginArray = 0; // Also used to store Tex3D slices.
+		UINT16 EndArray	  = 0; // End - Begin == Array Slices
+		UINT8  BeginMip	  = 0;
+		UINT8  EndMip	  = 0; // End - Begin == Mip Levels
+		UINT8  BeginPlane = 0;
+		UINT8  EndPlane	  = 0;
 	};
 
 	class CViewSubresourceSubset : public CSubresourceSubset
@@ -119,9 +119,9 @@ namespace RHI
 		}
 
 	protected:
-		UINT8  MipLevels;
-		UINT16 ArraySlices;
-		UINT8  PlaneCount;
+		UINT8  MipLevels   = 0;
+		UINT16 ArraySlices = 0;
+		UINT8  PlaneCount  = 0;
 	};
 
 	// This iterator iterates over contiguous ranges of subresources within a
@@ -253,13 +253,13 @@ namespace RHI
 			if (Parent)
 			{
 				CDescriptorHeapManager& Manager = Parent->GetHeapManager<ViewDesc>();
-				CpuHandle						= Manager.AllocateHeapSlot(HeapIndex);
+				CpuHandle						= Manager.AllocateHeapSlot(DescriptorHeapIndex);
 			}
 		}
 		D3D12Descriptor(D3D12Descriptor&& D3D12Descriptor) noexcept
 			: D3D12LinkedDeviceChild(std::exchange(D3D12Descriptor.Parent, {}))
 			, CpuHandle(std::exchange(D3D12Descriptor.CpuHandle, {}))
-			, HeapIndex(std::exchange(D3D12Descriptor.HeapIndex, UINT_MAX))
+			, DescriptorHeapIndex(std::exchange(D3D12Descriptor.DescriptorHeapIndex, UINT_MAX))
 		{
 		}
 		D3D12Descriptor& operator=(D3D12Descriptor&& D3D12Descriptor) noexcept
@@ -270,9 +270,9 @@ namespace RHI
 			}
 
 			InternalDestroy();
-			Parent	  = std::exchange(D3D12Descriptor.Parent, {});
-			CpuHandle = std::exchange(D3D12Descriptor.CpuHandle, {});
-			HeapIndex = std::exchange(D3D12Descriptor.HeapIndex, UINT_MAX);
+			Parent				= std::exchange(D3D12Descriptor.Parent, {});
+			CpuHandle			= std::exchange(D3D12Descriptor.CpuHandle, {});
+			DescriptorHeapIndex = std::exchange(D3D12Descriptor.DescriptorHeapIndex, UINT_MAX);
 
 			return *this;
 		}
@@ -286,7 +286,7 @@ namespace RHI
 
 		[[nodiscard]] bool IsValid() const noexcept
 		{
-			return HeapIndex != UINT_MAX;
+			return DescriptorHeapIndex != UINT_MAX;
 		}
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept
 		{
@@ -320,16 +320,16 @@ namespace RHI
 			if (Parent && IsValid())
 			{
 				CDescriptorHeapManager& Manager = Parent->GetHeapManager<ViewDesc>();
-				Manager.FreeHeapSlot(CpuHandle, HeapIndex);
-				Parent	  = nullptr;
-				CpuHandle = { NULL };
-				HeapIndex = UINT_MAX;
+				Manager.FreeHeapSlot(CpuHandle, DescriptorHeapIndex);
+				Parent				= nullptr;
+				CpuHandle			= { NULL };
+				DescriptorHeapIndex = UINT_MAX;
 			}
 		}
 
 	protected:
-		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = { NULL };
-		UINT						HeapIndex = UINT_MAX;
+		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle			= { NULL };
+		UINT						DescriptorHeapIndex = UINT_MAX;
 	};
 
 	template<typename ViewDesc>

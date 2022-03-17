@@ -64,9 +64,18 @@ namespace RHI
 		bool ReadbackResource;
 	};
 
-	CResourceState::CResourceState(u32 NumSubresources)
-		: SubresourceStates(NumSubresources)
+	CResourceState::CResourceState(u32 NumSubresources, D3D12_RESOURCE_STATES InitialResourceState)
+		: ResourceState(InitialResourceState)
+		, SubresourceStates(NumSubresources, InitialResourceState)
 	{
+		if (NumSubresources == 1)
+		{
+			TrackingMode = ETrackingMode::PerResource;
+		}
+		else
+		{
+			TrackingMode = ETrackingMode::PerSubresource;
+		}
 	}
 
 	D3D12_RESOURCE_STATES CResourceState::GetSubresourceState(u32 Subresource) const
@@ -113,9 +122,8 @@ namespace RHI
 		, Desc(this->Resource->GetDesc())
 		, PlaneCount(D3D12GetFormatPlaneCount(Parent->GetDevice(), Desc.Format))
 		, NumSubresources(CalculateNumSubresources())
-		, ResourceState(NumSubresources)
+		, ResourceState(NumSubresources, InitialResourceState)
 	{
-		ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
 	}
 
 	D3D12Resource::D3D12Resource(
@@ -130,9 +138,8 @@ namespace RHI
 		, Desc(Resource->GetDesc())
 		, PlaneCount(D3D12GetFormatPlaneCount(Parent->GetDevice(), Desc.Format))
 		, NumSubresources(CalculateNumSubresources())
-		, ResourceState(NumSubresources)
+		, ResourceState(NumSubresources, InitialResourceState)
 	{
-		ResourceState.SetSubresourceState(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, InitialResourceState);
 	}
 
 	Arc<ID3D12Resource> D3D12Resource::InitializeResource(
