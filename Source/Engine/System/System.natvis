@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="InlineAllocator&lt;*&gt;">
+		<DisplayString Condition="SizeInBytes == 0xcccccccc">Uninitialized</DisplayString>
+		<DisplayString Condition="SizeInBytes == 0">Null</DisplayString>
+		<DisplayString Condition="SizeInBytes &lt;= $T1">Stack Memory: {SizeInBytes} bytes</DisplayString>
+		<DisplayString Condition="SizeInBytes &gt; $T1">Heap Memory: {SizeInBytes} bytes</DisplayString>
+		<Expand>
+			<Item Name="Storage" Condition="SizeInBytes &lt;= $T1">(void*)Buffer</Item>
+			<Item Name="Storage" Condition="SizeInBytes &gt; $T1">Ptr</Item>
+			<Item Name="SizeInBytes">SizeInBytes</Item>
+		</Expand>
+	</Type>
+</AutoVisualizer>

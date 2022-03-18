@@ -4,14 +4,16 @@ set(PROJECTNAME "RHI")
 
 file(GLOB_RECURSE inc ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB_RECURSE src ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE natvis ${CMAKE_CURRENT_SOURCE_DIR}/*.natvis)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${natvis})
 
 add_library(${PROJECTNAME} STATIC
 	${inc}
-	${src})
+	${src}
+	${natvis})
 
 if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3

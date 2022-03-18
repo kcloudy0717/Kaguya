@@ -4,6 +4,7 @@ set(PROJECTNAME "System")
 
 file(GLOB_RECURSE inc ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB_RECURSE src ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE natvis ${CMAKE_CURRENT_SOURCE_DIR}/*.natvis)
 
 set(cityhash
 	${DEPDIR}/google/cityhash/city.h
@@ -11,11 +12,13 @@ set(cityhash
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${natvis})
 source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${cityhash})
 
 add_library(${PROJECTNAME} STATIC
 	${inc}
 	${src}
+	${natvis}
 
 	${cityhash})
 target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
