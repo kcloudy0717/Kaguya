@@ -21,6 +21,14 @@ namespace RHI
 		return LastSignaledValue;
 	}
 
+	UINT64 D3D12Fence::Signal(IDStorageQueue* DStorageQueue)
+	{
+		InternalSignal(DStorageQueue, CurrentValue);
+		UpdateLastCompletedValue();
+		CurrentValue++;
+		return LastSignaledValue;
+	}
+
 	bool D3D12Fence::IsFenceComplete(UINT64 Value)
 	{
 		if (Value <= LastCompletedValue)
@@ -52,6 +60,12 @@ namespace RHI
 	void D3D12Fence::InternalSignal(ID3D12CommandQueue* CommandQueue, UINT64 Value)
 	{
 		VERIFY_D3D12_API(CommandQueue->Signal(Fence.Get(), Value));
+		LastSignaledValue = Value;
+	}
+
+	void D3D12Fence::InternalSignal(IDStorageQueue* DStorageQueue, UINT64 Value)
+	{
+		DStorageQueue->EnqueueSignal(Fence.Get(), Value);
 		LastSignaledValue = Value;
 	}
 

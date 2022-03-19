@@ -151,7 +151,7 @@ namespace Asset
 			Handles.push_back(Mesh->Handle);
 			Mesh->UpdateInfo();
 			Mesh->ComputeBoundingBox();
-			AssetManager->RequestUpload(Mesh);
+			AssetManager->EnqueueRequest(Mesh);
 		}
 		return Handles;
 	}

@@ -21,6 +21,7 @@ namespace RHI
 		[[nodiscard]] ID3D12Fence1* Get() const noexcept { return Fence.Get(); }
 
 		UINT64 Signal(D3D12CommandQueue* CommandQueue);
+		UINT64 Signal(IDStorageQueue* DStorageQueue);
 
 		[[nodiscard]] bool IsFenceComplete(UINT64 Value);
 
@@ -30,6 +31,7 @@ namespace RHI
 		Arc<ID3D12Fence1> InitializeFence(UINT64 InitialValue, D3D12_FENCE_FLAGS Flags);
 
 		void InternalSignal(ID3D12CommandQueue* CommandQueue, UINT64 Value);
+		void InternalSignal(IDStorageQueue* DStorageQueue, UINT64 Value);
 
 		UINT64 UpdateLastCompletedValue();
 

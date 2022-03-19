@@ -41,13 +41,16 @@ namespace Asset
 		}
 
 		void RequestUpload(Texture* Texture);
-		void RequestUpload(Mesh* Mesh);
+
+		void EnqueueRequest(Texture* Texture);
+		void EnqueueRequest(Mesh* Mesh);
 
 	private:
 		void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
-		void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);
 
 	private:
+		RHI::D3D12Device* Device = nullptr;
+
 		MeshImporter	MeshImporter;
 		TextureImporter TextureImporter;
 
@@ -57,7 +60,6 @@ namespace Asset
 		// Upload stuff to the GPU
 		std::mutex				Mutex;
 		std::condition_variable ConditionVariable;
-		std::queue<Mesh*>		MeshUploadQueue;
 		std::queue<Texture*>	TextureUploadQueue;
 
 		std::jthread	  Thread;

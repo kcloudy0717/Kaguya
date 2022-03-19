@@ -48,7 +48,8 @@ namespace RHI
 		[[nodiscard]] auto GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
 		[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
 		[[nodiscard]] auto GetDStorageFactory() const noexcept -> IDStorageFactory* { return DStorageFactory.Get(); }
-		[[nodiscard]] auto GetDStorageQueue() const noexcept -> IDStorageQueue* { return DStorageQueueFile.Get(); }
+		[[nodiscard]] auto GetDStorageQueue(DSTORAGE_REQUEST_SOURCE_TYPE Type) const noexcept -> IDStorageQueue* { return DStorageQueues[Type].Get(); }
+		[[nodiscard]] auto GetDStorageFence() noexcept -> D3D12Fence* { return &DStorageFence; }
 		[[nodiscard]] auto GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
 		[[nodiscard]] auto GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
 		[[nodiscard]] auto GetLinkedDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
@@ -68,6 +69,8 @@ namespace RHI
 		void EndCapture() const;
 
 		void WaitIdle();
+
+		[[nodiscard]] D3D12SyncHandle DStorageSubmit(DSTORAGE_REQUEST_SOURCE_TYPE Type);
 
 		[[nodiscard]] D3D12RootSignature CreateRootSignature(RootSignatureDesc& Desc);
 
@@ -110,22 +113,22 @@ namespace RHI
 			~ReportLiveObjectGuard() { D3D12Device::ReportLiveObjects(); }
 		} MemoryGuard;
 
-		// struct WinPix
-		//{
-		//	WinPix()
-		//	{
-		//		Module = PIXLoadLatestWinPixGpuCapturerLibrary();
-		//	}
-		//	~WinPix()
-		//	{
-		//		if (Module)
-		//		{
-		//			FreeLibrary(Module);
-		//		}
-		//	}
+		/*struct WinPix
+		{
+			WinPix()
+				: Module(PIXLoadLatestWinPixGpuCapturerLibrary())
+			{
+			}
+			~WinPix()
+			{
+				if (Module)
+				{
+					FreeLibrary(Module);
+				}
+			}
 
-		//	HMODULE Module;
-		//} WinPix;
+			HMODULE Module;
+		} WinPix;*/
 
 		Arc<IDXGIFactory6> Factory6;
 		Arc<IDXGIAdapter3> Adapter3;
@@ -136,7 +139,8 @@ namespace RHI
 		Arc<ID3D12Device5> Device5;
 
 		Arc<IDStorageFactory> DStorageFactory;
-		Arc<IDStorageQueue>	  DStorageQueueFile;
+		Arc<IDStorageQueue>	  DStorageQueues[2];
+		D3D12Fence			  DStorageFence;
 
 		D3D12NodeMask		  AllNodeMask;
 		CD3DX12FeatureSupport FeatureSupport;

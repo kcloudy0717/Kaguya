@@ -177,8 +177,8 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Meshlet));
 					 Context.SetGraphicsRootSignature(Registry.GetRootSignature(RootSignatures::Meshlet));
 					 Context.SetGraphicsConstantBuffer(5, sizeof(GlobalConstants), &g_GlobalConstants);
-					 Context->SetGraphicsRootShaderResourceView(6, Materials.GetGpuVirtualAddress());
-					 Context->SetGraphicsRootShaderResourceView(7, Meshes.GetGpuVirtualAddress());
+					 Context->SetGraphicsRootShaderResourceView(6, WorldRenderView->Materials.GetGpuVirtualAddress());
+					 Context->SetGraphicsRootShaderResourceView(7, WorldRenderView->Meshes.GetGpuVirtualAddress());
 
 					 Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
@@ -191,8 +191,8 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 					 };
 					 RHI::D3D12DepthStencilView* DepthStencilView = Registry.Get<RHI::D3D12DepthStencilView>(GBufferArgs.Dsv);
 
-					 Context.ClearRenderTarget(3, RenderTargetViews, DepthStencilView);
-					 Context.SetRenderTarget(3, RenderTargetViews, DepthStencilView);
+					 Context.ClearRenderTarget(RenderTargetViews, DepthStencilView);
+					 Context.SetRenderTarget(RenderTargetViews, DepthStencilView);
 
 					 Context->ExecuteIndirect(
 						 CommandSignature,

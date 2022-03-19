@@ -113,10 +113,9 @@ namespace RHI
 		D3D12LinkedDevice* Parent = nullptr;
 	};
 
+	class D3D12Fence;
 	// Represents a Fence and Value pair, similar to that of a coroutine handle
 	// you can query the status of a command execution point and wait for it
-	class D3D12Fence;
-
 	class D3D12SyncHandle
 	{
 	public:

@@ -41,7 +41,18 @@ namespace RHI
 			.Name		= "DStorageQueue: File",
 			.Device		= Device.Get()
 		};
-		VERIFY_D3D12_API(DStorageFactory->CreateQueue(&QueueDesc, IID_PPV_ARGS(&DStorageQueueFile)));
+		VERIFY_D3D12_API(DStorageFactory->CreateQueue(&QueueDesc, IID_PPV_ARGS(&DStorageQueues[DSTORAGE_REQUEST_SOURCE_FILE])));
+
+		QueueDesc = {
+			.SourceType = DSTORAGE_REQUEST_SOURCE_MEMORY,
+			.Capacity	= DSTORAGE_MAX_QUEUE_CAPACITY,
+			.Priority	= DSTORAGE_PRIORITY_NORMAL,
+			.Name		= "DStorageQueue: Memory",
+			.Device		= Device.Get()
+		};
+		VERIFY_D3D12_API(DStorageFactory->CreateQueue(&QueueDesc, IID_PPV_ARGS(&DStorageQueues[DSTORAGE_REQUEST_SOURCE_MEMORY])));
+
+		DStorageFence = D3D12Fence(this, 0);
 
 		Arc<ID3D12InfoQueue> InfoQueue;
 		if (SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(&InfoQueue))))
@@ -150,6 +161,13 @@ namespace RHI
 	void D3D12Device::WaitIdle()
 	{
 		LinkedDevice.WaitIdle();
+	}
+
+	D3D12SyncHandle D3D12Device::DStorageSubmit(DSTORAGE_REQUEST_SOURCE_TYPE Type)
+	{
+		UINT64 FenceValue = DStorageFence.Signal(DStorageQueues[Type]);
+		DStorageQueues[Type]->Submit();
+		return D3D12SyncHandle{ &DStorageFence, FenceValue };
 	}
 
 	D3D12RootSignature D3D12Device::CreateRootSignature(RootSignatureDesc& Desc)
