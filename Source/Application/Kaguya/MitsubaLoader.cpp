@@ -348,18 +348,6 @@ void MitsubaLoader::ParseNode(const XmlNode* Node, Asset::AssetManager* AssetMan
 	}
 	if (Node->Tag == "sensor")
 	{
-		float Fov				  = GetFloatProperty(Node, "fov", 90.0f);
-		World->ActiveCamera->FoVY = Fov;
-
-		auto  CameraTransform = ParseTransformNode(Node);
-		auto& Transform		  = World->ActiveCameraActor.GetComponent<CoreComponent>().Transform;
-		Transform.SetTransform(XMLoadFloat4x4(&CameraTransform));
-		Transform.Position = {
-			-Transform.Position.x,
-			Transform.Position.y,
-			-Transform.Position.z
-		};
-		Transform.Rotate(0.0f, 180.0f, 0.0f);
 	}
 	if (Node->Tag == "bsdf")
 	{

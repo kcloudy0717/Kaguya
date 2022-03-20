@@ -3,11 +3,9 @@
 #include "RendererRegistry.h"
 
 DeferredRenderer::DeferredRenderer(
-	RHI::D3D12Device*	 Device,
-	RHI::D3D12SwapChain* SwapChain,
-	ShaderCompiler*		 Compiler,
-	Window*				 MainWindow)
-	: Renderer(Device, SwapChain, Compiler, MainWindow)
+	RHI::D3D12Device* Device,
+	ShaderCompiler*	  Compiler)
+	: Renderer(Device, Compiler)
 {
 	Shaders::Compile(Compiler);
 	RootSignatures::Compile(Device, Registry);
@@ -71,7 +69,7 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 		unsigned int NumMeshes;
 		unsigned int NumLights;
 	} g_GlobalConstants			= {};
-	g_GlobalConstants.Camera	= GetHLSLCameraDesc(*World->ActiveCamera);
+	g_GlobalConstants.Camera	= GetHLSLCameraDesc(*WorldRenderView->Camera);
 	g_GlobalConstants.NumMeshes = WorldRenderView->NumMeshes;
 	g_GlobalConstants.NumLights = WorldRenderView->NumLights;
 
@@ -134,25 +132,25 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 	GBufferArgs.Normal	  = Graph.Create<RHI::D3D12Texture>(
 		   RHI::RgTextureDesc("Normal")
 			   .SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
-			   .SetExtent(View.Width, View.Height, 1)
+			   .SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
 			   .SetAllowRenderTarget()
 			   .SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.MaterialId = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Material Id")
 			.SetFormat(DXGI_FORMAT_R32_UINT)
-			.SetExtent(View.Width, View.Height, 1)
+			.SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
 			.SetAllowRenderTarget()
 			.SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.Motion = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Motion")
 			.SetFormat(DXGI_FORMAT_R16G16_FLOAT)
-			.SetExtent(View.Width, View.Height, 1)
+			.SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
 			.SetAllowRenderTarget()
 			.SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.Depth = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Depth")
 			.SetFormat(DXGI_FORMAT_D32_FLOAT)
-			.SetExtent(View.Width, View.Height, 1)
+			.SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
 			.SetAllowDepthStencil()
 			.SetClearValue(RHI::RgClearValue(1.0f, 0xff)));
 
@@ -218,8 +216,8 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 					 Context->SetGraphicsRootShaderResourceView(4, WorldRenderView->Meshes.GetGpuVirtualAddress());
 
 					 Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					 Context.SetViewport(RHIViewport(0.0f, 0.0f, View.Width, View.Height, 0.0f, 1.0f));
-					 Context.SetScissorRect(RHIRect(0, 0, View.Width, View.Height));
+					 Context.SetViewport(RHIViewport(0.0f, 0.0f, WorldRenderView->View.Width, WorldRenderView->View.Height, 0.0f, 1.0f));
+					 Context.SetScissorRect(RHIRect(0, 0, WorldRenderView->View.Width, WorldRenderView->View.Height));
 
 					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {
 						 Registry.Get<RHI::D3D12RenderTargetView>(GBufferArgs.RtvNormal),

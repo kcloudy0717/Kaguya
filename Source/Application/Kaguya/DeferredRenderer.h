@@ -8,10 +8,8 @@ class DeferredRenderer final : public Renderer
 {
 public:
 	DeferredRenderer(
-		RHI::D3D12Device*	 Device,
-		RHI::D3D12SwapChain* SwapChain,
-		ShaderCompiler*		 Compiler,
-		Window*				 MainWindow);
+		RHI::D3D12Device* Device,
+		ShaderCompiler*	  Compiler);
 
 private:
 	void RenderOptions() override;

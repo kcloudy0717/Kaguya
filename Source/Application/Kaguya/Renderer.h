@@ -5,10 +5,6 @@
 #include "Core/Window.h"
 #include "View.h"
 
-#include "UI/WorldWindow.h"
-#include "UI/InspectorWindow.h"
-#include "UI/AssetWindow.h"
-
 #include "Globals.h"
 
 class RendererPresent : public RHI::IPresent
@@ -38,18 +34,14 @@ class Renderer
 public:
 	Renderer(
 		RHI::D3D12Device*	 Device,
-		RHI::D3D12SwapChain* SwapChain,
-		ShaderCompiler*		 Compiler,
-		Window*				 MainWindow);
+		ShaderCompiler*		 Compiler);
 	virtual ~Renderer();
 
 	void OnRenderOptions();
 
-	void OnRender(World* World, WorldRenderView* WorldRenderView);
+	void OnRender(RHI::D3D12CommandContext& Context, World* World, WorldRenderView* WorldRenderView);
 
-	void OnResize(uint32_t Width, uint32_t Height);
-
-	void OnMove(std::int32_t x, std::int32_t y);
+	void* GetViewportPtr() const { return Viewport; }
 
 protected:
 	virtual void RenderOptions()																		   = 0;
@@ -57,20 +49,12 @@ protected:
 
 protected:
 	RHI::D3D12Device*	 Device		= nullptr;
-	RHI::D3D12SwapChain* SwapChain	= nullptr;
 	ShaderCompiler*		 Compiler	= nullptr;
-	Window*				 MainWindow = nullptr;
 
 	RHI::RenderGraphAllocator Allocator;
 	RHI::RenderGraphRegistry  Registry;
 
-	View View;
-
 	size_t FrameIndex = 0;
 
 	void* Viewport = nullptr;
-
-	WorldWindow		WorldWindow;
-	InspectorWindow InspectorWindow;
-	AssetWindow		AssetWindow;
 };

@@ -8,11 +8,9 @@ static BloomSettings   g_Bloom;
 static TonemapSettings g_Tonemap;
 
 PathIntegratorDXR1_0::PathIntegratorDXR1_0(
-	RHI::D3D12Device*	 Device,
-	RHI::D3D12SwapChain* SwapChain,
-	ShaderCompiler*		 Compiler,
-	Window*				 MainWindow)
-	: Renderer(Device, SwapChain, Compiler, MainWindow)
+	RHI::D3D12Device* Device,
+	ShaderCompiler*	  Compiler)
+	: Renderer(Device, Compiler)
 {
 	Shaders::Compile(Compiler);
 	Libraries::Compile(Compiler);
@@ -124,7 +122,7 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 		RHI::RgResourceHandle Srv;
 		RHI::RgResourceHandle Uav;
 	} PathTraceArgs;
-	PathTraceArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Path Trace Output").SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT).SetExtent(View.Width, View.Height, 1).SetAllowUnorderedAccess());
+	PathTraceArgs.Output = Graph.Create<RHI::D3D12Texture>(RHI::RgTextureDesc("Path Trace Output").SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT).SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1).SetAllowUnorderedAccess());
 	PathTraceArgs.Srv	 = Graph.Create<RHI::D3D12ShaderResourceView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureSrv());
 	PathTraceArgs.Uav	 = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 
@@ -152,16 +150,21 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 
 						 DirectX::XMUINT2 Dimensions;
 						 unsigned int	  AntiAliasing;
-					 } g_GlobalConstants					 = {};
-					 g_GlobalConstants.Camera				 = GetHLSLCameraDesc(*World->ActiveCamera);
-					 g_GlobalConstants.Resolution			 = { static_cast<float>(View.Width), static_cast<float>(View.Height), 1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height) };
+					 } g_GlobalConstants		  = {};
+					 g_GlobalConstants.Camera	  = GetHLSLCameraDesc(*WorldRenderView->Camera);
+					 g_GlobalConstants.Resolution = {
+						 static_cast<float>(WorldRenderView->View.Width),
+						 static_cast<float>(WorldRenderView->View.Height),
+						 1.0f / static_cast<float>(WorldRenderView->View.Width),
+						 1.0f / static_cast<float>(WorldRenderView->View.Height)
+					 };
 					 g_GlobalConstants.NumLights			 = WorldRenderView->NumLights;
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
 					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
 					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
 					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
-					 g_GlobalConstants.Dimensions			 = { View.Width, View.Height };
+					 g_GlobalConstants.Dimensions			 = { WorldRenderView->View.Width, WorldRenderView->View.Height };
 					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
 
 					 Context.SetPipelineState(Registry.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
@@ -172,8 +175,8 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 					 Context->SetComputeRootShaderResourceView(3, WorldRenderView->Lights.GetGpuVirtualAddress());
 
 					 D3D12_DISPATCH_RAYS_DESC Desc = ShaderBindingTable.GetDesc(0, 0);
-					 Desc.Width					   = View.Width;
-					 Desc.Height				   = View.Height;
+					 Desc.Width					   = WorldRenderView->View.Width;
+					 Desc.Height				   = WorldRenderView->View.Height;
 					 Desc.Depth					   = 1;
 
 					 Context.DispatchRays(&Desc);
@@ -183,14 +186,14 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 	BloomInputParameters BloomInputArgs = {};
 	BloomInputArgs.Input				= PathTraceArgs.Output;
 	BloomInputArgs.Srv					= PathTraceArgs.Srv;
-	BloomParameters BloomArgs			= AddBloomPass(Graph, View, BloomInputArgs, g_Bloom);
+	BloomParameters BloomArgs			= AddBloomPass(Graph, WorldRenderView->View, BloomInputArgs, g_Bloom);
 
 	TonemapInputParameters TonemapInputArgs = {};
 	TonemapInputArgs.Input					= PathTraceArgs.Output;
 	TonemapInputArgs.Srv					= PathTraceArgs.Srv;
 	TonemapInputArgs.BloomInput				= BloomArgs.Output1[1]; // Output1[1] contains final upsampled bloom texture
 	TonemapInputArgs.BloomInputSrv			= BloomArgs.Output1Srvs[1];
-	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, View, TonemapInputArgs, g_Tonemap);
+	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, WorldRenderView->View, TonemapInputArgs, g_Tonemap);
 
 	// After render graph execution, we need to read tonemap output as part of imgui pipeline that is not part of the graph, so graph will automatically apply
 	// resource barrier transition for us

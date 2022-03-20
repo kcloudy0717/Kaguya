@@ -11,19 +11,21 @@ public:
 	{
 	}
 
-	void SetContext(World* pWorld, Actor Actor)
+	void SetContext(World* pWorld, Actor Actor, CameraComponent* ViewportCamera)
 	{
 		this->pWorld = pWorld;
 		if (Actor)
 		{
 			SelectedActor = Actor;
 		}
+		this->ViewportCamera = ViewportCamera;
 	}
 
 protected:
 	void OnRender() override;
 
 private:
-	World* pWorld		  = nullptr;
-	Actor  SelectedActor = {};
+	World*			 pWorld			= nullptr;
+	Actor			 SelectedActor	= {};
+	CameraComponent* ViewportCamera = nullptr;
 };

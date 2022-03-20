@@ -18,7 +18,7 @@ public:
 	// This only exist to verify the more efficient way of constructing frustum, refer to Frustum constructor
 	[[nodiscard]] Frustum CreateFrustum() const;
 
-	Transform* pTransform;
+	Transform Transform;
 
 	float FoVY		  = 90.0f; // Degrees
 	float AspectRatio = 16.0f / 9.0f;

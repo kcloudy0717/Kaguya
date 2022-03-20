@@ -162,8 +162,8 @@ void InspectorWindow::OnRender()
 				IsEdited |= RenderFloat3Control("Scale", Scale, 1.0f);
 				ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
 
-				XMStoreFloat4x4(&View, XMLoadFloat4x4(&pWorld->ActiveCamera->View));
-				XMStoreFloat4x4(&Projection, XMLoadFloat4x4(&pWorld->ActiveCamera->Projection));
+				XMStoreFloat4x4(&View, XMLoadFloat4x4(&ViewportCamera->View));
+				XMStoreFloat4x4(&Projection, XMLoadFloat4x4(&ViewportCamera->Projection));
 
 				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
 				IsEdited |= EditTransform(

@@ -104,4 +104,8 @@ struct WorldRenderView
 	Hlsl::Light*	pLights	  = nullptr;
 	Hlsl::Material* pMaterial = nullptr;
 	Hlsl::Mesh*		pMeshes	  = nullptr;
+
+	// Set explicitly
+	View			 View;
+	CameraComponent* Camera = nullptr;
 };

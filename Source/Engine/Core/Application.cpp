@@ -45,7 +45,15 @@ void Application::Run()
 
 	while (true)
 	{
-		PumpMessages();
+		// Pump messages
+		MSG Msg = {};
+		while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&Msg);
+			DispatchMessage(&Msg);
+		}
+		//
+
 		if (RequestExit)
 		{
 			break;
@@ -102,16 +110,6 @@ LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WP
 	}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
-}
-
-void Application::PumpMessages()
-{
-	MSG Msg = {};
-	while (PeekMessage(&Msg, nullptr, 0, 0, PM_REMOVE))
-	{
-		TranslateMessage(&Msg);
-		DispatchMessage(&Msg);
-	}
 }
 
 LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

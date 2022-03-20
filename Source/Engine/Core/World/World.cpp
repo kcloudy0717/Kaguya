@@ -18,34 +18,6 @@ auto World::CreateActor(std::string_view Name /*= {}*/) -> Actor
 	return Actor;
 }
 
-auto World::GetMainCamera() -> Actor
-{
-	auto View = Registry.view<CameraComponent>();
-	for (entt::entity Handle : View)
-	{
-		const auto& Component = View.get<CameraComponent>(Handle);
-		if (Component.Main)
-		{
-			return Actor(Handle, this);
-		}
-	}
-	return Actor(entt::null, this);
-}
-
-auto World::GetMainSkyLight() -> Actor
-{
-	auto View = Registry.view<SkyLightComponent>();
-	for (entt::entity Handle : View)
-	{
-		const auto& Component = View.get<SkyLightComponent>(Handle);
-		if (Component.Main)
-		{
-			return Actor(Handle, this);
-		}
-	}
-	return Actor(entt::null, this);
-}
-
 void World::Clear(bool AddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
@@ -90,18 +62,6 @@ void World::Update(float DeltaTime)
 
 void World::ResolveComponentDependencies()
 {
-	Registry.view<CoreComponent, CameraComponent>().each(
-		[&](CoreComponent& Core, CameraComponent& Camera)
-		{
-			Camera.pTransform = &Core.Transform;
-
-			if (Camera.Dirty)
-			{
-				Camera.Dirty = false;
-				WorldState |= EWorldState_Update;
-			}
-		});
-
 	// Refresh StaticMeshComponent
 	Registry.view<StaticMeshComponent>().each(
 		[this](StaticMeshComponent& StaticMesh)

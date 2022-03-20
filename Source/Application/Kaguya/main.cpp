@@ -16,7 +16,6 @@
 #include "Core/IApplicationMessageHandler.h"
 #include "Core/Asset/AssetManager.h"
 #include "Core/World/World.h"
-#include "Core/World/Scripts/Player.script.h"
 
 #include "Renderer.h"
 #include "DeferredRenderer.h"
@@ -27,6 +26,11 @@
 #include "MitsubaLoader.h"
 
 #include "Globals.h"
+
+#include "UI/WorldWindow.h"
+#include "UI/InspectorWindow.h"
+#include "UI/AssetWindow.h"
+#include "UI/ViewportWindow.h"
 
 class ImGuiContextManager
 {
@@ -147,6 +151,63 @@ enum class RENDER_PATH
 	PathIntegratorDXR1_1,
 };
 
+class EditorCamera
+{
+public:
+	void OnUpdate(float DeltaTime)
+	{
+		bool Fwd = false, Bwd = false, Right = false, Left = false, Up = false, Down = false;
+		if (Application::InputManager.RawInputEnabled)
+		{
+			Fwd	  = Application::InputManager.IsPressed('W');
+			Bwd	  = Application::InputManager.IsPressed('S');
+			Right = Application::InputManager.IsPressed('D');
+			Left  = Application::InputManager.IsPressed('A');
+			Up	  = Application::InputManager.IsPressed('E');
+			Down  = Application::InputManager.IsPressed('Q');
+		}
+
+		if (Application::InputManager.RawInputEnabled)
+		{
+			float z = CameraComponent.MovementSpeed * ((Fwd * DeltaTime) + (Bwd * -DeltaTime));
+			float x = CameraComponent.StrafeSpeed * ((Right * DeltaTime) + (Left * -DeltaTime));
+			float y = CameraComponent.StrafeSpeed * ((Up * DeltaTime) + (Down * -DeltaTime));
+
+			if (CameraComponent.Momentum)
+			{
+				ApplyMomentum(LastForward, z, DeltaTime);
+				ApplyMomentum(LastStrafe, x, DeltaTime);
+				ApplyMomentum(LastAscent, y, DeltaTime);
+			}
+
+			CameraComponent.Translate(x, y, z);
+		}
+
+		CameraComponent.Update();
+	}
+
+	// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/CameraController.cpp
+	void ApplyMomentum(float& OldValue, float& NewValue, float DeltaTime)
+	{
+		float BlendedValue;
+		if (abs(NewValue) > abs(OldValue))
+		{
+			BlendedValue = lerp(NewValue, OldValue, pow(0.6f, DeltaTime * 60.0f));
+		}
+		else
+		{
+			BlendedValue = lerp(NewValue, OldValue, pow(0.8f, DeltaTime * 60.0f));
+		}
+		OldValue = BlendedValue;
+		NewValue = BlendedValue;
+	}
+
+	CameraComponent CameraComponent;
+	float			LastForward = 0.0f;
+	float			LastStrafe	= 0.0f;
+	float			LastAscent	= 0.0f;
+};
+
 class Editor final
 	: public Application
 	, public IApplicationMessageHandler
@@ -178,28 +239,108 @@ public:
 
 	void Update() override
 	{
-		Stopwatch.Signal();
-		DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
-		ImGui_ImplDX12_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
-		ImGui::DockSpaceOverViewport();
-		ImGui::ShowDemoWindow();
-		ImGuizmo::BeginFrame();
-		ImGuizmo::AllowAxisFlip(false);
-		if (ImGui::Begin("Render Path"))
-		{
-			constexpr const char* View[] = { "Deferred Renderer", "Path Integrator DXR1.0", "Path Integrator DXR1.1" };
-			if (ImGui::Combo("Render Path", &RenderPath, View, static_cast<int>(std::size(View))))
-			{
-				CreateRenderPath();
-			}
-			Renderer->OnRenderOptions();
-		}
-		ImGui::End();
+		RHI::D3D12CommandContext& Context = Kaguya::Device->GetLinkedDevice()->GetCommandContext();
 
-		World->Update(DeltaTime);
-		Renderer->OnRender(World, WorldRenderView);
+		Kaguya::Device->OnBeginFrame();
+		Context.Open();
+		{
+			Stopwatch.Signal();
+			DeltaTime = static_cast<float>(Stopwatch.GetDeltaTime());
+			ImGui_ImplDX12_NewFrame();
+			ImGui_ImplWin32_NewFrame();
+			ImGui::NewFrame();
+			ImGui::DockSpaceOverViewport();
+			ImGui::ShowDemoWindow();
+			ImGuizmo::BeginFrame();
+			ImGuizmo::AllowAxisFlip(false);
+			if (ImGui::Begin("Render Path"))
+			{
+				constexpr const char* View[] = { "Deferred Renderer", "Path Integrator DXR1.0", "Path Integrator DXR1.1" };
+				if (ImGui::Combo("Render Path", &RenderPath, View, static_cast<int>(std::size(View))))
+				{
+					CreateRenderPath();
+				}
+				Renderer->OnRenderOptions();
+			}
+			ImGui::End();
+
+			if (ImGui::Begin("GPU Timing"))
+			{
+				for (const auto& iter : Kaguya::Device->GetLinkedDevice()->GetProfiler()->Data)
+				{
+					for (INT i = 0; i < iter.Depth; ++i)
+					{
+						ImGui::Text("    ");
+						ImGui::SameLine();
+					}
+					ImGui::Text("%s: %.2fms (%.2fms max)", iter.Name.data(), iter.AverageTime, iter.MaxTime);
+					ImGui::SameLine();
+					ImGui::NewLine();
+				}
+			}
+			ImGui::End();
+
+			World->Update(DeltaTime);
+			EditorCamera.OnUpdate(DeltaTime);
+			if (EditorCamera.CameraComponent.Dirty)
+			{
+				EditorCamera.CameraComponent.Dirty = false;
+				World->WorldState |= EWorldState_Update;
+			}
+
+			WorldRenderView->Camera = &EditorCamera.CameraComponent;
+
+			WorldWindow.SetContext(World);
+			WorldWindow.Render();
+			AssetWindow.SetContext(World);
+			AssetWindow.Render();
+			InspectorWindow.SetContext(World, WorldWindow.GetSelectedActor(), &EditorCamera.CameraComponent);
+			InspectorWindow.Render();
+
+			ViewportWindow.Renderer		   = Renderer.get();
+			ViewportWindow.World		   = World;
+			ViewportWindow.WorldRenderView = WorldRenderView;
+			ViewportWindow.MainWindow	   = MainWindow;
+			ViewportWindow.Context		   = &Context;
+			ViewportWindow.Render();
+
+			auto [pRenderTarget, RenderTargetView] = SwapChain->GetCurrentBackBufferResource();
+
+			auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+				pRenderTarget->GetResource(),
+				D3D12_RESOURCE_STATE_PRESENT,
+				D3D12_RESOURCE_STATE_RENDER_TARGET);
+			Context->ResourceBarrier(1, &Barrier);
+			{
+				D3D12_VIEWPORT Viewport	   = SwapChain->GetViewport();
+				D3D12_RECT	   ScissorRect = SwapChain->GetScissorRect();
+
+				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				Context->RSSetViewports(1, &Viewport);
+				Context->RSSetScissorRects(1, &ScissorRect);
+				Context->OMSetRenderTargets(1, &RenderTargetView, TRUE, nullptr);
+				FLOAT white[] = { 1, 1, 1, 1 };
+				Context->ClearRenderTargetView(RenderTargetView, white, 0, nullptr);
+
+				// ImGui Render
+				{
+					D3D12ScopedEvent(Context, "ImGui Render");
+
+					ImGui::Render();
+					ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.GetGraphicsCommandList());
+				}
+			}
+			Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+				pRenderTarget->GetResource(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_PRESENT);
+			Context->ResourceBarrier(1, &Barrier);
+		}
+		Context.Close();
+
+		RendererPresent Present(Context);
+		SwapChain->Present(true, Present);
+		Kaguya::Device->OnEndFrame();
 	}
 
 	void OnKeyDown(unsigned char KeyCode, bool IsRepeat) override
@@ -238,14 +379,13 @@ public:
 	{
 		if (World)
 		{
-			Actor MainCamera = World->GetMainCamera();
-			auto& Camera	 = MainCamera.GetComponent<CameraComponent>();
-
 			if (MainWindow->IsUsingRawInput())
 			{
-				Camera.Rotate(
-					Y * DeltaTime * Camera.MouseSensitivityY,
-					X * DeltaTime * Camera.MouseSensitivityX,
+				auto& CameraComponent = EditorCamera.CameraComponent;
+
+				CameraComponent.Rotate(
+					static_cast<float>(Y) * DeltaTime * CameraComponent.MouseSensitivityY,
+					static_cast<float>(X) * DeltaTime * CameraComponent.MouseSensitivityX,
 					0.0f);
 			}
 		}
@@ -265,9 +405,9 @@ public:
 		Window->Resize(Width, Height);
 		if (Window == MainWindow)
 		{
-			if (Renderer)
+			if (SwapChain)
 			{
-				Renderer->OnResize(Width, Height);
+				SwapChain->Resize(Width, Height);
 			}
 		}
 	}
@@ -276,9 +416,9 @@ public:
 	{
 		if (Window == MainWindow)
 		{
-			if (Renderer)
+			if (SwapChain)
 			{
-				Renderer->OnMove(X, Y);
+				SwapChain->DisplayHDRSupport();
 			}
 		}
 	}
@@ -288,15 +428,15 @@ public:
 		Renderer.reset();
 		if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::DeferredRenderer)
 		{
-			Renderer = std::make_unique<DeferredRenderer>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<DeferredRenderer>(Kaguya::Device, Kaguya::Compiler);
 		}
 		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_0)
 		{
-			Renderer = std::make_unique<PathIntegratorDXR1_0>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<PathIntegratorDXR1_0>(Kaguya::Device, Kaguya::Compiler);
 		}
 		else if (static_cast<RENDER_PATH>(RenderPath) == RENDER_PATH::PathIntegratorDXR1_1)
 		{
-			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, SwapChain, Kaguya::Compiler, MainWindow);
+			Renderer = std::make_unique<PathIntegratorDXR1_1>(Kaguya::Device, Kaguya::Compiler);
 		}
 		// Hack: Reset raytracing info after render path is reset to ensure no BLAS are left
 		Kaguya::AssetManager->GetMeshRegistry().EnumerateAsset(
@@ -317,6 +457,13 @@ public:
 	int						  RenderPath	  = 0;
 
 	float DeltaTime;
+
+	EditorCamera EditorCamera;
+
+	WorldWindow		WorldWindow;
+	InspectorWindow InspectorWindow;
+	AssetWindow		AssetWindow;
+	ViewportWindow	ViewportWindow;
 };
 
 int main(int /*argc*/, char* /*argv*/[])
@@ -359,8 +506,6 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	World			World(Kaguya::AssetManager);
 	WorldRenderView WorldRenderView(Kaguya::Device->GetLinkedDevice());
-
-	World.ActiveCameraActor.AddComponent<NativeScriptComponent>().Bind<PlayerScript>();
 
 	// MitsubaLoader::Load("Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
 	// MitsubaLoader::Load("Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);

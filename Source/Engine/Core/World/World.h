@@ -27,8 +27,6 @@ public:
 	World(Asset::AssetManager* AssetManager);
 
 	[[nodiscard]] auto CreateActor(std::string_view Name = {}) -> Actor;
-	[[nodiscard]] auto GetMainCamera() -> Actor;
-	[[nodiscard]] auto GetMainSkyLight() -> Actor;
 
 	void Clear(bool AddDefaultEntities = true);
 
@@ -277,9 +275,9 @@ inline Hlsl::Camera GetHLSLCameraDesc(const CameraComponent& Camera)
 	HlslCamera.FocalLength		= Camera.FocalLength;
 	HlslCamera.RelativeAperture = Camera.RelativeAperture;
 
-	HlslCamera.Position = { Camera.pTransform->Position.x,
-							Camera.pTransform->Position.y,
-							Camera.pTransform->Position.z,
+	HlslCamera.Position = { Camera.Transform.Position.x,
+							Camera.Transform.Position.y,
+							Camera.Transform.Position.z,
 							1.0f };
 
 	XMStoreFloat4x4(&HlslCamera.View, XMMatrixTranspose(XMLoadFloat4x4(&Camera.View)));

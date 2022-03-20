@@ -4,30 +4,30 @@ using namespace DirectX;
 
 XMVECTOR CameraComponent::GetUVector() const
 {
-	return pTransform->Right() * tanf(XMConvertToRadians(FoVY) * 0.5f) * AspectRatio;
+	return Transform.Right() * tanf(XMConvertToRadians(FoVY) * 0.5f) * AspectRatio;
 }
 
 XMVECTOR CameraComponent::GetVVector() const
 {
-	return pTransform->Up() * tanf(XMConvertToRadians(FoVY) * 0.5f);
+	return Transform.Up() * tanf(XMConvertToRadians(FoVY) * 0.5f);
 }
 
 XMVECTOR CameraComponent::GetWVector() const
 {
-	return pTransform->Forward();
+	return Transform.Forward();
 }
 
 void CameraComponent::SetLookAt(DirectX::XMVECTOR EyePosition, DirectX::XMVECTOR FocusPosition, DirectX::XMVECTOR UpDirection)
 {
 	XMMATRIX View = XMMatrixLookAtLH(EyePosition, FocusPosition, UpDirection);
-	pTransform->SetTransform(XMMatrixInverse(nullptr, View));
+	Transform.SetTransform(XMMatrixInverse(nullptr, View));
 }
 
 void CameraComponent::Update()
 {
 	PrevViewProjection = ViewProjection;
 
-	XMMATRIX WorldMatrix		  = pTransform->Matrix();
+	XMMATRIX WorldMatrix		  = Transform.Matrix();
 	XMMATRIX ViewMatrix			  = XMMatrixInverse(nullptr, WorldMatrix);
 	XMMATRIX ProjectionMatrix	  = XMMatrixPerspectiveFovLH(XMConvertToRadians(FoVY), AspectRatio, NearZ, FarZ);
 	XMMATRIX ViewProjectionMatrix = XMMatrixMultiply(ViewMatrix, ProjectionMatrix);
@@ -44,13 +44,13 @@ void CameraComponent::Update()
 void CameraComponent::Translate(float DeltaX, float DeltaY, float DeltaZ)
 {
 	Dirty = true;
-	pTransform->Translate(DeltaX, DeltaY, DeltaZ);
+	Transform.Translate(DeltaX, DeltaY, DeltaZ);
 }
 
 void CameraComponent::Rotate(float AngleX, float AngleY, float AngleZ)
 {
 	Dirty = true;
-	pTransform->Rotate(AngleX, AngleY, AngleZ);
+	Transform.Rotate(AngleX, AngleY, AngleZ);
 }
 
 Frustum CameraComponent::CreateFrustum() const
