@@ -200,8 +200,7 @@ namespace RHI
 
 			// Reverse iterate the render passes here, because often or not, the adjacency list should be built upon
 			// the latest changes to the render passes since those pass are more likely to change the resource we are writing to from other passes
-			// if we were to iterate from 0 to RenderPasses.size(), it'd often break the algorithm and
-			// creates an valid, but incorrect adjacency list
+			// if we were to iterate from 0 to RenderPasses.size(), it'd often break the algorithm and creates an incorrect adjacency list
 			for (size_t j = RenderPasses.size(); j-- != 0;)
 			{
 				if (i == j)

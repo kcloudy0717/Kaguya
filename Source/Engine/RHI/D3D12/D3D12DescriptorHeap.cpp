@@ -161,7 +161,7 @@ namespace RHI
 		SHeapEntry NewEntry;
 		VERIFY_D3D12_API(Parent->GetDevice()->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&NewEntry.DescriptorHeap)));
 		D3D12_CPU_DESCRIPTOR_HANDLE HeapBase = NewEntry.DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		NewEntry.FreeList.push_back({ HeapBase.ptr, HeapBase.ptr + Desc.NumDescriptors * DescriptorSize }); // throw( bad_alloc )
+		NewEntry.FreeList.push_back({ HeapBase.ptr, HeapBase.ptr + static_cast<SIZE_T>(Desc.NumDescriptors) * static_cast<SIZE_T>(DescriptorSize) }); // throw( bad_alloc )
 
 		Heaps.emplace_back(std::move(NewEntry));				  // throw( bad_alloc )
 		FreeHeaps.push_back(static_cast<UINT>(Heaps.size() - 1)); // throw( bad_alloc )

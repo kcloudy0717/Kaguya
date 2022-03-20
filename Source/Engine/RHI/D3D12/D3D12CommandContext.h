@@ -28,7 +28,7 @@ namespace RHI
 		D3D12CommandContext(const D3D12CommandContext&) = delete;
 		D3D12CommandContext& operator=(const D3D12CommandContext&) = delete;
 
-		[[nodiscard]] D3D12CommandQueue*		  GetCommandQueue();
+		[[nodiscard]] D3D12CommandQueue*		  GetCommandQueue() const noexcept;
 		[[nodiscard]] ID3D12GraphicsCommandList*  GetGraphicsCommandList() const noexcept;
 		[[nodiscard]] ID3D12GraphicsCommandList4* GetGraphicsCommandList4() const noexcept;
 		[[nodiscard]] ID3D12GraphicsCommandList6* GetGraphicsCommandList6() const noexcept;

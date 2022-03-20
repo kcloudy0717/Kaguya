@@ -22,7 +22,7 @@ namespace RHI
 	{
 	}
 
-	D3D12CommandQueue* D3D12CommandContext::GetCommandQueue()
+	D3D12CommandQueue* D3D12CommandContext::GetCommandQueue() const noexcept
 	{
 		return GetParentLinkedDevice()->GetCommandQueue(Type);
 	}
