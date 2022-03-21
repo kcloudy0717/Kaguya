@@ -8,7 +8,7 @@ namespace Asset
 		: Device(Device)
 	{
 		Thread = std::jthread(
-			[=]()
+			[Device, this]()
 			{
 				RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
 				std::vector<Texture*>	Textures;

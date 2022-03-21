@@ -1,7 +1,6 @@
 #include "WorldWindow.h"
 #include "../Globals.h"
 
-#include "Core/World/WorldArchive.h"
 #include "Core/CoreDefines.h"
 
 void WorldWindow::OnRender()
@@ -56,26 +55,6 @@ void WorldWindow::OnRender()
 		{
 			pWorld->Clear();
 			SelectedIndex = std::nullopt;
-		}
-
-		FilterDesc ComDlgFS[] = { { L"Scene File", L"*.json" }, { L"All Files (*.*)", L"*.*" } };
-
-		if (ImGui::MenuItem("Save"))
-		{
-			std::filesystem::path Path = FileSystem::SaveDialog(ComDlgFS);
-			if (!Path.empty())
-			{
-				WorldArchive::Save(Path.replace_extension(".json"), pWorld, Kaguya::AssetManager);
-			}
-		}
-
-		if (ImGui::MenuItem("Load"))
-		{
-			std::filesystem::path Path = FileSystem::OpenDialog(ComDlgFS);
-			if (!Path.empty())
-			{
-				WorldArchive::Load(Path, pWorld, Kaguya::AssetManager);
-			}
 		}
 
 		ImGui::EndPopup();

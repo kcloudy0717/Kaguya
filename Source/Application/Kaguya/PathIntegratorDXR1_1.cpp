@@ -159,14 +159,9 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 
 	Graph.Execute(Context);
 
-	static bool ExportDgml = true;
-	if (ExportDgml)
-	{
-		ExportDgml = false;
-		DgmlBuilder Builder("Render Graph");
-		Graph.ExportDgml(Builder);
-		Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
-	}
+	//DgmlBuilder Builder("Render Graph");
+	//Graph.ExportDgml(Builder);
+	//Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
 
 	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }

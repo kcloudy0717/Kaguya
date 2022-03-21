@@ -2,10 +2,7 @@
 #include "RHI/RHI.h"
 #include "RHI/RenderGraph/RenderGraph.h"
 #include "Core/World/World.h"
-#include "Core/Window.h"
 #include "View.h"
-
-#include "Globals.h"
 
 class RendererPresent : public RHI::IPresent
 {
@@ -41,7 +38,7 @@ public:
 
 	void OnRender(RHI::D3D12CommandContext& Context, World* World, WorldRenderView* WorldRenderView);
 
-	void* GetViewportPtr() const { return Viewport; }
+	[[nodiscard]] void* GetViewportPtr() const { return Viewport; }
 
 protected:
 	virtual void RenderOptions()																		   = 0;

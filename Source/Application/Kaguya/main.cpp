@@ -10,14 +10,11 @@
 #define SET_LEAK_BREAKPOINT(x)
 #endif
 
-#include "RHI/RHI.h"
-
 #include "Core/Application.h"
 #include "Core/IApplicationMessageHandler.h"
-#include "Core/Asset/AssetManager.h"
 #include "Core/World/World.h"
+#include "Core/World/WorldArchive.h"
 
-#include "Renderer.h"
 #include "DeferredRenderer.h"
 #include "PathIntegratorDXR1_0.h"
 #include "PathIntegratorDXR1_1.h"
@@ -279,6 +276,59 @@ public:
 				}
 			}
 			ImGui::End();
+
+			if (ImGui::BeginMainMenuBar())
+			{
+				if (ImGui::BeginMenu("File"))
+				{
+					FilterDesc ComDlgFS[] = { { L"Scene File", L"*.json" }, { L"All Files (*.*)", L"*.*" } };
+
+					if (ImGui::MenuItem("Save"))
+					{
+						std::filesystem::path Path = FileSystem::SaveDialog(ComDlgFS);
+						if (!Path.empty())
+						{
+							WorldArchive::Save(Path.replace_extension(".json"), World, Kaguya::AssetManager);
+						}
+					}
+
+					if (ImGui::MenuItem("Load"))
+					{
+						std::filesystem::path Path = FileSystem::OpenDialog(ComDlgFS);
+						if (!Path.empty())
+						{
+							WorldArchive::Load(Path, World, Kaguya::AssetManager);
+						}
+					}
+
+					ImGui::Separator();
+
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Edit"))
+				{
+					if (ImGui::MenuItem("Undo", "CTRL+Z"))
+					{
+					}
+					if (ImGui::MenuItem("Redo", "CTRL+Y", false, false))
+					{
+					} // Disabled item
+					ImGui::Separator();
+					if (ImGui::MenuItem("Cut", "CTRL+X"))
+					{
+					}
+					if (ImGui::MenuItem("Copy", "CTRL+C"))
+					{
+					}
+					if (ImGui::MenuItem("Paste", "CTRL+V"))
+					{
+					}
+
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMainMenuBar();
+			}
 
 			World->Update(DeltaTime);
 			EditorCamera.OnUpdate(DeltaTime);
