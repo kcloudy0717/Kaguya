@@ -12,6 +12,7 @@ namespace Asset
 			{
 				RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
 				std::vector<Texture*>	Textures;
+				std::vector<Mesh*>		Meshes;
 
 				while (true)
 				{
@@ -24,6 +25,7 @@ namespace Asset
 					}
 
 					Textures.clear();
+					Meshes.clear();
 
 					LinkedDevice->BeginResourceUpload();
 
@@ -36,6 +38,14 @@ namespace Asset
 						Textures.push_back(Texture);
 					}
 
+					while (!MeshUploadQueue.empty())
+					{
+						Mesh* Mesh = MeshUploadQueue.front();
+						MeshUploadQueue.pop();
+						UploadMesh(Mesh, LinkedDevice);
+						Meshes.push_back(Mesh);
+					}
+
 					LinkedDevice->EndResourceUpload(true);
 
 					for (auto Texture : Textures)
@@ -45,6 +55,14 @@ namespace Asset
 
 						Texture->Handle.State = true;
 						TextureRegistry.UpdateHandleState(Texture->Handle);
+					}
+					for (auto Mesh : Meshes)
+					{
+						// Release memory
+						Mesh->Release();
+
+						Mesh->Handle.State = true;
+						MeshRegistry.UpdateHandleState(Mesh->Handle);
 					}
 				}
 			});
@@ -123,10 +141,64 @@ namespace Asset
 		Device->Upload(Subresources, AssetTexture->DxTexture.GetResource());
 	}
 
+	void AssetManager::UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device)
+	{
+		UINT64 VertexBufferSizeInBytes = AssetMesh->Vertices.size() * sizeof(Vertex);
+		UINT64 IndexBufferSizeInBytes  = AssetMesh->Indices.size() * sizeof(uint32_t);
+
+		AssetMesh->VertexResource = RHI::D3D12Buffer(Device, VertexBufferSizeInBytes, sizeof(Vertex), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+		AssetMesh->IndexResource  = RHI::D3D12Buffer(Device, IndexBufferSizeInBytes, sizeof(uint32_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+
+		Device->Upload(AssetMesh->Vertices.data(), VertexBufferSizeInBytes, AssetMesh->VertexResource.GetResource());
+		Device->Upload(AssetMesh->Indices.data(), IndexBufferSizeInBytes, AssetMesh->IndexResource.GetResource());
+
+		if (AssetMesh->Options.GenerateMeshlets)
+		{
+			UINT64 MeshletBufferSizeInBytes			  = AssetMesh->Meshlets.size() * sizeof(Meshlet);
+			UINT64 UniqueVertexIndexBufferSizeInBytes = AssetMesh->UniqueVertexIndices.size() * sizeof(uint8_t);
+			UINT64 PrimitiveIndexBufferSizeInBytes	  = AssetMesh->PrimitiveIndices.size() * sizeof(MeshletTriangle);
+
+			AssetMesh->MeshletResource			 = RHI::D3D12Buffer(Device, MeshletBufferSizeInBytes, sizeof(Meshlet), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+			AssetMesh->UniqueVertexIndexResource = RHI::D3D12Buffer(Device, UniqueVertexIndexBufferSizeInBytes, sizeof(uint8_t), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+			AssetMesh->PrimitiveIndexResource	 = RHI::D3D12Buffer(Device, PrimitiveIndexBufferSizeInBytes, sizeof(MeshletTriangle), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE);
+
+			Device->Upload(AssetMesh->Meshlets.data(), MeshletBufferSizeInBytes, AssetMesh->MeshletResource.GetResource());
+			Device->Upload(AssetMesh->UniqueVertexIndices.data(), UniqueVertexIndexBufferSizeInBytes, AssetMesh->UniqueVertexIndexResource.GetResource());
+			Device->Upload(AssetMesh->PrimitiveIndices.data(), PrimitiveIndexBufferSizeInBytes, AssetMesh->PrimitiveIndexResource.GetResource());
+		}
+
+		D3D12_GPU_VIRTUAL_ADDRESS IndexAddress	= AssetMesh->IndexResource.GetGpuVirtualAddress();
+		D3D12_GPU_VIRTUAL_ADDRESS VertexAddress = AssetMesh->VertexResource.GetGpuVirtualAddress();
+
+		D3D12_RAYTRACING_GEOMETRY_DESC RaytracingGeometryDesc		= {};
+		RaytracingGeometryDesc.Type									= D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		RaytracingGeometryDesc.Flags								= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		RaytracingGeometryDesc.Triangles.Transform3x4				= NULL;
+		RaytracingGeometryDesc.Triangles.IndexFormat				= DXGI_FORMAT_R32_UINT;
+		RaytracingGeometryDesc.Triangles.VertexFormat				= DXGI_FORMAT_R32G32B32_FLOAT;
+		RaytracingGeometryDesc.Triangles.IndexCount					= static_cast<UINT>(AssetMesh->Indices.size());
+		RaytracingGeometryDesc.Triangles.VertexCount				= static_cast<UINT>(AssetMesh->Vertices.size());
+		RaytracingGeometryDesc.Triangles.IndexBuffer				= IndexAddress;
+		RaytracingGeometryDesc.Triangles.VertexBuffer.StartAddress	= VertexAddress;
+		RaytracingGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+
+		AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
+
+		AssetMesh->VertexView = RHI::D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
+		AssetMesh->IndexView  = RHI::D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
+	}
+
 	void AssetManager::RequestUpload(Texture* Texture)
 	{
 		std::scoped_lock Lock(Mutex);
 		TextureUploadQueue.push(Texture);
+		ConditionVariable.notify_all();
+	}
+
+	void AssetManager::RequestUpload(Mesh* Mesh)
+	{
+		std::scoped_lock Lock(Mutex);
+		MeshUploadQueue.push(Mesh);
 		ConditionVariable.notify_all();
 	}
 
@@ -179,10 +251,10 @@ namespace Asset
 		Texture->DxTexture = RHI::D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, std::nullopt, Texture->IsCubemap);
 		Texture->Srv	   = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), &Texture->DxTexture, false, std::nullopt, std::nullopt);
 
-		const size_t NumSubresources = Metadata.mipLevels * Metadata.arraySize;
-		auto		 Layouts		 = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * NumSubresources);
-		auto		 NumRows		 = (UINT*)_alloca(sizeof(UINT) * NumSubresources);
-		auto		 RowSizes		 = (UINT64*)_alloca(sizeof(UINT64) * NumSubresources);
+		const UINT NumSubresources = static_cast<UINT>(Metadata.mipLevels * Metadata.arraySize);
+		auto	   Layouts		   = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * NumSubresources);
+		auto	   NumRows		   = (UINT*)_alloca(sizeof(UINT) * NumSubresources);
+		auto	   RowSizes		   = (UINT64*)_alloca(sizeof(UINT64) * NumSubresources);
 
 		UINT64 IntermediateSize = 0;
 		Device->GetD3D12Device()->GetCopyableFootprints(&ResourceDesc, 0, NumSubresources, 0, Layouts, NumRows, RowSizes, &IntermediateSize);
@@ -225,12 +297,13 @@ namespace Asset
 		Request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_MULTIPLE_SUBRESOURCES;
 
 		Request.Source.Memory.Source = Pixels.get();
-		Request.Source.Memory.Size	 = IntermediateSize;
+		assert(IntermediateSize < UINT_MAX);
+		Request.Source.Memory.Size = static_cast<UINT>(IntermediateSize);
 
 		Request.Destination.MultipleSubresources.Resource		  = Texture->DxTexture.GetResource();
 		Request.Destination.MultipleSubresources.FirstSubresource = 0;
 
-		Request.UncompressedSize = IntermediateSize;
+		Request.UncompressedSize = static_cast<UINT>(IntermediateSize);
 
 		Device->GetDStorageQueue(DSTORAGE_REQUEST_SOURCE_MEMORY)->EnqueueRequest(&Request);
 		Device->GetDStorageQueue(DSTORAGE_REQUEST_SOURCE_MEMORY)->EnqueueStatus(StatusArray.Get(), 0);

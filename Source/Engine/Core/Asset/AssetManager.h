@@ -41,12 +41,14 @@ namespace Asset
 		}
 
 		void RequestUpload(Texture* Texture);
+		void RequestUpload(Mesh* Mesh);
 
 		void EnqueueRequest(Texture* Texture);
 		void EnqueueRequest(Mesh* Mesh);
 
 	private:
 		void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
+		void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);
 
 	private:
 		RHI::D3D12Device* Device = nullptr;
@@ -61,6 +63,7 @@ namespace Asset
 		std::mutex				Mutex;
 		std::condition_variable ConditionVariable;
 		std::queue<Texture*>	TextureUploadQueue;
+		std::queue<Mesh*>		MeshUploadQueue;
 
 		std::jthread	  Thread;
 		std::atomic<bool> Quit = false;
