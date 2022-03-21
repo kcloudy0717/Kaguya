@@ -289,7 +289,7 @@ public:
 						std::filesystem::path Path = FileSystem::SaveDialog(ComDlgFS);
 						if (!Path.empty())
 						{
-							WorldArchive::Save(Path.replace_extension(".json"), World, Kaguya::AssetManager);
+							WorldArchive::Save(Path.replace_extension(".json"), World, &EditorCamera.CameraComponent, Kaguya::AssetManager);
 						}
 					}
 
@@ -298,7 +298,7 @@ public:
 						std::filesystem::path Path = FileSystem::OpenDialog(ComDlgFS);
 						if (!Path.empty())
 						{
-							WorldArchive::Load(Path, World, Kaguya::AssetManager);
+							WorldArchive::Load(Path, World, &EditorCamera.CameraComponent, Kaguya::AssetManager);
 						}
 					}
 

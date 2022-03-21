@@ -38,6 +38,7 @@ struct ComponentSerializer
 void WorldArchive::Save(
 	const std::filesystem::path& Path,
 	World*						 World,
+	CameraComponent*			 Camera,
 	Asset::AssetManager*		 AssetManager)
 {
 	json Json;
@@ -58,9 +59,17 @@ void WorldArchive::Save(
 		AssetManager->GetMeshRegistry().EnumerateAsset(
 			[&](Asset::AssetHandle Handle, Asset::Mesh* Resource)
 			{
-				std::filesystem::path AssetPath = relative(Resource->Options.Path, Application::ExecutableDirectory);
-				auto&				  JsonMesh	= JsonMeshes[AssetPath.string()];
+				std::filesystem::path AssetPath			= relative(Resource->Options.Path, Application::ExecutableDirectory);
+				auto&				  JsonMesh			= JsonMeshes[AssetPath.string()];
 				JsonMesh["Options"]["GenerateMeshlets"] = Resource->Options.GenerateMeshlets;
+			});
+
+		auto& JsonCamera = Json["Camera"];
+		ForEachAttribute<CameraComponent>(
+			[&](auto&& Attribute)
+			{
+				const char* Name = Attribute.GetName();
+				JsonCamera[Name] = Attribute.Get(*Camera);
 			});
 
 		auto& JsonWorld = Json["World"];
@@ -116,6 +125,7 @@ void JsonGetIfExists(const json::value_type& Json, const char* Key, T& RefValue)
 void WorldArchive::Load(
 	const std::filesystem::path& Path,
 	World*						 World,
+	CameraComponent*			 Camera,
 	Asset::AssetManager*		 AssetManager)
 {
 	AssetManager->GetTextureRegistry().DestroyAll();
@@ -171,6 +181,24 @@ void WorldArchive::Load(
 		}
 	}
 
+	if (Json.contains("Camera"))
+	{
+		if (auto iter = Json.find("Camera"); iter != Json.end())
+		{
+			ForEachAttribute<CameraComponent>(
+				[&](auto&& Attribute)
+				{
+					const auto& Value = iter.value();
+
+					const char* Name = Attribute.GetName();
+					if (Value.contains(Name))
+					{
+						Attribute.Set(*Camera, Value[Name].template get<decltype(Attribute.GetType())>());
+					}
+				});
+		}
+	}
+
 	if (Json.contains("World"))
 	{
 		World->Clear(false);
@@ -185,6 +213,18 @@ void WorldArchive::Load(
 			ComponentDeserializer<LightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<SkyLightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Actor);
+
+			if (Actor.HasComponent<CameraComponent>())
+			{
+				auto& CameraComp = Actor.GetComponent<CameraComponent>();
+				*Camera			 = CameraComp;
+
+				CoreComponent& Core = Actor.GetComponent<CoreComponent>();
+				if (Core.Name == "Main Camera")
+				{
+					Camera->Transform = Core.Transform;
+				}
+			}
 
 			if (Actor.HasComponent<SkyLightComponent>())
 			{
