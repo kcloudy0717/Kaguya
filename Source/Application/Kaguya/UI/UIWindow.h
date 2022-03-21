@@ -63,6 +63,8 @@ public:
 		float			 Max		= 0.0f,
 		float			 Width		= ImGui::CalcItemWidth());
 
+	static bool EditTransform(const float* ViewMatrix, float* ProjectMatrix, float* TransformMatrix);
+
 protected:
 	virtual void OnRender() = 0;
 

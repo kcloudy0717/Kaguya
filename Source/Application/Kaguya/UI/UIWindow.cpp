@@ -207,3 +207,57 @@ bool UIWindow::RenderFloat3Control(
 	}
 	return IsEdited;
 }
+
+bool UIWindow::EditTransform(const float* ViewMatrix, float* ProjectMatrix, float* TransformMatrix)
+{
+	static bool				   UseSnap				 = false;
+	static ImGuizmo::OPERATION CurrentGizmoOperation = ImGuizmo::OPERATION::TRANSLATE;
+	static float			   Snap[3]				 = { 1, 1, 1 };
+	static ImGuizmo::MODE	   CurrentGizmoMode		 = ImGuizmo::WORLD;
+
+	ImGui::Text("Operation");
+
+	if (ImGui::RadioButton("Translate", CurrentGizmoOperation == ImGuizmo::TRANSLATE))
+	{
+		CurrentGizmoOperation = ImGuizmo::TRANSLATE;
+	}
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Rotate", CurrentGizmoOperation == ImGuizmo::ROTATE))
+	{
+		CurrentGizmoOperation = ImGuizmo::ROTATE;
+	}
+	ImGui::SameLine();
+
+	if (ImGui::RadioButton("Scale", CurrentGizmoOperation == ImGuizmo::SCALE))
+	{
+		CurrentGizmoOperation = ImGuizmo::SCALE;
+	}
+
+	ImGui::Checkbox("Snap", &UseSnap);
+	ImGui::SameLine();
+
+	switch (CurrentGizmoOperation)
+	{
+	case ImGuizmo::TRANSLATE:
+		ImGui::InputFloat3("Snap", &Snap[0]);
+		break;
+	case ImGuizmo::ROTATE:
+		ImGui::InputFloat("Angle Snap", &Snap[0]);
+		break;
+	case ImGuizmo::SCALE:
+		ImGui::InputFloat("Scale Snap", &Snap[0]);
+		break;
+	default:
+		break;
+	}
+
+	return ImGuizmo::Manipulate(
+		ViewMatrix,
+		ProjectMatrix,
+		CurrentGizmoOperation,
+		CurrentGizmoMode,
+		TransformMatrix,
+		nullptr,
+		UseSnap ? Snap : nullptr);
+}

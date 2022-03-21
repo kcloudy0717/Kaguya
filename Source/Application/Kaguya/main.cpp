@@ -331,6 +331,55 @@ public:
 				ImGui::EndMainMenuBar();
 			}
 
+			if (ImGui::Begin("Editor Camera"))
+			{
+				bool IsEdited = false;
+
+				DirectX::XMFLOAT4X4 World, View, Projection;
+
+				// Dont transpose this
+				XMStoreFloat4x4(&World, EditorCamera.CameraComponent.Transform.Matrix());
+
+				float Translation[3], Rotation[3], Scale[3];
+				ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&World), Translation, Rotation, Scale);
+				IsEdited |= UIWindow::RenderFloat3Control("Translation", Translation);
+				IsEdited |= UIWindow::RenderFloat3Control("Rotation", Rotation);
+				IsEdited |= UIWindow::RenderFloat3Control("Scale", Scale, 1.0f);
+				ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
+
+				XMStoreFloat4x4(&View, DirectX::XMLoadFloat4x4(&EditorCamera.CameraComponent.View));
+				XMStoreFloat4x4(&Projection, DirectX::XMLoadFloat4x4(&EditorCamera.CameraComponent.Projection));
+
+				// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
+				IsEdited |= UIWindow::EditTransform(
+					reinterpret_cast<float*>(&View),
+					reinterpret_cast<float*>(&Projection),
+					reinterpret_cast<float*>(&World));
+
+				if (IsEdited)
+				{
+					EditorCamera.CameraComponent.Transform.SetTransform(XMLoadFloat4x4(&World));
+				}
+
+				IsEdited |= UIWindow::RenderFloatControl("Vertical FoV", &EditorCamera.CameraComponent.FoVY, CameraComponent().FoVY, 45.0f, 85.0f);
+				IsEdited |= UIWindow::RenderFloatControl("Near", &EditorCamera.CameraComponent.NearZ, CameraComponent().NearZ, 0.1f, 1.0f);
+				IsEdited |= UIWindow::RenderFloatControl("Far", &EditorCamera.CameraComponent.FarZ, CameraComponent().FarZ, 10.0f, 10000.0f);
+
+				IsEdited |= UIWindow::RenderFloatControl(
+					"Movement Speed",
+					&EditorCamera.CameraComponent.MovementSpeed,
+					CameraComponent().MovementSpeed,
+					1.0f,
+					1000.0f);
+				IsEdited |= UIWindow::RenderFloatControl(
+					"Strafe Speed",
+					&EditorCamera.CameraComponent.StrafeSpeed,
+					CameraComponent().StrafeSpeed,
+					1.0f,
+					1000.0f);
+			}
+			ImGui::End();
+
 			World->Update(DeltaTime);
 			EditorCamera.OnUpdate(DeltaTime);
 			if (EditorCamera.CameraComponent.Dirty)

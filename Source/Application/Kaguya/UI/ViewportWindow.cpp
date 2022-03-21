@@ -1,5 +1,5 @@
 #include "ViewportWindow.h"
-#include "Core/Application.h"
+#include "System/Application.h"
 #include "../Renderer.h"
 
 void ViewportWindow::OnRender()
