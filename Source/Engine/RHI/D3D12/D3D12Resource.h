@@ -42,6 +42,7 @@ namespace RHI
 		D3D12Resource(
 			D3D12LinkedDevice*	  Parent,
 			Arc<ID3D12Resource>&& Resource,
+			D3D12_CLEAR_VALUE	  ClearValue,
 			D3D12_RESOURCE_STATES InitialResourceState);
 		D3D12Resource(
 			D3D12LinkedDevice*				 Parent,
@@ -154,6 +155,7 @@ namespace RHI
 		D3D12Texture(
 			D3D12LinkedDevice*	  Parent,
 			Arc<ID3D12Resource>&& Resource,
+			D3D12_CLEAR_VALUE	  ClearValue,
 			D3D12_RESOURCE_STATES InitialResourceState);
 		D3D12Texture(
 			D3D12LinkedDevice*				 Parent,

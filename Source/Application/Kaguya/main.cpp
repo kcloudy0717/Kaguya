@@ -304,23 +304,17 @@ public:
 			ViewportWindow.Context		   = &Context;
 			ViewportWindow.Render();
 
-			auto [pRenderTarget, RenderTargetView] = SwapChain->GetCurrentBackBufferResource();
+			auto [RenderTarget, RenderTargetView] = SwapChain->GetCurrentBackBufferResource();
 
-			auto Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				pRenderTarget->GetResource(),
-				D3D12_RESOURCE_STATE_PRESENT,
-				D3D12_RESOURCE_STATE_RENDER_TARGET);
-			Context->ResourceBarrier(1, &Barrier);
+			Context.TransitionBarrier(RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				D3D12_VIEWPORT Viewport	   = SwapChain->GetViewport();
-				D3D12_RECT	   ScissorRect = SwapChain->GetScissorRect();
-
 				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				Context->RSSetViewports(1, &Viewport);
-				Context->RSSetScissorRects(1, &ScissorRect);
-				Context->OMSetRenderTargets(1, &RenderTargetView, TRUE, nullptr);
-				FLOAT white[] = { 1, 1, 1, 1 };
-				Context->ClearRenderTargetView(RenderTargetView, white, 0, nullptr);
+
+				RHI::D3D12RenderTargetView* Views[] = { RenderTargetView };
+				Context.SetViewport(SwapChain->GetViewport());
+				Context.SetScissorRect(SwapChain->GetScissorRect());
+				Context.SetRenderTarget(Views, nullptr);
+				Context.ClearRenderTarget(Views, nullptr);
 
 				// ImGui Render
 				{
@@ -330,11 +324,7 @@ public:
 					ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), Context.GetGraphicsCommandList());
 				}
 			}
-			Barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-				pRenderTarget->GetResource(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				D3D12_RESOURCE_STATE_PRESENT);
-			Context->ResourceBarrier(1, &Barrier);
+			Context.TransitionBarrier(RenderTarget, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		Context.Close();
 

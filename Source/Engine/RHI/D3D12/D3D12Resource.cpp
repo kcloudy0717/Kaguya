@@ -115,10 +115,11 @@ namespace RHI
 	D3D12Resource::D3D12Resource(
 		D3D12LinkedDevice*	  Parent,
 		Arc<ID3D12Resource>&& Resource,
+		D3D12_CLEAR_VALUE	  ClearValue,
 		D3D12_RESOURCE_STATES InitialResourceState)
 		: D3D12LinkedDeviceChild(Parent)
 		, Resource(std::move(Resource))
-		, ClearValue(D3D12_CLEAR_VALUE{})
+		, ClearValue(ClearValue)
 		, Desc(this->Resource->GetDesc())
 		, PlaneCount(D3D12GetFormatPlaneCount(Parent->GetDevice(), Desc.Format))
 		, NumSubresources(CalculateNumSubresources())
@@ -220,8 +221,9 @@ namespace RHI
 	D3D12Texture::D3D12Texture(
 		D3D12LinkedDevice*	  Parent,
 		Arc<ID3D12Resource>&& Resource,
+		D3D12_CLEAR_VALUE	  ClearValue,
 		D3D12_RESOURCE_STATES InitialResourceState)
-		: D3D12Resource(Parent, std::move(Resource), InitialResourceState)
+		: D3D12Resource(Parent, std::move(Resource), ClearValue, InitialResourceState)
 	{
 	}
 

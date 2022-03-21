@@ -19,8 +19,8 @@ namespace RHI
 
 	struct D3D12SwapChainResource
 	{
-		D3D12Texture*				BackBuffer;
-		D3D12_CPU_DESCRIPTOR_HANDLE View;
+		D3D12Texture*		   BackBuffer;
+		D3D12RenderTargetView* View;
 	};
 
 	// HDR is not fully supported yet, still WIP
@@ -76,8 +76,8 @@ namespace RHI
 		[[nodiscard]] D3D12Texture*			 GetBackBuffer(UINT Index);
 		[[nodiscard]] D3D12SwapChainResource GetCurrentBackBufferResource();
 
-		[[nodiscard]] D3D12_VIEWPORT GetViewport() const noexcept;
-		[[nodiscard]] D3D12_RECT	 GetScissorRect() const noexcept;
+		[[nodiscard]] RHIViewport GetViewport() const noexcept;
+		[[nodiscard]] RHIRect	  GetScissorRect() const noexcept;
 
 		void Resize(UINT Width, UINT Height);
 

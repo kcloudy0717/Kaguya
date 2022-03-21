@@ -186,9 +186,10 @@ namespace RHI
 		std::span<D3D12RenderTargetView*> RenderTargetViews,
 		D3D12DepthStencilView*			  DepthStencilView)
 	{
+		UINT						NumRenderTargetDescriptors										 = static_cast<UINT>(RenderTargetViews.size());
 		D3D12_CPU_DESCRIPTOR_HANDLE pRenderTargetDescriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilDescriptor											 = {};
-		for (size_t i = 0; i < RenderTargetViews.size(); ++i)
+		for (UINT i = 0; i < NumRenderTargetDescriptors; ++i)
 		{
 			pRenderTargetDescriptors[i] = RenderTargetViews[i]->GetCpuHandle();
 		}
@@ -196,7 +197,7 @@ namespace RHI
 		{
 			DepthStencilDescriptor = DepthStencilView->GetCpuHandle();
 		}
-		CommandListHandle->OMSetRenderTargets(static_cast<UINT>(RenderTargetViews.size()), pRenderTargetDescriptors, FALSE, DepthStencilView ? &DepthStencilDescriptor : nullptr);
+		CommandListHandle->OMSetRenderTargets(NumRenderTargetDescriptors, pRenderTargetDescriptors, FALSE, DepthStencilView ? &DepthStencilDescriptor : nullptr);
 	}
 
 	void D3D12CommandContext::SetViewport(

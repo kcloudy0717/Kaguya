@@ -139,17 +139,17 @@ namespace RHI
 	D3D12SwapChainResource D3D12SwapChain::GetCurrentBackBufferResource()
 	{
 		UINT BackBufferIndex = SwapChain4->GetCurrentBackBufferIndex();
-		return { GetBackBuffer(BackBufferIndex), RenderTargetViews[BackBufferIndex].GetCpuHandle() };
+		return { GetBackBuffer(BackBufferIndex), &RenderTargetViews[BackBufferIndex] };
 	}
 
-	D3D12_VIEWPORT D3D12SwapChain::GetViewport() const noexcept
+	RHIViewport D3D12SwapChain::GetViewport() const noexcept
 	{
-		return CD3DX12_VIEWPORT(0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height));
+		return RHIViewport(0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height));
 	}
 
-	D3D12_RECT D3D12SwapChain::GetScissorRect() const noexcept
+	RHIRect D3D12SwapChain::GetScissorRect() const noexcept
 	{
-		return CD3DX12_RECT(0, 0, Width, Height);
+		return RHIRect(0, 0, Width, Height);
 	}
 
 	void D3D12SwapChain::Resize(UINT Width, UINT Height)
@@ -185,7 +185,9 @@ namespace RHI
 		{
 			Arc<ID3D12Resource> Resource;
 			VERIFY_D3D12_API(SwapChain4->GetBuffer(i, IID_PPV_ARGS(&Resource)));
-			BackBuffers[i] = D3D12Texture(GetParentDevice()->GetLinkedDevice(), std::move(Resource), D3D12_RESOURCE_STATE_PRESENT);
+			FLOAT			  Color[4]	 = { 1.0f, 1.0f, 1.0f, 1.0f };
+			D3D12_CLEAR_VALUE ClearValue = CD3DX12_CLEAR_VALUE(Desc.Format, Color);
+			BackBuffers[i]				 = D3D12Texture(GetParentDevice()->GetLinkedDevice(), std::move(Resource), ClearValue, D3D12_RESOURCE_STATE_PRESENT);
 		}
 
 		CreateRenderTargetViews();
