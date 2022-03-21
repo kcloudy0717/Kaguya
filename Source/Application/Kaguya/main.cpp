@@ -10,8 +10,9 @@
 #define SET_LEAK_BREAKPOINT(x)
 #endif
 
-#include "Core/Application.h"
-#include "Core/IApplicationMessageHandler.h"
+#include "System/Application.h"
+#include "System/IApplicationMessageHandler.h"
+
 #include "Core/World/World.h"
 #include "Core/World/WorldArchive.h"
 
@@ -358,8 +359,6 @@ public:
 
 			Context.TransitionBarrier(RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 				RHI::D3D12RenderTargetView* Views[] = { RenderTargetView };
 				Context.SetViewport(SwapChain->GetViewport());
 				Context.SetScissorRect(SwapChain->GetScissorRect());

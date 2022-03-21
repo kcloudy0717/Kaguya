@@ -2,7 +2,7 @@
 #include "World.h"
 #include <Core/Asset/AssetManager.h>
 #include <Core/CoreDefines.h>
-#include <Core/Application.h>
+#include <System/Application.h>
 
 #include <fstream>
 #include "WorldJson.h"
