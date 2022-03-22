@@ -65,6 +65,7 @@ public:
 
 	[[nodiscard]] bool Done() const noexcept { return Handle.done(); }
 
+	// Wait must be called before invoking Get()
 	void Wait() const noexcept
 	{
 		bool Succeeded = Handle.promise().Event.wait();

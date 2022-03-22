@@ -55,6 +55,7 @@ namespace RHI
 	{
 		if (CompilationWork)
 		{
+			CompilationWork.Wait();
 			PipelineState	= CompilationWork.Get();
 			CompilationWork = nullptr;
 		}
