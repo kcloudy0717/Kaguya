@@ -71,8 +71,7 @@ namespace RHI
 
 	D3D12SyncHandle D3D12CommandContext::Execute(bool WaitForCompletion)
 	{
-		D3D12CommandListHandle* Handles[]  = { &CommandListHandle };
-		D3D12SyncHandle			SyncHandle = GetCommandQueue()->ExecuteCommandLists(1, Handles, WaitForCompletion);
+		D3D12SyncHandle SyncHandle = GetCommandQueue()->ExecuteCommandLists({ &CommandListHandle }, WaitForCompletion);
 
 		// Release the command allocator so it can be reused.
 		CommandAllocatorPool.DiscardCommandAllocator(std::exchange(CommandAllocator, nullptr), SyncHandle);

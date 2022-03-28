@@ -65,19 +65,16 @@ namespace RHI
 	}
 
 	D3D12SyncHandle D3D12CommandQueue::ExecuteCommandLists(
-		UINT					NumCommandListHandles,
-		D3D12CommandListHandle* CommandListHandles[],
-		bool					WaitForCompletion)
+		Span<D3D12CommandListHandle* const> CommandListHandles,
+		bool								WaitForCompletion)
 	{
 		UINT			   NumCommandLists		 = 0;
 		UINT			   NumBarrierCommandList = 0;
 		ID3D12CommandList* CommandLists[32]		 = {};
 
 		// Resolve resource barriers
-		for (UINT i = 0; i < NumCommandListHandles; ++i)
+		for (const auto& CommandListHandle : CommandListHandles)
 		{
-			D3D12CommandListHandle* CommandListHandle = CommandListHandles[i];
-
 			if (ResolveResourceBarrierCommandList(CommandListHandle))
 			{
 				CommandLists[NumCommandLists++] = ResourceBarrierCommandListHandle.GetCommandList();
