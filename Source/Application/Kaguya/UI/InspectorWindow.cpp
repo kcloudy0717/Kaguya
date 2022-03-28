@@ -128,58 +128,58 @@ void InspectorWindow::OnRender()
 			return IsEdited;
 		});
 
-	RenderComponent<CameraComponent, false>(
-		"Camera",
-		SelectedActor,
-		[&](CameraComponent& Component)
-		{
-			bool IsEdited = false;
+	//RenderComponent<CameraComponent, false>(
+	//	"Camera",
+	//	SelectedActor,
+	//	[&](CameraComponent& Component)
+	//	{
+	//		bool IsEdited = false;
 
-			DirectX::XMFLOAT4X4 World, View, Projection;
+	//		DirectX::XMFLOAT4X4 World, View, Projection;
 
-			// Dont transpose this
-			XMStoreFloat4x4(&World, Component.Transform.Matrix());
+	//		// Dont transpose this
+	//		XMStoreFloat4x4(&World, Component.Transform.Matrix());
 
-			float Translation[3], Rotation[3], Scale[3];
-			ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&World), Translation, Rotation, Scale);
-			IsEdited |= RenderFloat3Control("Translation", Translation);
-			IsEdited |= RenderFloat3Control("Rotation", Rotation);
-			IsEdited |= RenderFloat3Control("Scale", Scale, 1.0f);
-			ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
+	//		float Translation[3], Rotation[3], Scale[3];
+	//		ImGuizmo::DecomposeMatrixToComponents(reinterpret_cast<float*>(&World), Translation, Rotation, Scale);
+	//		IsEdited |= RenderFloat3Control("Translation", Translation);
+	//		IsEdited |= RenderFloat3Control("Rotation", Rotation);
+	//		IsEdited |= RenderFloat3Control("Scale", Scale, 1.0f);
+	//		ImGuizmo::RecomposeMatrixFromComponents(Translation, Rotation, Scale, reinterpret_cast<float*>(&World));
 
-			XMStoreFloat4x4(&View, XMLoadFloat4x4(&ViewportCamera->View));
-			XMStoreFloat4x4(&Projection, XMLoadFloat4x4(&ViewportCamera->Projection));
+	//		XMStoreFloat4x4(&View, XMLoadFloat4x4(&ViewportCamera->View));
+	//		XMStoreFloat4x4(&Projection, XMLoadFloat4x4(&ViewportCamera->Projection));
 
-			// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
-			IsEdited |= EditTransform(
-				reinterpret_cast<float*>(&View),
-				reinterpret_cast<float*>(&Projection),
-				reinterpret_cast<float*>(&World));
+	//		// If we have edited the transform, update it and mark it as dirty so it will be updated on the GPU side
+	//		IsEdited |= EditTransform(
+	//			reinterpret_cast<float*>(&View),
+	//			reinterpret_cast<float*>(&Projection),
+	//			reinterpret_cast<float*>(&World));
 
-			if (IsEdited)
-			{
-				Component.Transform.SetTransform(XMLoadFloat4x4(&World));
-			}
+	//		if (IsEdited)
+	//		{
+	//			Component.Transform.SetTransform(XMLoadFloat4x4(&World));
+	//		}
 
-			IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, CameraComponent().FoVY, 45.0f, 85.0f);
-			IsEdited |= RenderFloatControl("Near", &Component.NearZ, CameraComponent().NearZ, 0.1f, 1.0f);
-			IsEdited |= RenderFloatControl("Far", &Component.FarZ, CameraComponent().FarZ, 10.0f, 10000.0f);
+	//		IsEdited |= RenderFloatControl("Vertical FoV", &Component.FoVY, CameraComponent().FoVY, 45.0f, 85.0f);
+	//		IsEdited |= RenderFloatControl("Near", &Component.NearZ, CameraComponent().NearZ, 0.1f, 1.0f);
+	//		IsEdited |= RenderFloatControl("Far", &Component.FarZ, CameraComponent().FarZ, 10.0f, 10000.0f);
 
-			IsEdited |= RenderFloatControl(
-				"Movement Speed",
-				&Component.MovementSpeed,
-				CameraComponent().MovementSpeed,
-				1.0f,
-				1000.0f);
-			IsEdited |= RenderFloatControl(
-				"Strafe Speed",
-				&Component.StrafeSpeed,
-				CameraComponent().StrafeSpeed,
-				1.0f,
-				1000.0f);
+	//		IsEdited |= RenderFloatControl(
+	//			"Movement Speed",
+	//			&Component.MovementSpeed,
+	//			CameraComponent().MovementSpeed,
+	//			1.0f,
+	//			1000.0f);
+	//		IsEdited |= RenderFloatControl(
+	//			"Strafe Speed",
+	//			&Component.StrafeSpeed,
+	//			CameraComponent().StrafeSpeed,
+	//			1.0f,
+	//			1000.0f);
 
-			return IsEdited;
-		});
+	//		return IsEdited;
+	//	});
 
 	RenderComponent<StaticMeshComponent, false>(
 		"Static Mesh",

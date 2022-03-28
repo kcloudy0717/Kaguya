@@ -143,6 +143,103 @@ namespace RHI
 	{
 	}
 
+	bool D3D12Resource::ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept
+	{
+		// All buffer resources as well as textures with the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set are
+		// implicitly promoted from D3D12_RESOURCE_STATE_COMMON to the relevant state on first GPU access, including
+		// GENERIC_READ to cover any read scenario.
+
+		// When this access occurs the promotion acts like an implicit resource barrier. For subsequent accesses, resource
+		// barriers will be required to change the resource state if necessary. Note that promotion from one promoted read
+		// state into multiple read state is valid, but this is not the case for write states.
+		if (Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			return true;
+		}
+		else
+		{
+			// Simultaneous-Access Textures
+			if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
+			{
+				// *Depth-stencil resources must be non-simultaneous-access textures and thus can never be implicitly
+				// promoted.
+				constexpr D3D12_RESOURCE_STATES NonPromotableStates = D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ;
+				if (State & NonPromotableStates)
+				{
+					return false;
+				}
+				return true;
+			}
+			// Non-Simultaneous-Access Textures
+			else
+			{
+				constexpr D3D12_RESOURCE_STATES NonPromotableStates =
+					D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER |
+					D3D12_RESOURCE_STATE_INDEX_BUFFER |
+					D3D12_RESOURCE_STATE_RENDER_TARGET |
+					D3D12_RESOURCE_STATE_UNORDERED_ACCESS |
+					D3D12_RESOURCE_STATE_DEPTH_WRITE |
+					D3D12_RESOURCE_STATE_DEPTH_READ |
+					D3D12_RESOURCE_STATE_STREAM_OUT |
+					D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT |
+					D3D12_RESOURCE_STATE_RESOLVE_DEST |
+					D3D12_RESOURCE_STATE_RESOLVE_SOURCE |
+					D3D12_RESOURCE_STATE_PREDICATION;
+
+				constexpr D3D12_RESOURCE_STATES PromotableStates =
+					D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
+					D3D12_RESOURCE_STATE_COPY_DEST |
+					D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+				if (State & NonPromotableStates)
+				{
+					return false;
+				}
+				else
+				{
+					UNREFERENCED_PARAMETER(PromotableStates);
+					return true;
+				}
+			}
+		}
+	}
+
+	bool D3D12Resource::ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept
+	{
+		// 1. Resources being accessed on a Copy queue
+		if (AccessedQueueType == D3D12_COMMAND_LIST_TYPE_COPY)
+		{
+			return true;
+		}
+
+		// 2. Buffer resources on any queue type
+		if (Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			return true;
+		}
+
+		// 3. Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set
+		if (Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS)
+		{
+			return true;
+		}
+
+		// 4. Any resource implicitly promoted to a read-only state
+		// NOTE: We dont care about buffers here because buffer will decay due to Case 2, only textures, so any read state
+		// that is supported by Non-Simultaneous-Access Textures can decay to common
+		constexpr D3D12_RESOURCE_STATES ReadOnlyStates =
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE |
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE |
+			D3D12_RESOURCE_STATE_COPY_SOURCE;
+		if (State & ReadOnlyStates)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	Arc<ID3D12Resource> D3D12Resource::InitializeResource(
 		D3D12_HEAP_PROPERTIES			 HeapProperties,
 		D3D12_RESOURCE_DESC				 Desc,
@@ -240,7 +337,7 @@ namespace RHI
 			  ClearValue)
 		, Cubemap(Cubemap)
 	{
-		// Textures can only be in device local heap
+		// Textures can only be in device local heap (for discrete GPUs) UMA case is not handled
 	}
 
 	UINT D3D12Texture::GetSubresourceIndex(

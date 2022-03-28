@@ -59,36 +59,6 @@ inline std::uint8_t Log2(std::uint64_t Value)
 	return 0;
 }
 
-constexpr std::size_t operator"" _KiB(std::size_t X)
-{
-	return X * 1024;
-}
-
-constexpr std::size_t operator"" _MiB(std::size_t X)
-{
-	return X * 1024 * 1024;
-}
-
-constexpr std::size_t operator"" _GiB(std::size_t X)
-{
-	return X * 1024 * 1024 * 1024;
-}
-
-constexpr std::size_t ToKiB(std::size_t Byte)
-{
-	return Byte / 1024;
-}
-
-constexpr std::size_t ToMiB(std::size_t Byte)
-{
-	return Byte / 1024 / 1024;
-}
-
-constexpr std::size_t ToGiB(std::size_t Byte)
-{
-	return Byte / 1024 / 1024 / 1024;
-}
-
 // http://reedbeta.com/blog/python-like-enumerate-in-cpp17/
 #include <tuple>
 

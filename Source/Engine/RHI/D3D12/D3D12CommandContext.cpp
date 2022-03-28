@@ -164,10 +164,10 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::ClearRenderTarget(
-		std::span<D3D12RenderTargetView*> RenderTargetViews,
-		D3D12DepthStencilView*			  DepthStencilView)
+		Span<D3D12RenderTargetView* const> RenderTargetViews,
+		D3D12DepthStencilView*			   DepthStencilView)
 	{
-		for (const auto RenderTargetView : RenderTargetViews)
+		for (const auto& RenderTargetView : RenderTargetViews)
 		{
 			D3D12_CLEAR_VALUE ClearValue = RenderTargetView->GetResource()->GetClearValue();
 			CommandListHandle->ClearRenderTargetView(RenderTargetView->GetCpuHandle(), ClearValue.Color, 0, nullptr);
@@ -183,8 +183,8 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::SetRenderTarget(
-		std::span<D3D12RenderTargetView*> RenderTargetViews,
-		D3D12DepthStencilView*			  DepthStencilView)
+		Span<D3D12RenderTargetView* const> RenderTargetViews,
+		D3D12DepthStencilView*			   DepthStencilView)
 	{
 		UINT						NumRenderTargetDescriptors										 = static_cast<UINT>(RenderTargetViews.size());
 		D3D12_CPU_DESCRIPTOR_HANDLE pRenderTargetDescriptors[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
@@ -209,7 +209,7 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::SetViewports(
-		std::span<RHIViewport> Viewports)
+		Span<const RHIViewport> Viewports)
 	{
 		Cache.Graphics.NumViewports = static_cast<UINT>(Viewports.size());
 		UINT ViewportIndex			= 0;
@@ -229,7 +229,7 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::SetScissorRects(
-		std::span<RHIRect> ScissorRects)
+		Span<const RHIRect> ScissorRects)
 	{
 		Cache.Graphics.NumScissorRects = static_cast<UINT>(ScissorRects.size());
 		UINT ScissorRectIndex		   = 0;

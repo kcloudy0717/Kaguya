@@ -66,6 +66,19 @@ namespace RHI
 		[[nodiscard]] UINT						 GetNumSubresources() const noexcept { return NumSubresources; }
 		[[nodiscard]] CResourceState&			 GetResourceState() { return ResourceState; }
 
+		// https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#implicit-state-transitions
+		// https://devblogs.microsoft.com/directx/a-look-inside-d3d12-resource-state-barriers/
+		// Can this resource be promoted to State from common
+		[[nodiscard]] bool ImplicitStatePromotion(D3D12_RESOURCE_STATES State) const noexcept;
+
+		// Can this resource decay back to common
+		// 4 Cases:
+		// 1. Resources being accessed on a Copy queue, or
+		// 2. Buffer resources on any queue type, or
+		// 3. Texture resources on any queue type that have the D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS flag set, or
+		// 4. Any resource implicitly promoted to a read-only state.
+		[[nodiscard]] bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept;
+
 	private:
 		Arc<ID3D12Resource> InitializeResource(
 			D3D12_HEAP_PROPERTIES			 HeapProperties,
@@ -76,6 +89,8 @@ namespace RHI
 		UINT CalculateNumSubresources() const;
 
 	protected:
+		// TODO: Add support for custom heap properties for UMA GPUs 
+
 		Arc<ID3D12Resource>				 Resource;
 		std::optional<D3D12_CLEAR_VALUE> ClearValue;
 		D3D12_RESOURCE_DESC				 Desc			 = {};

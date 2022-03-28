@@ -408,11 +408,10 @@ public:
 
 			Context.TransitionBarrier(RenderTarget, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				RHI::D3D12RenderTargetView* Views[] = { RenderTargetView };
 				Context.SetViewport(SwapChain->GetViewport());
 				Context.SetScissorRect(SwapChain->GetScissorRect());
-				Context.SetRenderTarget(Views, nullptr);
-				Context.ClearRenderTarget(Views, nullptr);
+				Context.SetRenderTarget({ RenderTargetView }, nullptr);
+				Context.ClearRenderTarget({ RenderTargetView }, nullptr);
 
 				// ImGui Render
 				{

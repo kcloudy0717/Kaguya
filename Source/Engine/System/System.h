@@ -8,6 +8,8 @@
 #include "Console.h"
 #include "Hash.h"
 
+#include "Span.h"
+
 #include "IO/FileStream.h"
 #include "IO/AsyncFileStream.h"
 #include "IO/BinaryReader.h"

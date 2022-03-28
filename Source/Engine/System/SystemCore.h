@@ -3,6 +3,18 @@
 #include <wil/resource.h>
 #include <type_traits>
 
+// clang-format off
+// Decimal SI units
+constexpr size_t operator""_KB(size_t x) { return x * 1000; }
+constexpr size_t operator""_MB(size_t x) { return x * 1000 * 1000; }
+constexpr size_t operator""_GB(size_t x) { return x * 1000 * 1000 * 1000; }
+
+// Binary SI units
+constexpr size_t operator""_KiB(size_t x) { return x * 1024; }
+constexpr size_t operator""_MiB(size_t x) { return x * 1024 * 1024; }
+constexpr size_t operator""_GiB(size_t x) { return x * 1024 * 1024 * 1024; }
+// clang-format on
+
 // http://blog.bitwigglers.org/using-enum-classes-as-type-safe-bitmasks/
 
 template<typename Enum>

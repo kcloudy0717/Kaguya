@@ -72,24 +72,24 @@ namespace RHI
 			D3D12RootSignature* RootSignature);
 
 		void ClearRenderTarget(
-			std::span<D3D12RenderTargetView*> RenderTargetViews,
-			D3D12DepthStencilView*			  DepthStencilView);
+			Span<D3D12RenderTargetView* const> RenderTargetViews,
+			D3D12DepthStencilView*			   DepthStencilView);
 
 		void SetRenderTarget(
-			std::span<D3D12RenderTargetView*> RenderTargetViews,
-			D3D12DepthStencilView*			  DepthStencilView);
+			Span<D3D12RenderTargetView* const> RenderTargetViews,
+			D3D12DepthStencilView*			   DepthStencilView);
 
 		void SetViewport(
 			const RHIViewport& Viewport);
 
 		void SetViewports(
-			std::span<RHIViewport> Viewports);
+			Span<const RHIViewport> Viewports);
 
 		void SetScissorRect(
 			const RHIRect& ScissorRect);
 
 		void SetScissorRects(
-			std::span<RHIRect> ScissorRects);
+			Span<const RHIRect> ScissorRects);
 
 		void SetGraphicsConstantBuffer(
 			UINT		RootParameterIndex,
