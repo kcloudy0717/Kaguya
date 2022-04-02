@@ -351,10 +351,11 @@ namespace RHI
 		D3D12View(const D3D12View&) = delete;
 		D3D12View& operator=(const D3D12View&) = delete;
 
-		[[nodiscard]] bool						  IsValid() const noexcept { return Descriptor.IsValid(); }
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
-		[[nodiscard]] ViewDesc					  GetDesc() const noexcept { return Desc; }
-		[[nodiscard]] D3D12Resource*			  GetResource() const noexcept { return Resource; }
+		[[nodiscard]] bool							IsValid() const noexcept { return Descriptor.IsValid(); }
+		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE	GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
+		[[nodiscard]] ViewDesc						GetDesc() const noexcept { return Desc; }
+		[[nodiscard]] D3D12Resource*				GetResource() const noexcept { return Resource; }
+		[[nodiscard]] const CViewSubresourceSubset& GetViewSubresourceSubset() const noexcept { return ViewSubresourceSubset; }
 
 	protected:
 		D3D12Descriptor<ViewDesc> Descriptor;
@@ -535,12 +536,13 @@ namespace RHI
 		D3D12DynamicView(const D3D12DynamicView&) = delete;
 		D3D12DynamicView& operator=(const D3D12DynamicView&) = delete;
 
-		[[nodiscard]] bool						  IsValid() const noexcept { return Descriptor.IsValid(); }
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
-		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle() const noexcept { return Descriptor.GetGpuHandle(); }
-		[[nodiscard]] UINT						  GetIndex() const noexcept { return Descriptor.GetIndex(); }
-		[[nodiscard]] ViewDesc					  GetDesc() const noexcept { return Desc; }
-		[[nodiscard]] D3D12Resource*			  GetResource() const noexcept { return Resource; }
+		[[nodiscard]] bool							IsValid() const noexcept { return Descriptor.IsValid(); }
+		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE	GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
+		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE	GetGpuHandle() const noexcept { return Descriptor.GetGpuHandle(); }
+		[[nodiscard]] UINT							GetIndex() const noexcept { return Descriptor.GetIndex(); }
+		[[nodiscard]] ViewDesc						GetDesc() const noexcept { return Desc; }
+		[[nodiscard]] D3D12Resource*				GetResource() const noexcept { return Resource; }
+		[[nodiscard]] const CViewSubresourceSubset& GetViewSubresourceSubset() const noexcept { return ViewSubresourceSubset; }
 
 	protected:
 		D3D12DynamicDescriptor<ViewDesc> Descriptor;

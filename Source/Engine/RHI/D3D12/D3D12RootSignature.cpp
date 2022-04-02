@@ -8,8 +8,8 @@ namespace RHI
 		// Worst case number of root parameters is 64
 		// Preallocate all possible parameters to avoid cost for push back
 		Parameters.reserve(D3D12_MAX_ROOT_COST);
-		DescriptorTableIndices.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
-		DescriptorTables.reserve(D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		DescriptorTableIndices.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		DescriptorTables.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
 	}
 
 	RootSignatureDesc& RootSignatureDesc::AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable)
@@ -190,7 +190,7 @@ namespace RHI
 		}
 	}
 
-	std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> D3D12RootSignature::GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
+	std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> D3D12RootSignature::GetDescriptorTableBitMask(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept
 	{
 		switch (Type)
 		{
@@ -205,7 +205,7 @@ namespace RHI
 
 	UINT D3D12RootSignature::GetNumDescriptors(UINT RootParameterIndex) const noexcept
 	{
-		assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		assert(RootParameterIndex < KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
 		return NumDescriptorsPerTable[RootParameterIndex];
 	}
 } // namespace RHI

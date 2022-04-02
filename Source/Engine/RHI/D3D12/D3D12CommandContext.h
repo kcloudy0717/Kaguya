@@ -1,7 +1,7 @@
 #pragma once
 #include "D3D12Core.h"
 #include "D3D12CommandList.h"
-#include "D3D12MemoryAllocator.h"
+#include "D3D12ResourceAllocator.h"
 #include "D3D12Profiler.h"
 
 namespace RHI
@@ -12,6 +12,25 @@ namespace RHI
 	class D3D12RootSignature;
 	class D3D12RenderTargetView;
 	class D3D12DepthStencilView;
+
+	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
+	{
+	public:
+		D3D12CommandAllocatorPool() noexcept = default;
+		explicit D3D12CommandAllocatorPool(
+			D3D12LinkedDevice*		Parent,
+			D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
+
+		[[nodiscard]] Arc<ID3D12CommandAllocator> RequestCommandAllocator();
+
+		void DiscardCommandAllocator(
+			Arc<ID3D12CommandAllocator> CommandAllocator,
+			D3D12SyncHandle				SyncHandle);
+
+	private:
+		D3D12_COMMAND_LIST_TYPE					CommandListType;
+		CFencePool<Arc<ID3D12CommandAllocator>> CommandAllocatorPool;
+	};
 
 	class D3D12CommandContext : public D3D12LinkedDeviceChild
 	{

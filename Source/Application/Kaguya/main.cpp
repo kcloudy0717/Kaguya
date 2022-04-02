@@ -30,6 +30,13 @@
 #include "UI/AssetWindow.h"
 #include "UI/ViewportWindow.h"
 
+// https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
+extern "C"
+{
+	_declspec(dllexport) extern const UINT D3D12SDKVersion = 700;
+	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
+}
+
 class ImGuiContextManager
 {
 public:
@@ -212,7 +219,6 @@ class Editor final
 {
 public:
 	explicit Editor()
-		: Application()
 	{
 		SetMessageHandler(this);
 		RegisterMessageCallback(ImguiMessageCallback, nullptr);

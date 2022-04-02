@@ -1,4 +1,4 @@
-#include "D3D12MemoryAllocator.h"
+#include "D3D12ResourceAllocator.h"
 #include "D3D12LinkedDevice.h"
 
 namespace RHI

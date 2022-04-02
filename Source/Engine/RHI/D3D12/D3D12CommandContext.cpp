@@ -9,6 +9,36 @@
 
 namespace RHI
 {
+	// D3D12CommandAllocatorPool
+	D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(
+		D3D12LinkedDevice*		Parent,
+		D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
+		: D3D12LinkedDeviceChild(Parent)
+		, CommandListType(CommandListType)
+	{
+	}
+
+	Arc<ID3D12CommandAllocator> D3D12CommandAllocatorPool::RequestCommandAllocator()
+	{
+		auto CreateCommandAllocator = [this]
+		{
+			Arc<ID3D12CommandAllocator> CommandAllocator;
+			VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
+			return CommandAllocator;
+		};
+		auto CommandAllocator = CommandAllocatorPool.RetrieveFromPool(CreateCommandAllocator);
+		CommandAllocator->Reset();
+		return CommandAllocator;
+	}
+
+	void D3D12CommandAllocatorPool::DiscardCommandAllocator(
+		Arc<ID3D12CommandAllocator> CommandAllocator,
+		D3D12SyncHandle				SyncHandle)
+	{
+		CommandAllocatorPool.ReturnToPool(std::move(CommandAllocator), SyncHandle);
+	}
+
+	// D3D12CommandContext
 	D3D12CommandContext::D3D12CommandContext(
 		D3D12LinkedDevice*		 Parent,
 		RHID3D12CommandQueueType Type,
@@ -166,6 +196,31 @@ namespace RHI
 		Span<D3D12RenderTargetView* const> RenderTargetViews,
 		D3D12DepthStencilView*			   DepthStencilView)
 	{
+		// Transition
+		for (const auto& RenderTargetView : RenderTargetViews)
+		{
+			const auto& ViewSubresourceSubset = RenderTargetView->GetViewSubresourceSubset();
+			for (auto Iter = ViewSubresourceSubset.begin(); Iter != ViewSubresourceSubset.end(); ++Iter)
+			{
+				for (UINT SubresourceIndex = Iter.StartSubresource(); SubresourceIndex < Iter.EndSubresource(); ++SubresourceIndex)
+				{
+					TransitionBarrier(RenderTargetView->GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, SubresourceIndex);
+				}
+			}
+		}
+		if (DepthStencilView)
+		{
+			const auto& ViewSubresourceSubset = DepthStencilView->GetViewSubresourceSubset();
+			for (auto Iter = ViewSubresourceSubset.begin(); Iter != ViewSubresourceSubset.end(); ++Iter)
+			{
+				for (UINT SubresourceIndex = Iter.StartSubresource(); SubresourceIndex < Iter.EndSubresource(); ++SubresourceIndex)
+				{
+					TransitionBarrier(DepthStencilView->GetResource(), D3D12_RESOURCE_STATE_DEPTH_WRITE, SubresourceIndex);
+				}
+			}
+		}
+
+		// Clear
 		for (const auto& RenderTargetView : RenderTargetViews)
 		{
 			D3D12_CLEAR_VALUE ClearValue = RenderTargetView->GetResource()->GetClearValue();

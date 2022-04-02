@@ -244,7 +244,7 @@ namespace RHI
 		UINT						NumDescriptors,
 		D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptor)
 	{
-		assert(RootParameterIndex < D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT && "Root parameter index exceeds the max descriptor table index");
+		assert(RootParameterIndex < KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT && "Root parameter index exceeds the max descriptor table index");
 
 		D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
 
@@ -267,7 +267,7 @@ namespace RHI
 	{
 		ID3D12Device* Device				   = GetParentLinkedDevice()->GetDevice();
 		UINT		  NumStaleDescriptorTables = 0;
-		UINT		  RootIndices[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT];
+		UINT		  RootIndices[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT];
 
 		for (size_t i = 0; i < StaleDescriptorTableBitMask.size(); ++i)
 		{
@@ -360,7 +360,7 @@ namespace RHI
 
 	void D3D12OnlineDescriptorHeap::CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CommandList)
 	{
-		UINT NumDescriptorsCommitted = ComputeHandleCache.CommitDescriptors<RHI_PIPELINE_STATE_TYPE::Graphics>(
+		UINT NumDescriptorsCommitted = ComputeHandleCache.CommitDescriptors<RHI_PIPELINE_STATE_TYPE::Compute>(
 			CpuBaseAddress,
 			GpuBaseAddress,
 			CommandList);

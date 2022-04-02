@@ -30,6 +30,7 @@ namespace RHI
 		UINT			 Index = 0;
 	};
 
+	// Dynamic resource binding heap, descriptor index are maintained in a free list
 	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
 	{
 	public:
@@ -63,6 +64,7 @@ namespace RHI
 		Mutex				Mutex;
 	};
 
+	// Used for RTV/DSV Heaps
 	class CDescriptorHeapManager : public D3D12LinkedDeviceChild
 	{
 	public: // Types
@@ -108,6 +110,9 @@ namespace RHI
 		std::list<UINT> FreeHeaps;
 	};
 
+	// Code below was used to simulate D3D11-ish kind binding model
+	// No longer used
+
 	struct D3D12DescriptorTableCache
 	{
 		// The pointer to the descriptor in the descriptor handle cache.
@@ -146,14 +151,14 @@ namespace RHI
 
 		// Each bit in the bit mask represents the index in the root signature
 		// that contains a descriptor table.
-		std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> DescriptorTableBitMask;
+		std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> DescriptorTableBitMask;
 
 		// Each bit set in the bit mask represents a descriptor table
 		// in the root signature that has changed since the last time the
 		// descriptors were copied.
-		std::bitset<D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> StaleDescriptorTableBitMask;
+		std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> StaleDescriptorTableBitMask;
 
-		D3D12DescriptorTableCache	DescriptorTableCaches[D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
+		D3D12DescriptorTableCache	DescriptorTableCaches[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHandles[DescriptorHandleLimit]						= {};
 	};
 

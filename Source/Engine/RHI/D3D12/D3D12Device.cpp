@@ -1,12 +1,5 @@
 #include "D3D12Device.h"
 
-// https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
-extern "C"
-{
-	_declspec(dllexport) extern const UINT D3D12SDKVersion = 700;
-	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
-}
-
 static ConsoleVariable CVar_Dred(
 	"D3D12.DRED",
 	"Enable device removed extended data\n"

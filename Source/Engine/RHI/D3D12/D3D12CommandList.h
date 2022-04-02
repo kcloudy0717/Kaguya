@@ -4,25 +4,6 @@
 
 namespace RHI
 {
-	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
-	{
-	public:
-		D3D12CommandAllocatorPool() noexcept = default;
-		explicit D3D12CommandAllocatorPool(
-			D3D12LinkedDevice*		Parent,
-			D3D12_COMMAND_LIST_TYPE CommandListType) noexcept;
-
-		[[nodiscard]] Arc<ID3D12CommandAllocator> RequestCommandAllocator();
-
-		void DiscardCommandAllocator(
-			Arc<ID3D12CommandAllocator> CommandAllocator,
-			D3D12SyncHandle				SyncHandle);
-
-	private:
-		D3D12_COMMAND_LIST_TYPE					CommandListType;
-		CFencePool<Arc<ID3D12CommandAllocator>> CommandAllocatorPool;
-	};
-
 	// https://www.youtube.com/watch?v=nmB2XMasz2o, Resource state tracking
 	struct PendingResourceBarrier
 	{
@@ -127,7 +108,7 @@ namespace RHI
 		Arc<ID3D12GraphicsCommandList>	GraphicsCommandList;
 		Arc<ID3D12GraphicsCommandList4> GraphicsCommandList4;
 		Arc<ID3D12GraphicsCommandList6> GraphicsCommandList6;
-#ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
+#ifdef KAGUYA_RHI_D3D12_DEBUG_RESOURCE_STATES
 		Arc<ID3D12DebugCommandList> DebugCommandList;
 #endif
 		D3D12ResourceStateTracker ResourceStateTracker;

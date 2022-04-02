@@ -4,34 +4,6 @@
 
 namespace RHI
 {
-	D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(
-		D3D12LinkedDevice*		Parent,
-		D3D12_COMMAND_LIST_TYPE CommandListType) noexcept
-		: D3D12LinkedDeviceChild(Parent)
-		, CommandListType(CommandListType)
-	{
-	}
-
-	Arc<ID3D12CommandAllocator> D3D12CommandAllocatorPool::RequestCommandAllocator()
-	{
-		auto CreateCommandAllocator = [this]
-		{
-			Arc<ID3D12CommandAllocator> CommandAllocator;
-			VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.ReleaseAndGetAddressOf())));
-			return CommandAllocator;
-		};
-		auto CommandAllocator = CommandAllocatorPool.RetrieveFromPool(CreateCommandAllocator);
-		CommandAllocator->Reset();
-		return CommandAllocator;
-	}
-
-	void D3D12CommandAllocatorPool::DiscardCommandAllocator(
-		Arc<ID3D12CommandAllocator> CommandAllocator,
-		D3D12SyncHandle				SyncHandle)
-	{
-		CommandAllocatorPool.ReturnToPool(std::move(CommandAllocator), SyncHandle);
-	}
-
 	std::vector<PendingResourceBarrier>& D3D12ResourceStateTracker::GetPendingResourceBarriers()
 	{
 		return PendingResourceBarriers;
@@ -68,7 +40,7 @@ namespace RHI
 		VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(Parent->GetNodeMask(), Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&GraphicsCommandList)));
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList4));
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList6));
-#ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
+#ifdef KAGUYA_RHI_D3D12_DEBUG_RESOURCE_STATES
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&DebugCommandList));
 #endif
 	}
@@ -164,7 +136,7 @@ namespace RHI
 		D3D12_RESOURCE_STATES State,
 		UINT				  Subresource)
 	{
-#ifdef LUNA_D3D12_DEBUG_RESOURCE_STATES
+#ifdef KAGUYA_RHI_D3D12_DEBUG_RESOURCE_STATES
 		if (DebugCommandList)
 		{
 			return DebugCommandList->AssertResourceState(Resource->GetResource(), Subresource, State);
