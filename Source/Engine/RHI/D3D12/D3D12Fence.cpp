@@ -6,7 +6,12 @@ namespace RHI
 {
 	D3D12Fence::D3D12Fence(D3D12Device* Parent, UINT64 InitialValue, D3D12_FENCE_FLAGS Flags /*= D3D12_FENCE_FLAG_NONE*/)
 		: D3D12DeviceChild(Parent)
-		, Fence(InitializeFence(InitialValue, Flags))
+		, Fence([&]
+				{
+					Arc<ID3D12Fence1> Fence;
+					VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateFence(InitialValue, Flags, IID_PPV_ARGS(&Fence)));
+					return Fence;
+				}())
 		, CurrentValue(InitialValue + 1)
 		, LastSignaledValue(0)
 		, LastCompletedValue(InitialValue)
@@ -48,13 +53,6 @@ namespace RHI
 
 		VERIFY_D3D12_API(Fence->SetEventOnCompletion(Value, nullptr));
 		UpdateLastCompletedValue();
-	}
-
-	Arc<ID3D12Fence1> D3D12Fence::InitializeFence(UINT64 InitialValue, D3D12_FENCE_FLAGS Flags)
-	{
-		Arc<ID3D12Fence1> Fence;
-		VERIFY_D3D12_API(Parent->GetD3D12Device()->CreateFence(InitialValue, Flags, IID_PPV_ARGS(&Fence)));
-		return Fence;
 	}
 
 	void D3D12Fence::InternalSignal(ID3D12CommandQueue* CommandQueue, UINT64 Value)

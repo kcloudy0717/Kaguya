@@ -178,9 +178,10 @@ namespace RHI
 		memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
 
 		CD3DX12_PIPELINE_STATE_STREAM2	 Stream(Desc);
-		D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {};
-		StreamDesc.pPipelineStateSubobjectStream	= &Stream;
-		StreamDesc.SizeInBytes						= sizeof(Stream);
+		D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {
+			.SizeInBytes				   = sizeof(Stream),
+			.pPipelineStateSubobjectStream = &Stream
+		};
 
 		if (Device->GetPipelineLibrary())
 		{
@@ -211,12 +212,13 @@ namespace RHI
 			});
 
 		Arc<ID3D12PipelineState>		  PipelineState;
-		D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {};
-		Desc.pRootSignature					   = Parser.RootSignature->GetApiHandle();
-		Desc.CS								   = RHITranslateD3D12(Parser.CS);
-		Desc.NodeMask						   = Device->GetAllNodeMask();
-		Desc.CachedPSO						   = D3D12_CACHED_PIPELINE_STATE();
-		Desc.Flags							   = D3D12_PIPELINE_STATE_FLAG_NONE;
+		D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {
+			.pRootSignature = Parser.RootSignature->GetApiHandle(),
+			.CS				= RHITranslateD3D12(Parser.CS),
+			.NodeMask		= Device->GetAllNodeMask(),
+			.CachedPSO		= D3D12_CACHED_PIPELINE_STATE(),
+			.Flags			= D3D12_PIPELINE_STATE_FLAG_NONE
+		};
 
 		if (Device->GetPipelineLibrary())
 		{

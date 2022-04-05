@@ -100,6 +100,7 @@ namespace RHI
 			D3D12Resource* Resource);
 
 	private:
+		// Friend due to D3D12CommandQueue::ResolveResourceBarrierCommandList
 		friend class D3D12CommandQueue;
 
 		static constexpr UINT NumBatches = 16;

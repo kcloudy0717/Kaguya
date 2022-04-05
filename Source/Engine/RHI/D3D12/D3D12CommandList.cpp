@@ -36,8 +36,14 @@ namespace RHI
 		D3D12_COMMAND_LIST_TYPE Type)
 		: D3D12LinkedDeviceChild(Parent)
 		, Type(Type)
+		, GraphicsCommandList(
+			  [&]
+			  {
+				  Arc<ID3D12GraphicsCommandList> GraphicsCommandList;
+				  VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(Parent->GetNodeMask(), Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&GraphicsCommandList)));
+				  return GraphicsCommandList;
+			  }())
 	{
-		VERIFY_D3D12_API(Parent->GetDevice5()->CreateCommandList1(Parent->GetNodeMask(), Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&GraphicsCommandList)));
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList4));
 		GraphicsCommandList->QueryInterface(IID_PPV_ARGS(&GraphicsCommandList6));
 #ifdef KAGUYA_RHI_D3D12_DEBUG_RESOURCE_STATES

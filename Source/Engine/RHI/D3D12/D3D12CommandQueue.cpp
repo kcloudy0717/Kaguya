@@ -8,18 +8,19 @@ namespace RHI
 		RHID3D12CommandQueueType Type)
 		: D3D12LinkedDeviceChild(Parent)
 		, CommandListType(RHITranslateD3D12(Type))
-		, CommandQueue([&]
-					   {
-						   Arc<ID3D12CommandQueue>	CommandQueue;
-						   D3D12_COMMAND_QUEUE_DESC Desc = {
-							   .Type	 = CommandListType,
-							   .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-							   .Flags	 = D3D12_COMMAND_QUEUE_FLAG_NONE,
-							   .NodeMask = Parent->GetNodeMask()
-						   };
-						   VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
-						   return CommandQueue;
-					   }())
+		, CommandQueue(
+			  [&]
+			  {
+				  Arc<ID3D12CommandQueue>  CommandQueue;
+				  D3D12_COMMAND_QUEUE_DESC Desc = {
+					  .Type		= CommandListType,
+					  .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+					  .Flags	= D3D12_COMMAND_QUEUE_FLAG_NONE,
+					  .NodeMask = Parent->GetNodeMask()
+				  };
+				  VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
+				  return CommandQueue;
+			  }())
 		, Fence(Parent->GetParentDevice(), 0, D3D12_FENCE_FLAG_NONE)
 		, ResourceBarrierCommandAllocatorPool(Parent, CommandListType)
 		, ResourceBarrierCommandAllocator(ResourceBarrierCommandAllocatorPool.RequestCommandAllocator())
