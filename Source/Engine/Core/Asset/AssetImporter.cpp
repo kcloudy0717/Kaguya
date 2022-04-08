@@ -45,7 +45,7 @@ namespace Asset
 
 			if (!paiScene || !paiScene->HasMeshes())
 			{
-				LUNA_LOG(Asset, Error, "{} error: {}", __FUNCTION__, Importer.GetErrorString());
+				KAGUYA_LOG(Asset, Error, "{} error: {}", __FUNCTION__, Importer.GetErrorString());
 				__debugbreak();
 				return {};
 			}

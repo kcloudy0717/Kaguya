@@ -226,6 +226,10 @@ namespace RHI
 		[[nodiscard]] UINT GetNumDescriptors(UINT RootParameterIndex) const noexcept;
 
 	private:
+		// Pre SM6.6 bindless root parameter setup
+		static void AddBindlessParameters(RootSignatureDesc& Desc);
+
+	private:
 		Arc<ID3D12RootSignature> RootSignature;
 		UINT					 NumParameters = 0;
 

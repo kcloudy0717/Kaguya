@@ -107,10 +107,10 @@ private:
 
 #define DEFINE_LOG_CATEGORY(Name)  Log##Name LOG_CONCATENATE(g_Log, Name)
 
-#define LUNA_LOG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
+#define KAGUYA_LOG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
 
 #if _DEBUG
-#define LUNA_LOG_DEBUG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
+#define KAGUYA_LOG_DEBUG(Name, Level, ...) LOG_CONCATENATE(g_Log, Name).##Level(__VA_ARGS__)
 #else
-#define LUNA_LOG_DEBUG(Name, Level, ...)
+#define KAGUYA_LOG_DEBUG(Name, Level, ...)
 #endif

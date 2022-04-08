@@ -152,7 +152,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	ScopedTimer Timer(
 		[&](i64 Milliseconds)
 		{
-			LUNA_LOG(Dxc, Info, L"{} compiled in {}ms", Path.c_str(), Milliseconds);
+			KAGUYA_LOG(Dxc, Info, L"{} compiled in {}ms", Path.c_str(), Milliseconds);
 		});
 
 	ShaderCompilationResult Result = {};
@@ -214,7 +214,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 			ComPtr<IDxcBlobUtf8>  Errors;
 			ComPtr<IDxcBlobUtf16> OutputName;
 			VERIFY_DXC_API(DxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&Errors), &OutputName));
-			LUNA_LOG(RHI, Error, "Shader compile error: {}", std::bit_cast<char*>(Errors->GetBufferPointer()));
+			KAGUYA_LOG(RHI, Error, "Shader compile error: {}", std::bit_cast<char*>(Errors->GetBufferPointer()));
 			throw std::runtime_error("Failed to compile shader");
 		}
 	}

@@ -82,15 +82,15 @@ namespace RHI
 
 		void ErrorBadInputParameter(size_t Index) override
 		{
-			LUNA_LOG(D3D12RHI, Error, "Bad input parameter at {}", Index);
+			KAGUYA_LOG(D3D12RHI, Error, "Bad input parameter at {}", Index);
 		}
 		void ErrorDuplicateSubobject(RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type) override
 		{
-			LUNA_LOG(D3D12RHI, Error, "Duplicate subobject {}", GetRHIPipelineStateSubobjectTypeString(Type));
+			KAGUYA_LOG(D3D12RHI, Error, "Duplicate subobject {}", GetRHIPipelineStateSubobjectTypeString(Type));
 		}
 		void ErrorUnknownSubobject(size_t Index) override
 		{
-			LUNA_LOG(D3D12RHI, Error, "Unknown subobject at {}", Index);
+			KAGUYA_LOG(D3D12RHI, Error, "Unknown subobject at {}", Index);
 		}
 
 		RHI_PIPELINE_STATE_TYPE				  Type;

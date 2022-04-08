@@ -102,7 +102,7 @@ namespace RHI
 		ScopedTimer Timer(
 			[&](i64 Milliseconds)
 			{
-				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+				KAGUYA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
 			});
 
 		Arc<ID3D12PipelineState>		   PipelineState;
@@ -155,7 +155,7 @@ namespace RHI
 		ScopedTimer Timer(
 			[&](i64 Milliseconds)
 			{
-				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+				KAGUYA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
 			});
 
 		Arc<ID3D12PipelineState>			   PipelineState;
@@ -208,7 +208,7 @@ namespace RHI
 		ScopedTimer Timer(
 			[&](i64 Milliseconds)
 			{
-				LUNA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+				KAGUYA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
 			});
 
 		Arc<ID3D12PipelineState>		  PipelineState;

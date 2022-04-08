@@ -137,6 +137,13 @@ namespace RHI
 		RootSignatureDesc& Desc)
 		: D3D12DeviceChild(Parent)
 	{
+		if (!Desc.IsLocal())
+		{
+			// If a root signature is local we don't add bindless descriptor table because it will conflict with global root
+			// signature
+			AddBindlessParameters(Desc);
+		}
+
 		D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {
 			.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1,
 			.Desc_1_1 = Desc.Build()
@@ -150,7 +157,7 @@ namespace RHI
 		if (FAILED(Result))
 		{
 			assert(ErrorBlob);
-			LUNA_LOG(D3D12RHI, Error, "{}", static_cast<const char*>(ErrorBlob->GetBufferPointer()));
+			KAGUYA_LOG(D3D12RHI, Error, "{}", static_cast<const char*>(ErrorBlob->GetBufferPointer()));
 		}
 		VERIFY_D3D12_API(Result);
 
@@ -207,5 +214,46 @@ namespace RHI
 	{
 		assert(RootParameterIndex < KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
 		return NumDescriptorsPerTable[RootParameterIndex];
+	}
+
+	void D3D12RootSignature::AddBindlessParameters(RootSignatureDesc& Desc)
+	{
+		// TODO: Maybe consider this as a fall back options when SM6.6 dynamic resource binding is integrated
+		/* Descriptor Tables */
+
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorDataVolatile = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
+		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorVolatile	  = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
+		Desc.AddDescriptorTable(
+				// ShaderResource
+				D3D12DescriptorTable(4)
+					.AddSRVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_ByteAddressBufferTable
+					.AddSRVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DTable
+					.AddSRVRange<0, 102>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DArrayTable
+					.AddSRVRange<0, 103>(UINT_MAX, DescriptorDataVolatile, 0)) // g_TextureCubeTable
+			.AddDescriptorTable(
+				// UnorderedAccess
+				D3D12DescriptorTable(2)
+					.AddUAVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_RWTexture2DTable
+					.AddUAVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)) // g_RWTexture2DArrayTable
+			.AddDescriptorTable(
+				// Sampler
+				D3D12DescriptorTable(1)
+					.AddSamplerRange<0, 100>(UINT_MAX, DescriptorVolatile, 0)); // g_SamplerTable
+
+		constexpr D3D12_FILTER				 PointFilter  = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		constexpr D3D12_FILTER				 LinearFilter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		constexpr D3D12_FILTER				 Anisotropic  = D3D12_FILTER_ANISOTROPIC;
+		constexpr D3D12_TEXTURE_ADDRESS_MODE Wrap		  = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		constexpr D3D12_TEXTURE_ADDRESS_MODE Clamp		  = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		constexpr D3D12_TEXTURE_ADDRESS_MODE Border		  = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		Desc.AddSampler<0, 101>(PointFilter, Wrap, 16)	// g_SamplerPointWrap
+			.AddSampler<1, 101>(PointFilter, Clamp, 16) // g_SamplerPointClamp
+
+			.AddSampler<2, 101>(LinearFilter, Wrap, 16)																					 // g_SamplerLinearWrap
+			.AddSampler<3, 101>(LinearFilter, Clamp, 16)																				 // g_SamplerLinearClamp
+			.AddSampler<4, 101>(LinearFilter, Border, 16, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK) // g_SamplerLinearBorder
+
+			.AddSampler<5, 101>(Anisotropic, Wrap, 16)	 // g_SamplerAnisotropicWrap
+			.AddSampler<6, 101>(Anisotropic, Clamp, 16); // g_SamplerAnisotropicClamp
 	}
 } // namespace RHI

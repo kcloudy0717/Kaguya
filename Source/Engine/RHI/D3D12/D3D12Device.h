@@ -104,9 +104,6 @@ namespace RHI
 		CD3DX12FeatureSupport InitializeFeatureSupport(const DeviceOptions& Options);
 		TDescriptorSizeCache  InitializeDescriptorSizeCache();
 
-		// Pre SM6.6 bindless root parameter setup
-		void AddBindlessParameterToDesc(RootSignatureDesc& Desc);
-
 	private:
 		struct ReportLiveObjectGuard
 		{

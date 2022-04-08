@@ -165,13 +165,6 @@ namespace RHI
 
 	D3D12RootSignature D3D12Device::CreateRootSignature(RootSignatureDesc& Desc)
 	{
-		if (!Desc.IsLocal())
-		{
-			// If a root signature is local we don't add bindless descriptor table because it will conflict with global root
-			// signature
-			AddBindlessParameterToDesc(Desc);
-		}
-
 		return D3D12RootSignature(this, Desc);
 	}
 
@@ -211,7 +204,7 @@ namespace RHI
 
 						auto CommandListName  = Node->pCommandListDebugNameW ? Node->pCommandListDebugNameW : L"<unknown>";
 						auto CommandQueueName = Node->pCommandQueueDebugNameW ? Node->pCommandQueueDebugNameW : L"<unknown>";
-						LUNA_LOG(D3D12RHI, Error, LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})", L"[DRED]", CommandListName, CommandQueueName, LastCompletedOp, Node->BreadcrumbCount);
+						KAGUYA_LOG(D3D12RHI, Error, LR"({0} Commandlist "{1}" on CommandQueue "{2}", {3} completed of {4})", L"[DRED]", CommandListName, CommandQueueName, LastCompletedOp, Node->BreadcrumbCount);
 
 						INT32 FirstOp = std::max(LastCompletedOp - 5, 0);
 						INT32 LastOp  = std::min(LastCompletedOp + 5, std::max(INT32(Node->BreadcrumbCount) - 1, 0));
@@ -219,27 +212,27 @@ namespace RHI
 						for (INT32 Op = FirstOp; Op <= LastOp; ++Op)
 						{
 							D3D12_AUTO_BREADCRUMB_OP BreadcrumbOp = Node->pCommandHistory[Op];
-							LUNA_LOG(D3D12RHI, Error, LR"(    Op: {0:d}, {1} {2})", Op, GetAutoBreadcrumbOpString(BreadcrumbOp), Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
+							KAGUYA_LOG(D3D12RHI, Error, LR"(    Op: {0:d}, {1} {2})", Op, GetAutoBreadcrumbOpString(BreadcrumbOp), Op + 1 == LastCompletedOp ? TEXT("- Last completed") : TEXT(""));
 						}
 					}
 				}
 
 				if (SUCCEEDED(Dred->GetPageFaultAllocationOutput(&PageFaultOutput)))
 				{
-					LUNA_LOG(D3D12RHI, Error, "[DRED] PageFault at VA GPUAddress: {0:x};", PageFaultOutput.PageFaultVA);
+					KAGUYA_LOG(D3D12RHI, Error, "[DRED] PageFault at VA GPUAddress: {0:x};", PageFaultOutput.PageFaultVA);
 
-					LUNA_LOG(D3D12RHI, Error, "[DRED] Active objects with VA ranges that match the faulting VA:");
+					KAGUYA_LOG(D3D12RHI, Error, "[DRED] Active objects with VA ranges that match the faulting VA:");
 					for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadExistingAllocationNode; Node; Node = Node->pNext)
 					{
 						auto ObjectName = Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>";
-						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
+						KAGUYA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
 					}
 
-					LUNA_LOG(D3D12RHI, Error, "[DRED] Recent freed objects with VA ranges that match the faulting VA:");
+					KAGUYA_LOG(D3D12RHI, Error, "[DRED] Recent freed objects with VA ranges that match the faulting VA:");
 					for (const D3D12_DRED_ALLOCATION_NODE* Node = PageFaultOutput.pHeadRecentFreedAllocationNode; Node; Node = Node->pNext)
 					{
 						auto ObjectName = Node->ObjectNameW ? Node->ObjectNameW : L"<unknown>";
-						LUNA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
+						KAGUYA_LOG(D3D12RHI, Error, L"    Name: {} (Type: {})", ObjectName, GetDredAllocationTypeString(Node->AllocationType));
 					}
 				}
 			}
@@ -260,8 +253,8 @@ namespace RHI
 				Adapter3 = std::move(AdapterIterator);
 				if (SUCCEEDED(Adapter3->GetDesc2(&AdapterDesc)))
 				{
-					LUNA_LOG(D3D12RHI, Info, "Adapter Vendor: {}", GetRHIVendorString(static_cast<RHI_VENDOR>(AdapterDesc.VendorId)));
-					LUNA_LOG(D3D12RHI, Info, L"Adapter: {}", AdapterDesc.Description);
+					KAGUYA_LOG(D3D12RHI, Info, "Adapter Vendor: {}", GetRHIVendorString(static_cast<RHI_VENDOR>(AdapterDesc.VendorId)));
+					KAGUYA_LOG(D3D12RHI, Info, L"Adapter: {}", AdapterDesc.Description);
 				}
 				break;
 			}
@@ -310,7 +303,7 @@ namespace RHI
 			Arc<ID3D12DeviceRemovedExtendedDataSettings> DredSettings;
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&DredSettings))))
 			{
-				LUNA_LOG(D3D12RHI, Info, "DRED Enabled");
+				KAGUYA_LOG(D3D12RHI, Info, "DRED Enabled");
 				// Turn on auto-breadcrumbs and page fault reporting.
 				DredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 				DredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
@@ -318,7 +311,7 @@ namespace RHI
 		}
 		else
 		{
-			LUNA_LOG(D3D12RHI, Info, "DRED Disabled");
+			KAGUYA_LOG(D3D12RHI, Info, "DRED Disabled");
 		}
 
 		Arc<ID3D12Device> Device;
@@ -331,14 +324,14 @@ namespace RHI
 		CD3DX12FeatureSupport FeatureSupport;
 		if (FAILED(FeatureSupport.Init(Device.Get())))
 		{
-			LUNA_LOG(D3D12RHI, Warn, "Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
+			KAGUYA_LOG(D3D12RHI, Warn, "Failed to initialize CD3DX12FeatureSupport, certain features might be unavailable.");
 		}
 
 		if (Options.WaveIntrinsics)
 		{
 			if (!FeatureSupport.WaveOps())
 			{
-				LUNA_LOG(D3D12RHI, Error, "Wave operation not supported on device");
+				KAGUYA_LOG(D3D12RHI, Error, "Wave operation not supported on device");
 			}
 		}
 
@@ -346,7 +339,7 @@ namespace RHI
 		{
 			if (FeatureSupport.RaytracingTier() < D3D12_RAYTRACING_TIER_1_0)
 			{
-				LUNA_LOG(D3D12RHI, Error, "Raytracing not supported on device");
+				KAGUYA_LOG(D3D12RHI, Error, "Raytracing not supported on device");
 			}
 		}
 
@@ -357,7 +350,7 @@ namespace RHI
 			if (FeatureSupport.HighestShaderModel() < D3D_SHADER_MODEL_6_6 ||
 				FeatureSupport.ResourceBindingTier() < D3D12_RESOURCE_BINDING_TIER_3)
 			{
-				LUNA_LOG(D3D12RHI, Error, "Dynamic resources not supported on device");
+				KAGUYA_LOG(D3D12RHI, Error, "Dynamic resources not supported on device");
 			}
 		}
 
@@ -365,14 +358,14 @@ namespace RHI
 		{
 			if (FeatureSupport.MeshShaderTier() < D3D12_MESH_SHADER_TIER_1)
 			{
-				LUNA_LOG(D3D12RHI, Error, "Mesh shaders not supported on device");
+				KAGUYA_LOG(D3D12RHI, Error, "Mesh shaders not supported on device");
 			}
 		}
 
 		BOOL EnhancedBarriersSupported = FeatureSupport.EnhancedBarriersSupported();
 		if (!EnhancedBarriersSupported)
 		{
-			LUNA_LOG(D3D12RHI, Warn, "Enhanced barriers not supported");
+			KAGUYA_LOG(D3D12RHI, Warn, "Enhanced barriers not supported");
 		}
 
 		return FeatureSupport;
@@ -390,47 +383,6 @@ namespace RHI
 			DescriptorSizeCache[i] = Device->GetDescriptorHandleIncrementSize(Types[i]);
 		}
 		return DescriptorSizeCache;
-	}
-
-	void D3D12Device::AddBindlessParameterToDesc(RootSignatureDesc& Desc)
-	{
-		// TODO: Maybe consider this as a fall back options when SM6.6 dynamic resource binding is integrated
-		/* Descriptor Tables */
-
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorDataVolatile = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
-		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorVolatile	  = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-		Desc.AddDescriptorTable(
-				// ShaderResource
-				D3D12DescriptorTable(4)
-					.AddSRVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_ByteAddressBufferTable
-					.AddSRVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DTable
-					.AddSRVRange<0, 102>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DArrayTable
-					.AddSRVRange<0, 103>(UINT_MAX, DescriptorDataVolatile, 0)) // g_TextureCubeTable
-			.AddDescriptorTable(
-				// UnorderedAccess
-				D3D12DescriptorTable(2)
-					.AddUAVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_RWTexture2DTable
-					.AddUAVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)) // g_RWTexture2DArrayTable
-			.AddDescriptorTable(
-				// Sampler
-				D3D12DescriptorTable(1)
-					.AddSamplerRange<0, 100>(UINT_MAX, DescriptorVolatile, 0)); // g_SamplerTable
-
-		constexpr D3D12_FILTER				 PointFilter  = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		constexpr D3D12_FILTER				 LinearFilter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		constexpr D3D12_FILTER				 Anisotropic  = D3D12_FILTER_ANISOTROPIC;
-		constexpr D3D12_TEXTURE_ADDRESS_MODE Wrap		  = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		constexpr D3D12_TEXTURE_ADDRESS_MODE Clamp		  = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-		constexpr D3D12_TEXTURE_ADDRESS_MODE Border		  = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		Desc.AddSampler<0, 101>(PointFilter, Wrap, 16)	// g_SamplerPointWrap
-			.AddSampler<1, 101>(PointFilter, Clamp, 16) // g_SamplerPointClamp
-
-			.AddSampler<2, 101>(LinearFilter, Wrap, 16)																					 // g_SamplerLinearWrap
-			.AddSampler<3, 101>(LinearFilter, Clamp, 16)																				 // g_SamplerLinearClamp
-			.AddSampler<4, 101>(LinearFilter, Border, 16, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK) // g_SamplerLinearBorder
-
-			.AddSampler<5, 101>(Anisotropic, Wrap, 16)	 // g_SamplerAnisotropicWrap
-			.AddSampler<6, 101>(Anisotropic, Clamp, 16); // g_SamplerAnisotropicClamp
 	}
 
 	D3D12Device::Dred::Dred(ID3D12Device* Device)

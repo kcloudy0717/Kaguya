@@ -87,7 +87,7 @@ namespace RHI
 							}
 							else
 							{
-								LUNA_LOG(D3D12RHI, Warn, "Failed to serialize pipeline library");
+								KAGUYA_LOG(D3D12RHI, Warn, "Failed to serialize pipeline library");
 							}
 						}
 					}
@@ -101,7 +101,7 @@ namespace RHI
 						HRESULT OpResult = PipelineLibrary1->Serialize(MappedView.GetView(sizeof(SIZE_T)), SerializedSize);
 						if (FAILED(OpResult))
 						{
-							LUNA_LOG(D3D12RHI, Warn, "Failed to serialize pipeline library");
+							KAGUYA_LOG(D3D12RHI, Warn, "Failed to serialize pipeline library");
 						}
 					}
 
@@ -113,7 +113,7 @@ namespace RHI
 		}
 		else
 		{
-			LUNA_LOG(D3D12RHI, Info, "Pipeline library disk cache invalidated");
+			KAGUYA_LOG(D3D12RHI, Info, "Pipeline library disk cache invalidated");
 			Stream.Reset();
 			BOOL OpResult = DeleteFile(Path.c_str());
 			assert(OpResult);
