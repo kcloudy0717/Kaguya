@@ -40,7 +40,9 @@ namespace RHI
 
 		// copy constructor that allows to instantiate class when U* is convertible to T*
 		template<ArcInterface U>
-		Arc(const Arc<U>& Other, std::enable_if_t<std::is_convertible_v<U*, T*>, void*>* = nullptr) noexcept
+		requires std::is_convertible_v<U*, T*>
+		Arc(const Arc<U>& Other)
+		noexcept
 			: Ptr(Other.Ptr)
 		{
 			InternalAddRef();
@@ -53,7 +55,9 @@ namespace RHI
 
 		// Move constructor that allows instantiation of a class when U* is convertible to T*
 		template<ArcInterface U>
-		Arc(Arc<U>&& Other, std::enable_if_t<std::is_convertible_v<U*, T*>, void*>* = nullptr) noexcept
+		requires std::is_convertible_v<U*, T*>
+		Arc(Arc<U>&& Other)
+		noexcept
 			: Ptr(std::exchange(Other.Ptr, nullptr))
 		{
 		}
