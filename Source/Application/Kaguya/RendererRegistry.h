@@ -534,7 +534,7 @@ struct RaytracingPipelineStates
 				 .AddHitGroup(g_HitGroupExport, {}, g_ClosestHit, {})
 				 .AddRootSignatureAssociation(Registry.GetRootSignature(LocalHitGroupRS)->GetApiHandle(), { g_HitGroupExport })
 				 .SetGlobalRootSignature(Registry.GetRootSignature(GlobalRS)->GetApiHandle())
-				 .SetRaytracingShaderConfig(PayloadSize, D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES)
+				 .SetRaytracingShaderConfig(PayloadSize, KAGUYA_RHI_D3D12_BUILTIN_TRIANGLE_INTERSECTION_ATTRIBUTES)
 				 .SetRaytracingPipelineConfig(MaxTraceRecursionDepth)));
 		g_RayGenerationSID = Registry.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_RayGeneration);
 		g_MissSID		   = Registry.GetRaytracingPipelineState(RTPSO)->GetShaderIdentifier(g_Miss);

@@ -14,6 +14,10 @@ public:
 private:
 	void Watch();
 
+private:
+	std::filesystem::path Path;
+	wil::unique_handle	  FileHandle;
+
 public:
 	std::atomic<bool>		   IncludeSubdirectories = false;
 	std::atomic<NotifyFilters> NotifyFilter			 = NotifyFilters::None;
@@ -24,9 +28,6 @@ public:
 	Event					   RenamedNewName		 = Event(true);
 
 private:
-	std::filesystem::path Path;
-	wil::unique_handle	  FileHandle;
-
 	std::atomic<bool> Running = true;
 	std::mutex		  Mutex;
 	std::jthread	  Thread;
