@@ -50,13 +50,13 @@ public:
 	}
 
 	template<typename C>
-	explicit Span(C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptMutableView<C>
+	explicit Span(C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptMutableView<T>
 		: Span(Container.data(), Container.size())
 	{
 	}
 
 	template<typename C>
-	Span(const C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptConstView<C>
+	Span(const C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptConstView<T>
 		: Span(Container.data(), Container.size())
 	{
 	}
