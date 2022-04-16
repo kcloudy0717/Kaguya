@@ -40,7 +40,7 @@ namespace RHI
 	public:
 		explicit D3D12Device(const DeviceOptions& Options);
 
-		void CreateDxgiFactory(bool Debug);
+		void CreateDxgiFactory();
 
 		[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
 		[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
@@ -99,7 +99,8 @@ namespace RHI
 			return Interface;
 		}
 
-		void				  InitializeDxgiObjects(bool Debug);
+		void				  InternalCreateDxgiFactory(bool Debug);
+		void				  InitializeDxgiObjects();
 		Arc<ID3D12Device>	  InitializeDevice(const DeviceOptions& Options);
 		CD3DX12FeatureSupport InitializeFeatureSupport(const DeviceOptions& Options);
 		TDescriptorSizeCache  InitializeDescriptorSizeCache();

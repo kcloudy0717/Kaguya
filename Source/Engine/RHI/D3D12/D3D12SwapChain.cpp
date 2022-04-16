@@ -34,7 +34,7 @@ namespace RHI
 		// then this app's DXGI factory is invalidated and must be created anew in order to retrieve up-to-date display information.
 		if (!Parent->GetDxgiFactory6()->IsCurrent())
 		{
-			Parent->CreateDxgiFactory(false);
+			Parent->CreateDxgiFactory();
 		}
 
 		IDXGIAdapter3* Adapter = Parent->GetDxgiAdapter3();

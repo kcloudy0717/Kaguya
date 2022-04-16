@@ -61,6 +61,40 @@ public:
 	{
 	}
 
+	// Implicit constructor from an initializer list, making it possible to pass a
+	// brace-enclosed initializer list to a function expecting a `Span`. Such
+	// spans constructed from an initializer list must be of type `Span<const T>`.
+	//
+	//   void Process(Span<const int> x);
+	//   Process({1, 2, 3});
+	//
+	// Note that as always the array referenced by the span must outlive the span.
+	// Since an initializer list constructor acts as if it is fed a temporary
+	// array (cf. C++ standard [dcl.init.list]/5), it's safe to use this
+	// constructor only when the `std::initializer_list` itself outlives the span.
+	// In order to meet this requirement it's sufficient to ensure that neither
+	// the span nor a copy of it is used outside of the expression in which it's
+	// created:
+	//
+	//   // Assume that this function uses the array directly, not retaining any
+	//   // copy of the span or pointer to any of its elements.
+	//   void Process(Span<const int> ints);
+	//
+	//   // Okay: the std::initializer_list<int> will reference a temporary array
+	//   // that isn't destroyed until after the call to Process returns.
+	//   Process({ 17, 19 });
+	//
+	//   // Not okay: the storage used by the std::initializer_list<int> is not
+	//   // allowed to be referenced after the first line.
+	//   Span<const int> ints = { 17, 19 };
+	//   Process(ints);
+	//
+	//   // Not okay for the same reason as above: even when the elements of the
+	//   // initializer list expression are not temporaries the underlying array
+	//   // is, so the initializer list must still outlive the span.
+	//   const int foo = 17;
+	//   Span<const int> ints = { foo };
+	//   Process(ints);
 	template<typename LazyT = T>
 	Span(std::initializer_list<value_type> List) requires SpanInternal::ConceptConstView<LazyT>
 		: Span(List.begin(), List.size())

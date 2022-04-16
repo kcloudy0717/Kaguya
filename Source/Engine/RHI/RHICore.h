@@ -17,7 +17,6 @@
 #include <unordered_map>
 #include <queue>
 #include <set>
-#include <unordered_map>
 
 #include <dxgiformat.h>
 
@@ -194,7 +193,7 @@ enum class RHI_FACTOR
 	OneMinusSrc1Alpha	 // One minus pixel-shader output alpha 1
 };
 
-struct RHI_RENDER_TARGET_BLEND_DESC
+struct RHIRenderTargetBlendDesc
 {
 	bool		 BlendEnable   = false;
 	RHI_FACTOR	 SrcBlendRgb   = RHI_FACTOR::One;
@@ -238,7 +237,7 @@ enum class RHI_STENCIL_OP
 	Decrease		  // Decrease the stencil value by one, wrap if necessary
 };
 
-struct RHI_DEPTH_STENCILOP_DESC
+struct RHIDepthStencilOpDesc
 {
 	RHI_STENCIL_OP		StencilFailOp	   = RHI_STENCIL_OP::Keep;
 	RHI_STENCIL_OP		StencilDepthFailOp = RHI_STENCIL_OP::Keep;
@@ -246,14 +245,14 @@ struct RHI_DEPTH_STENCILOP_DESC
 	RHI_COMPARISON_FUNC StencilFunc		   = RHI_COMPARISON_FUNC::Always;
 };
 
-struct BlendState
+struct RHIBlendState
 {
-	bool						 AlphaToCoverageEnable	= false;
-	bool						 IndependentBlendEnable = false;
-	RHI_RENDER_TARGET_BLEND_DESC RenderTargets[8];
+	bool					 AlphaToCoverageEnable	= false;
+	bool					 IndependentBlendEnable = false;
+	RHIRenderTargetBlendDesc RenderTargets[8];
 };
 
-struct RasterizerState
+struct RHIRasterizerState
 {
 	RHI_FILL_MODE FillMode				= RHI_FILL_MODE::Solid;
 	RHI_CULL_MODE CullMode				= RHI_CULL_MODE::Back;
@@ -268,21 +267,21 @@ struct RasterizerState
 	bool		  ConservativeRaster	= false;
 };
 
-struct DepthStencilState
+struct RHIDepthStencilState
 {
 	// Default states
 	// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc#remarks
-	bool					 DepthEnable	  = true;
-	bool					 DepthWrite		  = true;
-	RHI_COMPARISON_FUNC		 DepthFunc		  = RHI_COMPARISON_FUNC::Less;
-	bool					 StencilEnable	  = false;
-	std::byte				 StencilReadMask  = std::byte{ 0xff };
-	std::byte				 StencilWriteMask = std::byte{ 0xff };
-	RHI_DEPTH_STENCILOP_DESC FrontFace;
-	RHI_DEPTH_STENCILOP_DESC BackFace;
+	bool				  DepthEnable	   = true;
+	bool				  DepthWrite	   = true;
+	RHI_COMPARISON_FUNC	  DepthFunc		   = RHI_COMPARISON_FUNC::Less;
+	bool				  StencilEnable	   = false;
+	std::byte			  StencilReadMask  = std::byte{ 0xff };
+	std::byte			  StencilWriteMask = std::byte{ 0xff };
+	RHIDepthStencilOpDesc FrontFace;
+	RHIDepthStencilOpDesc BackFace;
 };
 
-struct RenderTargetState
+struct RHIRenderTargetState
 {
 	DXGI_FORMAT	  RTFormats[8]	   = { DXGI_FORMAT_UNKNOWN };
 	std::uint32_t NumRenderTargets = 0;
@@ -356,10 +355,10 @@ using PipelineStateStreamGS				   = PipelineStateStreamSubobject<Shader*, RHI_PI
 using PipelineStateStreamCS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS>;
 using PipelineStateStreamAS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::AS>;
 using PipelineStateStreamMS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS>;
-using PipelineStateStreamBlendState		   = PipelineStateStreamSubobject<BlendState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState>;
-using PipelineStateStreamRasterizerState   = PipelineStateStreamSubobject<RasterizerState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState>;
-using PipelineStateStreamDepthStencilState = PipelineStateStreamSubobject<DepthStencilState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState>;
-using PipelineStateStreamRenderTargetState = PipelineStateStreamSubobject<RenderTargetState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState>;
+using PipelineStateStreamBlendState		   = PipelineStateStreamSubobject<RHIBlendState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState>;
+using PipelineStateStreamRasterizerState   = PipelineStateStreamSubobject<RHIRasterizerState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState>;
+using PipelineStateStreamDepthStencilState = PipelineStateStreamSubobject<RHIDepthStencilState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState>;
+using PipelineStateStreamRenderTargetState = PipelineStateStreamSubobject<RHIRenderTargetState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState>;
 using PipelineStateStreamPrimitiveTopology = PipelineStateStreamSubobject<RHI_PRIMITIVE_TOPOLOGY, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology>;
 
 class IPipelineParserCallbacks
@@ -378,10 +377,10 @@ public:
 	virtual void CSCb(Shader*) {}
 	virtual void ASCb(Shader*) {}
 	virtual void MSCb(Shader*) {}
-	virtual void BlendStateCb(const BlendState&) {}
-	virtual void RasterizerStateCb(const RasterizerState&) {}
-	virtual void DepthStencilStateCb(const DepthStencilState&) {}
-	virtual void RenderTargetStateCb(const RenderTargetState&) {}
+	virtual void BlendStateCb(const RHIBlendState&) {}
+	virtual void RasterizerStateCb(const RHIRasterizerState&) {}
+	virtual void DepthStencilStateCb(const RHIDepthStencilState&) {}
+	virtual void RenderTargetStateCb(const RHIRenderTargetState&) {}
 	virtual void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY) {}
 
 	// Error Callbacks

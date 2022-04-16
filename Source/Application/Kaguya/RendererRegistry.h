@@ -319,10 +319,10 @@ struct PipelineStates
 			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
 			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
 
-			DepthStencilState DepthStencilState;
+			RHIDepthStencilState DepthStencilState;
 			DepthStencilState.DepthEnable = true;
 
-			RenderTargetState RenderTargetState;
+			RHIRenderTargetState RenderTargetState;
 			RenderTargetState.RTFormats[0]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
 			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32_UINT;
 			RenderTargetState.RTFormats[2]	   = DXGI_FORMAT_R16G16_FLOAT;
@@ -372,10 +372,10 @@ struct PipelineStates
 			IndirectCullMeshShader = Registry.CreatePipelineState(Device->CreatePipelineState(L"IndirectCullMeshShader", Stream));
 		}
 		{
-			DepthStencilState DepthStencilState;
+			RHIDepthStencilState DepthStencilState;
 			DepthStencilState.DepthEnable = true;
 
-			RenderTargetState RenderTargetState;
+			RHIRenderTargetState RenderTargetState;
 			RenderTargetState.RTFormats[0]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
 			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32_UINT;
 			RenderTargetState.RTFormats[2]	   = DXGI_FORMAT_R16G16_FLOAT;

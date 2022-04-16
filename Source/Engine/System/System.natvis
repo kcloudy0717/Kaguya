@@ -11,4 +11,15 @@
 			<Item Name="SizeInBytes">SizeInBytes</Item>
 		</Expand>
 	</Type>
+
+	<Type Name="Span&lt;*&gt;">
+		<DisplayString>{{Size={Size}}}</DisplayString>
+		<Expand>
+			<Item Name="[Size]">Size</Item>
+			<ArrayItems>
+				<Size>Size</Size>
+				<ValuePointer>Data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
 </AutoVisualizer>

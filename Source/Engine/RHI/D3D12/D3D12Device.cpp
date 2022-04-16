@@ -77,11 +77,13 @@ namespace RHI
 		}
 	}
 
-	void D3D12Device::CreateDxgiFactory(bool Debug)
+	void D3D12Device::CreateDxgiFactory()
 	{
-		UINT FactoryFlags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
-		// Create DXGIFactory
-		VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(&Factory6)));
+#ifdef _DEBUG
+		InternalCreateDxgiFactory(true);
+#else
+		InternalCreateDxgiFactory(false);
+#endif
 	}
 
 	bool D3D12Device::AllowAsyncPsoCompilation() const noexcept
@@ -173,6 +175,7 @@ namespace RHI
 		return D3D12RaytracingPipelineState(this, Desc);
 	}
 
+	// ======================================== Private ========================================
 	void D3D12Device::ReportLiveObjects()
 	{
 #ifdef _DEBUG
@@ -239,9 +242,16 @@ namespace RHI
 		}
 	}
 
-	void D3D12Device::InitializeDxgiObjects(bool Debug)
+	void D3D12Device::InternalCreateDxgiFactory(bool Debug)
 	{
-		CreateDxgiFactory(Debug);
+		UINT FactoryFlags = Debug ? DXGI_CREATE_FACTORY_DEBUG : 0;
+		// Create DXGIFactory
+		VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(&Factory6)));
+	}
+
+	void D3D12Device::InitializeDxgiObjects()
+	{
+		CreateDxgiFactory();
 
 		// Enumerate hardware for an adapter that supports D3D12
 		Arc<IDXGIAdapter3> AdapterIterator;
@@ -265,11 +275,7 @@ namespace RHI
 
 	Arc<ID3D12Device> D3D12Device::InitializeDevice(const DeviceOptions& Options)
 	{
-#ifdef _DEBUG
-		InitializeDxgiObjects(true);
-#else
-		InitializeDxgiObjects(false);
-#endif
+		InitializeDxgiObjects();
 
 		// Enable the D3D12 debug layer
 		if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)
