@@ -1,9 +1,11 @@
 ﻿#pragma once
+#include "SystemCore.h"
 
 class RwLock
 {
 public:
 	RwLock();
+	~RwLock();
 
 	RwLock(const RwLock&)	  = delete;
 	RwLock(RwLock&&) noexcept = delete;

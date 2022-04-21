@@ -2,7 +2,7 @@
 #include "Application.h"
 #include <hidusage.h>
 
-LPCWSTR Window::WindowClass = L"KaguyaWindow";
+LPCWSTR const Window::WindowClass = L"KaguyaWindow";
 
 void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc)
 {
@@ -133,11 +133,10 @@ bool Window::IsUsingRawInput() const noexcept
 bool Window::IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept
 {
 	bool Result = false;
-
 	RECT WindowRect = {};
 	GetWindowRect(WindowHandle.get(), &WindowRect);
-	HRGN Region = CreateRectRgn(0, 0, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top);
-	if (Region)
+	if (HRGN Region = CreateRectRgn(0, 0, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top);
+		Region)
 	{
 		Result = PtInRegion(Region, X, Y);
 		DeleteObject(Region);

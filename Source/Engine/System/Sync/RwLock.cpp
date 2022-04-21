@@ -5,6 +5,11 @@ RwLock::RwLock()
 	InitializeSRWLock(&Handle);
 }
 
+RwLock::~RwLock()
+{
+	UNREFERENCED_PARAMETER(Handle);
+}
+
 void RwLock::AcquireShared()
 {
 	AcquireSRWLockShared(&Handle);

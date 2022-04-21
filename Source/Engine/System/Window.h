@@ -22,7 +22,7 @@ struct WINDOW_DESC
 class Window
 {
 public:
-	static LPCWSTR WindowClass;
+	static LPCWSTR const WindowClass;
 
 	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc);
 

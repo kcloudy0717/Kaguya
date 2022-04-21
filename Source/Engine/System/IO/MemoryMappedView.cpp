@@ -16,15 +16,12 @@ MemoryMappedView::MemoryMappedView(MemoryMappedView&& MemoryMappedView) noexcept
 
 MemoryMappedView& MemoryMappedView::operator=(MemoryMappedView&& MemoryMappedView) noexcept
 {
-	if (this == &MemoryMappedView)
+	if (this != &MemoryMappedView)
 	{
-		return *this;
+		InternalDestroy();
+		View	 = std::exchange(MemoryMappedView.View, {});
+		Sentinel = std::exchange(MemoryMappedView.Sentinel, {});
 	}
-
-	InternalDestroy();
-	View	 = std::exchange(MemoryMappedView.View, {});
-	Sentinel = std::exchange(MemoryMappedView.Sentinel, {});
-
 	return *this;
 }
 

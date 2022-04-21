@@ -4,7 +4,7 @@
 MemoryMappedFile::MemoryMappedFile(
 	FileStream& Stream,
 	u64			FileSize /*= DefaultFileSize*/)
-	: Stream(Stream)
+	: Stream(&Stream)
 {
 	InternalCreate(FileSize);
 }
@@ -43,7 +43,7 @@ void MemoryMappedFile::GrowMapping(u64 Size)
 
 void MemoryMappedFile::InternalCreate(u64 FileSize)
 {
-	CurrentFileSize = Stream.GetSizeInBytes();
+	CurrentFileSize = Stream->GetSizeInBytes();
 	if (CurrentFileSize == 0)
 	{
 		// File mapping files with a size of 0 produces an error.
@@ -56,7 +56,7 @@ void MemoryMappedFile::InternalCreate(u64 FileSize)
 	}
 
 	FileMapping.reset(CreateFileMapping(
-		Stream.GetHandle(),
+		Stream->GetHandle(),
 		nullptr,
 		PAGE_READWRITE,
 		0,

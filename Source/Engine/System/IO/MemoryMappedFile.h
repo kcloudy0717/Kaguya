@@ -13,6 +13,12 @@ public:
 		FileStream& Stream,
 		u64			FileSize = DefaultFileSize);
 
+	MemoryMappedFile(MemoryMappedFile&&) noexcept = default;
+	MemoryMappedFile& operator=(MemoryMappedFile&&) noexcept = default;
+
+	MemoryMappedFile(const MemoryMappedFile&) = delete;
+	MemoryMappedFile& operator=(const MemoryMappedFile&) = delete;
+
 	[[nodiscard]] u64 GetCurrentFileSize() const noexcept;
 
 	[[nodiscard]] MemoryMappedView CreateView() const noexcept;
@@ -26,7 +32,7 @@ private:
 	void InternalCreate(u64 FileSize);
 
 private:
-	FileStream&			  Stream;
+	FileStream*			  Stream; // Stream must remain valid for the lifetime of the MemoryMappedFile
 	wil::unique_handle	  FileMapping;
 	std::filesystem::path Path;
 	u64					  CurrentFileSize = 0;

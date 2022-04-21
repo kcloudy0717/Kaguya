@@ -14,12 +14,10 @@ RwLockReadGuard::RwLockReadGuard(RwLockReadGuard&& RwLockReadGuard) noexcept
 
 RwLockReadGuard& RwLockReadGuard::operator=(RwLockReadGuard&& RwLockReadGuard) noexcept
 {
-	if (this == &RwLockReadGuard)
+	if (this != &RwLockReadGuard)
 	{
-		return *this;
+		Ptr = std::exchange(RwLockReadGuard.Ptr, nullptr);
 	}
-
-	Ptr = std::exchange(RwLockReadGuard.Ptr, nullptr);
 	return *this;
 }
 

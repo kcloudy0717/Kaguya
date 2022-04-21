@@ -14,12 +14,10 @@ RwLockWriteGuard::RwLockWriteGuard(RwLockWriteGuard&& RwLockWriteGuard) noexcept
 
 RwLockWriteGuard& RwLockWriteGuard::operator=(RwLockWriteGuard&& RwLockWriteGuard) noexcept
 {
-	if (this == &RwLockWriteGuard)
+	if (this != &RwLockWriteGuard)
 	{
-		return *this;
+		Ptr = std::exchange(RwLockWriteGuard.Ptr, nullptr);
 	}
-
-	Ptr = std::exchange(RwLockWriteGuard.Ptr, nullptr);
 	return *this;
 }
 

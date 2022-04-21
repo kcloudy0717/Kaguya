@@ -1,6 +1,6 @@
 #include "Stopwatch.h"
 
-i64 Stopwatch::Frequency = []
+const i64 Stopwatch::Frequency = []
 {
 	LARGE_INTEGER Frequency = {};
 	QueryPerformanceFrequency(&Frequency);

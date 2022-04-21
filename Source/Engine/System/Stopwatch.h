@@ -18,7 +18,7 @@ public:
 	void Signal() noexcept;
 	void Restart() noexcept;
 
-	static i64 Frequency; // Ticks per second
+	static const i64 Frequency; // Ticks per second
 
 private:
 	i64	   StartTime	= {};

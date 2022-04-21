@@ -14,12 +14,10 @@ MutexGuard::MutexGuard(MutexGuard&& MutexGuard) noexcept
 
 MutexGuard& MutexGuard::operator=(MutexGuard&& MutexGuard) noexcept
 {
-	if (this == &MutexGuard)
+	if (this != &MutexGuard)
 	{
-		return *this;
+		Ptr = std::exchange(MutexGuard.Ptr, nullptr);
 	}
-
-	Ptr = std::exchange(MutexGuard.Ptr, nullptr);
 	return *this;
 }
 

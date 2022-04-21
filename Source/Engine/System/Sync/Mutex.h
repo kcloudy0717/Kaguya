@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "SystemCore.h"
 
 class Mutex
 {
