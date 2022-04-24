@@ -23,7 +23,6 @@ namespace RHI
 		, Dred(Device.Get())
 		, LinkedDevice(this, D3D12NodeMask::FromIndex(0))
 		, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
-		, Library(!Options.PsoCachePath.empty() ? std::make_unique<D3D12PipelineLibrary>(this, Options.PsoCachePath) : nullptr)
 	{
 		VERIFY_D3D12_API(DStorageGetFactory(IID_PPV_ARGS(&DStorageFactory)));
 

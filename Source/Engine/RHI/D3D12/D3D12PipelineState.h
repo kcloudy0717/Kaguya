@@ -97,11 +97,6 @@ namespace RHI
 			const std::wstring& Name,
 			TDesc&				Desc);
 
-		static void StorePipeline(
-			D3D12Device*		 Device,
-			const std::wstring&	 Name,
-			ID3D12PipelineState* PipelineState);
-
 	private:
 		mutable Arc<ID3D12PipelineState>			PipelineState;
 		mutable AsyncTask<Arc<ID3D12PipelineState>> CompilationWork;

@@ -591,7 +591,6 @@ int main(int /*argc*/, char* /*argv*/[])
 	DeviceOptions.Raytracing	   = true;
 	DeviceOptions.DynamicResources = true;
 	DeviceOptions.MeshShaders	   = true;
-	DeviceOptions.PsoCachePath	   = Application::ExecutableDirectory / "Pso.cache";
 	D3D12RHIInitializer		D3D12RHIInitializer(DeviceOptions);
 	AssetManagerInitializer AssetManagerInitializer;
 

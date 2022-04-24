@@ -263,41 +263,8 @@ namespace RHI
 		ID3D12Device2* Device2 = Device->GetD3D12Device5();
 
 		Arc<ID3D12PipelineState> PipelineState;
-
-		if (Device->GetPipelineLibrary())
-		{
-			ID3D12PipelineLibrary1* PipelineLibrary1 = Device->GetPipelineLibrary()->GetLibrary1();
-			HRESULT					Result			 = (PipelineLibrary1->*D3D12PipelineStateTraits<TDesc>::Load())(Name.data(), &Desc, IID_PPV_ARGS(&PipelineState));
-			if (Result == E_INVALIDARG)
-			{
-				VERIFY_D3D12_API((Device2->*D3D12PipelineStateTraits<TDesc>::Create())(&Desc, IID_PPV_ARGS(&PipelineState)));
-				StorePipeline(Device, Name, PipelineState.Get());
-			}
-		}
-		else
-		{
-			VERIFY_D3D12_API((Device2->*D3D12PipelineStateTraits<TDesc>::Create())(&Desc, IID_PPV_ARGS(&PipelineState)));
-		}
+		VERIFY_D3D12_API((Device2->*D3D12PipelineStateTraits<TDesc>::Create())(&Desc, IID_PPV_ARGS(&PipelineState)));
 		return PipelineState;
-	}
-
-	void D3D12PipelineState::StorePipeline(
-		D3D12Device*		 Device,
-		const std::wstring&	 Name,
-		ID3D12PipelineState* PipelineState)
-	{
-		HRESULT Result = Device->GetPipelineLibrary()->GetLibrary1()->StorePipeline(Name.data(), PipelineState);
-		if (Result == E_INVALIDARG)
-		{
-			// A PSO with the specified name already exists in the library.
-			// If that is the case, we invalidate disk cache, so when next time app
-			// starts, pipeline library will be renewed with the updated PSOs.
-			Device->GetPipelineLibrary()->InvalidateDiskCache();
-		}
-		else
-		{
-			VERIFY_D3D12_API(Result);
-		}
 	}
 
 	RaytracingPipelineStateDesc::RaytracingPipelineStateDesc() noexcept

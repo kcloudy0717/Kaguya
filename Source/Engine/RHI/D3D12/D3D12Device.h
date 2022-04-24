@@ -1,7 +1,6 @@
 #pragma once
 #include "D3D12Core.h"
 #include "D3D12LinkedDevice.h"
-#include "D3D12PipelineLibrary.h"
 #include "D3D12RootSignature.h"
 #include "D3D12PipelineState.h"
 
@@ -18,7 +17,6 @@ namespace RHI
 		bool				  Raytracing;
 		bool				  DynamicResources;
 		bool				  MeshShaders;
-		std::filesystem::path PsoCachePath;
 	};
 
 	struct RootParameters
@@ -55,7 +53,6 @@ namespace RHI
 		[[nodiscard]] auto GetLinkedDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
 		[[nodiscard]] bool AllowAsyncPsoCompilation() const noexcept;
 		[[nodiscard]] auto GetPsoCompilationThreadPool() const noexcept -> ThreadPool* { return PsoCompilationThreadPool.get(); }
-		[[nodiscard]] auto GetPipelineLibrary() const noexcept -> D3D12PipelineLibrary* { return Library.get(); }
 
 		[[nodiscard]] bool SupportsWaveIntrinsics() const noexcept;
 		[[nodiscard]] bool SupportsRaytracing() const noexcept;
@@ -158,7 +155,6 @@ namespace RHI
 		// TODO: Add Multi-Adapter support
 		D3D12LinkedDevice					  LinkedDevice;
 		std::unique_ptr<ThreadPool>			  PsoCompilationThreadPool;
-		std::unique_ptr<D3D12PipelineLibrary> Library;
 
 		mutable HRESULT CaptureStatus = S_FALSE;
 	};

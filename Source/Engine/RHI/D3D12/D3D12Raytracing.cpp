@@ -380,7 +380,6 @@ namespace RHI
 		{
 			ScratchPool.Release(&AccelerationStructure.ScratchMemory);
 		}
-		////if (!AccelerationStructure.ResultMemory)
 	}
 
 	void D3D12RaytracingManager::Copy(
@@ -438,32 +437,33 @@ namespace RHI
 				ID3D12Resource* CompactedResource = AccelerationStructure.CompactedSizeCpuMemory.Parent->GetResource();
 				UINT64			Offset			  = AccelerationStructure.CompactedSizeCpuMemory.Offset;
 
-				D3D12_RANGE Range = {};
-				Range.Begin		  = Offset;
-				Range.End		  = Offset + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-				D3D12ScopedMap ScopedMap(
-					CompactedResource,
-					0,
-					Range,
-					[&](void* Data)
-					{
-						auto ByteData = static_cast<BYTE*>(Data);
+				const D3D12_RANGE Range = {
+					.Begin = Offset,
+					.End   = Offset + sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC)
+				};
 
-						D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC Desc = {};
-						memcpy(&Desc, &ByteData[Offset], sizeof(Desc));
+				void* Data = nullptr;
+				if (SUCCEEDED(CompactedResource->Map(0, &Range, &Data)))
+				{
+					auto ByteData = static_cast<BYTE*>(Data);
 
-						// Suballocate the gpu memory needed for compaction copy
-						AccelerationStructure.ResultCompactedMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
+					D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC Desc = {};
+					memcpy(&Desc, &ByteData[Offset], sizeof(Desc));
 
-						AccelerationStructure.CompactedSizeInBytes = AccelerationStructure.ResultCompactedMemory.Size;
-						TotalCompactedMemory += AccelerationStructure.ResultCompactedMemory.Size;
+					// Suballocate the gpu memory needed for compaction copy
+					AccelerationStructure.ResultCompactedMemory = ResultCompactedPool.Allocate(Desc.CompactedSizeInBytes);
 
-						// Copy the result buffer into the compacted buffer
-						CommandList->CopyRaytracingAccelerationStructure(AccelerationStructure.ResultCompactedMemory.VirtualAddress, AccelerationStructure.ResultMemory.VirtualAddress, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
+					AccelerationStructure.CompactedSizeInBytes = AccelerationStructure.ResultCompactedMemory.Size;
+					TotalCompactedMemory += AccelerationStructure.ResultCompactedMemory.Size;
 
-						// Tag as compaction complete
-						AccelerationStructure.IsCompacted = true;
-					});
+					// Copy the result buffer into the compacted buffer
+					CommandList->CopyRaytracingAccelerationStructure(AccelerationStructure.ResultCompactedMemory.VirtualAddress, AccelerationStructure.ResultMemory.VirtualAddress, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
+
+					// Tag as compaction complete
+					AccelerationStructure.IsCompacted = true;
+
+					CompactedResource->Unmap(0, nullptr);
+				}
 			}
 		}
 	}

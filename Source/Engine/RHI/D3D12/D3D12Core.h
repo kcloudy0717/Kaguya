@@ -238,33 +238,6 @@ namespace RHI
 		std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 	};
 
-	template<typename TFunc>
-	struct D3D12ScopedMap
-	{
-		D3D12ScopedMap(ID3D12Resource* Resource, UINT Subresource, D3D12_RANGE ReadRange, TFunc Func)
-			: Resource(Resource)
-		{
-			void* Data = nullptr;
-			if (SUCCEEDED(Resource->Map(Subresource, &ReadRange, &Data)))
-			{
-				Func(Data);
-			}
-			else
-			{
-				Resource = nullptr;
-			}
-		}
-		~D3D12ScopedMap()
-		{
-			if (Resource)
-			{
-				Resource->Unmap(0, nullptr);
-			}
-		}
-
-		ID3D12Resource* Resource = nullptr;
-	};
-
 	struct D3D12ScopedPointer
 	{
 		D3D12ScopedPointer() noexcept = default;
