@@ -7,24 +7,30 @@ namespace RHI
 	{
 	}
 
-	RenderPass& RenderPass::Read(RgResourceHandle Resource)
+	RenderPass& RenderPass::Read(Span<const RgResourceHandle> Resources)
 	{
-		// Only allow buffers/textures
-		assert(Resource.IsValid());
-		assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
-		Reads.insert(Resource);
-		ReadWrites.insert(Resource);
+		for (auto Resource : Resources)
+		{
+			// Only allow buffers/textures
+			assert(Resource.IsValid());
+			assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
+			Reads.insert(Resource);
+			ReadWrites.insert(Resource);
+		}
 		return *this;
 	}
 
-	RenderPass& RenderPass::Write(RgResourceHandle* Resource)
+	RenderPass& RenderPass::Write(Span<RgResourceHandle* const> Resources)
 	{
-		// Only allow buffers/textures
-		assert(Resource && Resource->IsValid());
-		assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
-		Resource->Version++;
-		Writes.insert(*Resource);
-		ReadWrites.insert(*Resource);
+		for (auto Resource : Resources)
+		{
+			// Only allow buffers/textures
+			assert(Resource && Resource->IsValid());
+			assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
+			Resource->Version++;
+			Writes.insert(*Resource);
+			ReadWrites.insert(*Resource);
+		}
 		return *this;
 	}
 

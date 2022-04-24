@@ -32,8 +32,8 @@ static BayerDitherParameters AddBayerDitherPass(RHI::RenderGraph& Graph, const V
 	BayerDitherArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(BayerDitherArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Bayer Dither")
-		.Read(Inputs.Input)
-		.Write(&BayerDitherArgs.Output)
+		.Read({ Inputs.Input })
+		.Write({ &BayerDitherArgs.Output })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{

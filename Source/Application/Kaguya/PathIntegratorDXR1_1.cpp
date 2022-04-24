@@ -90,7 +90,7 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	PathTraceArgs.Uav	 = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(PathTraceArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Path Trace")
-		.Write(&PathTraceArgs.Output)
+		.Write({ &PathTraceArgs.Output })
 		.Execute(
 			[=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{
@@ -155,7 +155,7 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	// After render graph execution, we need to read tonemap output as part of imgui pipeline that is not part of the graph, so graph will automatically apply
 	// resource barrier transition for us
 	Graph.GetEpiloguePass()
-		.Read(TonemapArgs.Output);
+		.Read({ TonemapArgs.Output });
 
 	Graph.Execute(Context);
 

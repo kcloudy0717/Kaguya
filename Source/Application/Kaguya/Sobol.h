@@ -32,8 +32,8 @@ static SobolParameters AddSobolPass(RHI::RenderGraph& Graph, const View& View, S
 	SobolArgs.Uav	 = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(SobolArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Sobol")
-		.Read(Inputs.Input)
-		.Write(&SobolArgs.Output)
+		.Read({ Inputs.Input })
+		.Write({ &SobolArgs.Output })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{

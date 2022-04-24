@@ -52,9 +52,8 @@ struct BlurUpsampleInputParameters
 static void BlurUpsample(std::string_view Name, RHI::RenderGraph& Graph, BlurUpsampleInputParameters Inputs, float UpsampleInterpolationFactor)
 {
 	Graph.AddRenderPass(Name)
-		.Read(Inputs.HighResInput)
-		.Read(Inputs.LowResInput)
-		.Write(Inputs.HighResOutput)
+		.Read({ Inputs.HighResInput, Inputs.LowResInput })
+		.Write({ Inputs.HighResOutput })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{
@@ -116,8 +115,8 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 	}
 
 	Graph.AddRenderPass("Bloom Mask")
-		.Read(Inputs.Input)
-		.Write(&BloomArgs.Output1[0])
+		.Read({ Inputs.Input })
+		.Write({ &BloomArgs.Output1[0] })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{
@@ -139,11 +138,8 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 				Context.Dispatch2D<8, 8>(kBloomWidth, kBloomHeight);
 			});
 	Graph.AddRenderPass("Bloom Downsample")
-		.Read(BloomArgs.Output1[0])
-		.Write(&BloomArgs.Output2[0])
-		.Write(&BloomArgs.Output3[0])
-		.Write(&BloomArgs.Output4[0])
-		.Write(&BloomArgs.Output5[0])
+		.Read({ BloomArgs.Output1[0] })
+		.Write({ &BloomArgs.Output2[0], &BloomArgs.Output3[0], &BloomArgs.Output4[0], &BloomArgs.Output5[0] })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{
@@ -169,8 +165,8 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 				Context.Dispatch2D<8, 8>(kBloomWidth / 2, kBloomHeight / 2);
 			});
 	Graph.AddRenderPass("Bloom Blur")
-		.Read(BloomArgs.Output5[0])
-		.Write(&BloomArgs.Output5[1])
+		.Read({ BloomArgs.Output5[0] })
+		.Write({ &BloomArgs.Output5[1] })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{

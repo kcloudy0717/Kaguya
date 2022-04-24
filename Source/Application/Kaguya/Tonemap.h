@@ -48,9 +48,8 @@ static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& Vie
 	TonemapArgs.Uav	   = Graph.Create<RHI::D3D12UnorderedAccessView>(RHI::RgViewDesc().SetResource(TonemapArgs.Output).AsTextureUav());
 
 	Graph.AddRenderPass("Tonemap")
-		.Read(Inputs.Input)
-		.Read(Inputs.BloomInput)
-		.Write(&TonemapArgs.Output)
+		.Read({ Inputs.Input, Inputs.BloomInput })
+		.Write({ &TonemapArgs.Output })
 		.Execute(
 			[=](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 			{

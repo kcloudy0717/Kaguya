@@ -64,8 +64,8 @@ namespace RHI
 
 		RenderPass(std::string_view Name);
 
-		RenderPass& Read(RgResourceHandle Resource);
-		RenderPass& Write(RgResourceHandle* Resource);
+		RenderPass& Read(Span<const RgResourceHandle> Resources);
+		RenderPass& Write(Span<RgResourceHandle* const> Resources);
 
 		template<typename PFNRenderPassCallback>
 		void Execute(PFNRenderPassCallback&& Callback)

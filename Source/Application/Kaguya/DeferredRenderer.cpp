@@ -202,10 +202,7 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 				 });
 #else
 	Graph.AddRenderPass("GBuffer")
-		.Write(&GBufferArgs.Normal)
-		.Write(&GBufferArgs.MaterialId)
-		.Write(&GBufferArgs.Motion)
-		.Write(&GBufferArgs.Depth)
+		.Write({ &GBufferArgs.Normal, &GBufferArgs.MaterialId, &GBufferArgs.Motion, &GBufferArgs.Depth })
 		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
 					 Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::GBuffer));
@@ -247,10 +244,7 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 	};
 
 	Graph.GetEpiloguePass()
-		.Read(GBufferArgs.Normal)
-		.Read(GBufferArgs.MaterialId)
-		.Read(GBufferArgs.Motion)
-		.Read(GBufferArgs.Depth);
+		.Read({ GBufferArgs.Normal, GBufferArgs.MaterialId, GBufferArgs.Motion, GBufferArgs.Depth });
 
 	Graph.Execute(Context);
 	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(Views[ViewMode])->GetGpuHandle().ptr);
