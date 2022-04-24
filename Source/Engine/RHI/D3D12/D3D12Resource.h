@@ -80,16 +80,16 @@ namespace RHI
 		[[nodiscard]] bool ImplicitStateDecay(D3D12_RESOURCE_STATES State, D3D12_COMMAND_LIST_TYPE AccessedQueueType) const noexcept;
 
 	private:
-		Arc<ID3D12Resource> InitializeResource(
+		[[nodiscard]] Arc<ID3D12Resource> InitializeResource(
 			D3D12_HEAP_PROPERTIES			 HeapProperties,
 			D3D12_RESOURCE_DESC				 Desc,
 			D3D12_RESOURCE_STATES			 InitialResourceState,
 			std::optional<D3D12_CLEAR_VALUE> ClearValue) const;
 
-		UINT CalculateNumSubresources() const;
+		[[nodiscard]] UINT CalculateNumSubresources() const;
 
 	protected:
-		// TODO: Add support for custom heap properties for UMA GPUs 
+		// TODO: Add support for custom heap properties for UMA GPUs
 
 		Arc<ID3D12Resource>				 Resource;
 		std::optional<D3D12_CLEAR_VALUE> ClearValue;
@@ -120,6 +120,13 @@ namespace RHI
 			UINT				 Stride,
 			D3D12_HEAP_TYPE		 HeapType,
 			D3D12_RESOURCE_FLAGS ResourceFlags);
+		~D3D12Buffer();
+
+		D3D12Buffer(D3D12Buffer&&) noexcept = default;
+		D3D12Buffer& operator=(D3D12Buffer&&) noexcept = default;
+
+		D3D12Buffer(const D3D12Buffer&) = delete;
+		D3D12Buffer& operator=(const D3D12Buffer&) = delete;
 
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const;
 		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress(UINT Index) const;
@@ -127,8 +134,8 @@ namespace RHI
 		template<typename T>
 		[[nodiscard]] T* GetCpuVirtualAddress() const
 		{
-			assert(CpuVirtualAddress && "Invalid CpuVirtualAddress");
-			return reinterpret_cast<T*>(CpuVirtualAddress);
+			assert(MappedData && "Invalid CpuVirtualAddress");
+			return reinterpret_cast<T*>(MappedData.get());
 		}
 
 		[[nodiscard]] D3D12_VERTEX_BUFFER_VIEW GetVertexBufferView() const noexcept
@@ -152,15 +159,20 @@ namespace RHI
 		template<typename T>
 		void CopyData(UINT Index, const T& Data)
 		{
-			assert(CpuVirtualAddress && "Invalid CpuVirtualAddress");
-			memcpy(&CpuVirtualAddress[Index * Stride], &Data, sizeof(T));
+			assert(MappedData.get() && "Invalid CpuVirtualAddress");
+			memcpy(&MappedData.get()[Index * Stride], &Data, sizeof(T));
 		}
 
 	private:
-		D3D12_HEAP_TYPE	   HeapType = {};
-		UINT			   Stride	= 0;
-		D3D12ScopedPointer ScopedPointer; // Upload heap
-		BYTE*			   CpuVirtualAddress = nullptr;
+		static void EmptyDestructor(BYTE* Ptr)
+		{
+			UNREFERENCED_PARAMETER(Ptr);
+		}
+
+	private:
+		D3D12_HEAP_TYPE									  HeapType	 = {};
+		UINT											  Stride	 = 0;
+		std::unique_ptr<BYTE, decltype(&EmptyDestructor)> MappedData = { nullptr, &EmptyDestructor }; // Upload heap
 	};
 
 	class D3D12Texture : public D3D12Resource

@@ -7,28 +7,60 @@ namespace RHI
 		D3D12LinkedDevice*		 Parent,
 		RHID3D12CommandQueueType Type)
 		: D3D12LinkedDeviceChild(Parent)
-		, CommandListType(RHITranslateD3D12(Type))
-		, CommandQueue(
-			  [&]
-			  {
-				  Arc<ID3D12CommandQueue>  CommandQueue;
-				  D3D12_COMMAND_QUEUE_DESC Desc = {
-					  .Type		= CommandListType,
-					  .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-					  .Flags	= D3D12_COMMAND_QUEUE_FLAG_NONE,
-					  .NodeMask = Parent->GetNodeMask()
-				  };
-				  VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
-				  return CommandQueue;
-			  }())
+		, CommandListType([&]()
+						  {
+							  switch (Type)
+							  {
+								  using enum RHID3D12CommandQueueType;
+							  case Direct:
+								  return D3D12_COMMAND_LIST_TYPE_DIRECT;
+							  case AsyncCompute:
+								  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+							  case Copy1:
+								  [[fallthrough]];
+							  case Copy2:
+								  return D3D12_COMMAND_LIST_TYPE_COPY;
+							  }
+							  return D3D12_COMMAND_LIST_TYPE();
+						  }())
+		, CommandQueue([&]
+					   {
+						   Arc<ID3D12CommandQueue>		  CommandQueue;
+						   const D3D12_COMMAND_QUEUE_DESC Desc = {
+							   .Type	 = CommandListType,
+							   .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+							   .Flags	 = D3D12_COMMAND_QUEUE_FLAG_NONE,
+							   .NodeMask = Parent->GetNodeMask()
+						   };
+						   VERIFY_D3D12_API(Parent->GetDevice()->CreateCommandQueue(&Desc, IID_PPV_ARGS(&CommandQueue)));
+						   return CommandQueue;
+					   }())
 		, Fence(Parent->GetParentDevice(), 0, D3D12_FENCE_FLAG_NONE)
 		, ResourceBarrierCommandAllocatorPool(Parent, CommandListType)
 		, ResourceBarrierCommandAllocator(ResourceBarrierCommandAllocatorPool.RequestCommandAllocator())
 		, ResourceBarrierCommandListHandle(Parent, CommandListType)
 	{
 #ifdef _DEBUG
-		CommandQueue->SetName(GetCommandQueueTypeString(Type));
-		Fence.Get()->SetName(GetCommandQueueTypeFenceString(Type));
+		switch (Type)
+		{
+			using enum RHID3D12CommandQueueType;
+		case Direct:
+			CommandQueue->SetName(L"3D");
+			Fence.Get()->SetName(L"3D Fence");
+			break;
+		case AsyncCompute:
+			CommandQueue->SetName(L"Async Compute");
+			Fence.Get()->SetName(L"Async Compute Fence");
+			break;
+		case Copy1:
+			CommandQueue->SetName(L"Copy 1");
+			Fence.Get()->SetName(L"Copy 1 Fence");
+			break;
+		case Copy2:
+			CommandQueue->SetName(L"Copy 2");
+			Fence.Get()->SetName(L"Copy 2 Fence");
+			break;
+		}
 #endif
 		UINT64 Frequency = 0;
 		if (SUCCEEDED(CommandQueue->GetTimestampFrequency(&Frequency)))

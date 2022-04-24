@@ -43,7 +43,7 @@ namespace RHI
 		void OnEndFrame();
 
 		[[nodiscard]] D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const;
-		[[nodiscard]] bool							 ResourceSupport4KBAlignment(D3D12_RESOURCE_DESC& Desc) const;
+		[[nodiscard]] bool							 ResourceSupport4KiBAlignment(D3D12_RESOURCE_DESC* Desc) const;
 
 		void WaitIdle();
 

@@ -102,6 +102,10 @@ namespace RHI
 		CD3DX12FeatureSupport InitializeFeatureSupport(const DeviceOptions& Options);
 		TDescriptorSizeCache  InitializeDescriptorSizeCache();
 
+		// Dred debug names
+		static LPCWSTR GetAutoBreadcrumbOpString(D3D12_AUTO_BREADCRUMB_OP Op);
+		static LPCWSTR GetDredAllocationTypeString(D3D12_DRED_ALLOCATION_TYPE Type);
+
 	private:
 		struct ReportLiveObjectGuard
 		{
