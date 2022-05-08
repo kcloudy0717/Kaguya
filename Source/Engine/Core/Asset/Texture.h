@@ -17,6 +17,10 @@ namespace Asset
 	class Texture : public IAsset
 	{
 	public:
+		static void SaveToDisk(RHI::D3D12Texture& Texture, const std::filesystem::path& Path);
+
+		void SaveToDisk(const std::filesystem::path& Path);
+
 		void Release();
 
 		TextureImportOptions Options;
@@ -29,6 +33,9 @@ namespace Asset
 
 		RHI::D3D12Texture			 DxTexture;
 		RHI::D3D12ShaderResourceView Srv;
+
+	private:
+		static void SaveToDDS(RHI::D3D12Texture& Texture, const std::filesystem::path& Path);
 	};
 
 	template<>

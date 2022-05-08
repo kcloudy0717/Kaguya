@@ -3,44 +3,6 @@
 
 namespace RHI
 {
-	D3D12LinearAllocatorPage::D3D12LinearAllocatorPage(
-		Arc<ID3D12Resource> Resource,
-		UINT64				PageSize)
-		: Resource(Resource)
-		, Offset(0)
-		, PageSize(PageSize)
-	{
-		Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress));
-		GpuVirtualAddress = Resource->GetGPUVirtualAddress();
-	}
-
-	D3D12LinearAllocatorPage::~D3D12LinearAllocatorPage()
-	{
-		Resource->Unmap(0, nullptr);
-	}
-
-	std::optional<D3D12Allocation> D3D12LinearAllocatorPage::Suballocate(UINT64 Size, UINT Alignment)
-	{
-		UINT64 AlignedSize = D3D12RHIUtils::AlignUp(Size, static_cast<UINT64>(Alignment));
-		if (Offset + AlignedSize > this->PageSize)
-		{
-			return std::nullopt;
-		}
-
-		D3D12Allocation Allocation = { .Resource		  = Resource.Get(),
-									   .Offset			  = Offset,
-									   .Size			  = Size,
-									   .CpuVirtualAddress = CpuVirtualAddress + Offset,
-									   .GpuVirtualAddress = GpuVirtualAddress + Offset };
-		Offset += AlignedSize;
-		return Allocation;
-	}
-
-	void D3D12LinearAllocatorPage::Reset()
-	{
-		Offset = 0;
-	}
-
 	D3D12LinearAllocator::D3D12LinearAllocator(D3D12LinkedDevice* Parent)
 		: D3D12LinkedDeviceChild(Parent)
 	{
@@ -83,7 +45,7 @@ namespace RHI
 		return OptAllocation.value();
 	}
 
-	D3D12LinearAllocatorPage* D3D12LinearAllocator::RequestPage()
+	D3D12LinearAllocator::Page* D3D12LinearAllocator::RequestPage()
 	{
 		while (SyncHandle && !RetiredPages.empty() && RetiredPages.front().first <= SyncHandle.GetValue())
 		{
@@ -91,7 +53,7 @@ namespace RHI
 			RetiredPages.pop();
 		}
 
-		D3D12LinearAllocatorPage* Page = nullptr;
+		Page* Page = nullptr;
 
 		if (!AvailablePages.empty())
 		{
@@ -107,7 +69,7 @@ namespace RHI
 		return Page;
 	}
 
-	std::unique_ptr<D3D12LinearAllocatorPage> D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) const
+	std::unique_ptr<D3D12LinearAllocator::Page> D3D12LinearAllocator::CreateNewPage(UINT64 PageSize) const
 	{
 		auto HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD, Parent->GetNodeMask(), Parent->GetNodeMask());
 		auto ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
@@ -125,14 +87,52 @@ namespace RHI
 		Resource->SetName(L"Linear Allocator Page");
 #endif
 
-		return std::make_unique<D3D12LinearAllocatorPage>(Resource, PageSize);
+		return std::make_unique<Page>(Resource, PageSize);
 	}
 
-	void D3D12LinearAllocator::DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages)
+	void D3D12LinearAllocator::DiscardPages(UINT64 FenceValue, const std::vector<Page*>& Pages)
 	{
 		for (const auto& Page : Pages)
 		{
 			RetiredPages.push(std::make_pair(FenceValue, Page));
 		}
+	}
+
+	D3D12LinearAllocator::Page::Page(
+		Arc<ID3D12Resource> Resource,
+		UINT64				PageSize)
+		: Resource(Resource)
+		, Offset(0)
+		, PageSize(PageSize)
+	{
+		Resource->Map(0, nullptr, reinterpret_cast<void**>(&CpuVirtualAddress));
+		GpuVirtualAddress = Resource->GetGPUVirtualAddress();
+	}
+
+	D3D12LinearAllocator::Page::~Page()
+	{
+		Resource->Unmap(0, nullptr);
+	}
+
+	std::optional<D3D12Allocation> D3D12LinearAllocator::Page::Suballocate(UINT64 Size, UINT Alignment)
+	{
+		UINT64 AlignedSize = D3D12RHIUtils::AlignUp(Size, static_cast<UINT64>(Alignment));
+		if (Offset + AlignedSize > this->PageSize)
+		{
+			return std::nullopt;
+		}
+
+		D3D12Allocation Allocation = { .Resource		  = Resource.Get(),
+									   .Offset			  = Offset,
+									   .Size			  = Size,
+									   .CpuVirtualAddress = CpuVirtualAddress + Offset,
+									   .GpuVirtualAddress = GpuVirtualAddress + Offset };
+		Offset += AlignedSize;
+		return Allocation;
+	}
+
+	void D3D12LinearAllocator::Page::Reset()
+	{
+		Offset = 0;
 	}
 } // namespace RHI

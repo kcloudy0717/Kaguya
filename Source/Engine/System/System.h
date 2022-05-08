@@ -10,6 +10,8 @@
 
 #include "Span.h"
 
+#include "OS/Process.h"
+
 #include "IO/FileStream.h"
 #include "IO/AsyncFileStream.h"
 #include "IO/BinaryReader.h"

@@ -185,132 +185,135 @@ namespace RHI
 	{
 	}
 
-	D3D12DescriptorHandleCache::D3D12DescriptorHandleCache(
-		D3D12LinkedDevice*		   Parent,
-		D3D12_DESCRIPTOR_HEAP_TYPE Type)
-		: D3D12LinkedDeviceChild(Parent)
-		, Type(Type)
-		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
+	namespace Internal
 	{
-	}
-
-	void D3D12DescriptorHandleCache::Reset()
-	{
-		DescriptorTableBitMask.reset();
-		StaleDescriptorTableBitMask.reset();
-
-		for (auto& DescriptorTableCache : DescriptorTableCaches)
+		D3D12DescriptorHandleCache::D3D12DescriptorHandleCache(
+			D3D12LinkedDevice*		   Parent,
+			D3D12_DESCRIPTOR_HEAP_TYPE Type)
+			: D3D12LinkedDeviceChild(Parent)
+			, Type(Type)
+			, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
 		{
-			DescriptorTableCache = {};
-		}
-	}
-
-	void D3D12DescriptorHandleCache::ParseRootSignature(const D3D12RootSignature& RootSignature, D3D12_DESCRIPTOR_HEAP_TYPE Type)
-	{
-		StaleDescriptorTableBitMask.reset();
-
-		DescriptorTableBitMask = RootSignature.GetDescriptorTableBitMask(Type);
-		if (!DescriptorTableBitMask.any())
-		{
-			return;
 		}
 
-		UINT DescriptorOffset = 0;
-		for (size_t i = 0; i < DescriptorTableBitMask.size(); ++i)
+		void D3D12DescriptorHandleCache::Reset()
 		{
-			if (DescriptorTableBitMask.test(i))
+			DescriptorTableBitMask.reset();
+			StaleDescriptorTableBitMask.reset();
+
+			for (auto& DescriptorTableCache : DescriptorTableCaches)
 			{
-				UINT RootParameterIndex = static_cast<UINT>(i);
-				if (RootParameterIndex < RootSignature.GetNumParameters())
+				DescriptorTableCache = {};
+			}
+		}
+
+		void D3D12DescriptorHandleCache::ParseRootSignature(const D3D12RootSignature& RootSignature, D3D12_DESCRIPTOR_HEAP_TYPE Type)
+		{
+			StaleDescriptorTableBitMask.reset();
+
+			DescriptorTableBitMask = RootSignature.GetDescriptorTableBitMask(Type);
+			if (!DescriptorTableBitMask.any())
+			{
+				return;
+			}
+
+			UINT DescriptorOffset = 0;
+			for (size_t i = 0; i < DescriptorTableBitMask.size(); ++i)
+			{
+				if (DescriptorTableBitMask.test(i))
 				{
-					UINT NumDescriptors = RootSignature.GetNumDescriptors(RootParameterIndex);
+					UINT RootParameterIndex = static_cast<UINT>(i);
+					if (RootParameterIndex < RootSignature.GetNumParameters())
+					{
+						UINT NumDescriptors = RootSignature.GetNumDescriptors(RootParameterIndex);
 
-					D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
-					DescriptorTableCache.NumDescriptors				= NumDescriptors;
-					DescriptorTableCache.BaseDescriptor				= DescriptorHandles + DescriptorOffset;
+						D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
+						DescriptorTableCache.NumDescriptors				= NumDescriptors;
+						DescriptorTableCache.BaseDescriptor				= DescriptorHandles + DescriptorOffset;
 
-					DescriptorOffset += NumDescriptors;
+						DescriptorOffset += NumDescriptors;
+					}
 				}
 			}
+
+			// Make sure the maximum number of descriptors per descriptor heap has not been exceeded.
+			assert(DescriptorOffset <= DescriptorHandleLimit && "Exceeded user-supplied maximum cache size");
 		}
 
-		// Make sure the maximum number of descriptors per descriptor heap has not been exceeded.
-		assert(DescriptorOffset <= DescriptorHandleLimit && "Exceeded user-supplied maximum cache size");
-	}
-
-	void D3D12DescriptorHandleCache::StageDescriptors(
-		UINT						RootParameterIndex,
-		UINT						Offset,
-		UINT						NumDescriptors,
-		D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptor)
-	{
-		assert(RootParameterIndex < KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT && "Root parameter index exceeds the max descriptor table index");
-
-		D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
-
-		assert(Offset + NumDescriptors <= DescriptorTableCache.NumDescriptors && "Number of descriptors exceeds the number of descripotrs in the descriptor table");
-
-		D3D12_CPU_DESCRIPTOR_HANDLE* DestDescriptor = DescriptorTableCache.BaseDescriptor + Offset;
-		for (UINT i = 0; i < NumDescriptors; ++i)
+		void D3D12DescriptorHandleCache::StageDescriptors(
+			UINT						RootParameterIndex,
+			UINT						Offset,
+			UINT						NumDescriptors,
+			D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptor)
 		{
-			DestDescriptor[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(SrcDescriptor, static_cast<INT>(i), DescriptorSize);
-		}
+			assert(RootParameterIndex < KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT && "Root parameter index exceeds the max descriptor table index");
 
-		StaleDescriptorTableBitMask.set(RootParameterIndex, true);
-	}
+			D3D12DescriptorTableCache& DescriptorTableCache = DescriptorTableCaches[RootParameterIndex];
 
-	template<RHI_PIPELINE_STATE_TYPE PsoType>
-	UINT D3D12DescriptorHandleCache::CommitDescriptors(
-		CD3DX12_CPU_DESCRIPTOR_HANDLE& DestCpuHandle,
-		CD3DX12_GPU_DESCRIPTOR_HANDLE& DestGpuHandle,
-		ID3D12GraphicsCommandList*	   CommandList)
-	{
-		ID3D12Device* Device				   = GetParentLinkedDevice()->GetDevice();
-		UINT		  NumStaleDescriptorTables = 0;
-		UINT		  RootIndices[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT];
+			assert(Offset + NumDescriptors <= DescriptorTableCache.NumDescriptors && "Number of descriptors exceeds the number of descripotrs in the descriptor table");
 
-		for (size_t i = 0; i < StaleDescriptorTableBitMask.size(); ++i)
-		{
-			if (StaleDescriptorTableBitMask.test(i))
+			D3D12_CPU_DESCRIPTOR_HANDLE* DestDescriptor = DescriptorTableCache.BaseDescriptor + Offset;
+			for (UINT i = 0; i < NumDescriptors; ++i)
 			{
-				RootIndices[i] = static_cast<UINT>(i);
-
-				NumStaleDescriptorTables++;
+				DestDescriptor[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(SrcDescriptor, static_cast<INT>(i), DescriptorSize);
 			}
+
+			StaleDescriptorTableBitMask.set(RootParameterIndex, true);
 		}
 
-		UINT NumDescriptorsCommitted = 0;
-		for (UINT i = 0; i < NumStaleDescriptorTables; ++i)
+		template<RHI_PIPELINE_STATE_TYPE PsoType>
+		UINT D3D12DescriptorHandleCache::CommitDescriptors(
+			CD3DX12_CPU_DESCRIPTOR_HANDLE& DestCpuHandle,
+			CD3DX12_GPU_DESCRIPTOR_HANDLE& DestGpuHandle,
+			ID3D12GraphicsCommandList*	   CommandList)
 		{
-			UINT						 RootParameterIndex = RootIndices[i];
-			UINT						 NumDescriptors		= DescriptorTableCaches[RootParameterIndex].NumDescriptors;
-			D3D12_CPU_DESCRIPTOR_HANDLE* DescriptorHandle	= DescriptorTableCaches[RootParameterIndex].BaseDescriptor;
+			ID3D12Device* Device				   = GetParentLinkedDevice()->GetDevice();
+			UINT		  NumStaleDescriptorTables = 0;
+			UINT		  RootIndices[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT];
 
-			D3D12_CPU_DESCRIPTOR_HANDLE pDestDescriptorRangeStarts[] = { DestCpuHandle };
-			UINT						pDestDescriptorRangeSizes[]	 = { NumDescriptors };
-			Device->CopyDescriptors(
-				1,
-				pDestDescriptorRangeStarts,
-				pDestDescriptorRangeSizes,
-				NumDescriptors,
-				DescriptorHandle,
-				nullptr,
-				Type);
+			for (size_t i = 0; i < StaleDescriptorTableBitMask.size(); ++i)
+			{
+				if (StaleDescriptorTableBitMask.test(i))
+				{
+					RootIndices[i] = static_cast<UINT>(i);
 
-			(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameterIndex, DestGpuHandle);
+					NumStaleDescriptorTables++;
+				}
+			}
 
-			// Offset current descriptor handles.
-			DestCpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
-			DestGpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
-			NumDescriptorsCommitted += NumDescriptors;
+			UINT NumDescriptorsCommitted = 0;
+			for (UINT i = 0; i < NumStaleDescriptorTables; ++i)
+			{
+				UINT						 RootParameterIndex = RootIndices[i];
+				UINT						 NumDescriptors		= DescriptorTableCaches[RootParameterIndex].NumDescriptors;
+				D3D12_CPU_DESCRIPTOR_HANDLE* DescriptorHandle	= DescriptorTableCaches[RootParameterIndex].BaseDescriptor;
 
-			// Flip the stale bit so the descriptor table is not recopied again unless it is updated with a new
-			// descriptor.
-			StaleDescriptorTableBitMask.flip(i);
+				D3D12_CPU_DESCRIPTOR_HANDLE pDestDescriptorRangeStarts[] = { DestCpuHandle };
+				UINT						pDestDescriptorRangeSizes[]	 = { NumDescriptors };
+				Device->CopyDescriptors(
+					1,
+					pDestDescriptorRangeStarts,
+					pDestDescriptorRangeSizes,
+					NumDescriptors,
+					DescriptorHandle,
+					nullptr,
+					Type);
+
+				(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameterIndex, DestGpuHandle);
+
+				// Offset current descriptor handles.
+				DestCpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
+				DestGpuHandle.Offset(static_cast<INT>(NumDescriptors), DescriptorSize);
+				NumDescriptorsCommitted += NumDescriptors;
+
+				// Flip the stale bit so the descriptor table is not recopied again unless it is updated with a new
+				// descriptor.
+				StaleDescriptorTableBitMask.flip(i);
+			}
+
+			return NumDescriptorsCommitted;
 		}
-
-		return NumDescriptorsCommitted;
-	}
+	} // namespace Internal
 
 	void D3D12OnlineDescriptorHeap::Reset()
 	{

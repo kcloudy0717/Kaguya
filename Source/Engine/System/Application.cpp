@@ -1,19 +1,9 @@
 #include "Application.h"
 #include "IApplicationMessageHandler.h"
 
-#include <shellapi.h>
-
 Application::Application()
 	: HInstance(GetModuleHandle(nullptr))
 {
-	// Initialize ExecutableDirectory
-	int Argc;
-	if (LPWSTR* Argv = CommandLineToArgvW(GetCommandLineW(), &Argc); Argv)
-	{
-		ExecutableDirectory = std::filesystem::path(Argv[0]).parent_path();
-		LocalFree(Argv);
-	}
-
 	// Register window class
 	WNDCLASSEXW ClassDesc	= {};
 	ClassDesc.cbSize		= sizeof(WNDCLASSEX);

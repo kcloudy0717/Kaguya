@@ -15,14 +15,14 @@ namespace RHI
 			D3D12NodeMask NodeMask);
 		~D3D12LinkedDevice();
 
-		[[nodiscard]] ID3D12Device*		   GetDevice() const;
-		[[nodiscard]] ID3D12Device5*	   GetDevice5() const;
-		[[nodiscard]] D3D12NodeMask		   GetNodeMask() const noexcept { return NodeMask; }
-		[[nodiscard]] D3D12CommandQueue*   GetCommandQueue(RHID3D12CommandQueueType Type);
-		[[nodiscard]] D3D12CommandQueue*   GetGraphicsQueue();
-		[[nodiscard]] D3D12CommandQueue*   GetAsyncComputeQueue();
-		[[nodiscard]] D3D12CommandQueue*   GetCopyQueue1();
-		[[nodiscard]] D3D12Profiler*	   GetProfiler();
+		[[nodiscard]] ID3D12Device*		   GetDevice() const noexcept;
+		[[nodiscard]] ID3D12Device5*	   GetDevice5() const noexcept;
+		[[nodiscard]] D3D12NodeMask		   GetNodeMask() const noexcept;
+		[[nodiscard]] D3D12CommandQueue*   GetCommandQueue(RHID3D12CommandQueueType Type) noexcept;
+		[[nodiscard]] D3D12CommandQueue*   GetGraphicsQueue() noexcept;
+		[[nodiscard]] D3D12CommandQueue*   GetAsyncComputeQueue() noexcept;
+		[[nodiscard]] D3D12CommandQueue*   GetCopyQueue1() noexcept;
+		[[nodiscard]] D3D12Profiler*	   GetProfiler() noexcept;
 		[[nodiscard]] D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept;
 		[[nodiscard]] D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept;
 		// clang-format off

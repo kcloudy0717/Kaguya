@@ -60,17 +60,22 @@ namespace RHI
 		}
 	}
 
-	ID3D12Device* D3D12LinkedDevice::GetDevice() const
+	ID3D12Device* D3D12LinkedDevice::GetDevice() const noexcept
 	{
 		return GetParentDevice()->GetD3D12Device();
 	}
 
-	ID3D12Device5* D3D12LinkedDevice::GetDevice5() const
+	ID3D12Device5* D3D12LinkedDevice::GetDevice5() const noexcept
 	{
 		return GetParentDevice()->GetD3D12Device5();
 	}
 
-	D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(RHID3D12CommandQueueType Type)
+	D3D12NodeMask D3D12LinkedDevice::GetNodeMask() const noexcept
+	{
+		return NodeMask;
+	}
+
+	D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(RHID3D12CommandQueueType Type) noexcept
 	{
 		// clang-format off
 		switch (Type)
@@ -85,22 +90,22 @@ namespace RHI
 		return nullptr;
 	}
 
-	D3D12CommandQueue* D3D12LinkedDevice::GetGraphicsQueue()
+	D3D12CommandQueue* D3D12LinkedDevice::GetGraphicsQueue() noexcept
 	{
 		return GetCommandQueue(RHID3D12CommandQueueType::Direct);
 	}
 
-	D3D12CommandQueue* D3D12LinkedDevice::GetAsyncComputeQueue()
+	D3D12CommandQueue* D3D12LinkedDevice::GetAsyncComputeQueue() noexcept
 	{
 		return GetCommandQueue(RHID3D12CommandQueueType::AsyncCompute);
 	}
 
-	D3D12CommandQueue* D3D12LinkedDevice::GetCopyQueue1()
+	D3D12CommandQueue* D3D12LinkedDevice::GetCopyQueue1() noexcept
 	{
 		return GetCommandQueue(RHID3D12CommandQueueType::Copy1);
 	}
 
-	D3D12Profiler* D3D12LinkedDevice::GetProfiler()
+	D3D12Profiler* D3D12LinkedDevice::GetProfiler() noexcept
 	{
 		return &Profiler;
 	}
@@ -156,7 +161,7 @@ namespace RHI
 
 		RwLockWriteGuard Guard(ResourceAllocationInfoTable.Mutex);
 
-		const D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(0, 1, &Desc);
+		const D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(NodeMask, 1, &Desc);
 		ResourceAllocationInfoTable.Table.insert(std::make_pair(Hash, ResourceAllocationInfo));
 
 		return ResourceAllocationInfo;

@@ -3,32 +3,35 @@
 
 namespace RHI
 {
-	struct DescriptorIndexPool
+	namespace Internal
 	{
-		// Removes the first element from the free list and returns its index
-		UINT Allocate()
+		struct DescriptorIndexPool
 		{
-			UINT NewIndex;
-			if (!IndexQueue.empty())
+			// Removes the first element from the free list and returns its index
+			UINT Allocate()
 			{
-				NewIndex = IndexQueue.front();
-				IndexQueue.pop();
+				UINT NewIndex;
+				if (!IndexQueue.empty())
+				{
+					NewIndex = IndexQueue.front();
+					IndexQueue.pop();
+				}
+				else
+				{
+					NewIndex = Index++;
+				}
+				return NewIndex;
 			}
-			else
+
+			void Release(UINT Index)
 			{
-				NewIndex = Index++;
+				IndexQueue.push(Index);
 			}
-			return NewIndex;
-		}
 
-		void Release(UINT Index)
-		{
-			IndexQueue.push(Index);
-		}
-
-		std::queue<UINT> IndexQueue;
-		UINT			 Index = 0;
-	};
+			std::queue<UINT> IndexQueue;
+			UINT			 Index = 0;
+		};
+	} // namespace Internal
 
 	// Dynamic resource binding heap, descriptor index are maintained in a free list
 	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
@@ -60,8 +63,8 @@ namespace RHI
 		D3D12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
 		UINT						DescriptorSize = 0;
 
-		DescriptorIndexPool IndexPool;
-		Mutex				Mutex;
+		Internal::DescriptorIndexPool IndexPool;
+		Mutex						  Mutex;
 	};
 
 	// Used for RTV/DSV Heaps
@@ -113,54 +116,57 @@ namespace RHI
 	// Code below was used to simulate D3D11-ish kind binding model
 	// No longer used
 
-	struct D3D12DescriptorTableCache
+	namespace Internal
 	{
-		// The pointer to the descriptor in the descriptor handle cache.
-		D3D12_CPU_DESCRIPTOR_HANDLE* BaseDescriptor;
-		UINT						 NumDescriptors;
-	};
+		struct D3D12DescriptorTableCache
+		{
+			// The pointer to the descriptor in the descriptor handle cache.
+			D3D12_CPU_DESCRIPTOR_HANDLE* BaseDescriptor;
+			UINT						 NumDescriptors;
+		};
 
-	class D3D12DescriptorHandleCache : public D3D12LinkedDeviceChild
-	{
-	public:
-		static constexpr UINT DescriptorHandleLimit = 256;
+		class D3D12DescriptorHandleCache : public D3D12LinkedDeviceChild
+		{
+		public:
+			static constexpr UINT DescriptorHandleLimit = 256;
 
-		explicit D3D12DescriptorHandleCache(
-			D3D12LinkedDevice*		   Parent,
-			D3D12_DESCRIPTOR_HEAP_TYPE Type);
+			explicit D3D12DescriptorHandleCache(
+				D3D12LinkedDevice*		   Parent,
+				D3D12_DESCRIPTOR_HEAP_TYPE Type);
 
-		void Reset();
+			void Reset();
 
-		void ParseRootSignature(const D3D12RootSignature& RootSignature, D3D12_DESCRIPTOR_HEAP_TYPE Type);
+			void ParseRootSignature(const D3D12RootSignature& RootSignature, D3D12_DESCRIPTOR_HEAP_TYPE Type);
 
-		void StageDescriptors(
-			UINT						RootParameterIndex,
-			UINT						Offset,
-			UINT						NumDescriptors,
-			D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptor);
+			void StageDescriptors(
+				UINT						RootParameterIndex,
+				UINT						Offset,
+				UINT						NumDescriptors,
+				D3D12_CPU_DESCRIPTOR_HANDLE SrcDescriptor);
 
-		template<RHI_PIPELINE_STATE_TYPE PsoType>
-		UINT CommitDescriptors(
-			CD3DX12_CPU_DESCRIPTOR_HANDLE& DestCpuHandle,
-			CD3DX12_GPU_DESCRIPTOR_HANDLE& DestGpuHandle,
-			ID3D12GraphicsCommandList*	   CommandList);
+			template<RHI_PIPELINE_STATE_TYPE PsoType>
+			UINT CommitDescriptors(
+				CD3DX12_CPU_DESCRIPTOR_HANDLE& DestCpuHandle,
+				CD3DX12_GPU_DESCRIPTOR_HANDLE& DestGpuHandle,
+				ID3D12GraphicsCommandList*	   CommandList);
 
-	private:
-		const D3D12_DESCRIPTOR_HEAP_TYPE Type			= {};
-		const UINT						 DescriptorSize = 0;
+		private:
+			const D3D12_DESCRIPTOR_HEAP_TYPE Type			= {};
+			const UINT						 DescriptorSize = 0;
 
-		// Each bit in the bit mask represents the index in the root signature
-		// that contains a descriptor table.
-		std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> DescriptorTableBitMask;
+			// Each bit in the bit mask represents the index in the root signature
+			// that contains a descriptor table.
+			std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> DescriptorTableBitMask;
 
-		// Each bit set in the bit mask represents a descriptor table
-		// in the root signature that has changed since the last time the
-		// descriptors were copied.
-		std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> StaleDescriptorTableBitMask;
+			// Each bit set in the bit mask represents a descriptor table
+			// in the root signature that has changed since the last time the
+			// descriptors were copied.
+			std::bitset<KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT> StaleDescriptorTableBitMask;
 
-		D3D12DescriptorTableCache	DescriptorTableCaches[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHandles[DescriptorHandleLimit]						= {};
-	};
+			D3D12DescriptorTableCache	DescriptorTableCaches[KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT] = {};
+			D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHandles[DescriptorHandleLimit]								   = {};
+		};
+	} // namespace Internal
 
 	class D3D12OnlineDescriptorHeap : public D3D12LinkedDeviceChild
 	{
@@ -197,7 +203,7 @@ namespace RHI
 		CD3DX12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
 		CD3DX12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
 
-		D3D12DescriptorHandleCache GraphicsHandleCache;
-		D3D12DescriptorHandleCache ComputeHandleCache;
+		Internal::D3D12DescriptorHandleCache GraphicsHandleCache;
+		Internal::D3D12DescriptorHandleCache ComputeHandleCache;
 	};
 } // namespace RHI

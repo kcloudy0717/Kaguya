@@ -10,6 +10,7 @@
 #define SET_LEAK_BREAKPOINT(x)
 #endif
 
+#include "System/System.h"
 #include "System/Application.h"
 #include "System/IApplicationMessageHandler.h"
 
@@ -228,7 +229,7 @@ public:
 	{
 		// WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
 
-		std::string IniFile = (Application::ExecutableDirectory / "imgui.ini").string();
+		std::string IniFile = (Process::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
 
 		CreateRenderPath();

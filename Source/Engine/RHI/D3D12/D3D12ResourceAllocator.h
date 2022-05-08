@@ -5,29 +5,9 @@ namespace RHI
 {
 	struct D3D12Allocation
 	{
-		ID3D12Resource*			  Resource;
+		ID3D12Resource*			  Resource; // Weak reference
 		UINT64					  Offset;
 		UINT64					  Size;
-		BYTE*					  CpuVirtualAddress;
-		D3D12_GPU_VIRTUAL_ADDRESS GpuVirtualAddress;
-	};
-
-	class D3D12LinearAllocatorPage
-	{
-	public:
-		explicit D3D12LinearAllocatorPage(
-			Arc<ID3D12Resource> Resource,
-			UINT64				PageSize);
-		~D3D12LinearAllocatorPage();
-
-		std::optional<D3D12Allocation> Suballocate(UINT64 Size, UINT Alignment);
-
-		void Reset();
-
-	private:
-		Arc<ID3D12Resource>		  Resource;
-		UINT64					  Offset;
-		UINT64					  PageSize;
 		BYTE*					  CpuVirtualAddress;
 		D3D12_GPU_VIRTUAL_ADDRESS GpuVirtualAddress;
 	};
@@ -64,19 +44,39 @@ namespace RHI
 		}
 
 	private:
-		[[nodiscard]] D3D12LinearAllocatorPage* RequestPage();
+		class Page
+		{
+		public:
+			explicit Page(
+				Arc<ID3D12Resource> Resource,
+				UINT64				PageSize);
+			~Page();
 
-		[[nodiscard]] std::unique_ptr<D3D12LinearAllocatorPage> CreateNewPage(UINT64 PageSize) const;
+			std::optional<D3D12Allocation> Suballocate(UINT64 Size, UINT Alignment);
 
-		void DiscardPages(UINT64 FenceValue, const std::vector<D3D12LinearAllocatorPage*>& Pages);
+			void Reset();
+
+		private:
+			Arc<ID3D12Resource>		  Resource;
+			UINT64					  Offset;
+			UINT64					  PageSize;
+			BYTE*					  CpuVirtualAddress;
+			D3D12_GPU_VIRTUAL_ADDRESS GpuVirtualAddress;
+		};
+
+		[[nodiscard]] Page* RequestPage();
+
+		[[nodiscard]] std::unique_ptr<Page> CreateNewPage(UINT64 PageSize) const;
+
+		void DiscardPages(UINT64 FenceValue, const std::vector<Page*>& Pages);
 
 	private:
-		std::vector<std::unique_ptr<D3D12LinearAllocatorPage>>	 PagePool;
-		std::queue<std::pair<UINT64, D3D12LinearAllocatorPage*>> RetiredPages;
-		std::queue<D3D12LinearAllocatorPage*>					 AvailablePages;
+		std::vector<std::unique_ptr<Page>>	 PagePool;
+		std::queue<std::pair<UINT64, Page*>> RetiredPages;
+		std::queue<Page*>					 AvailablePages;
 
-		D3D12SyncHandle						   SyncHandle;
-		D3D12LinearAllocatorPage*			   CurrentPage = nullptr;
-		std::vector<D3D12LinearAllocatorPage*> RetiredPageList;
+		D3D12SyncHandle	   SyncHandle;
+		Page*			   CurrentPage = nullptr;
+		std::vector<Page*> RetiredPageList;
 	};
 } // namespace RHI

@@ -57,6 +57,11 @@ namespace RHI
 		D3D12Resource(const D3D12Resource&) = delete;
 		D3D12Resource& operator=(const D3D12Resource&) = delete;
 
+		operator bool() const noexcept
+		{
+			return !!Resource;
+		}
+
 		[[nodiscard]] ID3D12Resource*			 GetResource() const { return Resource.Get(); }
 		[[nodiscard]] D3D12_CLEAR_VALUE			 GetClearValue() const noexcept { return ClearValue.has_value() ? *ClearValue : D3D12_CLEAR_VALUE{}; }
 		[[nodiscard]] const D3D12_RESOURCE_DESC& GetDesc() const noexcept { return Desc; }

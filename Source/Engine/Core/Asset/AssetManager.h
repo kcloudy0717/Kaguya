@@ -43,9 +43,6 @@ namespace Asset
 		void RequestUpload(Texture* Texture);
 		void RequestUpload(Mesh* Mesh);
 
-		void EnqueueRequest(Texture* Texture);
-		void EnqueueRequest(Mesh* Mesh);
-
 	private:
 		void UploadTexture(Texture* AssetTexture, RHI::D3D12LinkedDevice* Device);
 		void UploadMesh(Mesh* AssetMesh, RHI::D3D12LinkedDevice* Device);

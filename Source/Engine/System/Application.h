@@ -22,9 +22,9 @@ public:
 
 	void SetRawInputMode(bool Enable, Window* Window);
 
-	virtual bool Initialize() = 0;
-	virtual void Shutdown()	  = 0;
-	virtual void Update()	  = 0;
+	virtual bool Initialize() { return true; }
+	virtual void Shutdown() {}
+	virtual void Update() {}
 
 private:
 	static LRESULT CALLBACK WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
@@ -32,8 +32,6 @@ private:
 	LRESULT ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
-	// Components
-	inline static std::filesystem::path ExecutableDirectory;
 	inline static InputManager			InputManager;
 
 private:

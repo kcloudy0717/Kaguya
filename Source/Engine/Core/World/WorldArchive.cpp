@@ -49,7 +49,7 @@ void WorldArchive::Save(
 		AssetManager->GetTextureRegistry().EnumerateAsset(
 			[&](Asset::AssetHandle Handle, Asset::Texture* Resource)
 			{
-				std::filesystem::path AssetPath		   = relative(Resource->Options.Path, Application::ExecutableDirectory);
+				std::filesystem::path AssetPath		   = relative(Resource->Options.Path, Process::ExecutableDirectory);
 				auto&				  JsonTexture	   = JsonTextures[AssetPath.string()];
 				JsonTexture["Options"]["sRGB"]		   = Resource->Options.sRGB;
 				JsonTexture["Options"]["GenerateMips"] = Resource->Options.GenerateMips;
@@ -59,7 +59,7 @@ void WorldArchive::Save(
 		AssetManager->GetMeshRegistry().EnumerateAsset(
 			[&](Asset::AssetHandle Handle, Asset::Mesh* Resource)
 			{
-				std::filesystem::path AssetPath			= relative(Resource->Options.Path, Application::ExecutableDirectory);
+				std::filesystem::path AssetPath			= relative(Resource->Options.Path, Process::ExecutableDirectory);
 				auto&				  JsonMesh			= JsonMeshes[AssetPath.string()];
 				JsonMesh["Options"]["GenerateMeshlets"] = Resource->Options.GenerateMeshlets;
 			});
@@ -149,7 +149,7 @@ void WorldArchive::Load(
 		for (auto iter = JsonTextures.begin(); iter != JsonTextures.end(); ++iter)
 		{
 			Asset::TextureImportOptions Options = {};
-			Options.Path						= Application::ExecutableDirectory / iter.key();
+			Options.Path						= Process::ExecutableDirectory / iter.key();
 
 			if (auto& Value = iter.value(); Value.contains("Options"))
 			{
@@ -168,7 +168,7 @@ void WorldArchive::Load(
 		for (auto iter = JsonMeshes.begin(); iter != JsonMeshes.end(); ++iter)
 		{
 			Asset::MeshImportOptions Options = {};
-			Options.Path					 = Application::ExecutableDirectory / iter.key();
+			Options.Path					 = Process::ExecutableDirectory / iter.key();
 
 			auto& Value = iter.value();
 			if (Value.contains("Options"))
