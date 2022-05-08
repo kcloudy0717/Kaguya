@@ -69,11 +69,6 @@ void Application::AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& D
 	Window->Initialize(this, Parent, HInstance, Desc);
 }
 
-void Application::RegisterMessageCallback(MessageCallback Callback, void* Context)
-{
-	Callbacks.emplace_back(Callback, Context);
-}
-
 void Application::SetRawInputMode(bool Enable, Window* Window)
 {
 	Window->SetRawInput(Enable);
@@ -116,10 +111,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	Window* CurrentWindow = *WindowIter;
 
-	for (auto& Callback : Callbacks)
-	{
-		Callback.Function(Callback.Context, CurrentWindow->GetWindowHandle(), uMsg, wParam, lParam);
-	}
+	Callbacks(CurrentWindow->GetWindowHandle(), uMsg, wParam, lParam);
 
 	switch (uMsg)
 	{

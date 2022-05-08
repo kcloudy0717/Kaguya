@@ -120,16 +120,6 @@ namespace RHI
 		return {};
 	}
 
-	static VOID NTAPI CompileFromCoroutineHandle(
-		_Inout_ PTP_CALLBACK_INSTANCE Instance,
-		_Inout_opt_ PVOID			  Context,
-		_Inout_ PTP_WORK			  Work) noexcept
-	{
-		UNREFERENCED_PARAMETER(Instance);
-		std::coroutine_handle<>::from_address(Context)();
-		CloseThreadpoolWork(Work);
-	}
-
 	struct awaitable_CompilePsoThread
 	{
 		constexpr bool await_ready() const noexcept { return false; }
@@ -138,7 +128,12 @@ namespace RHI
 
 		void await_suspend(std::coroutine_handle<> handle) const
 		{
-			Device->GetPsoCompilationThreadPool()->QueueThreadpoolWork(CompileFromCoroutineHandle, handle.address());
+			Device->GetPsoCompilationThreadPool()->QueueThreadpoolWork(
+				[](void* Context)
+				{
+					std::coroutine_handle<>::from_address(Context)();
+				},
+				handle.address());
 		}
 
 		D3D12Device* Device;

@@ -170,18 +170,22 @@ namespace Asset
 		D3D12_GPU_VIRTUAL_ADDRESS IndexAddress	= AssetMesh->IndexResource.GetGpuVirtualAddress();
 		D3D12_GPU_VIRTUAL_ADDRESS VertexAddress = AssetMesh->VertexResource.GetGpuVirtualAddress();
 
-		D3D12_RAYTRACING_GEOMETRY_DESC RaytracingGeometryDesc		= {};
-		RaytracingGeometryDesc.Type									= D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-		RaytracingGeometryDesc.Flags								= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-		RaytracingGeometryDesc.Triangles.Transform3x4				= NULL;
-		RaytracingGeometryDesc.Triangles.IndexFormat				= DXGI_FORMAT_R32_UINT;
-		RaytracingGeometryDesc.Triangles.VertexFormat				= DXGI_FORMAT_R32G32B32_FLOAT;
-		RaytracingGeometryDesc.Triangles.IndexCount					= static_cast<UINT>(AssetMesh->Indices.size());
-		RaytracingGeometryDesc.Triangles.VertexCount				= static_cast<UINT>(AssetMesh->Vertices.size());
-		RaytracingGeometryDesc.Triangles.IndexBuffer				= IndexAddress;
-		RaytracingGeometryDesc.Triangles.VertexBuffer.StartAddress	= VertexAddress;
-		RaytracingGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+		const D3D12_RAYTRACING_GEOMETRY_DESC RaytracingGeometryDesc = {
+			.Type	   = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
+			.Flags	   = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
+			.Triangles = {
+				.Transform3x4 = NULL,
+				.IndexFormat  = DXGI_FORMAT_R32_UINT,
+				.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
+				.IndexCount	  = static_cast<UINT>(AssetMesh->Indices.size()),
+				.VertexCount  = static_cast<UINT>(AssetMesh->Vertices.size()),
+				.IndexBuffer  = IndexAddress,
+				.VertexBuffer = {
+					.StartAddress  = VertexAddress,
+					.StrideInBytes = sizeof(Vertex) },
 
+			}
+		};
 		AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
 
 		AssetMesh->VertexView = RHI::D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);

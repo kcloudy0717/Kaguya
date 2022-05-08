@@ -1,7 +1,12 @@
 #pragma once
 #include <filesystem>
-#include <wil/resource.h>
 #include <type_traits>
+#include <mutex>
+#include <cassert>
+#include <memory>
+#include <utility>
+
+#include <wil/resource.h>
 
 // clang-format off
 // Decimal SI units

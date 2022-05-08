@@ -11,19 +11,16 @@ namespace RHI
 	struct D3D12PipelineStateTraits<D3D12_GRAPHICS_PIPELINE_STATE_DESC>
 	{
 		static auto Create() { return &ID3D12Device::CreateGraphicsPipelineState; }
-		static auto Load() { return &ID3D12PipelineLibrary::LoadGraphicsPipeline; }
 	};
 	template<>
 	struct D3D12PipelineStateTraits<D3D12_COMPUTE_PIPELINE_STATE_DESC>
 	{
 		static auto Create() { return &ID3D12Device::CreateComputePipelineState; }
-		static auto Load() { return &ID3D12PipelineLibrary::LoadComputePipeline; }
 	};
 	template<>
 	struct D3D12PipelineStateTraits<D3D12_PIPELINE_STATE_STREAM_DESC>
 	{
 		static auto Create() { return &ID3D12Device2::CreatePipelineState; }
-		static auto Load() { return &ID3D12PipelineLibrary1::LoadPipeline; }
 	};
 
 	class D3D12PipelineParserCallbacks : public IPipelineParserCallbacks

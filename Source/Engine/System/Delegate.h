@@ -1,9 +1,5 @@
 ﻿#pragma once
-#include <mutex>
-#include <cassert>
-#include <memory>
-#include <type_traits>
-#include <utility>
+#include "SystemCore.h"
 
 // Delegate class can be used as an alternative to std::function, delegates are flexible
 // It can be binded to any types of subroutines
@@ -391,7 +387,7 @@ public:
 
 	DelegateHandle operator+=(DelegateType&& Delegate) { return Add(std::forward<DelegateType>(Delegate)); }
 
-	void operator()(TArgs&&... Args) const
+	void operator()(TArgs... Args) const
 	{
 		auto Lock = OptMutex ? std::unique_lock(*OptMutex) : std::unique_lock<std::mutex>();
 		for (const auto& Delegate : Delegates)

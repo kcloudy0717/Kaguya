@@ -2,6 +2,7 @@
 #include <filesystem>
 #include "Window.h"
 #include "InputManager.h"
+#include "Delegate.h"
 
 class IApplicationMessageHandler;
 
@@ -18,7 +19,6 @@ public:
 	void SetMessageHandler(IApplicationMessageHandler* MessageHandler);
 
 	void AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc);
-	void RegisterMessageCallback(MessageCallback Callback, void* Context);
 
 	void SetRawInputMode(bool Enable, Window* Window);
 
@@ -32,7 +32,7 @@ private:
 	LRESULT ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 public:
-	inline static InputManager			InputManager;
+	inline static InputManager InputManager;
 
 private:
 	struct PlatformWindows
@@ -66,10 +66,6 @@ private:
 	IApplicationMessageHandler* MessageHandler = nullptr;
 	std::vector<Window*>		Windows;
 
-	struct CallbackEntry
-	{
-		MessageCallback Function;
-		void*			Context;
-	};
-	std::vector<CallbackEntry> Callbacks;
+public:
+	MulticastDelegate<HWND /*HWnd*/, UINT /*Message*/, WPARAM /*WParam*/, LPARAM /*LParam*/> Callbacks;
 };

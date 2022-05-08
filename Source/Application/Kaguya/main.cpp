@@ -144,12 +144,6 @@ private:
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void ImguiMessageCallback(void* Context, HWND HWnd, UINT Message, WPARAM WParam, LPARAM LParam)
-{
-	UNREFERENCED_PARAMETER(Context);
-	ImGui_ImplWin32_WndProcHandler(HWnd, Message, WParam, LParam);
-}
-
 enum class RENDER_PATH
 {
 	DeferredRenderer,
@@ -222,7 +216,10 @@ public:
 	explicit Editor()
 	{
 		SetMessageHandler(this);
-		RegisterMessageCallback(ImguiMessageCallback, nullptr);
+		Callbacks += [&](HWND HWnd, UINT Message, WPARAM WParam, LPARAM LParam)
+		{
+			ImGui_ImplWin32_WndProcHandler(HWnd, Message, WParam, LParam);
+		};
 	}
 
 	bool Initialize() override

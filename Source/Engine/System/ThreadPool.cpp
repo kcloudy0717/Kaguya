@@ -29,14 +29,33 @@ ThreadPool::~ThreadPool()
 	DestroyThreadpoolEnvironment(&Environment);
 }
 
-void ThreadPool::QueueThreadpoolWork(PTP_WORK_CALLBACK Callback, PVOID Context)
+void ThreadPool::QueueThreadpoolWork(ThreadpoolWork&& Callback, PVOID Context)
 {
 	assert(Callback);
 
-	PTP_WORK Work = CreateThreadpoolWork(Callback, Context, &Environment);
-	if (!Work)
+	std::unique_ptr<WorkEntry> Entry(new (std::nothrow) WorkEntry());
+	if (Entry)
 	{
-		throw std::exception("CreateThreadpoolWork failed");
+		Entry->Work	   = std::move(Callback);
+		Entry->Context = Context;
+
+		PTP_WORK Work = CreateThreadpoolWork(ThreadpoolWorkCallback, Entry.release(), &Environment);
+		if (!Work)
+		{
+			throw std::exception("CreateThreadpoolWork failed");
+		}
+		SubmitThreadpoolWork(Work);
 	}
-	SubmitThreadpoolWork(Work);
+}
+
+VOID NTAPI ThreadPool::ThreadpoolWorkCallback(
+	_Inout_ PTP_CALLBACK_INSTANCE Instance,
+	_Inout_opt_ PVOID			  Context,
+	_Inout_ PTP_WORK			  Work) noexcept
+{
+	UNREFERENCED_PARAMETER(Instance);
+	auto Entry = static_cast<WorkEntry*>(Context);
+	Entry->Work(Entry->Context);
+	delete Entry;
+	CloseThreadpoolWork(Work);
 }
