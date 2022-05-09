@@ -32,10 +32,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	RHI::D3D12UnorderedAccessView Uav = RHI::D3D12UnorderedAccessView{ Device.GetLinkedDevice(), &Lut, {}, {} };
 
 	ShaderCompileOptions Options(L"CSMain");
-	Shader				 Shader = Compiler.CompileShader(
-		  RHI_SHADER_TYPE::Compute,
-		  Process::ExecutableDirectory / "Shaders/Utility/BRDFLUT.cs.hlsl",
-		  Options);
+	Shader				 Shader = Compiler.CompileCS(Process::ExecutableDirectory / "Shaders/Utility/BRDFLUT.cs.hlsl", Options);
 
 	RHI::D3D12RootSignature RootSignature = Device.CreateRootSignature(
 		RHI::RootSignatureDesc()

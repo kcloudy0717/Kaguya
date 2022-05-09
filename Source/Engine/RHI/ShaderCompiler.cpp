@@ -78,6 +78,46 @@ Shader ShaderCompiler::CompileShader(
 	return { ShaderType, Result.ShaderHash, Result.Binary, Result.Pdb };
 }
 
+Shader ShaderCompiler::CompileVS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Vertex, Path, Options);
+}
+
+Shader ShaderCompiler::CompileHS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Hull, Path, Options);
+}
+
+Shader ShaderCompiler::CompileDS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Domain, Path, Options);
+}
+
+Shader ShaderCompiler::CompileGS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Geometry, Path, Options);
+}
+
+Shader ShaderCompiler::CompilePS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Pixel, Path, Options);
+}
+
+Shader ShaderCompiler::CompileCS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Compute, Path, Options);
+}
+
+Shader ShaderCompiler::CompileAS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Amplification, Path, Options);
+}
+
+Shader ShaderCompiler::CompileMS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
+{
+	return CompileShader(RHI_SHADER_TYPE::Mesh, Path, Options);
+}
+
 Library ShaderCompiler::CompileLibrary(
 	const std::filesystem::path& Path) const
 {
@@ -194,8 +234,8 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	VERIFY_DXC_API(Utils->LoadFile(Path.c_str(), nullptr, &Source));
 
 	DxcBuffer SourceBuffer = {
-		.Ptr = Source->GetBufferPointer(),
-		.Size = Source->GetBufferSize(),
+		.Ptr	  = Source->GetBufferPointer(),
+		.Size	  = Source->GetBufferSize(),
 		.Encoding = DXC_CP_ACP
 	};
 	ComPtr<IDxcResult> DxcResult;

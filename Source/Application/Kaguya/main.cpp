@@ -10,6 +10,8 @@
 #define SET_LEAK_BREAKPOINT(x)
 #endif
 
+#include "External/IconsFontAwesome5.h"
+
 #include "System/System.h"
 #include "System/Application.h"
 #include "System/IApplicationMessageHandler.h"
@@ -47,6 +49,20 @@ public:
 		ImGui::CreateContext();
 		ImGui::StyleColorsDark();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+		ImFontConfig IconsConfig;
+		IconsConfig.OversampleH = 2;
+		IconsConfig.OversampleV = 2;
+		ImGui::GetIO().Fonts->AddFontFromFileTTF("Assets/Fonts/CascadiaMono.ttf", 15.0f, &IconsConfig);
+
+		// merge in icons from Font Awesome
+		static constexpr ImWchar IconsRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+		IconsConfig.MergeMode				   = true;
+		IconsConfig.PixelSnapH				   = true;
+		IconsConfig.GlyphOffset				   = { 0.0f, 1.0f };
+		IconsConfig.GlyphMinAdvanceX		   = 15.0f;
+		ImGui::GetIO().Fonts->AddFontFromFileTTF("Assets/Fonts/" FONT_ICON_FILE_NAME_FAR, 15.0f, &IconsConfig, IconsRanges);
+		// use FONT_ICON_FILE_NAME_FAR if you want regular instead of solid
 
 		constexpr auto ColorFromBytes = [](uint8_t r, uint8_t g, uint8_t b)
 		{
@@ -284,7 +300,7 @@ public:
 
 			if (ImGui::BeginMainMenuBar())
 			{
-				if (ImGui::BeginMenu("File"))
+				if (ImGui::BeginMenu(ICON_FA_FILE " File"))
 				{
 					FilterDesc ComDlgFS[] = { { L"Scene File", L"*.json" }, { L"All Files (*.*)", L"*.*" } };
 
@@ -310,7 +326,7 @@ public:
 
 					ImGui::EndMenu();
 				}
-				if (ImGui::BeginMenu("Edit"))
+				if (ImGui::BeginMenu(ICON_FA_EDIT " Edit"))
 				{
 					if (ImGui::MenuItem("Undo", "CTRL+Z"))
 					{

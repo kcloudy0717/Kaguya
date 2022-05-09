@@ -22,10 +22,10 @@ private:
 
 struct ShaderCompilationResult
 {
-	Microsoft::WRL::ComPtr<IDxcBlob>			   Binary;
-	std::wstring								   PdbName;
-	Microsoft::WRL::ComPtr<IDxcBlob>			   Pdb;
-	DxcShaderHash								   ShaderHash;
+	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
+	std::wstring					 PdbName;
+	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
+	DxcShaderHash					 ShaderHash;
 };
 
 class ShaderCompiler
@@ -38,6 +38,38 @@ public:
 
 	[[nodiscard]] Shader CompileShader(
 		RHI_SHADER_TYPE				 ShaderType,
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileVS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileHS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileDS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileGS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompilePS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileCS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileAS(
+		const std::filesystem::path& Path,
+		const ShaderCompileOptions&	 Options) const;
+
+	[[nodiscard]] Shader CompileMS(
 		const std::filesystem::path& Path,
 		const ShaderCompileOptions&	 Options) const;
 
