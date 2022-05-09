@@ -53,7 +53,7 @@ public:
 		ImFontConfig IconsConfig;
 		IconsConfig.OversampleH = 2;
 		IconsConfig.OversampleV = 2;
-		ImGui::GetIO().Fonts->AddFontFromFileTTF("Assets/Fonts/CascadiaMono.ttf", 15.0f, &IconsConfig);
+		ImGui::GetIO().Fonts->AddFontFromFileTTF("Resources/Fonts/CascadiaMono.ttf", 15.0f, &IconsConfig);
 
 		// merge in icons from Font Awesome
 		static constexpr ImWchar IconsRanges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
@@ -61,7 +61,7 @@ public:
 		IconsConfig.PixelSnapH				   = true;
 		IconsConfig.GlyphOffset				   = { 0.0f, 1.0f };
 		IconsConfig.GlyphMinAdvanceX		   = 15.0f;
-		ImGui::GetIO().Fonts->AddFontFromFileTTF("Assets/Fonts/" FONT_ICON_FILE_NAME_FAR, 15.0f, &IconsConfig, IconsRanges);
+		ImGui::GetIO().Fonts->AddFontFromFileTTF("Resources/Fonts/" FONT_ICON_FILE_NAME_FAR, 15.0f, &IconsConfig, IconsRanges);
 		// use FONT_ICON_FILE_NAME_FAR if you want regular instead of solid
 
 		constexpr auto ColorFromBytes = [](uint8_t r, uint8_t g, uint8_t b)
