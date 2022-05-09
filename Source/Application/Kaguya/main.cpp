@@ -397,6 +397,7 @@ public:
 					CameraComponent().StrafeSpeed,
 					1.0f,
 					1000.0f);
+				EditorCamera.CameraComponent.Dirty = IsEdited;
 			}
 			ImGui::End();
 

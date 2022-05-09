@@ -207,25 +207,11 @@ void WorldArchive::Load(
 		for (const auto& JsonEntity : JsonWorld)
 		{
 			Actor Actor = World->CreateActor();
-
 			ComponentDeserializer<CoreComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<CameraComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<LightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<SkyLightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Actor);
-
-			if (Actor.HasComponent<CameraComponent>())
-			{
-				auto& CameraComp = Actor.GetComponent<CameraComponent>();
-				*Camera			 = CameraComp;
-
-				CoreComponent& Core = Actor.GetComponent<CoreComponent>();
-				if (Core.Name == "Main Camera")
-				{
-					Camera->Transform = Core.Transform;
-				}
-			}
-
 			if (Actor.HasComponent<SkyLightComponent>())
 			{
 				auto& SkyLight		  = Actor.GetComponent<SkyLightComponent>();
@@ -233,7 +219,6 @@ void WorldArchive::Load(
 				SkyLight.Handle.State = false;
 				SkyLight.Handle.Id	  = SkyLight.HandleId;
 			}
-
 			if (Actor.HasComponent<StaticMeshComponent>())
 			{
 				auto& StaticMesh		= Actor.GetComponent<StaticMeshComponent>();

@@ -22,16 +22,11 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 {
 	WorldState = EWorldState_Update;
 	Registry.clear();
-	ActiveCameraActor	= {};
 	ActiveSkyLightActor = {};
-	ActiveCamera		= nullptr;
 	ActiveSkyLight		= nullptr;
 	Actors.clear();
 	if (AddDefaultEntities)
 	{
-		ActiveCameraActor = CreateActor("Main Camera");
-		ActiveCameraActor.AddComponent<CameraComponent>();
-
 		ActiveSkyLightActor = CreateActor("Main Sky Light");
 		ActiveSkyLightActor.AddComponent<SkyLightComponent>();
 	}
@@ -40,7 +35,7 @@ void World::Clear(bool AddDefaultEntities /*= true*/)
 void World::DestroyActor(size_t Index)
 {
 	Actor Entity = Actors[Index];
-	if (Entity == ActiveCameraActor || Entity == ActiveSkyLightActor)
+	if (Entity == ActiveSkyLightActor)
 	{
 		return;
 	}
@@ -130,15 +125,6 @@ void World::OnComponentAdded<CoreComponent>(Actor Actor, CoreComponent& Componen
 template<>
 void World::OnComponentAdded<CameraComponent>(Actor Actor, CameraComponent& Component)
 {
-	if (!ActiveCamera)
-	{
-		ActiveCameraActor = Actor;
-		ActiveCamera	  = &Component;
-	}
-	else
-	{
-		Component.Main = false;
-	}
 }
 
 template<>

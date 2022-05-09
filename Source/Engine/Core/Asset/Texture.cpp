@@ -225,8 +225,8 @@ namespace Asset
 
 		FileStream	 Stream(Path, FileMode::Create);
 		BinaryWriter Writer(Stream);
-		Writer.Write(DDS_MAGIC);
-		Writer.Write(Header);
+		Writer << DDS_MAGIC;
+		Writer << Header;
 		Writer.Write(Pixels.get(), RowSizeInBytes * NumRows);
 	}
 } // namespace Asset

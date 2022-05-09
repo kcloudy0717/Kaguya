@@ -9,5 +9,6 @@ BinaryWriter::BinaryWriter(FileStream& Stream)
 
 void BinaryWriter::Write(const void* Data, u64 SizeInBytes) const
 {
-	Stream.Write(Data, SizeInBytes);
+	u64 BytesWritten = Stream.Write(Data, SizeInBytes);
+	assert(BytesWritten == SizeInBytes);
 }

@@ -1,5 +1,4 @@
 #pragma once
-#include <span>
 #include <string>
 #include <string_view>
 #include <DirectXMath.h>

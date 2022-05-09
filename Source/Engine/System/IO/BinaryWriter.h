@@ -28,6 +28,14 @@ public:
 		Write(Object.data(), Object.size() * sizeof(std::wstring::value_type));
 	}
 
+	template<typename T>
+	requires std::is_trivial_v<T>
+		BinaryWriter& operator<<(const T& Object)
+	{
+		Write(Object);
+		return *this;
+	}
+
 private:
 	FileStream& Stream;
 };

@@ -46,12 +46,12 @@ public:
 	DirectX::XMFLOAT4X4 PrevViewProjection;
 
 	bool Dirty = true;
-	bool Main  = true;
 };
 
 REGISTER_CLASS_ATTRIBUTES(
 	CameraComponent,
 	"Camera",
+	CLASS_ATTRIBUTE(CameraComponent, Transform),
 	CLASS_ATTRIBUTE(CameraComponent, FoVY),
 	CLASS_ATTRIBUTE(CameraComponent, AspectRatio),
 	CLASS_ATTRIBUTE(CameraComponent, NearZ),

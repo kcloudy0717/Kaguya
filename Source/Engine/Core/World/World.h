@@ -51,10 +51,7 @@ public:
 	EWorldState	   WorldState = EWorldState::EWorldState_Render;
 	entt::registry Registry;
 
-	Actor ActiveCameraActor;
-	Actor ActiveSkyLightActor;
-
-	CameraComponent*   ActiveCamera	  = nullptr;
+	Actor			   ActiveSkyLightActor;
 	SkyLightComponent* ActiveSkyLight = nullptr;
 	std::vector<Actor> Actors;
 };
