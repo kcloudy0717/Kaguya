@@ -1,33 +1,13 @@
-// main.cpp : Defines the entry point for the application.
-#if defined(_DEBUG)
-// memory leak
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#define ENABLE_LEAK_DETECTION() _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF)
-#define SET_LEAK_BREAKPOINT(x)	_CrtSetBreakAlloc(x)
-#else
-#define ENABLE_LEAK_DETECTION()
-#define SET_LEAK_BREAKPOINT(x)
-#endif
-
 #include "External/IconsFontAwesome5.h"
-
 #include "System/System.h"
 #include "System/Application.h"
 #include "System/IApplicationMessageHandler.h"
-
 #include "Core/World/World.h"
 #include "Core/World/WorldArchive.h"
-
 #include "DeferredRenderer.h"
 #include "PathIntegratorDXR1_0.h"
 #include "PathIntegratorDXR1_1.h"
-
-// File loader
-#include "MitsubaLoader.h"
-
 #include "Globals.h"
-
 #include "UI/WorldWindow.h"
 #include "UI/InspectorWindow.h"
 #include "UI/AssetWindow.h"
@@ -240,8 +220,6 @@ public:
 
 	bool Initialize() override
 	{
-		// WorldArchive::Load(ExecutableDirectory / "Assets/Scenes/cornellbox.json", World);
-
 		std::string IniFile = (Process::ExecutableDirectory / "imgui.ini").string();
 		ImGui::LoadIniSettingsFromDisk(IniFile.data());
 
@@ -312,7 +290,6 @@ public:
 							WorldArchive::Save(Path.replace_extension(".json"), World, &EditorCamera.CameraComponent, Kaguya::AssetManager);
 						}
 					}
-
 					if (ImGui::MenuItem("Load"))
 					{
 						std::filesystem::path Path = FileSystem::OpenDialog(ComDlgFS);
@@ -576,9 +553,6 @@ public:
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-	ENABLE_LEAK_DETECTION();
-	SET_LEAK_BREAKPOINT(-1);
-
 	Editor				Editor;
 	ImGuiContextManager ImGui;
 
@@ -613,10 +587,6 @@ int main(int /*argc*/, char* /*argv*/[])
 
 	World			World(Kaguya::AssetManager);
 	WorldRenderView WorldRenderView(Kaguya::Device->GetLinkedDevice());
-
-	// MitsubaLoader::Load("Assets/Models/coffee/scene.xml", Kaguya::AssetManager, &World);
-	// MitsubaLoader::Load("Assets/Models/bathroom/scene.xml", Kaguya::AssetManager, &World);
-	// MitsubaLoader::Load("Assets/Models/staircase2/scene.xml", Kaguya::AssetManager, &World);
 
 	Editor.MainWindow	   = &MainWindow;
 	Editor.SwapChain	   = &SwapChain;
