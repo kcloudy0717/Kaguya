@@ -22,7 +22,6 @@ namespace RHI
 		, DescriptorSizeCache(InitializeDescriptorSizeCache())
 		, Dred(Device.Get())
 		, LinkedDevice(this, D3D12NodeMask::FromIndex(0))
-		, PsoCompilationThreadPool(std::make_unique<ThreadPool>())
 	{
 		VERIFY_D3D12_API(DStorageGetFactory(IID_PPV_ARGS(&DStorageFactory)));
 

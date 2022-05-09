@@ -52,7 +52,6 @@ namespace RHI
 		[[nodiscard]] auto GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
 		[[nodiscard]] auto GetLinkedDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
 		[[nodiscard]] bool AllowAsyncPsoCompilation() const noexcept;
-		[[nodiscard]] auto GetPsoCompilationThreadPool() const noexcept -> ThreadPool* { return PsoCompilationThreadPool.get(); }
 
 		[[nodiscard]] bool SupportsWaveIntrinsics() const noexcept;
 		[[nodiscard]] bool SupportsRaytracing() const noexcept;
@@ -158,7 +157,6 @@ namespace RHI
 		// Represents a single node
 		// TODO: Add Multi-Adapter support
 		D3D12LinkedDevice					  LinkedDevice;
-		std::unique_ptr<ThreadPool>			  PsoCompilationThreadPool;
 
 		mutable HRESULT CaptureStatus = S_FALSE;
 	};

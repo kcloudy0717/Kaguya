@@ -128,15 +128,13 @@ namespace RHI
 
 		void await_suspend(std::coroutine_handle<> handle) const
 		{
-			Device->GetPsoCompilationThreadPool()->QueueThreadpoolWork(
+			Process::ThreadPool.QueueThreadpoolWork(
 				[](void* Context)
 				{
 					std::coroutine_handle<>::from_address(Context)();
 				},
 				handle.address());
 		}
-
-		D3D12Device* Device;
 	};
 
 	D3D12PipelineState::D3D12PipelineState(
@@ -169,7 +167,7 @@ namespace RHI
 	{
 		if (Device->AllowAsyncPsoCompilation())
 		{
-			co_await awaitable_CompilePsoThread{ Device };
+			co_await awaitable_CompilePsoThread{};
 		}
 		else
 		{

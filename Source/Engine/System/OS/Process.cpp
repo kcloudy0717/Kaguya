@@ -13,3 +13,5 @@ const std::filesystem::path Process::ExecutableDirectory = []
 
 	return Path;
 }();
+
+ThreadPool Process::ThreadPool;
