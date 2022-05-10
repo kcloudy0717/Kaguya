@@ -12,10 +12,12 @@ namespace RHI
 		for (auto Resource : Resources)
 		{
 			// Only allow buffers/textures
-			assert(Resource.IsValid());
-			assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
-			Reads.insert(Resource);
-			ReadWrites.insert(Resource);
+			if (Resource.IsValid())
+			{
+				assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
+				Reads.insert(Resource);
+				ReadWrites.insert(Resource);
+			}
 		}
 		return *this;
 	}
@@ -25,11 +27,13 @@ namespace RHI
 		for (auto Resource : Resources)
 		{
 			// Only allow buffers/textures
-			assert(Resource && Resource->IsValid());
-			assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
-			Resource->Version++;
-			Writes.insert(*Resource);
-			ReadWrites.insert(*Resource);
+			if (Resource && Resource->IsValid())
+			{
+				assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
+				Resource->Version++;
+				Writes.insert(*Resource);
+				ReadWrites.insert(*Resource);
+			}
 		}
 		return *this;
 	}

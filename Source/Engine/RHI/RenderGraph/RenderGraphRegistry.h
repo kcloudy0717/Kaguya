@@ -65,27 +65,27 @@ namespace RHI
 		{
 			if constexpr (std::is_same_v<T, D3D12Buffer>)
 			{
-				return Buffers;
+				return BufferCache;
 			}
 			else if constexpr (std::is_same_v<T, D3D12Texture>)
 			{
-				return Textures;
+				return TextureCache;
 			}
 			else if constexpr (std::is_same_v<T, D3D12RenderTargetView>)
 			{
-				return RenderTargetViews;
+				return RtvCache;
 			}
 			else if constexpr (std::is_same_v<T, D3D12DepthStencilView>)
 			{
-				return DepthStencilViews;
+				return DsvCache;
 			}
 			else if constexpr (std::is_same_v<T, D3D12ShaderResourceView>)
 			{
-				return ShaderResourceViews;
+				return SrvCache;
 			}
 			else if constexpr (std::is_same_v<T, D3D12UnorderedAccessView>)
 			{
-				return UnorderedAccessViews;
+				return UavCache;
 			}
 		}
 
@@ -103,11 +103,11 @@ namespace RHI
 		robin_hood::unordered_map<RgResourceHandle, RgTextureDesc> TextureDescTable;
 		robin_hood::unordered_map<RgResourceHandle, RgViewDesc>	   ViewDescTable;
 
-		std::vector<D3D12Buffer>			  Buffers;
-		std::vector<D3D12Texture>			  Textures;
-		std::vector<D3D12RenderTargetView>	  RenderTargetViews;
-		std::vector<D3D12DepthStencilView>	  DepthStencilViews;
-		std::vector<D3D12ShaderResourceView>  ShaderResourceViews;
-		std::vector<D3D12UnorderedAccessView> UnorderedAccessViews;
+		std::vector<D3D12Buffer>			  BufferCache;
+		std::vector<D3D12Texture>			  TextureCache;
+		std::vector<D3D12RenderTargetView>	  RtvCache;
+		std::vector<D3D12DepthStencilView>	  DsvCache;
+		std::vector<D3D12ShaderResourceView>  SrvCache;
+		std::vector<D3D12UnorderedAccessView> UavCache;
 	};
 } // namespace RHI

@@ -182,8 +182,16 @@ public:
 		CameraComponent.Update();
 	}
 
+	void OnRawMouseMove(float dx, float dy)
+	{
+		CameraComponent.Rotate(
+			dy * CameraComponent.MouseSensitivityY,
+			dx * CameraComponent.MouseSensitivityX,
+			0.0f);
+	}
+
 	// https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/MiniEngine/Core/CameraController.cpp
-	void ApplyMomentum(float& OldValue, float& NewValue, float DeltaTime)
+	void ApplyMomentum(float& OldValue, float& NewValue, float DeltaTime) const noexcept
 	{
 		float BlendedValue;
 		if (abs(NewValue) > abs(OldValue))
@@ -466,12 +474,7 @@ public:
 		{
 			if (MainWindow->IsUsingRawInput())
 			{
-				auto& CameraComponent = EditorCamera.CameraComponent;
-
-				CameraComponent.Rotate(
-					static_cast<float>(Y) * DeltaTime * CameraComponent.MouseSensitivityY,
-					static_cast<float>(X) * DeltaTime * CameraComponent.MouseSensitivityX,
-					0.0f);
+				EditorCamera.OnRawMouseMove(static_cast<float>(X) * DeltaTime, static_cast<float>(Y) * DeltaTime);
 			}
 		}
 	}

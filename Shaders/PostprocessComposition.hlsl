@@ -21,13 +21,17 @@ float3 LinearTosRGB(float3 x)
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
 {
 	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
-	Texture2D			Bloom  = HLSL_TEXTURE2D(BloomIndex);
 	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
 
-	// Bloom
-	float2 UV	 = float2(Params.DispatchThreadID.xy + 0.5f) * InverseOutputSize;
 	float4 Color = Input[Params.DispatchThreadID.xy];
-	Color += BloomIntensity * Bloom.SampleLevel(g_SamplerLinearClamp, UV, 0.0f);
+
+	// Bloom
+	if (BloomIndex != -1)
+	{
+		Texture2D Bloom = HLSL_TEXTURE2D(BloomIndex);
+		float2	  UV	= float2(Params.DispatchThreadID.xy + 0.5f) * InverseOutputSize;
+		Color += BloomIntensity * Bloom.SampleLevel(g_SamplerLinearClamp, UV, 0.0f);
+	}
 
 	// Tonemap
 	Color.rgb = ACESFitted(Color.rgb);

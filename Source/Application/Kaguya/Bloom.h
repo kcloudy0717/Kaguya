@@ -8,6 +8,7 @@
 
 struct BloomSettings
 {
+	bool  Enable	= true;
 	float Threshold = 3.5f;
 };
 

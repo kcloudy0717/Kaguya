@@ -38,6 +38,7 @@ void PathIntegratorDXR1_1::RenderOptions()
 		&PathIntegratorState::MinimumDepth,
 		&PathIntegratorState::MaximumDepth);
 
+	ImGui::Checkbox("Enable Bloom", &g_Bloom.Enable);
 	ImGui::SliderFloat("Bloom Threshold", &g_Bloom.Threshold, 0.0f, 50.0f);
 	ImGui::SliderFloat("Bloom Intensity", &g_Tonemap.BloomIntensity, 0.0f, 50.0f);
 
@@ -140,10 +141,14 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 				Context.UAVBarrier(nullptr);
 			});
 
-	BloomInputParameters BloomInputArgs = {};
-	BloomInputArgs.Input				= PathTraceArgs.Output;
-	BloomInputArgs.Srv					= PathTraceArgs.Srv;
-	BloomParameters BloomArgs			= AddBloomPass(Graph, WorldRenderView->View, BloomInputArgs, g_Bloom);
+	BloomParameters BloomArgs = {};
+	if (g_Bloom.Enable)
+	{
+		BloomInputParameters BloomInputArgs = {};
+		BloomInputArgs.Input				= PathTraceArgs.Output;
+		BloomInputArgs.Srv					= PathTraceArgs.Srv;
+		BloomArgs							= AddBloomPass(Graph, WorldRenderView->View, BloomInputArgs, g_Bloom);
+	}
 
 	TonemapInputParameters TonemapInputArgs = {};
 	TonemapInputArgs.Input					= PathTraceArgs.Output;
@@ -159,9 +164,9 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 
 	Graph.Execute(Context);
 
-	//DgmlBuilder Builder("Render Graph");
-	//Graph.ExportDgml(Builder);
-	//Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
+	// DgmlBuilder Builder("Render Graph");
+	// Graph.ExportDgml(Builder);
+	// Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
 
 	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
 }

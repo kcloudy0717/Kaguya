@@ -33,15 +33,33 @@ namespace RHI
 		return RaytracingPipelineStateRegistry.GetResource(Handle);
 	}
 
+	template<typename T>
+	bool ClearCache(bool ShouldClear, T& Cache, size_t NewSize)
+	{
+		if (ShouldClear)
+		{
+			T().swap(Cache);
+			Cache.resize(NewSize);
+		}
+		return ShouldClear;
+	}
+
 	void RenderGraphRegistry::RealizeResources(RenderGraph* Graph, D3D12Device* Device)
 	{
 		this->Graph = Graph;
-		Buffers.resize(Graph->Buffers.size());
-		Textures.resize(Graph->Textures.size());
-		RenderTargetViews.resize(Graph->RenderTargetViews.size());
-		DepthStencilViews.resize(Graph->DepthStencilViews.size());
-		ShaderResourceViews.resize(Graph->ShaderResourceViews.size());
-		UnorderedAccessViews.resize(Graph->UnorderedAccessViews.size());
+
+		if (ClearCache(BufferCache.size() != Graph->Buffers.size(), BufferCache, Graph->Buffers.size()))
+		{
+			BufferDescTable.clear();
+		}
+		if (ClearCache(TextureCache.size() != Graph->Textures.size(), TextureCache, Graph->Textures.size()))
+		{
+			TextureDescTable.clear();
+		}
+		ClearCache(RtvCache.size() != Graph->Rtvs.size(), RtvCache, Graph->Rtvs.size());
+		ClearCache(DsvCache.size() != Graph->Dsvs.size(), DsvCache, Graph->Dsvs.size());
+		ClearCache(SrvCache.size() != Graph->Srvs.size(), SrvCache, Graph->Srvs.size());
+		ClearCache(UavCache.size() != Graph->Uavs.size(), UavCache, Graph->Uavs.size());
 
 		// This is used to check to see if any view associated with the texture needs to be updated in case if texture is dirty
 		// The view does not check for this, so do it here manually
@@ -106,60 +124,58 @@ namespace RHI
 			case RgTextureType::TextureCube:
 				ResourceDesc = CD3DX12_RESOURCE_DESC::Tex2D(Desc.Format, Desc.Width, Desc.Height, Desc.DepthOrArraySize, Desc.MipLevels, 1, 0, ResourceFlags);
 				break;
-			default:
-				break;
 			}
 
-			Textures[i]		  = D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, ClearValue);
+			TextureCache[i]	  = D3D12Texture(Device->GetLinkedDevice(), ResourceDesc, ClearValue);
 			std::wstring Name = std::wstring(RgTexture.Desc.Name.begin(), RgTexture.Desc.Name.end());
-			Textures[i].GetResource()->SetName(Name.data());
+			TextureCache[i].GetResource()->SetName(Name.data());
 		}
 
-		for (size_t i = 0; i < Graph->RenderTargetViews.size(); ++i)
+		for (size_t i = 0; i < Graph->Rtvs.size(); ++i)
 		{
-			const auto& RgView = Graph->RenderTargetViews[i];
+			const auto& RgView = Graph->Rtvs[i];
 			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
 			{
 				continue;
 			}
 
-			std::optional<UINT> ArraySlice = RgView.Desc.RgRtv.ArraySlice != -1 ? RgView.Desc.RgRtv.ArraySlice : std::optional<UINT>{};
-			std::optional<UINT> MipSlice   = RgView.Desc.RgRtv.MipSlice != -1 ? RgView.Desc.RgRtv.MipSlice : std::optional<UINT>{};
-			std::optional<UINT> ArraySize  = RgView.Desc.RgRtv.ArraySize != -1 ? RgView.Desc.RgRtv.ArraySize : std::optional<UINT>{};
+			std::optional<UINT> ArraySlice = RgView.Desc.Rtv.ArraySlice != -1 ? RgView.Desc.Rtv.ArraySlice : std::optional<UINT>{};
+			std::optional<UINT> MipSlice   = RgView.Desc.Rtv.MipSlice != -1 ? RgView.Desc.Rtv.MipSlice : std::optional<UINT>{};
+			std::optional<UINT> ArraySize  = RgView.Desc.Rtv.ArraySize != -1 ? RgView.Desc.Rtv.ArraySize : std::optional<UINT>{};
 			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				RenderTargetViews[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RtvCache[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.Rtv.sRGB);
 			}
 			else
 			{
-				RenderTargetViews[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.RgRtv.sRGB);
+				RtvCache[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.Rtv.sRGB);
 			}
 		}
 
-		for (size_t i = 0; i < Graph->DepthStencilViews.size(); ++i)
+		for (size_t i = 0; i < Graph->Dsvs.size(); ++i)
 		{
-			const auto& RgView = Graph->DepthStencilViews[i];
+			const auto& RgView = Graph->Dsvs[i];
 			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
 			{
 				continue;
 			}
 
-			std::optional<UINT> ArraySlice = RgView.Desc.RgDsv.ArraySlice != -1 ? RgView.Desc.RgDsv.ArraySlice : std::optional<UINT>{};
-			std::optional<UINT> MipSlice   = RgView.Desc.RgDsv.MipSlice != -1 ? RgView.Desc.RgDsv.MipSlice : std::optional<UINT>{};
-			std::optional<UINT> ArraySize  = RgView.Desc.RgDsv.ArraySize != -1 ? RgView.Desc.RgDsv.ArraySize : std::optional<UINT>{};
+			std::optional<UINT> ArraySlice = RgView.Desc.Dsv.ArraySlice != -1 ? RgView.Desc.Dsv.ArraySlice : std::optional<UINT>{};
+			std::optional<UINT> MipSlice   = RgView.Desc.Dsv.MipSlice != -1 ? RgView.Desc.Dsv.MipSlice : std::optional<UINT>{};
+			std::optional<UINT> ArraySize  = RgView.Desc.Dsv.ArraySize != -1 ? RgView.Desc.Dsv.ArraySize : std::optional<UINT>{};
 			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				DepthStencilViews[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
+				DsvCache[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
 			}
 			else
 			{
-				DepthStencilViews[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
+				DsvCache[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
 			}
 		}
 
-		for (size_t i = 0; i < Graph->ShaderResourceViews.size(); ++i)
+		for (size_t i = 0; i < Graph->Srvs.size(); ++i)
 		{
-			const auto& RgView = Graph->ShaderResourceViews[i];
+			const auto& RgView = Graph->Srvs[i];
 			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
 			{
 				continue;
@@ -169,7 +185,7 @@ namespace RHI
 			{
 			case RgViewType::BufferSrv:
 			{
-				ShaderResourceViews[i] = D3D12ShaderResourceView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferSrv.Raw, RgView.Desc.BufferSrv.FirstElement, RgView.Desc.BufferSrv.NumElements);
+				SrvCache[i] = D3D12ShaderResourceView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferSrv.Raw, RgView.Desc.BufferSrv.FirstElement, RgView.Desc.BufferSrv.NumElements);
 			}
 			break;
 
@@ -179,7 +195,7 @@ namespace RHI
 				bool				sRGB			= RgView.Desc.TextureSrv.sRGB;
 				std::optional<UINT> MostDetailedMip = RgView.Desc.TextureSrv.MostDetailedMip != -1 ? RgView.Desc.TextureSrv.MostDetailedMip : std::optional<UINT>{};
 				std::optional<UINT> MipLevels		= RgView.Desc.TextureSrv.MipLevels != -1 ? RgView.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
-				ShaderResourceViews[i]				= D3D12ShaderResourceView(Device->GetLinkedDevice(), Resource, sRGB, MostDetailedMip, MipLevels);
+				SrvCache[i]							= D3D12ShaderResourceView(Device->GetLinkedDevice(), Resource, sRGB, MostDetailedMip, MipLevels);
 			}
 			break;
 
@@ -188,9 +204,9 @@ namespace RHI
 			}
 		}
 
-		for (size_t i = 0; i < Graph->UnorderedAccessViews.size(); ++i)
+		for (size_t i = 0; i < Graph->Uavs.size(); ++i)
 		{
-			const auto& RgView = Graph->UnorderedAccessViews[i];
+			const auto& RgView = Graph->Uavs[i];
 			if (!IsViewDirty(RgView) && !TextureDirtyHandles.contains(RgView.Desc.AssociatedResource))
 			{
 				continue;
@@ -200,7 +216,7 @@ namespace RHI
 			{
 			case RgViewType::BufferUav:
 			{
-				UnorderedAccessViews[i] = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferUav.NumElements, RgView.Desc.BufferUav.CounterOffsetInBytes);
+				UavCache[i] = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferUav.NumElements, RgView.Desc.BufferUav.CounterOffsetInBytes);
 			}
 			break;
 
@@ -209,7 +225,7 @@ namespace RHI
 				D3D12Texture*		Resource   = Get<D3D12Texture>(RgView.Desc.AssociatedResource);
 				std::optional<UINT> ArraySlice = RgView.Desc.TextureUav.ArraySlice != -1 ? RgView.Desc.TextureUav.ArraySlice : std::optional<UINT>{};
 				std::optional<UINT> MipSlice   = RgView.Desc.TextureUav.MipSlice != -1 ? RgView.Desc.TextureUav.MipSlice : std::optional<UINT>{};
-				UnorderedAccessViews[i]		   = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Resource, ArraySlice, MipSlice);
+				UavCache[i]					   = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Resource, ArraySlice, MipSlice);
 			}
 			break;
 
@@ -227,7 +243,7 @@ namespace RHI
 
 	bool RenderGraphRegistry::IsViewDirty(const RgView& View)
 	{
-		RgResourceHandle Handle = View.Handle; // View andle
+		RgResourceHandle Handle = View.Handle; // View handle
 
 		bool ViewDirty;
 		auto Iter = ViewDescTable.find(Handle);

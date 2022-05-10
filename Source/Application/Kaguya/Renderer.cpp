@@ -22,19 +22,7 @@ void Renderer::OnRenderOptions()
 
 void Renderer::OnRender(RHI::D3D12CommandContext& Context, World* World, WorldRenderView* WorldRenderView)
 {
-	/*static bool CaptureOnce = false;
-	if (!CaptureOnce)
-	{
-		RenderCore::Device->BeginCapture(Application::ExecutableDirectory / "GPU 0.wpix");
-	}*/
-
 	D3D12ScopedEvent(Context, "Render");
 	this->Render(World, WorldRenderView, Context);
-
 	++FrameIndex;
-	/*if (!CaptureOnce)
-	{
-		CaptureOnce = true;
-		RenderCore::Device->EndCapture();
-	}*/
 }

@@ -189,19 +189,19 @@ namespace RHI
 			}
 			else if constexpr (std::is_same_v<T, D3D12RenderTargetView>)
 			{
-				return RenderTargetViews;
+				return Rtvs;
 			}
 			else if constexpr (std::is_same_v<T, D3D12DepthStencilView>)
 			{
-				return DepthStencilViews;
+				return Dsvs;
 			}
 			else if constexpr (std::is_same_v<T, D3D12ShaderResourceView>)
 			{
-				return ShaderResourceViews;
+				return Srvs;
 			}
 			else if constexpr (std::is_same_v<T, D3D12UnorderedAccessView>)
 			{
-				return UnorderedAccessViews;
+				return Uavs;
 			}
 		}
 
@@ -215,10 +215,10 @@ namespace RHI
 
 		std::vector<RgBuffer>  Buffers;
 		std::vector<RgTexture> Textures;
-		std::vector<RgView>	   RenderTargetViews;
-		std::vector<RgView>	   DepthStencilViews;
-		std::vector<RgView>	   ShaderResourceViews;
-		std::vector<RgView>	   UnorderedAccessViews;
+		std::vector<RgView>	   Rtvs;
+		std::vector<RgView>	   Dsvs;
+		std::vector<RgView>	   Srvs;
+		std::vector<RgView>	   Uavs;
 
 		std::vector<RenderPass*> RenderPasses;
 		RenderPass*				 ProloguePass;

@@ -32,12 +32,14 @@ struct TonemapParameters
 	RHI::RgResourceHandle Uav;
 };
 
-static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& View, TonemapInputParameters Inputs, TonemapSettings Settings = TonemapSettings())
+static TonemapParameters AddTonemapPass(
+	RHI::RenderGraph&	   Graph,
+	const View&			   View,
+	TonemapInputParameters Inputs,
+	TonemapSettings		   Settings = TonemapSettings())
 {
 	assert(Inputs.Input.IsValid());
-	assert(Inputs.BloomInput.IsValid());
 	assert(Inputs.Srv.IsValid());
-	assert(Inputs.BloomInputSrv.IsValid());
 
 	TonemapParameters TonemapArgs;
 
@@ -64,8 +66,16 @@ static TonemapParameters AddTonemapPass(RHI::RenderGraph& Graph, const View& Vie
 				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
 				Args.BloomIntensity	   = Settings.BloomIntensity;
 				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
-				Args.Bloom			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
 				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);
+
+				if (Inputs.BloomInput.IsValid())
+				{
+					Args.Bloom = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
+				}
+				else
+				{
+					Args.Bloom.Handle = -1;
+				}
 
 				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));
 				Context.SetComputeRootSignature(Registry.GetRootSignature(RootSignatures::Tonemap));

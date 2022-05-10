@@ -254,20 +254,20 @@ namespace RHI
 
 		RgViewDesc& AsRtv(bool sRGB, std::optional<UINT> OptArraySlice = std::nullopt, std::optional<UINT> OptMipSlice = std::nullopt, std::optional<UINT> OptArraySize = std::nullopt)
 		{
-			Type			 = RgViewType::Rtv;
-			RgRtv.sRGB		 = sRGB;
-			RgRtv.ArraySlice = OptArraySlice.value_or(-1);
-			RgRtv.MipSlice	 = OptMipSlice.value_or(-1);
-			RgRtv.ArraySize	 = OptArraySize.value_or(-1);
+			Type		   = RgViewType::Rtv;
+			Rtv.sRGB	   = sRGB;
+			Rtv.ArraySlice = OptArraySlice.value_or(-1);
+			Rtv.MipSlice   = OptMipSlice.value_or(-1);
+			Rtv.ArraySize  = OptArraySize.value_or(-1);
 			return *this;
 		}
 
 		RgViewDesc& AsDsv(std::optional<UINT> OptArraySlice = std::nullopt, std::optional<UINT> OptMipSlice = std::nullopt, std::optional<UINT> OptArraySize = std::nullopt)
 		{
-			Type			 = RgViewType::Dsv;
-			RgDsv.ArraySlice = OptArraySlice.value_or(-1);
-			RgDsv.MipSlice	 = OptMipSlice.value_or(-1);
-			RgDsv.ArraySize	 = OptArraySize.value_or(-1);
+			Type		   = RgViewType::Dsv;
+			Dsv.ArraySlice = OptArraySlice.value_or(-1);
+			Dsv.MipSlice   = OptMipSlice.value_or(-1);
+			Dsv.ArraySize  = OptArraySize.value_or(-1);
 			return *this;
 		}
 
@@ -309,8 +309,8 @@ namespace RHI
 		RgViewType		 Type;
 		union
 		{
-			RgRtv		 RgRtv;
-			RgDsv		 RgDsv;
+			RgRtv		 Rtv;
+			RgDsv		 Dsv;
 			RgBufferSrv	 BufferSrv;
 			RgBufferUav	 BufferUav;
 			RgTextureSrv TextureSrv;
