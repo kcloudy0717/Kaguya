@@ -21,7 +21,6 @@ add_library(${PROJECTNAME} STATIC
 	${natvis}
 
 	${cityhash})
-target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
 if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3

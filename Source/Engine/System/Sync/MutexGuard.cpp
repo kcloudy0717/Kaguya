@@ -1,4 +1,5 @@
 #include "MutexGuard.h"
+#include <utility>
 #include "Mutex.h"
 
 MutexGuard::MutexGuard(Mutex& Ref)

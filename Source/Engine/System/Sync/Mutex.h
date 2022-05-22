@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "SystemCore.h"
+#include <wil/resource.h>
 
 class Mutex
 {

@@ -1,7 +1,7 @@
 #include "FileSystemWatcher.h"
 
-FileSystemWatcher::FileSystemWatcher(const std::filesystem::path& Path)
-	: Path(Path)
+FileSystemWatcher::FileSystemWatcher(std::filesystem::path Path)
+	: Path(std::move(Path))
 	, FileHandle(CreateFile(
 		  this->Path.c_str(),
 		  FILE_GENERIC_READ,

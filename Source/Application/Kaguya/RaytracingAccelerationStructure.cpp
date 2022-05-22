@@ -1,23 +1,11 @@
 #include "RaytracingAccelerationStructure.h"
 
-RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups, size_t NumInstances)
+RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups)
 	: Device(Device)
 	, NumHitGroups(NumHitGroups)
-	, NumInstances(NumInstances)
-	, TopLevelAccelerationStructure(NumInstances)
 {
-	StaticMeshes.reserve(NumInstances);
-
 	Manager = RHI::D3D12RaytracingManager(Device->GetLinkedDevice(), 6 * 1024 * 1024);
-
-	Null = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), nullptr);
-
-	InstanceDescs = RHI::D3D12Buffer(
-		Device->GetLinkedDevice(),
-		sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * NumInstances,
-		sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_RESOURCE_FLAG_NONE);
+	Null	= RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), nullptr);
 }
 
 void RaytracingAccelerationStructure::Reset()
@@ -29,10 +17,8 @@ void RaytracingAccelerationStructure::Reset()
 	CurrentInstanceContributionToHitGroupIndex = 0;
 }
 
-void RaytracingAccelerationStructure::AddInstance(const Transform& Transform, StaticMeshComponent* StaticMesh)
+void RaytracingAccelerationStructure::AddInstance(const Math::Transform& Transform, StaticMeshComponent* StaticMesh)
 {
-	assert(TopLevelAccelerationStructure.size() < NumInstances);
-
 	D3D12_RAYTRACING_INSTANCE_DESC RaytracingInstanceDesc = {};
 	XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(RaytracingInstanceDesc.Transform), Transform.Matrix());
 	RaytracingInstanceDesc.InstanceID						   = CurrentInstanceID++;
@@ -81,53 +67,54 @@ void RaytracingAccelerationStructure::Build(RHI::D3D12CommandContext& Context)
 		}
 	}
 
+	// Update acceleration structure address (in the case if it got compacted)
 	for (auto Geometry : ReferencedGeometries)
 	{
 		Geometry->AccelerationStructure = Manager.GetAddress(Geometry->BlasIndex);
 	}
 
 	D3D12ScopedEvent(Context, "TLAS");
-	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
+	size_t i = 0;
+	for (auto& Instance : TopLevelAccelerationStructure)
 	{
-		Instance.AccelerationStructure = StaticMeshes[i]->Mesh->AccelerationStructure;
+		Instance.AccelerationStructure = StaticMeshes[i++]->Mesh->AccelerationStructure;
 	}
 
+	// Compute memory requirements
 	UINT64 ScratchSize = 0, ResultSize = 0;
-	TopLevelAccelerationStructure.ComputeMemoryRequirements(
-		Device->GetD3D12Device5(),
-		&ScratchSize,
-		&ResultSize);
+	UINT64 InstanceSize = sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * TopLevelAccelerationStructure.size();
+	TopLevelAccelerationStructure.ComputeMemoryRequirements(Device->GetD3D12Device5(), &ScratchSize, &ResultSize);
 
-	if (!TlasScratch.GetResource() || TlasScratch.GetDesc().Width < ScratchSize)
+	// Create scratch, result, and instance buffers
+	if (!TlasScratch || TlasScratch.GetDesc().Width < ScratchSize)
 	{
-		// TLAS Scratch
-		TlasScratch = RHI::D3D12Buffer(
-			Device->GetLinkedDevice(),
-			ScratchSize,
-			0,
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		TlasScratch = RHI::D3D12Buffer(Device->GetLinkedDevice(), ScratchSize, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
-	if (!TlasResult.GetResource() || TlasResult.GetDesc().Width < ResultSize)
+	if (!TlasResult || TlasResult.GetDesc().Width < ResultSize)
 	{
-		// TLAS Result
 		TlasResult = RHI::D3D12ASBuffer(Device->GetLinkedDevice(), ResultSize);
 		SRV		   = RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), &TlasResult);
 	}
 
-	// Create the description for each instance
-	auto Instances = InstanceDescs.GetCpuVirtualAddress<D3D12_RAYTRACING_INSTANCE_DESC>();
-	for (auto [i, Instance] : enumerate(TopLevelAccelerationStructure))
+	if (!InstanceDescsBuffer || InstanceDescsBuffer.GetDesc().Width < InstanceSize)
 	{
-		Instances[i] = Instance;
+		InstanceDescsBuffer = RHI::D3D12Buffer(Device->GetLinkedDevice(), InstanceSize, sizeof(D3D12_RAYTRACING_INSTANCE_DESC), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
+	}
+
+	// Create the description for each instance
+	auto Instances = InstanceDescsBuffer.GetCpuVirtualAddress<D3D12_RAYTRACING_INSTANCE_DESC>();
+	i			   = 0;
+	for (auto& Instance : TopLevelAccelerationStructure)
+	{
+		Instances[i++] = Instance;
 	}
 
 	TopLevelAccelerationStructure.Generate(
 		Context.GetGraphicsCommandList6(),
 		TlasScratch.GetResource(),
 		TlasResult.GetResource(),
-		InstanceDescs.GetGpuVirtualAddress());
+		InstanceDescsBuffer.GetGpuVirtualAddress());
 }
 
 void RaytracingAccelerationStructure::PostBuild(RHI::D3D12SyncHandle SyncHandle)

@@ -1,5 +1,4 @@
 #include "Renderer.h"
-#include "RendererRegistry.h"
 
 Renderer::Renderer(
 	RHI::D3D12Device* Device,

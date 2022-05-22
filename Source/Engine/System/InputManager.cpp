@@ -1,4 +1,5 @@
 #include "InputManager.h"
+#include "Window.h"
 
 bool InputManager::IsPressed(EMouseButton Button) const
 {
@@ -57,15 +58,16 @@ void InputManager::EnableCursor()
 	FreeCursor();
 }
 
-void InputManager::DisableCursor(HWND HWnd)
+void InputManager::DisableCursor(Window* Window)
 {
 	CursorEnabled = false;
 	HideCursor();
-	ConfineCursor(HWnd);
+	ConfineCursor(Window);
 }
 
-void InputManager::ConfineCursor(HWND HWnd)
+void InputManager::ConfineCursor(Window* Window)
 {
+	HWND HWnd		= Window->GetWindowHandle();
 	RECT ClientRect = {};
 	::GetClientRect(HWnd, &ClientRect);
 	::MapWindowPoints(HWnd, nullptr, reinterpret_cast<POINT*>(&ClientRect), 2);

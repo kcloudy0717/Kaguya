@@ -4,11 +4,13 @@
 class AsyncAction
 {
 public:
-	struct promise_type final : promise_base<promise_type>
+	struct PromiseType final : Async::Internal::Promise<PromiseType>
 	{
 		void return_void() noexcept {}
 	};
 
+	// promise_type and coroutine_handle must be present
+	using promise_type	   = PromiseType;
 	using coroutine_handle = std::coroutine_handle<promise_type>;
 
 	AsyncAction() noexcept = default;
@@ -16,30 +18,30 @@ public:
 		: Handle(Handle)
 	{
 	}
-
-	~AsyncAction() { InternalDestroy(); }
-
 	AsyncAction(AsyncAction&& AsyncAction) noexcept
 		: Handle(std::exchange(AsyncAction.Handle, nullptr))
 	{
 	}
 	AsyncAction& operator=(AsyncAction&& AsyncAction) noexcept
 	{
-		if (this == &AsyncAction)
+		if (this != &AsyncAction)
 		{
-			return *this;
+			InternalDestroy();
+			Handle = std::exchange(AsyncAction.Handle, nullptr);
 		}
-
-		InternalDestroy();
-		Handle = std::exchange(AsyncAction.Handle, nullptr);
 		return *this;
 	}
-
-	AsyncAction(std::nullptr_t) {}
+	AsyncAction(std::nullptr_t)
+	{
+	}
 	AsyncAction& operator=(std::nullptr_t)
 	{
 		InternalDestroy();
 		return *this;
+	}
+	~AsyncAction()
+	{
+		InternalDestroy();
 	}
 
 	AsyncAction(const AsyncAction&) = delete;

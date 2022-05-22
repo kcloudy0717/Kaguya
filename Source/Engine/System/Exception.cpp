@@ -20,7 +20,7 @@ const char* Exception::GetErrorType() const noexcept
 
 std::string Exception::GetError() const
 {
-	return "<unknown>";
+	return "[Unknown]";
 }
 
 std::string Exception::GetExceptionOrigin() const

@@ -1,4 +1,5 @@
 #include "RwLockWriteGuard.h"
+#include <utility>
 #include "RwLock.h"
 
 RwLockWriteGuard::RwLockWriteGuard(RwLock& Ref)

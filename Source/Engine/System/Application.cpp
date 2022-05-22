@@ -1,26 +1,43 @@
 #include "Application.h"
 #include "IApplicationMessageHandler.h"
+#include "Platform.h"
+
+#include <ShObjIdl.h>
+
+Application::PlatformWindows::PlatformWindows()
+	: Initialized(SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED)))
+{
+}
+
+Application::PlatformWindows::~PlatformWindows()
+{
+	if (Initialized)
+	{
+		CoUninitialize();
+	}
+}
 
 Application::Application()
 	: HInstance(GetModuleHandle(nullptr))
 {
 	// Register window class
-	WNDCLASSEXW ClassDesc	= {};
-	ClassDesc.cbSize		= sizeof(WNDCLASSEX);
-	ClassDesc.style			= CS_DBLCLKS;
-	ClassDesc.lpfnWndProc	= WindowProc;
-	ClassDesc.cbClsExtra	= 0;
-	ClassDesc.cbWndExtra	= 0;
-	ClassDesc.hInstance		= HInstance;
-	ClassDesc.hIcon			= nullptr;
-	ClassDesc.hCursor		= ::LoadCursor(nullptr, IDC_ARROW);
-	ClassDesc.hbrBackground = nullptr;
-	ClassDesc.lpszMenuName	= nullptr;
-	ClassDesc.lpszClassName = Window::WindowClass;
-	ClassDesc.hIconSm		= nullptr;
+	const WNDCLASSEXW ClassDesc = {
+		.cbSize		   = sizeof(WNDCLASSEX),
+		.style		   = CS_DBLCLKS,
+		.lpfnWndProc   = WindowProc,
+		.cbClsExtra	   = 0,
+		.cbWndExtra	   = 0,
+		.hInstance	   = HInstance,
+		.hIcon		   = nullptr,
+		.hCursor	   = ::LoadCursor(nullptr, IDC_ARROW),
+		.hbrBackground = nullptr,
+		.lpszMenuName  = nullptr,
+		.lpszClassName = Window::WindowClass,
+		.hIconSm	   = nullptr
+	};
 	if (!RegisterClassExW(&ClassDesc))
 	{
-		ErrorExit(TEXT("RegisterClassExW"));
+		Platform::Exit(L"RegisterClassExW");
 	}
 }
 
@@ -304,7 +321,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
 	break;
 
-		// WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
+	// WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
 	case WM_ENTERSIZEMOVE:
 	{
 		Resizing = true;
@@ -312,7 +329,6 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	break;
 
 	// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
-	// Here we reset everything based on the new window dimensions.
 	case WM_EXITSIZEMOVE:
 	{
 		Resizing = false;
@@ -396,6 +412,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_CLOSE:
 	{
 		MessageHandler->OnWindowClose(CurrentWindow);
+		CurrentWindow->Destroy();
 	}
 	break;
 

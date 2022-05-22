@@ -1,5 +1,7 @@
 #pragma once
 #include "PathIntegratorDXR1_0.h"
+#include "Bloom.h"
+#include "Tonemap.h"
 
 class PathIntegratorDXR1_1 final : public Renderer
 {
@@ -12,6 +14,8 @@ private:
 	void RenderOptions() override;
 	void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) override;
 
+	void ResetAccumulation();
+
 private:
 	RaytracingAccelerationStructure AccelerationStructure;
 
@@ -19,5 +23,8 @@ private:
 	UINT NumTemporalSamples = 0;
 	UINT FrameCounter		= 0;
 
-	PathIntegratorState PathIntegratorState;
+	PathIntegratorSettings Settings;
+
+	BloomSettings	Bloom;
+	TonemapSettings Tonemap;
 };

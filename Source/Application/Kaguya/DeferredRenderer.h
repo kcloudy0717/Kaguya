@@ -1,6 +1,5 @@
 #pragma once
 #include "Renderer.h"
-#include "Core/CoreDefines.h"
 
 #define USE_MESH_SHADERS 0
 

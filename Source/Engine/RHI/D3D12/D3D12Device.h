@@ -12,11 +12,11 @@ namespace RHI
 		bool EnableGpuBasedValidation;
 		bool EnableAutoDebugName;
 
-		D3D_FEATURE_LEVEL	  FeatureLevel;
-		bool				  WaveIntrinsics;
-		bool				  Raytracing;
-		bool				  DynamicResources;
-		bool				  MeshShaders;
+		D3D_FEATURE_LEVEL FeatureLevel;
+		bool			  WaveIntrinsics;
+		bool			  Raytracing;
+		bool			  DynamicResources;
+		bool			  MeshShaders;
 	};
 
 	struct RootParameters
@@ -40,18 +40,18 @@ namespace RHI
 
 		void CreateDxgiFactory();
 
-		[[nodiscard]] auto GetDxgiFactory6() const noexcept -> IDXGIFactory6* { return Factory6.Get(); }
-		[[nodiscard]] auto GetDxgiAdapter3() const noexcept -> IDXGIAdapter3* { return Adapter3.Get(); }
-		[[nodiscard]] auto GetD3D12Device() const noexcept -> ID3D12Device* { return Device.Get(); }
-		[[nodiscard]] auto GetD3D12Device1() const noexcept -> ID3D12Device1* { return Device1.Get(); }
-		[[nodiscard]] auto GetD3D12Device5() const noexcept -> ID3D12Device5* { return Device5.Get(); }
-		[[nodiscard]] auto GetDStorageFactory() const noexcept -> IDStorageFactory* { return DStorageFactory.Get(); }
-		[[nodiscard]] auto GetDStorageQueue(DSTORAGE_REQUEST_SOURCE_TYPE Type) const noexcept -> IDStorageQueue* { return DStorageQueues[Type].Get(); }
-		[[nodiscard]] auto GetDStorageFence() noexcept -> D3D12Fence* { return &DStorageFence; }
-		[[nodiscard]] auto GetAllNodeMask() const noexcept -> D3D12NodeMask { return AllNodeMask; }
-		[[nodiscard]] auto GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept -> UINT { return DescriptorSizeCache[Type]; }
-		[[nodiscard]] auto GetLinkedDevice() noexcept -> D3D12LinkedDevice* { return &LinkedDevice; }
-		[[nodiscard]] bool AllowAsyncPsoCompilation() const noexcept;
+		[[nodiscard]] IDXGIFactory6*	 GetDxgiFactory6() const noexcept { return Factory6.Get(); }
+		[[nodiscard]] IDXGIAdapter3*	 GetDxgiAdapter3() const noexcept { return Adapter3.Get(); }
+		[[nodiscard]] ID3D12Device*		 GetD3D12Device() const noexcept { return Device.Get(); }
+		[[nodiscard]] ID3D12Device1*	 GetD3D12Device1() const noexcept { return Device1.Get(); }
+		[[nodiscard]] ID3D12Device5*	 GetD3D12Device5() const noexcept { return Device5.Get(); }
+		[[nodiscard]] IDStorageFactory*	 GetDStorageFactory() const noexcept { return DStorageFactory.Get(); }
+		[[nodiscard]] IDStorageQueue*	 GetDStorageQueue(DSTORAGE_REQUEST_SOURCE_TYPE Type) const noexcept { return DStorageQueues[Type].Get(); }
+		[[nodiscard]] D3D12Fence*		 GetDStorageFence() noexcept { return &DStorageFence; }
+		[[nodiscard]] D3D12NodeMask		 GetAllNodeMask() const noexcept { return AllNodeMask; }
+		[[nodiscard]] UINT				 GetSizeOfDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type) const noexcept { return DescriptorSizeCache[Type]; }
+		[[nodiscard]] D3D12LinkedDevice* GetLinkedDevice() noexcept { return &LinkedDevice; }
+		[[nodiscard]] bool				 AllowAsyncPsoCompilation() const noexcept;
 
 		[[nodiscard]] bool SupportsWaveIntrinsics() const noexcept;
 		[[nodiscard]] bool SupportsRaytracing() const noexcept;
@@ -156,7 +156,7 @@ namespace RHI
 
 		// Represents a single node
 		// TODO: Add Multi-Adapter support
-		D3D12LinkedDevice					  LinkedDevice;
+		D3D12LinkedDevice LinkedDevice;
 
 		mutable HRESULT CaptureStatus = S_FALSE;
 	};

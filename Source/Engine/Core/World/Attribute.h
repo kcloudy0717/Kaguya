@@ -1,92 +1,98 @@
 #pragma once
 #include <tuple>
 
-template<typename T, typename TTuple>
-struct AttributeContainer
+namespace Reflection
 {
-	inline static const char* Name		 = RegisterClassName<T>();
-	inline static TTuple	  Attributes = RegisterClassAttributes<T>();
-};
-
-template<typename... TArgs>
-auto Attributes(TArgs&&... Args)
-{
-	return std::make_tuple(std::forward<TArgs>(Args)...);
-}
-
-template<typename TClass>
-const char* RegisterClassName();
-
-template<typename TClass>
-auto RegisterClassAttributes();
-
-template<typename TClass>
-const char* GetClass()
-{
-	return AttributeContainer<TClass, decltype(RegisterClassAttributes<TClass>())>::Name;
-}
-
-template<typename TClass>
-auto& GetAttributes()
-{
-	return AttributeContainer<TClass, decltype(RegisterClassAttributes<TClass>())>::Attributes;
-}
-
-template<typename TClass>
-constexpr std::size_t GetNumAttributes()
-{
-	return std::tuple_size<decltype(RegisterClassAttributes<TClass>())>::value;
-}
-
-template<typename TClass, typename Functor>
-void ForEachAttribute(Functor&& F)
-{
-	std::apply(
-		[&](auto&&... x)
-		{
-			(..., F(x));
-		},
-		GetAttributes<TClass>());
-}
-
-template<typename TClass, typename T>
-class Attribute
-{
-public:
-	using Ptr = T TClass::*;
-
-	Attribute(const char* Name, Ptr pPtr)
-		: Name(Name)
-		, pPtr(pPtr)
+	template<typename T, typename TTuple>
+	struct ReflectionClass
 	{
+		inline static const char* Name		 = RegisterReflectionClassName<T>();
+		inline static TTuple	  Attributes = RegisterReflectionClassAttributes<T>();
+	};
+
+	template<typename... TArgs>
+	auto Attributes(TArgs&&... Args)
+	{
+		return std::make_tuple(std::forward<TArgs>(Args)...);
 	}
 
-	[[nodiscard]] const char* GetName() const noexcept { return Name; }
+	template<typename TClass>
+	const char* RegisterReflectionClassName();
 
-	// Used exclusively by decltype
-	T GetType() const noexcept { return T(); }
+	template<typename TClass>
+	auto RegisterReflectionClassAttributes();
 
-	const T& Get(const TClass& Class) const noexcept { return Class.*pPtr; }
+	template<typename TClass>
+	const char* GetReflectionClassName()
+	{
+		return ReflectionClass<TClass, decltype(RegisterReflectionClassAttributes<TClass>())>::Name;
+	}
 
-	T& Get(TClass& Class) noexcept { return Class.*pPtr; }
+	template<typename TClass>
+	auto& GetReflectionClassAttributes()
+	{
+		return ReflectionClass<TClass, decltype(RegisterReflectionClassAttributes<TClass>())>::Attributes;
+	}
 
-	void Set(TClass& Class, T&& Value) { Class.*pPtr = std::forward<T>(Value); }
+	template<typename TClass>
+	constexpr std::size_t GetNumAttributes()
+	{
+		return std::tuple_size_v<decltype(RegisterReflectionClassAttributes<TClass>())>;
+	}
 
-private:
-	const char* Name;
-	Ptr			pPtr;
-};
+	template<typename TClass, typename Functor>
+	void ForEachAttributeIn(Functor&& F)
+	{
+		std::apply(
+			[&](auto&&... x)
+			{
+				(..., F(x));
+			},
+			GetReflectionClassAttributes<TClass>());
+	}
 
-#define CLASS_ATTRIBUTE(Class, x) Attribute(#x, &Class::x)
+	template<typename TClass, typename T>
+	class Attribute
+	{
+	public:
+		using Ptr = T TClass::*;
 
-#define REGISTER_CLASS_ATTRIBUTES(Class, Name, ...)                                                                    \
-	template<>                                                                                                         \
-	inline const char* RegisterClassName<Class>()                                                                      \
-	{                                                                                                                  \
-		return Name;                                                                                                   \
-	}                                                                                                                  \
-	template<>                                                                                                         \
-	inline auto RegisterClassAttributes<Class>()                                                                       \
-	{                                                                                                                  \
-		return Attributes(__VA_ARGS__);                                                                                \
+		Attribute(const char* Name, Ptr pPtr)
+			: Name(Name)
+			, pPtr(pPtr)
+		{
+		}
+
+		[[nodiscard]] const char* GetName() const noexcept { return Name; }
+
+		// Used exclusively by decltype
+		T GetType() const noexcept { return T(); }
+
+		const T& Get(const TClass& Class) const noexcept { return Class.*pPtr; }
+
+		T& Get(TClass& Class) noexcept { return Class.*pPtr; }
+
+		void Set(TClass& Class, T&& Value) { Class.*pPtr = std::forward<T>(Value); }
+
+	private:
+		const char* Name;
+		Ptr			pPtr;
+	};
+} // namespace Reflection
+
+#define CLASS_ATTRIBUTE(Class, x) Reflection::Attribute(#x, &Class::x)
+
+#define REGISTER_CLASS_ATTRIBUTES(Class, Name, ...)             \
+	namespace Reflection                                        \
+	{                                                           \
+		template<>                                              \
+		inline const char* RegisterReflectionClassName<Class>() \
+		{                                                       \
+			return Name;                                        \
+		}                                                       \
+		template<>                                              \
+		inline auto RegisterReflectionClassAttributes<Class>()  \
+		{                                                       \
+			return Attributes(__VA_ARGS__);                     \
+		}                                                       \
 	}

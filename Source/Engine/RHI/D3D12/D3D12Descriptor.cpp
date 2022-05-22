@@ -3,6 +3,32 @@
 
 namespace RHI
 {
+	namespace Internal
+	{
+		constexpr DXGI_FORMAT MakeSRGB(DXGI_FORMAT Format) noexcept
+		{
+			switch (Format)
+			{
+			case DXGI_FORMAT_R8G8B8A8_UNORM:
+				return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+			case DXGI_FORMAT_BC1_UNORM:
+				return DXGI_FORMAT_BC1_UNORM_SRGB;
+			case DXGI_FORMAT_BC2_UNORM:
+				return DXGI_FORMAT_BC2_UNORM_SRGB;
+			case DXGI_FORMAT_BC3_UNORM:
+				return DXGI_FORMAT_BC3_UNORM_SRGB;
+			case DXGI_FORMAT_B8G8R8A8_UNORM:
+				return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+			case DXGI_FORMAT_B8G8R8X8_UNORM:
+				return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
+			case DXGI_FORMAT_BC7_UNORM:
+				return DXGI_FORMAT_BC7_UNORM_SRGB;
+			default:
+				return Format;
+			}
+		}
+	} // namespace Internal
+
 	CSubresourceSubset::CSubresourceSubset(
 		UINT8  NumMips,
 		UINT16 NumArraySlices,
@@ -251,41 +277,6 @@ namespace RHI
 		EndMip = BeginMip + 1;
 	}
 
-	bool CSubresourceSubset::DoesNotOverlap(const CSubresourceSubset& CSubresourceSubset) const noexcept
-	{
-		if (EndArray <= CSubresourceSubset.BeginArray)
-		{
-			return true;
-		}
-
-		if (CSubresourceSubset.EndArray <= BeginArray)
-		{
-			return true;
-		}
-
-		if (EndMip <= CSubresourceSubset.BeginMip)
-		{
-			return true;
-		}
-
-		if (CSubresourceSubset.EndMip <= BeginMip)
-		{
-			return true;
-		}
-
-		if (EndPlane <= CSubresourceSubset.BeginPlane)
-		{
-			return true;
-		}
-
-		if (CSubresourceSubset.EndPlane <= BeginPlane)
-		{
-			return true;
-		}
-
-		return false;
-	}
-
 	CViewSubresourceSubset::CViewSubresourceSubset(const CSubresourceSubset& Subresources, UINT8 MipLevels, UINT16 ArraySize, UINT8 PlaneCount)
 		: CSubresourceSubset(Subresources)
 		, MipLevels(MipLevels)
@@ -446,7 +437,7 @@ namespace RHI
 		UINT ArraySize	= OptArraySize.value_or(Desc.DepthOrArraySize);
 
 		D3D12_RENDER_TARGET_VIEW_DESC ViewDesc = {};
-		ViewDesc.Format						   = sRGB ? D3D12RHIUtils::MakeSRGB(Desc.Format) : Desc.Format;
+		ViewDesc.Format						   = sRGB ? Internal::MakeSRGB(Desc.Format) : Desc.Format;
 
 		// TODO: Add 1D/3D support
 		switch (Desc.Dimension)
@@ -560,7 +551,7 @@ namespace RHI
 		D3D12LinkedDevice*					   Device,
 		const D3D12_SHADER_RESOURCE_VIEW_DESC& Desc,
 		D3D12Resource*						   Resource)
-		: D3D12DynamicView(Device, Desc, Resource)
+		: D3D12View(Device, Desc, Resource)
 	{
 		RecreateView();
 	}
@@ -667,7 +658,7 @@ namespace RHI
 		{
 			if (sRGB)
 			{
-				return D3D12RHIUtils::MakeSRGB(Format);
+				return Internal::MakeSRGB(Format);
 			}
 			// TODO: Add more
 			switch (Format)
@@ -724,7 +715,7 @@ namespace RHI
 		const D3D12_UNORDERED_ACCESS_VIEW_DESC& Desc,
 		D3D12Resource*							Resource,
 		D3D12Resource*							CounterResource /*= nullptr*/)
-		: D3D12DynamicView(Device, Desc, Resource)
+		: D3D12View(Device, Desc, Resource)
 		, CounterResource(CounterResource)
 	{
 		RecreateView();

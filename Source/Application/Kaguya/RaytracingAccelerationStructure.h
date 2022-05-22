@@ -1,7 +1,6 @@
 #pragma once
 #include "System/System.h"
 #include "RHI/RHI.h"
-#include "Core/CoreDefines.h"
 #include "Core/World/World.h"
 
 #define RAYTRACING_INSTANCEMASK_ALL (0xff)
@@ -10,7 +9,7 @@ class RaytracingAccelerationStructure
 {
 public:
 	RaytracingAccelerationStructure() noexcept = default;
-	RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups, size_t NumInstances);
+	RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups);
 
 	const RHI::D3D12ShaderResourceView& GetShaderResourceView() const { return IsValid() ? SRV : Null; }
 
@@ -18,7 +17,7 @@ public:
 
 	void Reset();
 
-	void AddInstance(const Transform& Transform, StaticMeshComponent* StaticMesh);
+	void AddInstance(const Math::Transform& Transform, StaticMeshComponent* StaticMesh);
 
 	void Build(RHI::D3D12CommandContext& Context);
 
@@ -28,7 +27,6 @@ public:
 
 	RHI::D3D12Device* Device	   = nullptr;
 	UINT			  NumHitGroups = 0;
-	size_t			  NumInstances = 0;
 
 	RHI::D3D12RaytracingManager Manager;
 
@@ -40,7 +38,7 @@ public:
 
 	RHI::D3D12Buffer   TlasScratch;
 	RHI::D3D12ASBuffer TlasResult;
-	RHI::D3D12Buffer   InstanceDescs;
+	RHI::D3D12Buffer   InstanceDescsBuffer;
 
 	RHI::D3D12ShaderResourceView Null;
 	RHI::D3D12ShaderResourceView SRV;

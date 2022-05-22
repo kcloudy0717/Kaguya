@@ -1,20 +1,21 @@
 #include "FileStream.h"
+#include <cassert>
 
 FileStream::FileStream(
-	const std::filesystem::path& Path,
-	FileMode					 Mode,
-	FileAccess					 Access)
-	: Path(Path)
+	std::filesystem::path Path,
+	FileMode			  Mode,
+	FileAccess			  Access)
+	: Path(std::move(Path))
 	, Mode(Mode)
 	, Access(Access)
-	, Handle(InitializeHandle(Path, Mode, Access))
+	, Handle(InitializeHandle(this->Path, Mode, Access))
 {
 }
 
 FileStream::FileStream(
-	const std::filesystem::path& Path,
-	FileMode					 Mode)
-	: FileStream(Path, Mode, FileAccess::ReadWrite)
+	std::filesystem::path Path,
+	FileMode			  Mode)
+	: FileStream(std::move(Path), Mode, FileAccess::ReadWrite)
 {
 }
 
@@ -55,12 +56,7 @@ std::unique_ptr<std::byte[]> FileStream::ReadAll() const
 	DWORD NumberOfBytesRead	  = 0;
 	DWORD NumberOfBytesToRead = static_cast<DWORD>(FileSize);
 	auto  Buffer			  = std::make_unique<std::byte[]>(FileSize);
-	if (ReadFile(
-			Handle.get(),
-			Buffer.get(),
-			NumberOfBytesToRead,
-			&NumberOfBytesRead,
-			nullptr))
+	if (ReadFile(Handle.get(), Buffer.get(), NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
 	{
 		assert(NumberOfBytesToRead == NumberOfBytesRead);
 	}
@@ -75,12 +71,7 @@ u64 FileStream::Read(
 	{
 		DWORD NumberOfBytesRead	  = 0;
 		DWORD NumberOfBytesToRead = static_cast<DWORD>(SizeInBytes);
-		if (ReadFile(
-				Handle.get(),
-				Buffer,
-				NumberOfBytesToRead,
-				&NumberOfBytesRead,
-				nullptr))
+		if (ReadFile(Handle.get(), Buffer, NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
 		{
 			return NumberOfBytesRead;
 		}
@@ -96,19 +87,11 @@ u64 FileStream::Write(
 	{
 		DWORD NumberOfBytesWritten = 0;
 		DWORD NumberOfBytesToWrite = static_cast<DWORD>(SizeInBytes);
-		if (!WriteFile(
-				Handle.get(),
-				Buffer,
-				NumberOfBytesToWrite,
-				&NumberOfBytesWritten,
-				nullptr))
+		if (WriteFile(Handle.get(), Buffer, NumberOfBytesToWrite, &NumberOfBytesWritten, nullptr))
 		{
-			ErrorExit(L"WriteFile");
+			return NumberOfBytesWritten;
 		}
-
-		return NumberOfBytesWritten;
 	}
-
 	return 0;
 }
 
@@ -116,32 +99,29 @@ void FileStream::Seek(
 	i64		   Offset,
 	SeekOrigin RelativeOrigin) const
 {
-	DWORD		  MoveMethod	   = GetMoveMethod(RelativeOrigin);
+	DWORD MoveMethod = [RelativeOrigin]()
+	{
+		// clang-format off
+		switch (RelativeOrigin)
+		{
+		case SeekOrigin::Begin:		return FILE_BEGIN;
+		case SeekOrigin::Current:	return FILE_CURRENT;
+		case SeekOrigin::End:		return FILE_END;
+		}
+		// clang-format on
+		return 0;
+	}();
 	LARGE_INTEGER liDistanceToMove = {};
 	liDistanceToMove.QuadPart	   = Offset;
-	SetFilePointerEx(
-		Handle.get(),
-		liDistanceToMove,
-		nullptr,
-		MoveMethod);
+	SetFilePointerEx(Handle.get(), liDistanceToMove, nullptr, MoveMethod);
 }
 
-DWORD FileStream::GetMoveMethod(SeekOrigin Origin)
+wil::unique_handle FileStream::InitializeHandle(
+	const std::filesystem::path& Path,
+	FileMode					 Mode,
+	FileAccess					 Access)
 {
-	DWORD dwMoveMethod = 0;
-	// clang-format off
-	switch (Origin)
-	{
-	case SeekOrigin::Begin:		dwMoveMethod = FILE_BEGIN;		break;
-	case SeekOrigin::Current:	dwMoveMethod = FILE_CURRENT;	break;
-	case SeekOrigin::End:		dwMoveMethod = FILE_END;		break;
-	}
-	// clang-format on
-	return dwMoveMethod;
-}
-
-void FileStream::VerifyArguments()
-{
+	// Validation
 	switch (Mode)
 	{
 	case FileMode::CreateNew:
@@ -160,14 +140,6 @@ void FileStream::VerifyArguments()
 		assert(CanWrite());
 		break;
 	}
-}
-
-wil::unique_handle FileStream::InitializeHandle(
-	const std::filesystem::path& Path,
-	FileMode					 Mode,
-	FileAccess					 Access)
-{
-	VerifyArguments();
 
 	DWORD CreationDisposition = [Mode]
 	{

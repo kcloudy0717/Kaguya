@@ -1,17 +1,17 @@
 ﻿#pragma once
-#include <span>
-#include "SystemCore.h"
+#include <filesystem>
+#include "Span.h"
 
 struct FilterDesc
 {
-	LPCWSTR Name;
-	LPCWSTR Filter;
+	std::wstring_view Name;
+	std::wstring_view Filter;
 };
 
 class FileSystem
 {
 public:
-	static std::filesystem::path			  OpenDialog(std::span<FilterDesc> FilterSpecs);
-	static std::vector<std::filesystem::path> OpenDialogMultiple(std::span<FilterDesc> FilterSpecs);
-	static std::filesystem::path			  SaveDialog(std::span<FilterDesc> FilterSpecs);
+	static std::filesystem::path			  OpenDialog(Span<const FilterDesc> FilterSpecs);
+	static std::vector<std::filesystem::path> OpenDialogMultiple(Span<const FilterDesc> FilterSpecs);
+	static std::filesystem::path			  SaveDialog(Span<const FilterDesc> FilterSpecs);
 };

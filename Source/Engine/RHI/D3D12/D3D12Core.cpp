@@ -79,19 +79,19 @@ namespace RHI
 		return !!Fence;
 	}
 
-	auto D3D12SyncHandle::GetValue() const noexcept -> UINT64
+	UINT64 D3D12SyncHandle::GetValue() const noexcept
 	{
 		assert(static_cast<bool>(*this));
 		return Value;
 	}
 
-	auto D3D12SyncHandle::IsComplete() const -> bool
+	bool D3D12SyncHandle::IsComplete() const
 	{
 		assert(static_cast<bool>(*this));
 		return Fence->IsFenceComplete(Value);
 	}
 
-	auto D3D12SyncHandle::WaitForCompletion() const -> void
+	void D3D12SyncHandle::WaitForCompletion() const
 	{
 		assert(static_cast<bool>(*this));
 		Fence->HostWaitForValue(Value);

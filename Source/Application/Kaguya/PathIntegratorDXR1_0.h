@@ -2,7 +2,7 @@
 #include "Renderer.h"
 #include "RaytracingAccelerationStructure.h"
 
-struct PathIntegratorState
+struct PathIntegratorSettings
 {
 	static constexpr UINT MinimumDepth = 1;
 	static constexpr UINT MaximumDepth = 32;
@@ -30,7 +30,7 @@ private:
 	UINT NumTemporalSamples = 0;
 	UINT FrameCounter		= 0;
 
-	PathIntegratorState PathIntegratorState;
+	PathIntegratorSettings Settings;
 
 	// Pad local root arguments explicitly
 	struct RootArgument

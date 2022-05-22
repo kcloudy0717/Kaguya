@@ -53,25 +53,10 @@
 	</Type>
 
 	<Type Name="RHI::D3D12Descriptor&lt;*&gt;">
-		<DisplayString>{{ CpuHandle={CpuHandle.ptr}, DescriptorHeapIndex={DescriptorHeapIndex} }}</DisplayString>
-	</Type>
-
-	<Type Name="RHI::D3D12View&lt;*&gt;">
-		<DisplayString Condition="Descriptor.DescriptorHeapIndex == 4294967295">Invalid</DisplayString>
-		<DisplayString>{Descriptor}</DisplayString>
-		<Expand>
-			<Item Name="Descriptor">Descriptor</Item>
-			<Item Name="Desc">Desc</Item>
-			<Item Name="Resource">Resource</Item>
-			<Item Name="ViewSubresourceSubset">ViewSubresourceSubset</Item>
-		</Expand>
-	</Type>
-
-	<Type Name="RHI::D3D12DynamicDescriptor&lt;*&gt;">
 		<DisplayString>{{ CpuHandle={CpuHandle.ptr}, GpuHandle={GpuHandle.ptr}, Index={Index} }}</DisplayString>
 	</Type>
 
-	<Type Name="RHI::D3D12DynamicView&lt;*&gt;">
+	<Type Name="RHI::D3D12View&lt;*&gt;">
 		<DisplayString Condition="Descriptor.Index == 4294967295">Invalid</DisplayString>
 		<DisplayString>{Descriptor}</DisplayString>
 		<Expand>

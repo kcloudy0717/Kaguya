@@ -218,7 +218,7 @@ namespace RHI
 
 	void D3D12RootSignature::AddBindlessParameters(RootSignatureDesc& Desc)
 	{
-		// TODO: Maybe consider this as a fall back options when SM6.6 dynamic resource binding is integrated
+		// Pre SM6.6 Bindless setup
 		/* Descriptor Tables */
 
 		constexpr D3D12_DESCRIPTOR_RANGE_FLAGS DescriptorDataVolatile = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;

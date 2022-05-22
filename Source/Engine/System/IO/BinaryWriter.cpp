@@ -1,4 +1,5 @@
 ﻿#include "BinaryWriter.h"
+#include <cassert>
 #include "FileStream.h"
 
 BinaryWriter::BinaryWriter(FileStream& Stream)

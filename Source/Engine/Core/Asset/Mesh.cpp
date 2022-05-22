@@ -6,8 +6,8 @@ namespace Asset
 	{
 		DirectX::BoundingBox Box;
 		DirectX::BoundingBox::CreateFromPoints(Box, Vertices.size(), &Vertices[0].Position, sizeof(Vertex));
-		BoundingBox.Center	= Vec3f(Box.Center.x, Box.Center.y, Box.Center.z);
-		BoundingBox.Extents = Vec3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
+		BoundingBox.Center	= Math::Vec3f(Box.Center.x, Box.Center.y, Box.Center.z);
+		BoundingBox.Extents = Math::Vec3f(Box.Extents.x, Box.Extents.y, Box.Extents.z);
 	}
 
 	void Mesh::UpdateInfo()

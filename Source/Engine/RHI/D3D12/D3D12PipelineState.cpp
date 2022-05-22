@@ -128,7 +128,7 @@ namespace RHI
 
 		void await_suspend(std::coroutine_handle<> handle) const
 		{
-			Process::ThreadPool.QueueThreadpoolWork(
+			Process::ThreadPool->QueueThreadpoolWork(
 				[](void* Context)
 				{
 					std::coroutine_handle<>::from_address(Context)();

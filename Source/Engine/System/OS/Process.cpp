@@ -1,4 +1,6 @@
 #include "Process.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Window.h>
 #include <shellapi.h>
 
 const std::filesystem::path Process::ExecutableDirectory = []
@@ -14,4 +16,4 @@ const std::filesystem::path Process::ExecutableDirectory = []
 	return Path;
 }();
 
-ThreadPool Process::ThreadPool;
+std::unique_ptr<ThreadPool> Process::ThreadPool = ThreadPool::Create();

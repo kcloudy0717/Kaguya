@@ -56,15 +56,6 @@ namespace Asset
 		AssetRegistry<Mesh>	   MeshRegistry;
 		AssetRegistry<Texture> TextureRegistry;
 
-		// Upload stuff to the GPU
-		std::mutex				Mutex;
-		std::condition_variable ConditionVariable;
-		std::queue<Texture*>	TextureUploadQueue;
-		std::queue<Mesh*>		MeshUploadQueue;
-
-		std::jthread	  Thread;
-		std::atomic<bool> Quit = false;
-
 		friend class AssetWindow;
 	};
 } // namespace Asset

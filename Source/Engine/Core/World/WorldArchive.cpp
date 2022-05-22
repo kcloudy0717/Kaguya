@@ -1,8 +1,5 @@
 #include "WorldArchive.h"
-#include "World.h"
 #include <Core/Asset/AssetManager.h>
-#include <Core/CoreDefines.h>
-#include <System/Application.h>
 
 #include <fstream>
 #include "WorldJson.h"
@@ -24,8 +21,8 @@ struct ComponentSerializer
 		{
 			auto& Component = Actor.GetComponent<T>();
 
-			auto& JsonAttributes = Json[GetClass<T>()];
-			ForEachAttribute<T>(
+			auto& JsonAttributes = Json[Reflection::GetReflectionClassName<T>()];
+			Reflection::ForEachAttributeIn<T>(
 				[&](auto&& Attribute)
 				{
 					const char* Name	 = Attribute.GetName();
@@ -65,7 +62,7 @@ void WorldArchive::Save(
 			});
 
 		auto& JsonCamera = Json["Camera"];
-		ForEachAttribute<CameraComponent>(
+		Reflection::ForEachAttributeIn<CameraComponent>(
 			[&](auto&& Attribute)
 			{
 				const char* Name = Attribute.GetName();
@@ -73,12 +70,11 @@ void WorldArchive::Save(
 			});
 
 		auto& JsonWorld = Json["World"];
-		for (auto [i, Actor] : enumerate(World->Actors))
+		for (size_t i = 0; i < World->Actors.size(); ++i)
 		{
+			auto& Actor		 = World->Actors[i];
 			auto& JsonEntity = JsonWorld[i];
-
 			ComponentSerializer<CoreComponent>(JsonEntity, Actor);
-			ComponentSerializer<CameraComponent>(JsonEntity, Actor);
 			ComponentSerializer<LightComponent>(JsonEntity, Actor);
 			ComponentSerializer<SkyLightComponent>(JsonEntity, Actor);
 			ComponentSerializer<StaticMeshComponent>(JsonEntity, Actor);
@@ -94,11 +90,11 @@ struct ComponentDeserializer
 {
 	ComponentDeserializer(const json& Json, Actor* Actor)
 	{
-		if (auto iter = Json.find(GetClass<T>()); iter != Json.end())
+		if (auto iter = Json.find(Reflection::GetReflectionClassName<T>()); iter != Json.end())
 		{
 			auto& Component = Actor->GetOrAddComponent<T>();
 
-			ForEachAttribute<T>(
+			Reflection::ForEachAttributeIn<T>(
 				[&](auto&& Attribute)
 				{
 					const auto& Value = iter.value();
@@ -185,7 +181,7 @@ void WorldArchive::Load(
 	{
 		if (auto iter = Json.find("Camera"); iter != Json.end())
 		{
-			ForEachAttribute<CameraComponent>(
+			Reflection::ForEachAttributeIn<CameraComponent>(
 				[&](auto&& Attribute)
 				{
 					const auto& Value = iter.value();
@@ -208,7 +204,6 @@ void WorldArchive::Load(
 		{
 			Actor Actor = World->CreateActor();
 			ComponentDeserializer<CoreComponent>(JsonEntity, &Actor);
-			ComponentDeserializer<CameraComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<LightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<SkyLightComponent>(JsonEntity, &Actor);
 			ComponentDeserializer<StaticMeshComponent>(JsonEntity, &Actor);

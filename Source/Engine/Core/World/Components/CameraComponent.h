@@ -1,8 +1,7 @@
 #pragma once
 
-class CameraComponent
+struct CameraComponent
 {
-public:
 	[[nodiscard]] DirectX::XMVECTOR GetUVector() const;
 	[[nodiscard]] DirectX::XMVECTOR GetVVector() const;
 	[[nodiscard]] DirectX::XMVECTOR GetWVector() const;
@@ -15,10 +14,7 @@ public:
 
 	void Rotate(float AngleX, float AngleY, float AngleZ);
 
-	// This only exist to verify the more efficient way of constructing frustum, refer to Frustum constructor
-	[[nodiscard]] Frustum CreateFrustum() const;
-
-	Transform Transform;
+	Math::Transform Transform;
 
 	float FoVY		  = 90.0f; // Degrees
 	float AspectRatio = 16.0f / 9.0f;

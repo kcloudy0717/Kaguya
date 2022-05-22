@@ -1,5 +1,5 @@
 #include "DeferredRenderer.h"
-
+#include <imgui.h>
 #include "RendererRegistry.h"
 
 DeferredRenderer::DeferredRenderer(
@@ -128,13 +128,13 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 		RHI::RgResourceHandle SrvMotion;
 		RHI::RgResourceHandle SrvDepth;
 	} GBufferArgs;
-	constexpr f32 Color[] = { 0, 0, 0, 0 };
-	GBufferArgs.Normal	  = Graph.Create<RHI::D3D12Texture>(
-		   RHI::RgTextureDesc("Normal")
-			   .SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
-			   .SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
-			   .SetAllowRenderTarget()
-			   .SetClearValue(RHI::RgClearValue(Color)));
+	constexpr float Color[] = { 0, 0, 0, 0 };
+	GBufferArgs.Normal		= Graph.Create<RHI::D3D12Texture>(
+		 RHI::RgTextureDesc("Normal")
+			 .SetFormat(DXGI_FORMAT_R32G32B32A32_FLOAT)
+			 .SetExtent(WorldRenderView->View.Width, WorldRenderView->View.Height, 1)
+			 .SetAllowRenderTarget()
+			 .SetClearValue(RHI::RgClearValue(Color)));
 	GBufferArgs.MaterialId = Graph.Create<RHI::D3D12Texture>(
 		RHI::RgTextureDesc("Material Id")
 			.SetFormat(DXGI_FORMAT_R32_UINT)
@@ -213,7 +213,7 @@ void DeferredRenderer::Render(World* World, WorldRenderView* WorldRenderView, RH
 					 Context->SetGraphicsRootShaderResourceView(4, WorldRenderView->Meshes.GetGpuVirtualAddress());
 
 					 Context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					 Context.SetViewport(RHIViewport(0.0f, 0.0f, WorldRenderView->View.Width, WorldRenderView->View.Height, 0.0f, 1.0f));
+					 Context.SetViewport(RHIViewport(0.0f, 0.0f, static_cast<float>(WorldRenderView->View.Width), static_cast<float>(WorldRenderView->View.Height), 0.0f, 1.0f));
 					 Context.SetScissorRect(RHIRect(0, 0, WorldRenderView->View.Width, WorldRenderView->View.Height));
 
 					 RHI::D3D12RenderTargetView* RenderTargetViews[3] = {

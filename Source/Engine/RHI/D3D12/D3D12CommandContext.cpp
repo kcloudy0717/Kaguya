@@ -82,7 +82,7 @@ namespace RHI
 
 		if (Type == RHID3D12CommandQueueType::Direct || Type == RHID3D12CommandQueueType::AsyncCompute)
 		{
-			ID3D12DescriptorHeap* DescriptorHeaps[2] = {
+			ID3D12DescriptorHeap* const DescriptorHeaps[2] = {
 				GetParentLinkedDevice()->GetResourceDescriptorHeap(),
 				GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
 			};
@@ -224,15 +224,22 @@ namespace RHI
 		for (const auto& RenderTargetView : RenderTargetViews)
 		{
 			D3D12_CLEAR_VALUE ClearValue = RenderTargetView->GetResource()->GetClearValue();
-			CommandListHandle->ClearRenderTargetView(RenderTargetView->GetCpuHandle(), ClearValue.Color, 0, nullptr);
+			CommandListHandle->ClearRenderTargetView(
+				RenderTargetView->GetCpuHandle(),
+				ClearValue.Color,
+				0,
+				nullptr);
 		}
 		if (DepthStencilView)
 		{
 			D3D12_CLEAR_VALUE ClearValue = DepthStencilView->GetResource()->GetClearValue();
-			FLOAT			  Depth		 = ClearValue.DepthStencil.Depth;
-			UINT8			  Stencil	 = ClearValue.DepthStencil.Stencil;
-
-			CommandListHandle->ClearDepthStencilView(DepthStencilView->GetCpuHandle(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, Depth, Stencil, 0, nullptr);
+			CommandListHandle->ClearDepthStencilView(
+				DepthStencilView->GetCpuHandle(),
+				D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+				ClearValue.DepthStencil.Depth,
+				ClearValue.DepthStencil.Stencil,
+				0,
+				nullptr);
 		}
 	}
 
@@ -398,10 +405,10 @@ namespace RHI
 		ID3D12GraphicsCommandList* CommandList = CommandListHandle.GetGraphicsCommandList();
 
 		// Bindless descriptors
-		UINT NumParameters		= RootSignature->GetNumParameters();
-		UINT Offset				= NumParameters - RootParameters::DescriptorTable::NumRootParameters;
-		auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
-		auto SamplerDescriptor	= GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
+		const UINT NumParameters	  = RootSignature->GetNumParameters();
+		const UINT Offset			  = NumParameters - RootParameters::DescriptorTable::NumRootParameters;
+		const auto ResourceDescriptor = GetParentLinkedDevice()->GetResourceDescriptorHeap().GetGpuDescriptorHandle(0);
+		const auto SamplerDescriptor  = GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetGpuDescriptorHandle(0);
 
 		(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::ShaderResourceDescriptorTable + Offset, ResourceDescriptor);
 		(CommandList->*D3D12DescriptorTableTraits<PsoType>::Bind())(RootParameters::DescriptorTable::UnorderedAccessDescriptorTable + Offset, ResourceDescriptor);

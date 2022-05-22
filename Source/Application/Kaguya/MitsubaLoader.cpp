@@ -56,7 +56,7 @@ i32 GetIntegerProperty(const XmlNode* Parent, std::string_view Name, i32 Default
 	return DefaultValue;
 }
 
-f32 GetFloatProperty(const XmlNode* Parent, std::string_view Name, f32 DefaultValue)
+float GetFloatProperty(const XmlNode* Parent, std::string_view Name, float DefaultValue)
 {
 	if (const XmlNode* Property = Parent->GetChild(
 			[Name](const XmlNode& Node)
@@ -76,7 +76,7 @@ f32 GetFloatProperty(const XmlNode* Parent, std::string_view Name, f32 DefaultVa
 		if (auto Attribute = Property->GetAttributeByName("value");
 			Attribute)
 		{
-			return Attribute->GetValue<f32>();
+			return Attribute->GetValue<float>();
 		}
 	}
 
@@ -110,7 +110,7 @@ std::string GetStringProperty(const XmlNode* Parent, std::string_view Name)
 	return {};
 }
 
-Vec3f GetRgbProperty(const XmlNode* Parent, std::string_view Name)
+Math::Vec3f GetRgbProperty(const XmlNode* Parent, std::string_view Name)
 {
 	if (const XmlNode* Property = Parent->GetChild(
 			[Name](const XmlNode& Node)
@@ -132,8 +132,8 @@ Vec3f GetRgbProperty(const XmlNode* Parent, std::string_view Name)
 		{
 			auto Tokens = Tokenize(std::string(Attribute->Value.begin(), Attribute->Value.end()), std::regex(", "));
 			assert(Tokens.size() == 3);
-			size_t i = 0;
-			Vec3f  Value;
+			size_t		i = 0;
+			Math::Vec3f Value;
 			for (const auto& Token : Tokens)
 			{
 				Value[i++] = std::stof(Token);
@@ -221,7 +221,7 @@ DirectX::XMFLOAT4X4 ParseTransformNode(const XmlNode* Node)
 			if (Child.Tag == "matrix")
 			{
 				DirectX::XMFLOAT4X4 World = GetMatrixFromAttribute(&Child);
-				Matrix = XMLoadFloat4x4(&World) * Matrix;
+				Matrix					  = XMLoadFloat4x4(&World) * Matrix;
 			}
 		}
 	}
@@ -296,13 +296,13 @@ Material ParseMaterial(const XmlNode* Node, Asset::AssetManager* AssetManager)
 	Material Material;
 	if (BsdfType == "diffuse")
 	{
-		Vec3f Albedo		   = GetRgbProperty(Bsdf, "reflectance");
+		Math::Vec3f Albedo	   = GetRgbProperty(Bsdf, "reflectance");
 		Material.BaseColor	   = { Albedo.x, Albedo.y, Albedo.z };
 		Material.Albedo.Handle = GetTextureProperty(Bsdf, "reflectance", AssetManager);
 	}
 	if (BsdfType == "plastic" || BsdfType == "roughplastic")
 	{
-		Vec3f Albedo		   = GetRgbProperty(Bsdf, "diffuseReflectance");
+		Math::Vec3f Albedo	   = GetRgbProperty(Bsdf, "diffuseReflectance");
 		Material.BaseColor	   = { Albedo.x, Albedo.y, Albedo.z };
 		Material.Albedo.Handle = GetTextureProperty(Bsdf, "diffuseReflectance", AssetManager);
 	}
@@ -315,9 +315,9 @@ Material ParseMaterial(const XmlNode* Node, Asset::AssetManager* AssetManager)
 	if (BsdfType == "conductor")
 	{
 		Material.BSDFType = EBSDFTypes::Mirror;
-		//Material.Metallic  = 1.0f;
-		//Material.Specular  = 1.0f;
-		//Material.Roughness = 0.0f;
+		// Material.Metallic  = 1.0f;
+		// Material.Specular  = 1.0f;
+		// Material.Roughness = 0.0f;
 	}
 
 	MaterialMap[Id] = Material;

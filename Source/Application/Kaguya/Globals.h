@@ -9,22 +9,24 @@ namespace Kaguya
 	extern Asset::AssetManager* AssetManager;
 } // namespace Kaguya
 
-class D3D12RHIInitializer
+// Manages global state for RHI, should be initialized before anything else
+class GlobalRHIContext
 {
 public:
-	D3D12RHIInitializer(const RHI::DeviceOptions& Options);
-	~D3D12RHIInitializer();
+	GlobalRHIContext();
+	~GlobalRHIContext();
 
 private:
 	std::unique_ptr<ShaderCompiler>	  Compiler;
 	std::unique_ptr<RHI::D3D12Device> Device;
-	bool							  ImGuiD3D12Initialized = false;
 };
 
-class AssetManagerInitializer
+// Manages global state for asset management, should be initialized before anything else
+class GlobalAssetManagerContext
 {
 public:
-	AssetManagerInitializer();
+	GlobalAssetManagerContext();
+	~GlobalAssetManagerContext();
 
 private:
 	std::unique_ptr<Asset::AssetManager> AssetManager;

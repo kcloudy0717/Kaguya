@@ -57,13 +57,13 @@ static TonemapParameters AddTonemapPass(
 			{
 				struct Parameters
 				{
-					Vec2f			InverseOutputSize;
+					Math::Vec2f		InverseOutputSize;
 					float			BloomIntensity;
 					HlslTexture2D	Input;
 					HlslTexture2D	Bloom;
 					HlslRWTexture2D Output;
 				} Args;
-				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
+				Args.InverseOutputSize = Math::Vec2f(1.0f / static_cast<float>(View.Width), 1.0f / static_cast<float>(View.Height));
 				Args.BloomIntensity	   = Settings.BloomIntensity;
 				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
 				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);

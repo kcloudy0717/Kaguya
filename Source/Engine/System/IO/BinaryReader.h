@@ -1,5 +1,7 @@
 ﻿#pragma once
-#include "SystemCore.h"
+#include <cassert>
+#include <memory>
+#include "Types.h"
 
 class FileStream;
 

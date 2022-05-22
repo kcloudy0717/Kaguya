@@ -1,4 +1,10 @@
 #pragma once
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 #include <entt.hpp>
 #include "Components.h"
 #include "Actor.h"
@@ -154,7 +160,7 @@ namespace Hlsl
 		D3D12_GPU_VIRTUAL_ADDRESS AccelerationStructure;
 
 		// 24
-		BoundingBox BoundingBox;
+		Math::BoundingBox BoundingBox;
 		// 20
 		D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 
@@ -191,7 +197,7 @@ namespace Hlsl
 
 		DirectX::XMFLOAT4X4 PrevViewProjection;
 
-		Frustum Frustum;
+		Math::Frustum Frustum;
 	};
 } // namespace Hlsl
 
@@ -217,7 +223,7 @@ inline Hlsl::Material GetHLSLMaterialDesc(const Material& Material)
 			 .Albedo = Material.TextureIndices[0] };
 }
 
-inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const LightComponent& Light)
+inline Hlsl::Light GetHLSLLightDesc(const Math::Transform& Transform, const LightComponent& Light)
 {
 	using namespace DirectX;
 
@@ -251,7 +257,7 @@ inline Hlsl::Light GetHLSLLightDesc(const Transform& Transform, const LightCompo
 			 .I = Light.I };
 }
 
-inline Hlsl::Mesh GetHLSLMeshDesc(const Transform& Transform)
+inline Hlsl::Mesh GetHLSLMeshDesc(const Math::Transform& Transform)
 {
 	Hlsl::Mesh Mesh = {};
 	XMStoreFloat4x4(&Mesh.Transform, XMMatrixTranspose(Transform.Matrix()));
@@ -287,7 +293,7 @@ inline Hlsl::Camera GetHLSLCameraDesc(const CameraComponent& Camera)
 
 	XMStoreFloat4x4(&HlslCamera.PrevViewProjection, XMMatrixTranspose(XMLoadFloat4x4(&Camera.PrevViewProjection)));
 
-	HlslCamera.Frustum = Frustum(Camera.ViewProjection);
+	HlslCamera.Frustum = Math::Frustum(Camera.ViewProjection);
 
 	return HlslCamera;
 }

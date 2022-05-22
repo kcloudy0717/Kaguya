@@ -57,9 +57,8 @@ struct Material
 	int TextureIndices[ETextureTypes::NumTextureTypes];
 };
 
-class StaticMeshComponent
+struct StaticMeshComponent
 {
-public:
 	Asset::AssetHandle Handle	= {};
 	uint32_t		   HandleId = UINT32_MAX;
 	Asset::Mesh*	   Mesh		= nullptr;

@@ -1,13 +1,11 @@
 #include "WorldWindow.h"
-#include "../Globals.h"
-
-#include "Core/CoreDefines.h"
 
 void WorldWindow::OnRender()
 {
-	for (auto [Index, Actor] : enumerate(pWorld->Actors))
+	for (size_t i = 0; i < pWorld->Actors.size(); ++i)
 	{
-		auto& Name = Actor.GetComponent<CoreComponent>().Name;
+		auto& Actor = pWorld->Actors[i];
+		auto& Name	= Actor.GetComponent<CoreComponent>().Name;
 
 		ImGuiTreeNodeFlags TreeNodeFlags = (GetSelectedActor() == Actor ? ImGuiTreeNodeFlags_Selected : 0);
 		TreeNodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -17,7 +15,7 @@ void WorldWindow::OnRender()
 
 		if (bClicked)
 		{
-			SelectedIndex = Index;
+			SelectedIndex = i;
 		}
 
 		if (bOpened)

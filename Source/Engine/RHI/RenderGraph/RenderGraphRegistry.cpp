@@ -48,6 +48,15 @@ namespace RHI
 	{
 		this->Graph = Graph;
 
+		// TODO: Add buffers support, I haven't had the need to use buffers, so code for them are not implemented yet.
+		/*
+		 * If a graph's resource has changed (e.g. the number of resources mismatches than what the registry cache has),
+		 * it will trigger reallocation for those resources, this ensures the resources needed by the pass are
+		 * allocated correctly (good index)
+		 *
+		 * TODO: Maybe a more robust way to cache resources and detect changes to render passes?
+		 */
+
 		if (ClearCache(BufferCache.size() != Graph->Buffers.size(), BufferCache, Graph->Buffers.size()))
 		{
 			BufferDescTable.clear();

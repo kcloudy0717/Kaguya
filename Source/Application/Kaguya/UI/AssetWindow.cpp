@@ -1,5 +1,6 @@
 #include "AssetWindow.h"
 #include "../Globals.h"
+#include <ImGuizmo.h>
 
 enum AssetTextureColumnID
 {

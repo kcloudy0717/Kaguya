@@ -1,5 +1,8 @@
 #pragma once
-#include "SystemCore.h"
+#include <string>
+#include <string_view>
+#include <vector>
+#include "Types.h"
 
 namespace System
 {
@@ -25,7 +28,7 @@ namespace System
 			}
 
 			template<>
-			[[nodiscard]] f32 GetValue() const noexcept
+			[[nodiscard]] float GetValue() const noexcept
 			{
 				// :(
 				std::string String(Value.begin(), Value.end());

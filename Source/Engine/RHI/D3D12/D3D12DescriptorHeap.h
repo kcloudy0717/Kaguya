@@ -37,6 +37,7 @@ namespace RHI
 	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
 	{
 	public:
+		D3D12DescriptorHeap() noexcept = default;
 		explicit D3D12DescriptorHeap(
 			D3D12LinkedDevice*		   Parent,
 			D3D12_DESCRIPTOR_HEAP_TYPE Type,
@@ -64,10 +65,10 @@ namespace RHI
 		UINT						DescriptorSize = 0;
 
 		Internal::DescriptorIndexPool IndexPool;
-		Mutex						  Mutex;
+		std::unique_ptr<Mutex>		  IndexMutex;
 	};
 
-	// Used for RTV/DSV Heaps
+	// Used for RTV/DSV Heaps, Source: https://github.com/microsoft/D3D12TranslationLayer/blob/master/include/ImmediateContext.hpp#L320
 	class CDescriptorHeapManager : public D3D12LinkedDeviceChild
 	{
 	public: // Types
@@ -92,6 +93,7 @@ namespace RHI
 		using THeapMap = std::deque<SHeapEntry>;
 
 	public: // Methods
+		CDescriptorHeapManager() noexcept = default;
 		explicit CDescriptorHeapManager(
 			D3D12LinkedDevice*		   Parent,
 			D3D12_DESCRIPTOR_HEAP_TYPE Type,
@@ -105,9 +107,9 @@ namespace RHI
 		void AllocateHeap();
 
 	private: // Members
-		const D3D12_DESCRIPTOR_HEAP_DESC Desc;
-		const UINT						 DescriptorSize;
-		Mutex							 Mutex;
+		D3D12_DESCRIPTOR_HEAP_DESC Desc;
+		UINT					   DescriptorSize;
+		std::unique_ptr<Mutex>	   HeapMutex;
 
 		THeapMap		Heaps;
 		std::list<UINT> FreeHeaps;
@@ -115,7 +117,6 @@ namespace RHI
 
 	// Code below was used to simulate D3D11-ish kind binding model
 	// No longer used
-
 	namespace Internal
 	{
 		struct D3D12DescriptorTableCache
@@ -130,6 +131,7 @@ namespace RHI
 		public:
 			static constexpr UINT DescriptorHandleLimit = 256;
 
+			D3D12DescriptorHandleCache() noexcept = default;
 			explicit D3D12DescriptorHandleCache(
 				D3D12LinkedDevice*		   Parent,
 				D3D12_DESCRIPTOR_HEAP_TYPE Type);
@@ -151,8 +153,8 @@ namespace RHI
 				ID3D12GraphicsCommandList*	   CommandList);
 
 		private:
-			const D3D12_DESCRIPTOR_HEAP_TYPE Type			= {};
-			const UINT						 DescriptorSize = 0;
+			D3D12_DESCRIPTOR_HEAP_TYPE Type			  = {};
+			UINT					   DescriptorSize = 0;
 
 			// Each bit in the bit mask represents the index in the root signature
 			// that contains a descriptor table.
@@ -171,6 +173,7 @@ namespace RHI
 	class D3D12OnlineDescriptorHeap : public D3D12LinkedDeviceChild
 	{
 	public:
+		D3D12OnlineDescriptorHeap() noexcept = default;
 		explicit D3D12OnlineDescriptorHeap(
 			D3D12LinkedDevice*		   Parent,
 			D3D12_DESCRIPTOR_HEAP_TYPE Type,
@@ -196,9 +199,9 @@ namespace RHI
 		void CommitComputeRootDescriptorTables(ID3D12GraphicsCommandList* CommandList);
 
 	private:
-		const D3D12_DESCRIPTOR_HEAP_DESC Desc;
-		UINT							 NumDescriptors = 0;
-		Arc<ID3D12DescriptorHeap>		 DescriptorHeap;
+		D3D12_DESCRIPTOR_HEAP_DESC Desc;
+		UINT					   NumDescriptors = 0;
+		Arc<ID3D12DescriptorHeap>  DescriptorHeap;
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
 		CD3DX12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};

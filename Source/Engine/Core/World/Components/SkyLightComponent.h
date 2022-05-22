@@ -2,9 +2,8 @@
 #include "Core/Asset/IAsset.h"
 #include "Core/Asset/Texture.h"
 
-class SkyLightComponent
+struct SkyLightComponent
 {
-public:
 	Asset::AssetHandle Handle	= {};
 	uint32_t		   HandleId = UINT32_MAX;
 	Asset::Texture*	   Texture	= nullptr;

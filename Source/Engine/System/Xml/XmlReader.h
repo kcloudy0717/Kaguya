@@ -1,5 +1,5 @@
 #pragma once
-#include "SystemCore.h"
+#include <memory>
 #include "XmlAttribute.h"
 
 class FileStream;

@@ -5,7 +5,7 @@ template<typename T>
 class AsyncTask
 {
 public:
-	struct promise_type final : promise_base<promise_type, T>
+	struct PromiseType final : Async::Internal::Promise<PromiseType, T>
 	{
 		void return_value(const T& Value) noexcept { this->Value = Value; }
 
@@ -18,6 +18,8 @@ public:
 		T Value = {};
 	};
 
+	// promise_type and coroutine_handle must be present
+	using promise_type	   = PromiseType;
 	using coroutine_handle = std::coroutine_handle<promise_type>;
 
 	AsyncTask() noexcept = default;
@@ -25,30 +27,30 @@ public:
 		: Handle(Handle)
 	{
 	}
-
-	~AsyncTask() { InternalDestroy(); }
-
 	AsyncTask(AsyncTask&& AsyncTask) noexcept
 		: Handle(std::exchange(AsyncTask.Handle, nullptr))
 	{
 	}
 	AsyncTask& operator=(AsyncTask&& AsyncTask) noexcept
 	{
-		if (this == &AsyncTask)
+		if (this != &AsyncTask)
 		{
-			return *this;
+			InternalDestroy();
+			Handle = std::exchange(AsyncTask.Handle, nullptr);
 		}
-
-		InternalDestroy();
-		Handle = std::exchange(AsyncTask.Handle, nullptr);
 		return *this;
 	}
-
-	AsyncTask(std::nullptr_t) {}
+	AsyncTask(std::nullptr_t)
+	{
+	}
 	AsyncTask& operator=(std::nullptr_t)
 	{
 		InternalDestroy();
 		return *this;
+	}
+	~AsyncTask()
+	{
+		InternalDestroy();
 	}
 
 	AsyncTask(const AsyncTask&) = delete;

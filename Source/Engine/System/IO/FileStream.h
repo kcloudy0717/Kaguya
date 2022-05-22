@@ -1,17 +1,19 @@
 #pragma once
-#include "SystemCore.h"
+#include <filesystem>
+#include <wil/resource.h>
+#include "Types.h"
 
 class FileStream
 {
 public:
 	FileStream() noexcept = default;
 	explicit FileStream(
-		const std::filesystem::path& Path,
-		FileMode					 Mode,
-		FileAccess					 Access);
+		std::filesystem::path Path,
+		FileMode			  Mode,
+		FileAccess			  Access);
 	explicit FileStream(
-		const std::filesystem::path& Path,
-		FileMode					 Mode);
+		std::filesystem::path Path,
+		FileMode			  Mode);
 
 	FileStream(FileStream&&) noexcept = default;
 	FileStream& operator=(FileStream&&) noexcept = default;
@@ -41,10 +43,6 @@ public:
 		SeekOrigin RelativeOrigin) const;
 
 private:
-	static DWORD GetMoveMethod(SeekOrigin Origin);
-
-	void VerifyArguments();
-
 	wil::unique_handle InitializeHandle(
 		const std::filesystem::path& Path,
 		FileMode					 Mode,

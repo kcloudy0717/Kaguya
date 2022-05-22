@@ -61,13 +61,13 @@ static void BlurUpsample(std::string_view Name, RHI::RenderGraph& Graph, BlurUps
 				RHI::D3D12Texture* HighResInput = Registry.Get<RHI::D3D12Texture>(Inputs.HighResInput);
 				struct Parameters
 				{
-					Vec2f			InverseOutputSize;
+					Math::Vec2f		InverseOutputSize;
 					float			UpsampleInterpolationFactor;
 					HlslTexture2D	HighRes;
 					HlslTexture2D	LowRes;
 					HlslRWTexture2D Output;
 				} Args;
-				Args.InverseOutputSize			 = Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
+				Args.InverseOutputSize			 = Math::Vec2f(1.0f / static_cast<float>(HighResInput->GetDesc().Width), 1.0f / static_cast<float>(HighResInput->GetDesc().Height));
 				Args.UpsampleInterpolationFactor = UpsampleInterpolationFactor;
 				Args.HighRes					 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.HighResInputSrv);
 				Args.LowRes						 = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.LowResInputSrv);
@@ -123,12 +123,12 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 			{
 				struct Parameters
 				{
-					Vec2f			InverseOutputSize;
+					Math::Vec2f		InverseOutputSize;
 					float			Threshold;
 					HlslTexture2D	Input;
 					HlslRWTexture2D Output;
 				} Args;
-				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
+				Args.InverseOutputSize = Math::Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
 				Args.Threshold		   = Settings.Threshold;
 				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
 				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output1Uavs[0]);
@@ -146,14 +146,14 @@ static BloomParameters AddBloomPass(RHI::RenderGraph& Graph, const View& View, B
 			{
 				struct Parameters
 				{
-					Vec2f			InverseOutputSize;
+					Math::Vec2f		InverseOutputSize;
 					HlslTexture2D	Bloom;
 					HlslRWTexture2D Output1;
 					HlslRWTexture2D Output2;
 					HlslRWTexture2D Output3;
 					HlslRWTexture2D Output4;
 				} Args;
-				Args.InverseOutputSize = Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
+				Args.InverseOutputSize = Math::Vec2f(1.0f / static_cast<float>(kBloomWidth), 1.0f / static_cast<float>(kBloomHeight));
 				Args.Bloom			   = Registry.Get<RHI::D3D12ShaderResourceView>(BloomArgs.Output1Srvs[0]);
 				Args.Output1		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output2Uavs[0]);
 				Args.Output2		   = Registry.Get<RHI::D3D12UnorderedAccessView>(BloomArgs.Output3Uavs[0]);

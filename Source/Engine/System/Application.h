@@ -1,5 +1,4 @@
 #pragma once
-#include <filesystem>
 #include "Window.h"
 #include "InputManager.h"
 #include "Delegate.h"
@@ -37,18 +36,10 @@ public:
 private:
 	struct PlatformWindows
 	{
-		PlatformWindows()
-			: Result(CoInitializeEx(nullptr, COINIT_MULTITHREADED))
-		{
-		}
-		~PlatformWindows()
-		{
-			if (SUCCEEDED(Result))
-			{
-				CoUninitialize();
-			}
-		}
-		HRESULT Result = S_FALSE;
+		PlatformWindows();
+		~PlatformWindows();
+
+		bool Initialized = false;
 	} PlatformWindows;
 
 	HINSTANCE HInstance;

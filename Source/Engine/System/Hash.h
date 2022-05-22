@@ -1,5 +1,5 @@
 #pragma once
-#include "SystemCore.h"
+#include "Types.h"
 
 class Hash
 {

@@ -11,33 +11,14 @@ namespace D3D12RHIUtils
 	{
 		return (T)(((size_t)Size + (size_t)Alignment - 1) & ~((size_t)Alignment - 1));
 	}
-
-	constexpr DXGI_FORMAT MakeSRGB(DXGI_FORMAT Format) noexcept
-	{
-		switch (Format)
-		{
-		case DXGI_FORMAT_R8G8B8A8_UNORM:
-			return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-		case DXGI_FORMAT_BC1_UNORM:
-			return DXGI_FORMAT_BC1_UNORM_SRGB;
-		case DXGI_FORMAT_BC2_UNORM:
-			return DXGI_FORMAT_BC2_UNORM_SRGB;
-		case DXGI_FORMAT_BC3_UNORM:
-			return DXGI_FORMAT_BC3_UNORM_SRGB;
-		case DXGI_FORMAT_B8G8R8A8_UNORM:
-			return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-		case DXGI_FORMAT_B8G8R8X8_UNORM:
-			return DXGI_FORMAT_B8G8R8X8_UNORM_SRGB;
-		case DXGI_FORMAT_BC7_UNORM:
-			return DXGI_FORMAT_BC7_UNORM_SRGB;
-		default:
-			return Format;
-		}
-	}
 } // namespace D3D12RHIUtils
 
 namespace RHI
 {
+	class D3D12Device;
+	class D3D12LinkedDevice;
+	class D3D12Fence;
+
 	enum class RHID3D12CommandQueueType
 	{
 		Direct,
@@ -79,8 +60,6 @@ namespace RHI
 		UINT NodeMask;
 	};
 
-	class D3D12Device;
-
 	class D3D12DeviceChild
 	{
 	public:
@@ -95,8 +74,6 @@ namespace RHI
 	protected:
 		D3D12Device* Parent = nullptr;
 	};
-
-	class D3D12LinkedDevice;
 
 	class D3D12LinkedDeviceChild
 	{
@@ -113,7 +90,6 @@ namespace RHI
 		D3D12LinkedDevice* Parent = nullptr;
 	};
 
-	class D3D12Fence;
 	// Represents a Fence and Value pair, similar to that of a coroutine handle
 	// you can query the status of a command execution point and wait for it
 	class D3D12SyncHandle
@@ -140,9 +116,9 @@ namespace RHI
 
 		explicit operator bool() const noexcept;
 
-		[[nodiscard]] auto GetValue() const noexcept -> UINT64;
-		[[nodiscard]] auto IsComplete() const -> bool;
-		auto			   WaitForCompletion() const -> void;
+		[[nodiscard]] UINT64 GetValue() const noexcept;
+		[[nodiscard]] bool	 IsComplete() const;
+		void				 WaitForCompletion() const;
 
 	private:
 		friend class D3D12CommandQueue;

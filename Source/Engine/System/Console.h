@@ -1,6 +1,6 @@
 #pragma once
-#include "Delegate.h"
 #include <string_view>
+#include "Delegate.h"
 
 class IConsoleObject
 {

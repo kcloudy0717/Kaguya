@@ -1,6 +1,7 @@
 #include "InspectorWindow.h"
-#include <imgui_internal.h>
 #include "../Globals.h"
+#include <imgui_internal.h>
+#include <ImGuizmo.h>
 
 template<typename T, bool IsCoreComponent, typename UIFunction>
 static void RenderComponent(std::string_view Name, Actor Actor, UIFunction Func)

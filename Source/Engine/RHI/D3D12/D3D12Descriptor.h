@@ -21,8 +21,6 @@ namespace RHI
 		explicit CSubresourceSubset(const D3D12_RENDER_TARGET_VIEW_DESC& Desc) noexcept;
 		explicit CSubresourceSubset(const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc) noexcept;
 
-		[[nodiscard]] bool DoesNotOverlap(const CSubresourceSubset& CSubresourceSubset) const noexcept;
-
 	protected:
 		UINT16 BeginArray = 0; // Also used to store Tex3D slices.
 		UINT16 EndArray	  = 0; // End - Begin == Array Slices
@@ -242,7 +240,7 @@ namespace RHI
 		static auto Create() { return &ID3D12Device::CreateUnorderedAccessView; }
 	};
 
-	template<typename ViewDesc>
+	template<typename ViewDesc, bool Dynamic>
 	class D3D12Descriptor : public D3D12LinkedDeviceChild
 	{
 	public:
@@ -252,28 +250,35 @@ namespace RHI
 		{
 			if (Parent)
 			{
-				CDescriptorHeapManager& Manager = Parent->GetHeapManager<ViewDesc>();
-				CpuHandle						= Manager.AllocateHeapSlot(DescriptorHeapIndex);
+				if constexpr (Dynamic)
+				{
+					D3D12DescriptorHeap* DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
+					DescriptorHeap->Allocate(CpuHandle, GpuHandle, Index);
+				}
+				else if constexpr (!Dynamic)
+				{
+					CDescriptorHeapManager* Manager = Parent->GetHeapManager<ViewDesc>();
+					CpuHandle						= Manager->AllocateHeapSlot(Index);
+				}
 			}
 		}
 		D3D12Descriptor(D3D12Descriptor&& D3D12Descriptor) noexcept
 			: D3D12LinkedDeviceChild(std::exchange(D3D12Descriptor.Parent, {}))
 			, CpuHandle(std::exchange(D3D12Descriptor.CpuHandle, {}))
-			, DescriptorHeapIndex(std::exchange(D3D12Descriptor.DescriptorHeapIndex, UINT_MAX))
+			, GpuHandle(std::exchange(D3D12Descriptor.GpuHandle, {}))
+			, Index(std::exchange(D3D12Descriptor.Index, UINT_MAX))
 		{
 		}
 		D3D12Descriptor& operator=(D3D12Descriptor&& D3D12Descriptor) noexcept
 		{
-			if (this == &D3D12Descriptor)
+			if (this != &D3D12Descriptor)
 			{
-				return *this;
+				InternalDestroy();
+				Parent	  = std::exchange(D3D12Descriptor.Parent, {});
+				CpuHandle = std::exchange(D3D12Descriptor.CpuHandle, {});
+				GpuHandle = std::exchange(D3D12Descriptor.GpuHandle, {});
+				Index	  = std::exchange(D3D12Descriptor.Index, UINT_MAX);
 			}
-
-			InternalDestroy();
-			Parent				= std::exchange(D3D12Descriptor.Parent, {});
-			CpuHandle			= std::exchange(D3D12Descriptor.CpuHandle, {});
-			DescriptorHeapIndex = std::exchange(D3D12Descriptor.DescriptorHeapIndex, UINT_MAX);
-
 			return *this;
 		}
 		~D3D12Descriptor()
@@ -286,181 +291,12 @@ namespace RHI
 
 		[[nodiscard]] bool IsValid() const noexcept
 		{
-			return DescriptorHeapIndex != UINT_MAX;
+			return Index != UINT_MAX;
 		}
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept
+		[[nodiscard]] bool IsShaderVisible() const noexcept
 		{
-			assert(IsValid());
-			return CpuHandle;
+			return Dynamic;
 		}
-
-		void CreateDefaultView(ID3D12Resource* Resource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, nullptr, CpuHandle);
-		}
-
-		void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CpuHandle);
-		}
-
-		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
-		}
-
-		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
-		}
-
-	private:
-		void InternalDestroy()
-		{
-			if (Parent && IsValid())
-			{
-				CDescriptorHeapManager& Manager = Parent->GetHeapManager<ViewDesc>();
-				Manager.FreeHeapSlot(CpuHandle, DescriptorHeapIndex);
-				Parent				= nullptr;
-				CpuHandle			= { NULL };
-				DescriptorHeapIndex = UINT_MAX;
-			}
-		}
-
-	protected:
-		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle			= { NULL };
-		UINT						DescriptorHeapIndex = UINT_MAX;
-	};
-
-	template<typename ViewDesc>
-	class D3D12View
-	{
-	public:
-		D3D12View() noexcept = default;
-		explicit D3D12View(D3D12LinkedDevice* Device, const ViewDesc& Desc, D3D12Resource* Resource)
-			: Descriptor(Device)
-			, Desc(Desc)
-			, Resource(Resource)
-			, ViewSubresourceSubset(Resource ? CViewSubresourceSubset::FromView(this) : CViewSubresourceSubset())
-		{
-		}
-
-		D3D12View(D3D12View&&) noexcept = default;
-		D3D12View& operator=(D3D12View&&) noexcept = default;
-
-		D3D12View(const D3D12View&) = delete;
-		D3D12View& operator=(const D3D12View&) = delete;
-
-		[[nodiscard]] bool							IsValid() const noexcept { return Descriptor.IsValid(); }
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE	GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
-		[[nodiscard]] ViewDesc						GetDesc() const noexcept { return Desc; }
-		[[nodiscard]] D3D12Resource*				GetResource() const noexcept { return Resource; }
-		[[nodiscard]] const CViewSubresourceSubset& GetViewSubresourceSubset() const noexcept { return ViewSubresourceSubset; }
-
-	protected:
-		D3D12Descriptor<ViewDesc> Descriptor;
-		ViewDesc				  Desc	   = {};
-		D3D12Resource*			  Resource = nullptr;
-		CViewSubresourceSubset	  ViewSubresourceSubset;
-	};
-
-	class D3D12RenderTargetView : public D3D12View<D3D12_RENDER_TARGET_VIEW_DESC>
-	{
-	public:
-		D3D12RenderTargetView() noexcept = default;
-		explicit D3D12RenderTargetView(
-			D3D12LinkedDevice*					 Device,
-			const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
-			D3D12Resource*						 Resource);
-		explicit D3D12RenderTargetView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt,
-			bool				sRGB		  = false);
-
-		void RecreateView();
-
-	private:
-		static D3D12_RENDER_TARGET_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice,
-			std::optional<UINT> OptMipSlice,
-			std::optional<UINT> OptArraySize,
-			bool				sRGB);
-	};
-
-	class D3D12DepthStencilView : public D3D12View<D3D12_DEPTH_STENCIL_VIEW_DESC>
-	{
-	public:
-		D3D12DepthStencilView() noexcept = default;
-		explicit D3D12DepthStencilView(
-			D3D12LinkedDevice*					 Device,
-			const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc,
-			D3D12Resource*						 Resource);
-		explicit D3D12DepthStencilView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt);
-
-		void RecreateView();
-
-	private:
-		static D3D12_DEPTH_STENCIL_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt);
-	};
-
-	template<typename ViewDesc>
-	class D3D12DynamicDescriptor : public D3D12LinkedDeviceChild
-	{
-	public:
-		D3D12DynamicDescriptor() noexcept = default;
-		explicit D3D12DynamicDescriptor(D3D12LinkedDevice* Parent)
-			: D3D12LinkedDeviceChild(Parent)
-		{
-			if (Parent)
-			{
-				D3D12DescriptorHeap& DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
-				DescriptorHeap.Allocate(CpuHandle, GpuHandle, Index);
-			}
-		}
-		D3D12DynamicDescriptor(D3D12DynamicDescriptor&& D3D12DynamicDescriptor) noexcept
-			: D3D12LinkedDeviceChild(std::exchange(D3D12DynamicDescriptor.Parent, {}))
-			, CpuHandle(std::exchange(D3D12DynamicDescriptor.CpuHandle, {}))
-			, GpuHandle(std::exchange(D3D12DynamicDescriptor.GpuHandle, {}))
-			, Index(std::exchange(D3D12DynamicDescriptor.Index, UINT_MAX))
-		{
-		}
-		D3D12DynamicDescriptor& operator=(D3D12DynamicDescriptor&& D3D12DynamicDescriptor) noexcept
-		{
-			if (this == &D3D12DynamicDescriptor)
-			{
-				return *this;
-			}
-
-			InternalDestroy();
-			Parent	  = std::exchange(D3D12DynamicDescriptor.Parent, {});
-			CpuHandle = std::exchange(D3D12DynamicDescriptor.CpuHandle, {});
-			GpuHandle = std::exchange(D3D12DynamicDescriptor.GpuHandle, {});
-			Index	  = std::exchange(D3D12DynamicDescriptor.Index, UINT_MAX);
-
-			return *this;
-		}
-		~D3D12DynamicDescriptor()
-		{
-			InternalDestroy();
-		}
-
-		D3D12DynamicDescriptor(const D3D12DynamicDescriptor&) = delete;
-		D3D12DynamicDescriptor& operator=(const D3D12DynamicDescriptor&) = delete;
-
-		[[nodiscard]] bool						  IsValid() const noexcept { return Index != UINT_MAX; }
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle() const noexcept
 		{
 			assert(IsValid());
@@ -468,6 +304,7 @@ namespace RHI
 		}
 		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandle() const noexcept
 		{
+			static_assert(Dynamic, "Descriptor is not dynamic");
 			assert(IsValid());
 			return GpuHandle;
 		}
@@ -502,27 +339,40 @@ namespace RHI
 		{
 			if (Parent && IsValid())
 			{
-				D3D12DescriptorHeap& DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
-				DescriptorHeap.Release(Index);
-				Parent	  = nullptr;
-				CpuHandle = { NULL };
-				GpuHandle = { NULL };
-				Index	  = UINT_MAX;
+				if constexpr (Dynamic)
+				{
+					D3D12DescriptorHeap* DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
+					DescriptorHeap->Release(Index);
+					Parent	  = nullptr;
+					CpuHandle = { NULL };
+					GpuHandle = { NULL };
+					Index	  = UINT_MAX;
+				}
+				else if constexpr (!Dynamic)
+				{
+					CDescriptorHeapManager* Manager = Parent->GetHeapManager<ViewDesc>();
+					Manager->FreeHeapSlot(CpuHandle, Index);
+					Parent	  = nullptr;
+					CpuHandle = { NULL };
+					Index	  = UINT_MAX;
+				}
 			}
 		}
 
 	protected:
-		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = { NULL };
-		D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle = { NULL };
-		UINT						Index	  = UINT_MAX;
+		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle = {};
+		// If Dynamic is true, this represents bindless handle index in the descriptor heap
+		// Else it represents descriptor heap entry index in CDescriptorHeapManager
+		UINT Index = UINT_MAX;
 	};
 
-	template<typename ViewDesc>
-	class D3D12DynamicView
+	template<typename ViewDesc, bool Dynamic>
+	class D3D12View
 	{
 	public:
-		D3D12DynamicView() noexcept = default;
-		explicit D3D12DynamicView(D3D12LinkedDevice* Device, const ViewDesc& Desc, D3D12Resource* Resource)
+		D3D12View() noexcept = default;
+		explicit D3D12View(D3D12LinkedDevice* Device, const ViewDesc& Desc, D3D12Resource* Resource)
 			: Descriptor(Device)
 			, Desc(Desc)
 			, Resource(Resource)
@@ -530,11 +380,11 @@ namespace RHI
 		{
 		}
 
-		D3D12DynamicView(D3D12DynamicView&&) noexcept = default;
-		D3D12DynamicView& operator=(D3D12DynamicView&&) = default;
+		D3D12View(D3D12View&&) noexcept = default;
+		D3D12View& operator=(D3D12View&&) noexcept = default;
 
-		D3D12DynamicView(const D3D12DynamicView&) = delete;
-		D3D12DynamicView& operator=(const D3D12DynamicView&) = delete;
+		D3D12View(const D3D12View&) = delete;
+		D3D12View& operator=(const D3D12View&) = delete;
 
 		[[nodiscard]] bool							IsValid() const noexcept { return Descriptor.IsValid(); }
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE	GetCpuHandle() const noexcept { return Descriptor.GetCpuHandle(); }
@@ -545,13 +395,65 @@ namespace RHI
 		[[nodiscard]] const CViewSubresourceSubset& GetViewSubresourceSubset() const noexcept { return ViewSubresourceSubset; }
 
 	protected:
-		D3D12DynamicDescriptor<ViewDesc> Descriptor;
-		ViewDesc						 Desc	  = {};
-		D3D12Resource*					 Resource = nullptr;
-		CViewSubresourceSubset			 ViewSubresourceSubset;
+		D3D12Descriptor<ViewDesc, Dynamic> Descriptor;
+		ViewDesc						   Desc		= {};
+		D3D12Resource*					   Resource = nullptr;
+		CViewSubresourceSubset			   ViewSubresourceSubset;
 	};
 
-	class D3D12ShaderResourceView : public D3D12DynamicView<D3D12_SHADER_RESOURCE_VIEW_DESC>
+	class D3D12RenderTargetView : public D3D12View<D3D12_RENDER_TARGET_VIEW_DESC, false>
+	{
+	public:
+		D3D12RenderTargetView() noexcept = default;
+		explicit D3D12RenderTargetView(
+			D3D12LinkedDevice*					 Device,
+			const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
+			D3D12Resource*						 Resource);
+		explicit D3D12RenderTargetView(
+			D3D12LinkedDevice*	Device,
+			D3D12Texture*		Texture,
+			std::optional<UINT> OptArraySlice = std::nullopt,
+			std::optional<UINT> OptMipSlice	  = std::nullopt,
+			std::optional<UINT> OptArraySize  = std::nullopt,
+			bool				sRGB		  = false);
+
+		void RecreateView();
+
+	private:
+		static D3D12_RENDER_TARGET_VIEW_DESC GetDesc(
+			D3D12Texture*		Texture,
+			std::optional<UINT> OptArraySlice,
+			std::optional<UINT> OptMipSlice,
+			std::optional<UINT> OptArraySize,
+			bool				sRGB);
+	};
+
+	class D3D12DepthStencilView : public D3D12View<D3D12_DEPTH_STENCIL_VIEW_DESC, false>
+	{
+	public:
+		D3D12DepthStencilView() noexcept = default;
+		explicit D3D12DepthStencilView(
+			D3D12LinkedDevice*					 Device,
+			const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc,
+			D3D12Resource*						 Resource);
+		explicit D3D12DepthStencilView(
+			D3D12LinkedDevice*	Device,
+			D3D12Texture*		Texture,
+			std::optional<UINT> OptArraySlice = std::nullopt,
+			std::optional<UINT> OptMipSlice	  = std::nullopt,
+			std::optional<UINT> OptArraySize  = std::nullopt);
+
+		void RecreateView();
+
+	private:
+		static D3D12_DEPTH_STENCIL_VIEW_DESC GetDesc(
+			D3D12Texture*		Texture,
+			std::optional<UINT> OptArraySlice = std::nullopt,
+			std::optional<UINT> OptMipSlice	  = std::nullopt,
+			std::optional<UINT> OptArraySize  = std::nullopt);
+	};
+
+	class D3D12ShaderResourceView : public D3D12View<D3D12_SHADER_RESOURCE_VIEW_DESC, true>
 	{
 	public:
 		D3D12ShaderResourceView() noexcept = default;
@@ -592,7 +494,7 @@ namespace RHI
 			std::optional<UINT> OptMipLevels);
 	};
 
-	class D3D12UnorderedAccessView : public D3D12DynamicView<D3D12_UNORDERED_ACCESS_VIEW_DESC>
+	class D3D12UnorderedAccessView : public D3D12View<D3D12_UNORDERED_ACCESS_VIEW_DESC, true>
 	{
 	public:
 		D3D12UnorderedAccessView() noexcept = default;

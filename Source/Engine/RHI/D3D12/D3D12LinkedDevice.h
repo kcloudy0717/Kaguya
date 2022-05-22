@@ -26,14 +26,15 @@ namespace RHI
 		[[nodiscard]] D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept;
 		[[nodiscard]] D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept;
 		// clang-format off
-		template<typename ViewDesc> CDescriptorHeapManager& GetHeapManager() noexcept;
-		template<> CDescriptorHeapManager& GetHeapManager<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return RtvHeapManager; }
-		template<> CDescriptorHeapManager& GetHeapManager<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return DsvHeapManager; }
-		template<typename ViewDesc> D3D12DescriptorHeap& GetDescriptorHeap() noexcept;
-		template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_CONSTANT_BUFFER_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-		template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-		template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return ResourceDescriptorHeap; }
-		template<> D3D12DescriptorHeap& GetDescriptorHeap<D3D12_SAMPLER_DESC>() noexcept { return SamplerDescriptorHeap; }
+		template<typename ViewDesc> CDescriptorHeapManager* GetHeapManager() noexcept;
+		template<> CDescriptorHeapManager* GetHeapManager<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return &RtvHeapManager; }
+		template<> CDescriptorHeapManager* GetHeapManager<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return &DsvHeapManager; }
+
+		template<typename ViewDesc> D3D12DescriptorHeap* GetDescriptorHeap() noexcept;
+		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_CONSTANT_BUFFER_VIEW_DESC>() noexcept { return &ResourceDescriptorHeap; }
+		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_SHADER_RESOURCE_VIEW_DESC>() noexcept { return &ResourceDescriptorHeap; }
+		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return &ResourceDescriptorHeap; }
+		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_SAMPLER_DESC>() noexcept { return &SamplerDescriptorHeap; }
 		// clang-format on
 		[[nodiscard]] D3D12CommandContext& GetCommandContext(UINT ThreadIndex = 0);
 		[[nodiscard]] D3D12CommandContext& GetAsyncComputeCommandContext(UINT ThreadIndex = 0);

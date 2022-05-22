@@ -1,4 +1,5 @@
 #include "Console.h"
+#include <unordered_map>
 #include "Hash.h"
 
 IConsoleObject::IConsoleObject(std::string_view Name)

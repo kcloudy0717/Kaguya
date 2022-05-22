@@ -1,5 +1,10 @@
 #pragma once
-#include "SystemCore.h"
+#include <atomic>
+#include <filesystem>
+#include <mutex>
+#include <thread>
+#include <wil/resource.h>
+#include "Types.h"
 #include "Delegate.h"
 
 class FileSystemWatcher
@@ -7,7 +12,7 @@ class FileSystemWatcher
 public:
 	using Event = MulticastDelegate<const FileSystemEventArgs&>;
 
-	explicit FileSystemWatcher(const std::filesystem::path& Path);
+	explicit FileSystemWatcher(std::filesystem::path Path);
 
 	~FileSystemWatcher();
 

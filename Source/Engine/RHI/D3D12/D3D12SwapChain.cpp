@@ -221,7 +221,7 @@ namespace RHI
 		TearingSupport = AllowTearing == TRUE;
 
 		// Width/Height can be set to 0
-		DXGI_SWAP_CHAIN_DESC1 Desc = {
+		const DXGI_SWAP_CHAIN_DESC1 Desc = {
 			.Width		 = 0,
 			.Height		 = 0,
 			.Format		 = Format,

@@ -38,7 +38,7 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 		Application));
 	if (!WindowHandle)
 	{
-		ErrorExit(L"CreateWindowExW");
+		throw std::runtime_error("CreateWindowExW");
 	}
 
 	RECT ClientRect = {};
@@ -52,7 +52,7 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 	RawInputDevice.hwndTarget	  = WindowHandle.get();
 	if (!RegisterRawInputDevices(&RawInputDevice, 1, sizeof(RAWINPUTDEVICE)))
 	{
-		ErrorExit(L"RegisterRawInputDevices");
+		throw std::runtime_error("RegisterRawInputDevices");
 	}
 }
 

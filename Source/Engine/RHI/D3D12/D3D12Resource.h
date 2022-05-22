@@ -169,9 +169,8 @@ namespace RHI
 		}
 
 	private:
-		static void EmptyDestructor(BYTE* Ptr)
+		static void EmptyDestructor([[maybe_unused]] BYTE* Ptr)
 		{
-			UNREFERENCED_PARAMETER(Ptr);
 		}
 
 	private:

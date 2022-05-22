@@ -1,5 +1,5 @@
 #pragma once
-#include "SystemCore.h"
+#include <filesystem>
 #include "ThreadPool.h"
 
 class Process
@@ -7,5 +7,5 @@ class Process
 public:
 	static const std::filesystem::path ExecutableDirectory;
 
-	static ThreadPool ThreadPool;
+	static std::unique_ptr<ThreadPool> ThreadPool;
 };

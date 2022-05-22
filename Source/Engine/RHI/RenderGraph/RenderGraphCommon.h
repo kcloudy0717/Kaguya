@@ -78,28 +78,28 @@ namespace RHI
 
 	struct RgDepthStencilValue
 	{
-		f32 Depth;
-		u8	Stencil;
+		float Depth;
+		u8	  Stencil;
 	};
 
 	struct RgClearValue
 	{
 		RgClearValue() noexcept = default;
-		constexpr RgClearValue(const f32 Color[4])
+		constexpr RgClearValue(const float Color[4])
 		{
 			this->Color[0] = Color[0];
 			this->Color[1] = Color[1];
 			this->Color[2] = Color[2];
 			this->Color[3] = Color[3];
 		}
-		constexpr RgClearValue(f32 Depth, u8 Stencil)
+		constexpr RgClearValue(float Depth, u8 Stencil)
 			: DepthStencil{ Depth, Stencil }
 		{
 		}
 
 		union
 		{
-			f32					Color[4];
+			float				Color[4];
 			RgDepthStencilValue DepthStencil;
 		};
 	};

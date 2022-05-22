@@ -3,6 +3,8 @@
 #include <cassert>
 #include <coroutine>
 #include <stdexcept>
+#include <utility>
+#include <wil/resource.h>
 
 // Learning coroutines
 // These are highly unstable
@@ -117,116 +119,133 @@ public:
 	}
 };
 
-// Provides boiler plate code for promise types
-template<typename TDerived, typename TResult = void>
-struct promise_base
+namespace Async
 {
-	promise_base() { Event.create(); }
-
-	auto get_return_object() noexcept
+	namespace Internal
 	{
-		return std::coroutine_handle<TDerived>::from_promise(*static_cast<TDerived*>(this));
-	}
-
-	auto initial_suspend() noexcept { return std::suspend_never{}; }
-
-	auto final_suspend() noexcept
-	{
-		struct final_suspend_awaiter
+		// Provides boiler plate code for promise types
+		template<typename TDerived, typename TResult = void>
+		struct Promise
 		{
-			[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
-
-			constexpr void await_resume() const noexcept {}
-
-			[[nodiscard]] constexpr bool await_suspend(std::coroutine_handle<>) const noexcept
+			Promise()
 			{
-				AsyncStatus status = Promise->Status.load();
-				if (status == AsyncStatus::Started)
+				Event.create();
+			}
+
+			auto get_return_object() noexcept
+			{
+				return std::coroutine_handle<TDerived>::from_promise(*static_cast<TDerived*>(this));
+			}
+
+			auto initial_suspend() noexcept
+			{
+				return std::suspend_never{};
+			}
+
+			auto final_suspend() noexcept
+			{
+				struct final_suspend_awaiter
 				{
-					status = AsyncStatus::Completed;
-					Promise->Status.store(status);
+					[[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
+
+					constexpr void await_resume() const noexcept {}
+
+					[[nodiscard]] constexpr bool await_suspend(std::coroutine_handle<>) const noexcept
+					{
+						AsyncStatus CurrentStatus = Instance->Status.load();
+						if (CurrentStatus == AsyncStatus::Started)
+						{
+							CurrentStatus = AsyncStatus::Completed;
+							Instance->Status.store(CurrentStatus);
+						}
+
+						Instance->Event.SetEvent();
+						return Instance->GetStatus() == AsyncStatus::Completed;
+					}
+
+					Promise* Instance;
+				};
+
+				return final_suspend_awaiter{ this };
+			}
+
+			void unhandled_exception() noexcept
+			{
+				Exception = std::current_exception();
+				try
+				{
+					std::rethrow_exception(Exception);
+				}
+				catch (const cancelled_promise&)
+				{
+					Status.store(AsyncStatus::Canceled);
+				}
+				catch (...)
+				{
+					Status.store(AsyncStatus::Error);
+				}
+			}
+
+			void rethrow_if_exception()
+			{
+				if (Exception)
+				{
+					std::rethrow_exception(Exception);
+				}
+			}
+
+			template<typename TExpression>
+			[[nodiscard]] constexpr TExpression&& await_transform(TExpression&& Expression)
+			{
+				if (GetStatus() == AsyncStatus::Canceled)
+				{
+					throw cancelled_promise();
 				}
 
-				Promise->Event.SetEvent();
-				return Promise->GetStatus() == AsyncStatus::Completed;
+				return std::forward<TExpression>(Expression);
 			}
 
-			promise_base* Promise;
+			void get_return_value() const noexcept
+			{
+			}
+
+			void copy_return_value() const noexcept
+			{
+			}
+
+			[[nodiscard]] AsyncStatus GetStatus() const noexcept
+			{
+				return Status.load();
+			}
+
+			auto Get()
+			{
+				AsyncStatus CurrentStatus = Status.load();
+				if constexpr (std::is_same_v<TResult, void>)
+				{
+					if (CurrentStatus == AsyncStatus::Completed)
+					{
+						return static_cast<TDerived*>(this)->get_return_value();
+					}
+					// Operation failed
+					assert(CurrentStatus == AsyncStatus::Started);
+					throw invalid_method_call();
+				}
+				else
+				{
+					if (CurrentStatus == AsyncStatus::Completed || CurrentStatus == AsyncStatus::Started)
+					{
+						return static_cast<TDerived*>(this)->copy_return_value();
+					}
+					// Operation failed
+					assert(CurrentStatus == AsyncStatus::Error || CurrentStatus == AsyncStatus::Canceled);
+					std::rethrow_exception(Exception);
+				}
+			}
+
+			std::atomic<AsyncStatus> Status = AsyncStatus::Started;
+			wil::unique_event		 Event;
+			std::exception_ptr		 Exception;
 		};
-
-		return final_suspend_awaiter{ this };
-	}
-
-	void unhandled_exception() noexcept
-	{
-		Exception = std::current_exception();
-
-		try
-		{
-			std::rethrow_exception(Exception);
-		}
-		catch (const cancelled_promise&)
-		{
-			Status.store(AsyncStatus::Canceled);
-		}
-		catch (...)
-		{
-			Status.store(AsyncStatus::Error);
-		}
-	}
-
-	void rethrow_if_exception()
-	{
-		if (Exception)
-		{
-			std::rethrow_exception(Exception);
-		}
-	}
-
-	template<typename TExpression>
-	[[nodiscard]] constexpr TExpression&& await_transform(TExpression&& Expression)
-	{
-		if (GetStatus() == AsyncStatus::Canceled)
-		{
-			throw cancelled_promise();
-		}
-
-		return std::forward<TExpression>(Expression);
-	}
-
-	void get_return_value() const noexcept {}
-
-	void copy_return_value() const noexcept {}
-
-	[[nodiscard]] AsyncStatus GetStatus() const noexcept { return Status.load(); }
-
-	auto Get()
-	{
-		AsyncStatus status = Status.load();
-
-		if constexpr (std::is_same_v<TResult, void>)
-		{
-			if (status == AsyncStatus::Completed)
-			{
-				return static_cast<TDerived*>(this)->get_return_value();
-			}
-			// Operation failed
-			assert(status == AsyncStatus::Started);
-			throw invalid_method_call();
-		}
-		else
-		{
-			if (status == AsyncStatus::Completed || status == AsyncStatus::Started)
-			{
-				return static_cast<TDerived*>(this)->copy_return_value();
-			}
-			// Operation failed
-			assert(status == AsyncStatus::Error || status == AsyncStatus::Canceled);
-			std::rethrow_exception(Exception);
-		}
-	}
-
-	std::atomic<AsyncStatus> Status = AsyncStatus::Started;
-	wil::unique_event		 Event;
-	std::exception_ptr		 Exception;
-};
+	} // namespace Internal
+} // namespace Async

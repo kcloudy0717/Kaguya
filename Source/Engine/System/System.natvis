@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-	<Type Name="InlineAllocator&lt;*&gt;">
+	<Type Name="Kaguya::Internal::InlineAllocator&lt;*&gt;">
 		<DisplayString Condition="SizeInBytes == 0xcccccccc">Uninitialized</DisplayString>
 		<DisplayString Condition="SizeInBytes == 0">Null</DisplayString>
 		<DisplayString Condition="SizeInBytes &lt;= $T1">Stack Memory: {SizeInBytes} bytes</DisplayString>

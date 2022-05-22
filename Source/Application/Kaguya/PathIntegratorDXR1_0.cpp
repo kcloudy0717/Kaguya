@@ -1,4 +1,5 @@
 #include "PathIntegratorDXR1_0.h"
+#include <imgui.h>
 #include "RendererRegistry.h"
 
 #include "Tonemap.h"
@@ -18,7 +19,7 @@ PathIntegratorDXR1_0::PathIntegratorDXR1_0(
 	PipelineStates::Compile(Device, Registry);
 	RaytracingPipelineStates::Compile(Device, Registry);
 
-	AccelerationStructure = RaytracingAccelerationStructure(Device, 1, World::MeshLimit);
+	AccelerationStructure = RaytracingAccelerationStructure(Device, 1);
 
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(RaytracingPipelineStates::g_RayGenerationSID);
@@ -38,18 +39,18 @@ void PathIntegratorDXR1_0::RenderOptions()
 
 	if (ImGui::Button("Restore Defaults"))
 	{
-		PathIntegratorState = {};
+		Settings = {};
 		ResetPathIntegrator = true;
 	}
 
-	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
-	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
+	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &Settings.Antialiasing);
+	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &Settings.SkyIntensity, 0.0f, 50.0f);
 	ResetPathIntegrator |= ImGui::SliderScalar(
 		"Max Depth",
 		ImGuiDataType_U32,
-		&PathIntegratorState.MaxDepth,
-		&PathIntegratorState::MinimumDepth,
-		&PathIntegratorState::MaximumDepth);
+		&Settings.MaxDepth,
+		&PathIntegratorSettings::MinimumDepth,
+		&PathIntegratorSettings::MaximumDepth);
 
 	ImGui::SliderFloat("Bloom Threshold", &g_Bloom.Threshold, 0.0f, 50.0f);
 	ImGui::SliderFloat("Bloom Intensity", &g_Tonemap.BloomIntensity, 0.0f, 50.0f);
@@ -80,10 +81,11 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 		{
 			// Update shader table
 			HitGroupShaderTable->Reset();
-			for (auto [i, MeshRenderer] : enumerate(AccelerationStructure.StaticMeshes))
+			for (size_t i = 0; i < AccelerationStructure.StaticMeshes.size(); ++i)
 			{
-				ID3D12Resource* VertexBuffer = MeshRenderer->Mesh->VertexResource.GetResource();
-				ID3D12Resource* IndexBuffer	 = MeshRenderer->Mesh->IndexResource.GetResource();
+				StaticMeshComponent* MeshComponent = AccelerationStructure.StaticMeshes[i];
+				ID3D12Resource*		 VertexBuffer  = MeshComponent->Mesh->VertexResource.GetResource();
+				ID3D12Resource*		 IndexBuffer   = MeshComponent->Mesh->IndexResource.GetResource();
 
 				RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
 				Record.ShaderIdentifier										 = RaytracingPipelineStates::g_DefaultSID;
@@ -160,12 +162,12 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 					 };
 					 g_GlobalConstants.NumLights			 = WorldRenderView->NumLights;
 					 g_GlobalConstants.TotalFrameCount		 = FrameCounter++;
-					 g_GlobalConstants.MaxDepth				 = PathIntegratorState.MaxDepth;
+					 g_GlobalConstants.MaxDepth				 = Settings.MaxDepth;
 					 g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
 					 g_GlobalConstants.RenderTarget			 = Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
-					 g_GlobalConstants.SkyIntensity			 = PathIntegratorState.SkyIntensity;
+					 g_GlobalConstants.SkyIntensity			 = Settings.SkyIntensity;
 					 g_GlobalConstants.Dimensions			 = { WorldRenderView->View.Width, WorldRenderView->View.Height };
-					 g_GlobalConstants.AntiAliasing			 = PathIntegratorState.Antialiasing;
+					 g_GlobalConstants.AntiAliasing			 = Settings.Antialiasing;
 
 					 Context.SetPipelineState(Registry.GetRaytracingPipelineState(RaytracingPipelineStates::RTPSO));
 					 Context.SetComputeRootSignature(Registry.GetRootSignature(RaytracingPipelineStates::GlobalRS));

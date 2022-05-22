@@ -37,31 +37,34 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 		{ EBSDFTypes::Disney, "Disney" },
 	});
 
-inline void to_json(json& Json, const Transform& InTransform)
+namespace Math
 {
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			Json[Name]		 = Attribute.Get(InTransform);
-		});
-}
-inline void from_json(const json& Json, Transform& OutTransform)
-{
-	ForEachAttribute<Transform>(
-		[&](auto&& Attribute)
-		{
-			const char* Name = Attribute.GetName();
-			if (Json.contains(Name))
+	inline void to_json(json& Json, const Transform& InTransform)
+	{
+		Reflection::ForEachAttributeIn<Transform>(
+			[&](auto&& Attribute)
 			{
-				Attribute.Set(OutTransform, Json[Name].get<decltype(Attribute.GetType())>());
-			}
-		});
-}
+				const char* Name = Attribute.GetName();
+				Json[Name]		 = Attribute.Get(InTransform);
+			});
+	}
+	inline void from_json(const json& Json, Transform& OutTransform)
+	{
+		Reflection::ForEachAttributeIn<Transform>(
+			[&](auto&& Attribute)
+			{
+				const char* Name = Attribute.GetName();
+				if (Json.contains(Name))
+				{
+					Attribute.Set(OutTransform, Json[Name].get<decltype(Attribute.GetType())>());
+				}
+			});
+	}
+} // namespace Math
 
 inline void to_json(json& Json, const MaterialTexture& InMaterialTexture)
 {
-	ForEachAttribute<MaterialTexture>(
+	Reflection::ForEachAttributeIn<MaterialTexture>(
 		[&](auto&& Attribute)
 		{
 			const char* Name = Attribute.GetName();
@@ -70,7 +73,7 @@ inline void to_json(json& Json, const MaterialTexture& InMaterialTexture)
 }
 inline void from_json(const json& Json, MaterialTexture& OutMaterialTexture)
 {
-	ForEachAttribute<MaterialTexture>(
+	Reflection::ForEachAttributeIn<MaterialTexture>(
 		[&](auto&& Attribute)
 		{
 			const char* Name = Attribute.GetName();
@@ -87,7 +90,7 @@ inline void from_json(const json& Json, MaterialTexture& OutMaterialTexture)
 
 inline void to_json(json& Json, const Material& InMaterial)
 {
-	ForEachAttribute<Material>(
+	Reflection::ForEachAttributeIn<Material>(
 		[&](auto&& Attribute)
 		{
 			const char* Name = Attribute.GetName();
@@ -96,7 +99,7 @@ inline void to_json(json& Json, const Material& InMaterial)
 }
 inline void from_json(const json& Json, Material& OutMaterial)
 {
-	ForEachAttribute<Material>(
+	Reflection::ForEachAttributeIn<Material>(
 		[&](auto&& Attribute)
 		{
 			const char* Name = Attribute.GetName();

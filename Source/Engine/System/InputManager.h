@@ -1,6 +1,8 @@
 #pragma once
 #include <bitset>
 
+class Window;
+
 enum class EMouseButton
 {
 	Left,
@@ -8,20 +10,6 @@ enum class EMouseButton
 	Right,
 	NumButtons
 };
-
-constexpr const char* EMouseButtonToString(EMouseButton Button)
-{
-	switch (Button)
-	{
-	case EMouseButton::Left:
-		return "Left";
-	case EMouseButton::Middle:
-		return "Middle";
-	case EMouseButton::Right:
-		return "Right";
-	}
-	return "<unknown>";
-}
 
 class InputManager
 {
@@ -39,9 +27,9 @@ public:
 	void OnKeyUp(unsigned char KeyCode);
 
 	void EnableCursor();
-	void DisableCursor(HWND HWnd);
+	void DisableCursor(Window* Window);
 
-	void ConfineCursor(HWND HWnd);
+	void ConfineCursor(Window* Window);
 	void FreeCursor();
 	void ShowCursor();
 	void HideCursor();

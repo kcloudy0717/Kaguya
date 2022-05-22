@@ -233,7 +233,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	ComPtr<IDxcBlobEncoding> Source;
 	VERIFY_DXC_API(Utils->LoadFile(Path.c_str(), nullptr, &Source));
 
-	DxcBuffer SourceBuffer = {
+	const DxcBuffer SourceBuffer = {
 		.Ptr	  = Source->GetBufferPointer(),
 		.Size	  = Source->GetBufferSize(),
 		.Encoding = DXC_CP_ACP
@@ -283,7 +283,6 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		DxcResult->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&ShaderHash), &OutputName);
 		if (ShaderHash)
 		{
-			assert(ShaderHash->GetBufferSize() == sizeof(DxcShaderHash));
 			Result.ShaderHash = *static_cast<DxcShaderHash*>(ShaderHash->GetBufferPointer());
 		}
 	}

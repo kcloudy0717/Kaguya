@@ -297,7 +297,7 @@ namespace RHI
 	{
 	public:
 		using Record						  = D3D12RaytracingShaderRecord<T>;
-		static constexpr UINT64 StrideInBytes = AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		static constexpr UINT64 StrideInBytes = D3D12RHIUtils::AlignUp<UINT64>(sizeof(Record), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 
 		D3D12RaytracingShaderTable(size_t NumShaderRecords)
 			: ShaderRecords(NumShaderRecords)
@@ -308,7 +308,7 @@ namespace RHI
 		UINT64 GetTotalSizeInBytes() const override
 		{
 			UINT64 SizeInBytes = static_cast<UINT64>(ShaderRecords.size()) * GetStrideInBytes();
-			SizeInBytes		   = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			SizeInBytes		   = D3D12RHIUtils::AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 			return SizeInBytes;
 		}
 
@@ -316,7 +316,7 @@ namespace RHI
 		UINT64 GetSizeInBytes() const override
 		{
 			UINT64 SizeInBytes = static_cast<UINT64>(NumShaderRecords) * GetStrideInBytes();
-			SizeInBytes		   = AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			SizeInBytes		   = D3D12RHIUtils::AlignUp<UINT64>(SizeInBytes, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 			return SizeInBytes;
 		}
 

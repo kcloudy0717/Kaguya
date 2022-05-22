@@ -1,19 +1,17 @@
 #pragma once
 
-class CoreComponent
+struct CoreComponent
 {
-public:
-	std::string Name;
-
-	Transform Transform;
+	std::string		Name;
+	Math::Transform Transform;
 };
 
 REGISTER_CLASS_ATTRIBUTES(
-	Transform,
+	Math::Transform,
 	"Transform",
-	CLASS_ATTRIBUTE(Transform, Position),
-	CLASS_ATTRIBUTE(Transform, Scale),
-	CLASS_ATTRIBUTE(Transform, Orientation))
+	CLASS_ATTRIBUTE(Math::Transform, Position),
+	CLASS_ATTRIBUTE(Math::Transform, Scale),
+	CLASS_ATTRIBUTE(Math::Transform, Orientation))
 
 REGISTER_CLASS_ATTRIBUTES(
 	CoreComponent,

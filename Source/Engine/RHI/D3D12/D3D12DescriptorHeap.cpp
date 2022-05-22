@@ -11,8 +11,8 @@ namespace RHI
 		D3D12_DESCRIPTOR_HEAP_FLAGS Flags,
 		u32							NodeMask)
 	{
-		Arc<ID3D12DescriptorHeap>  DescriptorHeap;
-		D3D12_DESCRIPTOR_HEAP_DESC Desc = {
+		Arc<ID3D12DescriptorHeap>		 DescriptorHeap;
+		const D3D12_DESCRIPTOR_HEAP_DESC Desc = {
 			.Type			= Type,
 			.NumDescriptors = NumDescriptors,
 			.Flags			= Flags,
@@ -32,6 +32,7 @@ namespace RHI
 		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
 		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
 		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
+		, IndexMutex(std::make_unique<Mutex>())
 	{
 	}
 
@@ -40,7 +41,7 @@ namespace RHI
 		D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
 		UINT&						 Index)
 	{
-		MutexGuard Guard(Mutex);
+		MutexGuard Guard(*IndexMutex);
 		Index				= IndexPool.Allocate();
 		CpuDescriptorHandle = this->GetCpuDescriptorHandle(Index);
 		GpuDescriptorHandle = this->GetGpuDescriptorHandle(Index);
@@ -48,7 +49,7 @@ namespace RHI
 
 	void D3D12DescriptorHeap::Release(UINT Index)
 	{
-		MutexGuard Guard(Mutex);
+		MutexGuard Guard(*IndexMutex);
 		IndexPool.Release(Index);
 	}
 
@@ -64,17 +65,15 @@ namespace RHI
 
 	CDescriptorHeapManager::CDescriptorHeapManager(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT PageSize)
 		: D3D12LinkedDeviceChild(Parent)
-		, Desc({ Type,
-				 PageSize,
-				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-				 Parent->GetNodeMask() })
+		, Desc({ Type, PageSize, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, Parent->GetNodeMask() })
 		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
+		, HeapMutex(std::make_unique<Mutex>())
 	{
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE CDescriptorHeapManager::AllocateHeapSlot(UINT& OutDescriptorHeapIndex)
 	{
-		MutexGuard Guard(Mutex);
+		MutexGuard Guard(*HeapMutex);
 
 		if (FreeHeaps.empty())
 		{
@@ -102,13 +101,13 @@ namespace RHI
 
 	void CDescriptorHeapManager::FreeHeapSlot(D3D12_CPU_DESCRIPTOR_HANDLE Offset, UINT DescriptorHeapIndex) noexcept
 	{
-		MutexGuard Guard(Mutex);
+		MutexGuard Guard(*HeapMutex);
 		try
 		{
 			assert(DescriptorHeapIndex < Heaps.size());
 			SHeapEntry& HeapEntry = Heaps[DescriptorHeapIndex];
 
-			SFreeRange NewRange = {
+			const SFreeRange NewRange = {
 				Offset.ptr,
 				Offset.ptr + DescriptorSize
 			};
@@ -165,24 +164,6 @@ namespace RHI
 
 		Heaps.emplace_back(std::move(NewEntry));				  // throw( bad_alloc )
 		FreeHeaps.push_back(static_cast<UINT>(Heaps.size() - 1)); // throw( bad_alloc )
-	}
-
-	D3D12OnlineDescriptorHeap::D3D12OnlineDescriptorHeap(
-		D3D12LinkedDevice*		   Parent,
-		D3D12_DESCRIPTOR_HEAP_TYPE Type,
-		UINT					   NumDescriptors)
-		: D3D12LinkedDeviceChild(Parent)
-		, Desc({ Type,
-				 NumDescriptors,
-				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-				 Parent->GetNodeMask() })
-		, NumDescriptors(NumDescriptors)
-		, DescriptorHeap(CreateDescriptorHeap(Parent->GetDevice(), Type, NumDescriptors, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, Parent->GetNodeMask()))
-		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
-		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
-		, GraphicsHandleCache(Parent, Type)
-		, ComputeHandleCache(Parent, Type)
-	{
 	}
 
 	namespace Internal
@@ -314,6 +295,24 @@ namespace RHI
 			return NumDescriptorsCommitted;
 		}
 	} // namespace Internal
+
+	D3D12OnlineDescriptorHeap::D3D12OnlineDescriptorHeap(
+		D3D12LinkedDevice*		   Parent,
+		D3D12_DESCRIPTOR_HEAP_TYPE Type,
+		UINT					   NumDescriptors)
+		: D3D12LinkedDeviceChild(Parent)
+		, Desc({ Type,
+				 NumDescriptors,
+				 D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+				 Parent->GetNodeMask() })
+		, NumDescriptors(NumDescriptors)
+		, DescriptorHeap(CreateDescriptorHeap(Parent->GetDevice(), Type, NumDescriptors, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, Parent->GetNodeMask()))
+		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
+		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
+		, GraphicsHandleCache(Parent, Type)
+		, ComputeHandleCache(Parent, Type)
+	{
+	}
 
 	void D3D12OnlineDescriptorHeap::Reset()
 	{

@@ -52,38 +52,3 @@ void CameraComponent::Rotate(float AngleX, float AngleY, float AngleZ)
 	Dirty = true;
 	Transform.Rotate(AngleX, AngleY, AngleZ);
 }
-
-Frustum CameraComponent::CreateFrustum() const
-{
-	float NearHeight = 2.0f * tanf(XMConvertToRadians(FoVY) * 0.5f) * NearZ;
-	float FarHeight	 = 2.0f * tanf(XMConvertToRadians(FoVY) * 0.5f) * FarZ;
-	float NearWidth	 = NearHeight * AspectRatio;
-	float FarWidth	 = FarHeight * AspectRatio;
-
-	Vec3f XAxis(InverseView(0, 0), InverseView(0, 1), InverseView(0, 2));
-	Vec3f YAxis(InverseView(1, 0), InverseView(1, 1), InverseView(1, 2));
-	Vec3f ZAxis(InverseView(2, 0), InverseView(2, 1), InverseView(2, 2));
-	Vec3f Translation(InverseView(3, 0), InverseView(3, 1), InverseView(3, 2));
-
-	Vec3f NearCenter = Translation + (ZAxis * NearZ);
-	Vec3f FarCenter	 = Translation + (ZAxis * FarZ);
-
-	Vec3f Ntl = NearCenter + (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
-	Vec3f Ntr = NearCenter + (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
-	Vec3f Nbl = NearCenter - (YAxis * (NearHeight * 0.5f)) - (XAxis * (NearWidth * 0.5f));
-	Vec3f Nbr = NearCenter - (YAxis * (NearHeight * 0.5f)) + (XAxis * (NearWidth * 0.5f));
-
-	Vec3f Ftl = FarCenter + (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
-	Vec3f Ftr = FarCenter + (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
-	Vec3f Fbl = FarCenter - (YAxis * (FarHeight * 0.5f)) - (XAxis * (FarWidth * 0.5f));
-	Vec3f Fbr = FarCenter - (YAxis * (FarHeight * 0.5f)) + (XAxis * (FarWidth * 0.5f));
-
-	Frustum Frustum;
-	Frustum.Left   = Plane(Ntl, Ftl, Nbl);
-	Frustum.Right  = Plane(Ftr, Ntr, Fbr);
-	Frustum.Bottom = Plane(Nbl, Fbl, Fbr);
-	Frustum.Top	   = Plane(Ntl, Ntr, Ftl);
-	Frustum.Near   = Plane(Ntr, Ntl, Nbl);
-	Frustum.Far	   = Plane(Ftl, Ftr, Fbr);
-	return Frustum;
-}

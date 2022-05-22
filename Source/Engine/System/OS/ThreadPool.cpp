@@ -1,61 +1,90 @@
 ﻿#include "ThreadPool.h"
+#include <cassert>
+#define WIN32_LEAN_AND_MEAN
+#include <Window.h>
 
-ThreadPool::ThreadPool()
+struct WorkEntry
 {
-	InitializeThreadpoolEnvironment(&Environment);
-	Pool = CreateThreadpool(nullptr);
-	if (!Pool)
-	{
-		throw std::exception("CreateThreadpool failed");
-	}
+	ThreadPool::ThreadpoolWork Work;
+	void*					   Context = nullptr;
+};
 
-	CleanupGroup = CreateThreadpoolCleanupGroup();
-	if (!CleanupGroup)
-	{
-		CloseThreadpool(Pool);
-		throw std::exception("CreateThreadpoolCleanupGroup failed");
-	}
-
-	// No more failures
-	SetThreadpoolCallbackPool(&Environment, Pool);
-	SetThreadpoolCallbackCleanupGroup(&Environment, CleanupGroup, nullptr);
-}
-
-ThreadPool::~ThreadPool()
+namespace OS
 {
-	CloseThreadpoolCleanupGroupMembers(CleanupGroup, bCancelPendingWorkOnCleanup, nullptr);
-	CloseThreadpoolCleanupGroup(CleanupGroup);
-	CloseThreadpool(Pool);
-	DestroyThreadpoolEnvironment(&Environment);
-}
-
-void ThreadPool::QueueThreadpoolWork(ThreadpoolWork&& Callback, PVOID Context)
-{
-	assert(Callback);
-
-	std::unique_ptr<WorkEntry> Entry(new (std::nothrow) WorkEntry());
-	if (Entry)
+	namespace Internal
 	{
-		Entry->Work	   = std::move(Callback);
-		Entry->Context = Context;
-
-		PTP_WORK Work = CreateThreadpoolWork(ThreadpoolWorkCallback, Entry.release(), &Environment);
-		if (!Work)
+		static VOID NTAPI ThreadpoolWorkCallback(
+			_Inout_ PTP_CALLBACK_INSTANCE Instance,
+			_Inout_opt_ PVOID			  Context,
+			_Inout_ PTP_WORK			  Work) noexcept
 		{
-			throw std::exception("CreateThreadpoolWork failed");
+			UNREFERENCED_PARAMETER(Instance);
+			auto Entry = static_cast<WorkEntry*>(Context);
+			Entry->Work(Entry->Context);
+			delete Entry;
+			CloseThreadpoolWork(Work);
 		}
-		SubmitThreadpoolWork(Work);
-	}
-}
+	} // namespace Internal
+} // namespace OS
 
-VOID NTAPI ThreadPool::ThreadpoolWorkCallback(
-	_Inout_ PTP_CALLBACK_INSTANCE Instance,
-	_Inout_opt_ PVOID			  Context,
-	_Inout_ PTP_WORK			  Work) noexcept
+class WindowsThreadPool : public ThreadPool
 {
-	UNREFERENCED_PARAMETER(Instance);
-	auto Entry = static_cast<WorkEntry*>(Context);
-	Entry->Work(Entry->Context);
-	delete Entry;
-	CloseThreadpoolWork(Work);
+public:
+	WindowsThreadPool()
+	{
+		InitializeThreadpoolEnvironment(&Environment);
+		Pool = CreateThreadpool(nullptr);
+		if (!Pool)
+		{
+			throw std::exception("CreateThreadpool failed");
+		}
+
+		CleanupGroup = CreateThreadpoolCleanupGroup();
+		if (!CleanupGroup)
+		{
+			CloseThreadpool(Pool);
+			throw std::exception("CreateThreadpoolCleanupGroup failed");
+		}
+
+		// No more failures
+		SetThreadpoolCallbackPool(&Environment, Pool);
+		SetThreadpoolCallbackCleanupGroup(&Environment, CleanupGroup, nullptr);
+	}
+	~WindowsThreadPool()
+	{
+		CloseThreadpoolCleanupGroupMembers(CleanupGroup, bCancelPendingWorkOnCleanup, nullptr);
+		CloseThreadpoolCleanupGroup(CleanupGroup);
+		CloseThreadpool(Pool);
+		DestroyThreadpoolEnvironment(&Environment);
+	}
+
+	void QueueThreadpoolWork(ThreadpoolWork&& Callback, void* Context) override
+	{
+		assert(Callback);
+
+		std::unique_ptr<WorkEntry> Entry(new (std::nothrow) WorkEntry());
+		if (Entry)
+		{
+			Entry->Work	   = std::move(Callback);
+			Entry->Context = Context;
+
+			PTP_WORK Work = CreateThreadpoolWork(OS::Internal::ThreadpoolWorkCallback, Entry.release(), &Environment);
+			if (!Work)
+			{
+				throw std::runtime_error("CreateThreadpoolWork");
+			}
+			SubmitThreadpoolWork(Work);
+		}
+	}
+
+private:
+	TP_CALLBACK_ENVIRON Environment;
+	PTP_POOL			Pool						= nullptr;
+	PTP_CLEANUP_GROUP	CleanupGroup				= nullptr;
+	bool				bCancelPendingWorkOnCleanup = true;
+};
+
+std::unique_ptr<ThreadPool> ThreadPool::Create()
+{
+	return std::make_unique<WindowsThreadPool>();
 }

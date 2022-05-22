@@ -1,25 +1,29 @@
 #pragma once
+#include <cassert>
 #include <type_traits>
 #include <stdexcept>
 
-namespace SpanInternal
+namespace Kaguya
 {
-	template<typename C>
-	concept ContainerConvertible = requires(C Container)
+	namespace Internal
 	{
-		Container.data();
-		Container.size();
-	};
+		template<typename C>
+		concept ContainerConvertible = requires(C Container)
+		{
+			Container.data();
+			Container.size();
+		};
 
-	template<typename T>
-	concept ConceptMutableView = !std::is_const_v<T>;
+		template<typename T>
+		concept ConceptMutableView = !std::is_const_v<T>;
 
-	template<typename T>
-	concept ConceptConstView = std::is_const_v<T>;
+		template<typename T>
+		concept ConceptConstView = std::is_const_v<T>;
 
-	// A constexpr min function to avoid min/max macro
-	constexpr size_t Min(size_t a, size_t b) noexcept { return a < b ? a : b; }
-} // namespace SpanInternal
+		// A constexpr min function to avoid min/max macro
+		constexpr size_t Min(size_t a, size_t b) noexcept { return a < b ? a : b; }
+	} // namespace Internal
+} // namespace Kaguya
 
 template<typename T>
 class Span
@@ -50,13 +54,13 @@ public:
 	}
 
 	template<typename C>
-	explicit Span(C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptMutableView<T>
+	explicit Span(C& Container) requires Kaguya::Internal::ContainerConvertible<C> && Kaguya::Internal::ConceptMutableView<T>
 		: Span(Container.data(), Container.size())
 	{
 	}
 
 	template<typename C>
-	Span(const C& Container) requires SpanInternal::ContainerConvertible<C> && SpanInternal::ConceptConstView<T>
+	Span(const C& Container) requires Kaguya::Internal::ContainerConvertible<C> && Kaguya::Internal::ConceptConstView<T>
 		: Span(Container.data(), Container.size())
 	{
 	}
@@ -96,7 +100,7 @@ public:
 	//   Span<const int> ints = { foo };
 	//   Process(ints);
 	template<typename LazyT = T>
-	Span(std::initializer_list<value_type> List) requires SpanInternal::ConceptConstView<LazyT>
+	Span(std::initializer_list<value_type> List) requires Kaguya::Internal::ConceptConstView<LazyT>
 		: Span(List.begin(), List.size())
 	{
 	}
@@ -140,7 +144,7 @@ public:
 	[[nodiscard]] constexpr Span Subspan(size_t Offset, size_t Length = npos)
 	{
 		assert(Offset <= size());
-		return Span(data() + Offset, SpanInternal::Min(size() - Offset, Length));
+		return Span(data() + Offset, Kaguya::Internal::Min(size() - Offset, Length));
 	}
 
 private:
@@ -169,7 +173,7 @@ Span<T> MakeSpan(T* Begin, T* End) noexcept
 	return Span<T>(Begin, static_cast<size_t>(End - Begin));
 }
 
-template<int&... ExplicitArgumentBarrier, SpanInternal::ContainerConvertible C>
+template<int&... ExplicitArgumentBarrier, Kaguya::Internal::ContainerConvertible C>
 constexpr auto MakeSpan(C& Container) noexcept
 {
 	return MakeSpan(Container.data(), Container.size());

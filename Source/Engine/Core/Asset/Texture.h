@@ -25,8 +25,8 @@ namespace Asset
 
 		TextureImportOptions Options;
 
-		Vec2i Resolution;
-		bool  IsCubemap = false;
+		Math::Vec2i Extent;
+		bool		IsCubemap = false;
 
 		std::string			  Name;
 		DirectX::ScratchImage TexImage;

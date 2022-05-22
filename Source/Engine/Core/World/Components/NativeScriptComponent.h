@@ -2,9 +2,8 @@
 
 class ScriptableActor;
 
-class NativeScriptComponent
+struct NativeScriptComponent
 {
-public:
 	template<typename T, typename... TArgs>
 	void Bind(TArgs&&... Args)
 	{
@@ -15,7 +14,6 @@ public:
 		};
 	}
 
-	std::unique_ptr<ScriptableActor> Instance;
-
+	std::unique_ptr<ScriptableActor>				  Instance;
 	std::function<std::unique_ptr<ScriptableActor>()> InstantiateScript;
 };

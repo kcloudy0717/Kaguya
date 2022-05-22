@@ -1,330 +1,234 @@
 #pragma once
-#include <cassert>
-#include <cmath>
-#include <algorithm>
-#include "Intrinsics.h"
+#include "Vec.h"
 
-namespace xvm
+namespace Math
 {
-	struct Vec4
+	template<typename T>
+	struct [[nodiscard]] Vec<T, 4>
 	{
-		Vec4() noexcept
-			: vec(_mm_setzero_ps())
+		constexpr Vec() noexcept
+			: x(static_cast<T>(0))
+			, y(static_cast<T>(0))
+			, z(static_cast<T>(0))
+			, w(static_cast<T>(0))
 		{
 		}
-		Vec4(__m128 a) noexcept
-			: vec(a)
+		constexpr Vec(T x, T y, T z, T w) noexcept
+			: x(x)
+			, y(y)
+			, z(z)
+			, w(w)
 		{
 		}
-		Vec4(float x, float y, float z, float w) noexcept
-			: vec(_mm_set_ps(w, z, y, x))
+		constexpr Vec(T v) noexcept
+			: Vec(v, v, v, v)
 		{
 		}
-		Vec4(float v) noexcept
-			: Vec4(v, v, v, v)
+		constexpr Vec(const Vec<T, 2>& xy, T z, T w)
+			: x(xy.x)
+			, y(xy.y)
+			, z(z)
+			, w(w)
+		{
+		}
+		constexpr Vec(const Vec<T, 2>& xy, const Vec<T, 2>& zw)
+			: x(xy.x)
+			, y(xy.y)
+			, z(zw.x)
+			, w(zw.y)
+		{
+		}
+		constexpr Vec(const Vec<T, 3>& xyz, T w)
+			: x(xyz.x)
+			, y(xyz.y)
+			, z(xyz.z)
+			, w(w)
+		{
+		}
+		template<typename U>
+		constexpr Vec(const Vec<U, 4>& v)
+			: x(static_cast<T>(v.x))
+			, y(static_cast<T>(v.y))
+			, z(static_cast<T>(v.z))
+			, w(static_cast<T>(v.w))
 		{
 		}
 
-		float operator[](size_t Index) const noexcept
+		T*		 data() noexcept { return reinterpret_cast<T*>(this); }
+		const T* data() const noexcept { return reinterpret_cast<const T*>(this); }
+
+		constexpr T operator[](size_t i) const noexcept
 		{
-			assert(Index < 4);
-			return f32[Index];
+			return this->*Array[i];
 		}
 
-		float& operator[](size_t Index) noexcept
+		constexpr T& operator[](size_t i) noexcept
 		{
-			assert(Index < 4);
-			return f32[Index];
+			return this->*Array[i];
 		}
 
-		union
-		{
-			__m128				  vec;
-			float				  f32[4];
-			xvm::ScalarSwizzle<0> x;
-			xvm::ScalarSwizzle<1> y;
-			xvm::ScalarSwizzle<2> z;
-			xvm::ScalarSwizzle<3> w;
-		};
+		T x, y, z, w;
+
+	private:
+		static constexpr T Vec::*Array[]{ &Vec::x, &Vec::y, &Vec::z, &Vec::w };
 	};
 
-	Vec4 XVM_CALLCONV  operator-(Vec4 v);
-	Vec4 XVM_CALLCONV  operator+(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV  operator-(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV  operator*(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV  operator/(Vec4 v1, Vec4 v2);
-	Vec4& XVM_CALLCONV operator+=(Vec4& v1, Vec4 v2);
-	Vec4& XVM_CALLCONV operator-=(Vec4& v1, Vec4 v2);
-	Vec4& XVM_CALLCONV operator*=(Vec4& v1, Vec4 v2);
-	Vec4& XVM_CALLCONV operator/=(Vec4& v1, Vec4 v2);
-
-	bool XVM_CALLCONV All(Vec4 v);
-	bool XVM_CALLCONV Any(Vec4 v);
-	bool XVM_CALLCONV IsFinite(Vec4 v);
-	bool XVM_CALLCONV IsInfinite(Vec4 v);
-	bool XVM_CALLCONV IsNan(Vec4 v);
-
-	Vec4 XVM_CALLCONV Abs(Vec4 v);
-	Vec4 XVM_CALLCONV Clamp(Vec4 v, Vec4 min, Vec4 max);
-	Vec4 XVM_CALLCONV Dot(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV Length(Vec4 v);
-	Vec4 XVM_CALLCONV Lerp(Vec4 v1, Vec4 v2, Vec4 s);
-	Vec4 XVM_CALLCONV Max(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV Min(Vec4 v1, Vec4 v2);
-	Vec4 XVM_CALLCONV Normalize(Vec4 v);
-	Vec4 XVM_CALLCONV Sqrt(Vec4 v);
-
-	XVM_INLINE Vec4 XVM_CALLCONV operator-(Vec4 v)
-	{
-		return _mm_xor_ps(v.vec, xvm::XVMMaskNegative);
+#define DEFINE_UNARY_OPERATOR(op)                                \
+	template<typename T>                                         \
+	constexpr Vec<T, 4> operator op(const Vec<T, 4>& a) noexcept \
+	{                                                            \
+		return Vec<T, 4>(op a.x, op a.y, op a.z, op a.w);        \
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV operator+(Vec4 v1, Vec4 v2)
-	{
-		return _mm_add_ps(v1.vec, v2.vec);
+#define DEFINE_BINARY_OPERATORS(op)                                                  \
+	/* Vector-Vector op */                                                           \
+	template<typename T>                                                             \
+	constexpr Vec<T, 4> operator op(const Vec<T, 4>& a, const Vec<T, 4>& b) noexcept \
+	{                                                                                \
+		return Vec<T, 4>(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w);            \
+	}                                                                                \
+	/* Vector-Scalar op */                                                           \
+	template<typename T>                                                             \
+	constexpr Vec<T, 4> operator op(const Vec<T, 4>& a, T b) noexcept                \
+	{                                                                                \
+		return Vec<T, 4>(a.x op b, a.y op b, a.z op b, a.w op b);                    \
+	}                                                                                \
+	/* Scalar-Vector op */                                                           \
+	template<typename T>                                                             \
+	constexpr Vec<T, 4> operator op(T a, const Vec<T, 4>& b) noexcept                \
+	{                                                                                \
+		return Vec<T, 4>(a op b.x, a op b.y, a op b.z, a op b.w);                    \
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV operator-(Vec4 v1, Vec4 v2)
-	{
-		return _mm_sub_ps(v1.vec, v2.vec);
+#define DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS(op)                    \
+	/* Vector-Vector op */                                            \
+	template<typename T>                                              \
+	Vec<T, 4>& operator op(Vec<T, 4>& a, const Vec<T, 4>& b) noexcept \
+	{                                                                 \
+		a.x op b.x;                                                   \
+		a.y op b.y;                                                   \
+		a.z op b.z;                                                   \
+		a.w op b.w;                                                   \
+		return a;                                                     \
+	}                                                                 \
+	/* Vector-Scalar op */                                            \
+	template<typename T>                                              \
+	Vec<T, 4>& operator op(Vec<T, 4>& a, T b) noexcept                \
+	{                                                                 \
+		a.x op b;                                                     \
+		a.y op b;                                                     \
+		a.z op b;                                                     \
+		a.w op b;                                                     \
+		return a;                                                     \
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV operator*(Vec4 v1, Vec4 v2)
-	{
-		return _mm_mul_ps(v1.vec, v2.vec);
+#define DEFINE_COMPARISON_OPERATORS(op)                                                 \
+	/* Vector-Vector op */                                                              \
+	template<typename T>                                                                \
+	constexpr Vec<bool, 4> operator op(const Vec<T, 4>& a, const Vec<T, 4>& b) noexcept \
+	{                                                                                   \
+		return Vec<bool, 4>(a.x op b.x, a.y op b.y, a.z op b.z, a.w op b.w);            \
+	}                                                                                   \
+	/* Vector-Scalar op */                                                              \
+	template<typename T>                                                                \
+	constexpr Vec<bool, 4> operator op(const Vec<T, 4>& a, T b) noexcept                \
+	{                                                                                   \
+		return Vec<bool, 4>(a.x op b, a.y op b, a.z op b, a.w op b);                    \
+	}                                                                                   \
+	/* Scalar-Vector op */                                                              \
+	template<typename T>                                                                \
+	constexpr Vec<bool, 4> operator op(T a, const Vec<T, 4>& b) noexcept                \
+	{                                                                                   \
+		return Vec<bool, 4>(a op b.x, a op b.y, a op b.z, a op b.w);                    \
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV operator/(Vec4 v1, Vec4 v2)
+	DEFINE_UNARY_OPERATOR(-);
+	DEFINE_UNARY_OPERATOR(!);
+	DEFINE_UNARY_OPERATOR(~);
+
+	DEFINE_BINARY_OPERATORS(+);
+	DEFINE_BINARY_OPERATORS(-);
+	DEFINE_BINARY_OPERATORS(*);
+	DEFINE_BINARY_OPERATORS(/);
+
+	DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS(+=);
+	DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS(-=);
+	DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS(*=);
+	DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS(/=);
+
+	DEFINE_COMPARISON_OPERATORS(==);
+	DEFINE_COMPARISON_OPERATORS(!=);
+	DEFINE_COMPARISON_OPERATORS(<);
+	DEFINE_COMPARISON_OPERATORS(>);
+	DEFINE_COMPARISON_OPERATORS(<=);
+	DEFINE_COMPARISON_OPERATORS(>=);
+
+#undef DEFINE_COMPARISON_OPERATORS
+#undef DEFINE_ARITHMETIC_ASSIGNMENT_OPERATORS
+#undef DEFINE_BINARY_OPERATORS
+#undef DEFINE_UNARY_OPERATOR
+
+	// Intrinsics
+	template<typename T>
+	[[nodiscard]] constexpr T dot(const Vec<T, 4>& a, const Vec<T, 4>& b) noexcept
 	{
-		return _mm_div_ps(v1.vec, v2.vec);
+		return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 	}
 
-	XVM_INLINE Vec4& XVM_CALLCONV operator+=(Vec4& v1, Vec4 v2)
+	template<typename T>
+	[[nodiscard]] constexpr T lengthsquared(const Vec<T, 4>& v) noexcept
 	{
-		v1 = v1 + v2;
-		return v1;
+		return dot(v, v);
 	}
 
-	XVM_INLINE Vec4& XVM_CALLCONV operator-=(Vec4& v1, Vec4 v2)
+	template<typename T>
+	[[nodiscard]] constexpr T length(const Vec<T, 4>& v) noexcept
 	{
-		v1 = v1 - v2;
-		return v1;
+		return sqrt(lengthsquared(v));
 	}
 
-	XVM_INLINE Vec4& XVM_CALLCONV operator*=(Vec4& v1, Vec4 v2)
+	template<typename T>
+	[[nodiscard]] Vec<T, 4> normalize(const Vec<T, 4>& v) noexcept
 	{
-		v1 = v1 * v2;
-		return v1;
+		return v / length(v);
 	}
 
-	XVM_INLINE Vec4& XVM_CALLCONV operator/=(Vec4& v1, Vec4 v2)
+	template<typename T>
+	[[nodiscard]] Vec<T, 4> abs(const Vec<T, 4>& v) noexcept
 	{
-		v1 = v1 / v2;
-		return v1;
+		return Vec<T, 4>(std::abs(v.x), std::abs(v.y), std::abs(v.z), std::abs(v.w));
 	}
 
-	XVM_INLINE bool XVM_CALLCONV All(Vec4 v)
+	template<typename T>
+	[[nodiscard]] bool isnan(const Vec<T, 4>& v) noexcept
 	{
-		__m128 cmp	= _mm_cmpneq_ps(v.vec, _mm_setzero_ps()); // v != 0
-		int	   mask = _mm_movemask_ps(cmp) & 0x0000000F;	  // If all is non-zero, the mask is exactly 0x0000000F
-		return mask == 0x0000000F;
+		return std::isnan(v.x) || std::isnan(v.y) || std::isnan(v.z) || std::isnan(v.w);
 	}
 
-	XVM_INLINE bool XVM_CALLCONV Any(Vec4 v)
+	template<typename T>
+	[[nodiscard]] Vec<T, 4> clamp(const Vec<T, 4>& v, T min, T max) noexcept
 	{
-		__m128 cmp	= _mm_cmpneq_ps(v.vec, _mm_setzero_ps()); // v != 0
-		int	   mask = _mm_movemask_ps(cmp) & 0x0000000F;	  // If x or y or z or w are non-zero, the mask is non-zero
-		return mask != 0;
+		return Vec<T, 4>(clamp(v.x, min, max), clamp(v.y, min, max), clamp(v.z, min, max), clamp(v.w, min, max));
 	}
 
-	XVM_INLINE bool XVM_CALLCONV IsFinite(Vec4 v)
+	template<typename T>
+	[[nodiscard]] Vec<T, 4> saturate(const Vec<T, 4>& v) noexcept
 	{
-		__m128 cmp = _mm_and_ps(v.vec, xvm::XVMMaskAbsoluteValue); // Mask off the sign bit
-		cmp		   = _mm_cmpneq_ps(cmp, xvm::XVMInfinity);		   // v != infinity
-		int mask   = _mm_movemask_ps(cmp) & 0x0000000F;			   // If x, y, z, w is finite, the mask is exactly 0x0000000F
-		return mask == 0x0000000F;
+		return clamp(v, T(0), T(1));
 	}
 
-	XVM_INLINE bool XVM_CALLCONV IsInfinite(Vec4 v)
+	[[nodiscard]] constexpr bool any(const Vec<bool, 4>& v) noexcept
 	{
-		__m128 cmp = _mm_and_ps(v.vec, xvm::XVMMaskAbsoluteValue); // Mask off the sign bit then compare to infinity
-		cmp		   = _mm_cmpeq_ps(cmp, xvm::XVMInfinity);		   // v == infinity
-		int mask   = _mm_movemask_ps(cmp) & 0x0000000F;			   // If x or y or z or w is infinity, the mask is non-zero
-		return mask != 0;
+		return v.x || v.y || v.z || v.w;
 	}
 
-	XVM_INLINE bool XVM_CALLCONV IsNan(Vec4 v)
+	[[nodiscard]] constexpr bool all(const Vec<bool, 4>& v) noexcept
 	{
-		__m128 dst	= _mm_cmpneq_ps(v.vec, v.vec);		 // v != v
-		int	   mask = _mm_movemask_ps(dst) & 0x0000000F; // If x or y or z or w are NaN, the mask is non-zero
-		return mask != 0;
+		return v.x && v.y && v.z && v.w;
 	}
 
-	XVM_INLINE Vec4 XVM_CALLCONV Abs(Vec4 v)
-	{
-		// & the sign bit
-		return _mm_and_ps(xvm::XVMMaskAbsoluteValue, v.vec);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Clamp(Vec4 v, Vec4 min, Vec4 max)
-	{
-		__m128 xmm0 = _mm_min_ps(v.vec, max.vec);
-		__m128 xmm1 = _mm_max_ps(xmm0, min.vec);
-		return xmm1;
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Dot(Vec4 v1, Vec4 v2)
-	{
-		__m128 dot	 = _mm_mul_ps(v1.vec, v2.vec);
-		__m128 shuff = XVM_SWIZZLE_PS(dot, _MM_SHUFFLE(2, 3, 0, 1)); // { y, x, w, z }
-		dot			 = _mm_add_ps(dot, shuff);						 // { x+y, y+x, z+w, w+z }
-		shuff		 = _mm_movehl_ps(shuff, dot);					 // { dot.fp2, dot.fp3, shuff.fp2, shuff.fp3 }
-		dot			 = _mm_add_ss(dot, shuff);						 // { x+y+z+w, ?, ?, ? }
-		return XVM_SWIZZLE_PS(dot, _MM_SHUFFLE(0, 0, 0, 0));		 // splat fp0
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Length(Vec4 v)
-	{
-		Vec4 v2 = Dot(v, v);
-		return _mm_sqrt_ps(v2.vec);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Lerp(Vec4 v1, Vec4 v2, Vec4 s)
-	{
-		// x + s(y-x)
-		__m128 sub = _mm_sub_ps(v2.vec, v1.vec);
-		__m128 mul = _mm_mul_ps(sub, s.vec);
-		return _mm_add_ps(v1.vec, mul);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Max(Vec4 v1, Vec4 v2)
-	{
-		return _mm_max_ps(v1.vec, v2.vec);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Min(Vec4 v1, Vec4 v2)
-	{
-		return _mm_min_ps(v1.vec, v2.vec);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Normalize(Vec4 v)
-	{
-		Vec4 l = Length(v);
-		return _mm_div_ps(v.vec, l.vec);
-	}
-
-	XVM_INLINE Vec4 XVM_CALLCONV Sqrt(Vec4 v)
-	{
-		return _mm_sqrt_ps(v.vec);
-	}
-} // namespace xvm
-
-template<typename T>
-struct Vec4
-{
-	constexpr Vec4() noexcept
-		: x(static_cast<T>(0))
-		, y(static_cast<T>(0))
-		, z(static_cast<T>(0))
-		, w(static_cast<T>(0))
-	{
-	}
-	constexpr Vec4(T x, T y, T z, T w) noexcept
-		: x(x)
-		, y(y)
-		, z(z)
-		, w(w)
-	{
-	}
-	constexpr Vec4(T v) noexcept
-		: Vec4(v, v, v, v)
-	{
-	}
-
-	T*		 data() noexcept { return reinterpret_cast<T*>(this); }
-	const T* data() const noexcept { return reinterpret_cast<const T*>(this); }
-
-	constexpr T operator[](size_t i) const noexcept
-	{
-		assert(i < 4);
-		return this->*Array[i];
-	}
-
-	constexpr T& operator[](size_t i) noexcept
-	{
-		assert(i < 4);
-		return this->*Array[i];
-	}
-
-	Vec4 operator-() const noexcept
-	{
-		return Vec4(-x, -y, -z, -w);
-	}
-
-	Vec4 operator+(const Vec4& v) const noexcept
-	{
-		return Vec4(x + v.x, y + v.y, z + v.z, w + v.w);
-	}
-
-	Vec4 operator-(const Vec4& v) const noexcept
-	{
-		return Vec4(x - v.x, y - v.y, z - v.z, w - v.w);
-	}
-
-	Vec4 operator*(const Vec4& v) const noexcept
-	{
-		return Vec4(x * v.x, y * v.y, z * v.z, w * v.w);
-	}
-
-	Vec4 operator/(T s) const noexcept
-	{
-		float inv = static_cast<T>(1) / s;
-		return Vec4(x * inv, y * inv, z * inv, w * inv);
-	}
-
-	Vec4& operator+=(const Vec4& v) noexcept
-	{
-		x += v.x;
-		y += v.y;
-		z += v.z;
-		w += v.w;
-		return *this;
-	}
-
-	Vec4& operator-=(const Vec4& v) noexcept
-	{
-		x -= v.x;
-		y -= v.y;
-		z -= v.z;
-		w -= v.w;
-		return *this;
-	}
-
-	Vec4& operator*=(const Vec4& v) noexcept
-	{
-		x *= v.x;
-		y *= v.y;
-		z *= v.z;
-		w *= v.w;
-		return *this;
-	}
-
-	Vec4& operator/=(T s) noexcept
-	{
-		float inv = static_cast<T>(1) / s;
-		x *= inv;
-		y *= inv;
-		z *= inv;
-		w *= inv;
-		return *this;
-	}
-
-	T x, y, z, w;
-
-private:
-	static constexpr T Vec4::*Array[]{ &Vec4::x, &Vec4::y, &Vec4::z, &Vec4::w };
-};
-
-using Vec4i = Vec4<int>;
-using Vec4f = Vec4<float>;
-using Vec4d = Vec4<double>;
+	using Vec4i = Vec<int, 4>;
+	using Vec4f = Vec<float, 4>;
+	using Vec4d = Vec<double, 4>;
+	using Vec4b = Vec<bool, 4>;
+} // namespace Math

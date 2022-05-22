@@ -7,71 +7,10 @@ namespace Asset
 	AssetManager::AssetManager(RHI::D3D12Device* Device)
 		: Device(Device)
 	{
-		Thread = std::jthread(
-			[Device, this]()
-			{
-				RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
-				std::vector<Texture*>	Textures;
-				std::vector<Mesh*>		Meshes;
-
-				while (true)
-				{
-					std::unique_lock Lock(Mutex);
-					ConditionVariable.wait(Lock);
-
-					if (Quit)
-					{
-						break;
-					}
-
-					Textures.clear();
-					Meshes.clear();
-
-					LinkedDevice->BeginResourceUpload();
-
-					// Process Texture
-					while (!TextureUploadQueue.empty())
-					{
-						Texture* Texture = TextureUploadQueue.front();
-						TextureUploadQueue.pop();
-						UploadTexture(Texture, LinkedDevice);
-						Textures.push_back(Texture);
-					}
-
-					while (!MeshUploadQueue.empty())
-					{
-						Mesh* Mesh = MeshUploadQueue.front();
-						MeshUploadQueue.pop();
-						UploadMesh(Mesh, LinkedDevice);
-						Meshes.push_back(Mesh);
-					}
-
-					LinkedDevice->EndResourceUpload(true);
-
-					for (auto Texture : Textures)
-					{
-						// Release memory
-						Texture->Release();
-
-						Texture->Handle.State = true;
-						TextureRegistry.UpdateHandleState(Texture->Handle);
-					}
-					for (auto Mesh : Meshes)
-					{
-						// Release memory
-						Mesh->Release();
-
-						Mesh->Handle.State = true;
-						MeshRegistry.UpdateHandleState(Mesh->Handle);
-					}
-				}
-			});
 	}
 
 	AssetManager::~AssetManager()
 	{
-		Quit = true;
-		ConditionVariable.notify_all();
 	}
 
 	AssetType AssetManager::GetAssetTypeFromExtension(const std::filesystem::path& Path)
@@ -188,21 +127,33 @@ namespace Asset
 		};
 		AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);
 
-		AssetMesh->VertexView = RHI::D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, VertexBufferSizeInBytes);
-		AssetMesh->IndexView  = RHI::D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, IndexBufferSizeInBytes);
+		AssetMesh->VertexView = RHI::D3D12ShaderResourceView(Device, &AssetMesh->VertexResource, true, 0, static_cast<UINT>(VertexBufferSizeInBytes));
+		AssetMesh->IndexView  = RHI::D3D12ShaderResourceView(Device, &AssetMesh->IndexResource, true, 0, static_cast<UINT>(IndexBufferSizeInBytes));
 	}
 
 	void AssetManager::RequestUpload(Texture* Texture)
 	{
-		std::scoped_lock Lock(Mutex);
-		TextureUploadQueue.push(Texture);
-		ConditionVariable.notify_all();
+		RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
+		LinkedDevice->BeginResourceUpload();
+		UploadTexture(Texture, LinkedDevice);
+		LinkedDevice->EndResourceUpload(true);
+
+		// Release memory
+		Texture->Release();
+		Texture->Handle.State = true;
+		TextureRegistry.UpdateHandleState(Texture->Handle);
 	}
 
 	void AssetManager::RequestUpload(Mesh* Mesh)
 	{
-		std::scoped_lock Lock(Mutex);
-		MeshUploadQueue.push(Mesh);
-		ConditionVariable.notify_all();
+		RHI::D3D12LinkedDevice* LinkedDevice = Device->GetLinkedDevice();
+		LinkedDevice->BeginResourceUpload();
+		UploadMesh(Mesh, LinkedDevice);
+		LinkedDevice->EndResourceUpload(true);
+
+		// Release memory
+		Mesh->Release();
+		Mesh->Handle.State = true;
+		MeshRegistry.UpdateHandleState(Mesh->Handle);
 	}
 } // namespace Asset

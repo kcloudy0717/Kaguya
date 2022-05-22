@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "SystemCore.h"
+#include <string>
+#include "Types.h"
 
 class FileStream;
 

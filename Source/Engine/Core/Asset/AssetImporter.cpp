@@ -1,6 +1,13 @@
 #include "AssetImporter.h"
 #include "AssetManager.h"
 
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -298,7 +305,7 @@ namespace Asset
 
 		Texture* Asset	  = AssetManager->CreateAsset<Texture>();
 		Asset->Options	  = Options;
-		Asset->Resolution = Vec2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
+		Asset->Extent = Math::Vec2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
 		Asset->IsCubemap  = TexMetadata.IsCubemap();
 		Asset->Name		  = Path.filename().string();
 		Asset->TexImage	  = std::move(OutImage);

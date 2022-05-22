@@ -3,7 +3,6 @@
 
 namespace RHI
 {
-
 	constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE RHITranslateD3D12(RHI_PRIMITIVE_TOPOLOGY Topology)
 	{
 		// clang-format off
@@ -178,8 +177,7 @@ namespace RHI
 		Desc.MultisampleEnable	   = RasterizerState.MultisampleEnable;
 		Desc.AntialiasedLineEnable = RasterizerState.AntialiasedLineEnable;
 		Desc.ForcedSampleCount	   = RasterizerState.ForcedSampleCount;
-		Desc.ConservativeRaster	   = RasterizerState.ConservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON
-																		: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		Desc.ConservativeRaster	   = RasterizerState.ConservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 		return Desc;
 	}
 

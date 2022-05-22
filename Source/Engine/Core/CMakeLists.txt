@@ -11,7 +11,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 add_library(${PROJECTNAME} STATIC
 	${inc}
 	${src})
-target_precompile_headers(${PROJECTNAME} PRIVATE pch.h)
 
 if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3

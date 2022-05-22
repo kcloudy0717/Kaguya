@@ -6,9 +6,8 @@ enum class ELightTypes
 	Quad
 };
 
-class LightComponent
+struct LightComponent
 {
-public:
 	ELightTypes		  Type	= ELightTypes::Point;
 	DirectX::XMFLOAT3 I		= { 1.0f, 1.0f, 1.0f }; // Intensity of the light
 	float			  Width = 1.0f, Height = 1.0f;	// Used by QuadLight

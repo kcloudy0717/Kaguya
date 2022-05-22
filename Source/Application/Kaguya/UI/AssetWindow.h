@@ -1,8 +1,6 @@
 #pragma once
 #include "UIWindow.h"
-
 #include <Core/World/World.h>
-#include <Core/World/Actor.h>
 
 class AssetWindow : public UIWindow
 {

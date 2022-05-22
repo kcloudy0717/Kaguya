@@ -1,4 +1,5 @@
 #include "ViewportWindow.h"
+#include <ImGuizmo.h>
 #include "System/Application.h"
 #include "../Renderer.h"
 
@@ -34,7 +35,7 @@ void ViewportWindow::OnRender()
 
 	if (ImGui::IsMouseDown(ImGuiMouseButton_Right) && IsHovered)
 	{
-		Application::InputManager.DisableCursor(MainWindow->GetWindowHandle());
+		Application::InputManager.DisableCursor(MainWindow);
 	}
 	else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 	{

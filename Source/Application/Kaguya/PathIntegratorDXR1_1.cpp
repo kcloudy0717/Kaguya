@@ -1,11 +1,6 @@
 #include "PathIntegratorDXR1_1.h"
+#include <imgui.h>
 #include "RendererRegistry.h"
-
-#include "Tonemap.h"
-#include "Bloom.h"
-
-static BloomSettings   g_Bloom;
-static TonemapSettings g_Tonemap;
 
 PathIntegratorDXR1_1::PathIntegratorDXR1_1(
 	RHI::D3D12Device* Device,
@@ -16,7 +11,7 @@ PathIntegratorDXR1_1::PathIntegratorDXR1_1(
 	RootSignatures::Compile(Device, Registry);
 	PipelineStates::Compile(Device, Registry);
 
-	AccelerationStructure = RaytracingAccelerationStructure(Device, 1, World::MeshLimit);
+	AccelerationStructure = RaytracingAccelerationStructure(Device, 1);
 }
 
 void PathIntegratorDXR1_1::RenderOptions()
@@ -25,26 +20,26 @@ void PathIntegratorDXR1_1::RenderOptions()
 
 	if (ImGui::Button("Restore Defaults"))
 	{
-		PathIntegratorState = {};
+		Settings = {};
 		ResetPathIntegrator = true;
 	}
 
-	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &PathIntegratorState.Antialiasing);
-	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &PathIntegratorState.SkyIntensity, 0.0f, 50.0f);
+	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &Settings.Antialiasing);
+	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &Settings.SkyIntensity, 0.0f, 50.0f);
 	ResetPathIntegrator |= ImGui::SliderScalar(
 		"Max Depth",
 		ImGuiDataType_U32,
-		&PathIntegratorState.MaxDepth,
-		&PathIntegratorState::MinimumDepth,
-		&PathIntegratorState::MaximumDepth);
+		&Settings.MaxDepth,
+		&PathIntegratorSettings::MinimumDepth,
+		&PathIntegratorSettings::MaximumDepth);
 
-	ImGui::Checkbox("Enable Bloom", &g_Bloom.Enable);
-	ImGui::SliderFloat("Bloom Threshold", &g_Bloom.Threshold, 0.0f, 50.0f);
-	ImGui::SliderFloat("Bloom Intensity", &g_Tonemap.BloomIntensity, 0.0f, 50.0f);
+	ResetPathIntegrator |= ImGui::Checkbox("Enable Bloom", &Bloom.Enable);
+	ImGui::SliderFloat("Bloom Threshold", &Bloom.Threshold, 0.0f, 50.0f);
+	ImGui::SliderFloat("Bloom Intensity", &Tonemap.BloomIntensity, 0.0f, 50.0f);
 
 	if (ResetPathIntegrator)
 	{
-		NumTemporalSamples = 0;
+		ResetAccumulation();
 	}
 
 	ImGui::Text("Num Temporal Samples: %u", NumTemporalSamples);
@@ -57,7 +52,7 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
 		World->WorldState  = EWorldState_Render;
-		NumTemporalSamples = 0;
+		ResetAccumulation();
 	}
 
 	RHI::D3D12SyncHandle ASBuildSyncHandle;
@@ -121,12 +116,12 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 				g_GlobalConstants.Resolution			= { static_cast<float>(WorldRenderView->View.Width), static_cast<float>(WorldRenderView->View.Height), 1.0f / static_cast<float>(WorldRenderView->View.Width), 1.0f / static_cast<float>(WorldRenderView->View.Height) };
 				g_GlobalConstants.NumLights				= WorldRenderView->NumLights;
 				g_GlobalConstants.TotalFrameCount		= FrameCounter++;
-				g_GlobalConstants.MaxDepth				= PathIntegratorState.MaxDepth;
+				g_GlobalConstants.MaxDepth				= Settings.MaxDepth;
 				g_GlobalConstants.NumAccumulatedSamples = NumTemporalSamples++;
 				g_GlobalConstants.RenderTarget			= Registry.Get<RHI::D3D12UnorderedAccessView>(PathTraceArgs.Uav)->GetIndex();
-				g_GlobalConstants.SkyIntensity			= PathIntegratorState.SkyIntensity;
+				g_GlobalConstants.SkyIntensity			= Settings.SkyIntensity;
 				g_GlobalConstants.Dimensions			= { WorldRenderView->View.Width, WorldRenderView->View.Height };
-				g_GlobalConstants.AntiAliasing			= PathIntegratorState.Antialiasing;
+				g_GlobalConstants.AntiAliasing			= Settings.Antialiasing;
 				g_GlobalConstants.Sky					= World->ActiveSkyLight->SRVIndex;
 
 				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::RTX::PathTrace));
@@ -142,12 +137,12 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 			});
 
 	BloomParameters BloomArgs = {};
-	if (g_Bloom.Enable)
+	if (Bloom.Enable)
 	{
 		BloomInputParameters BloomInputArgs = {};
 		BloomInputArgs.Input				= PathTraceArgs.Output;
 		BloomInputArgs.Srv					= PathTraceArgs.Srv;
-		BloomArgs							= AddBloomPass(Graph, WorldRenderView->View, BloomInputArgs, g_Bloom);
+		BloomArgs							= AddBloomPass(Graph, WorldRenderView->View, BloomInputArgs, Bloom);
 	}
 
 	TonemapInputParameters TonemapInputArgs = {};
@@ -155,7 +150,7 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	TonemapInputArgs.Srv					= PathTraceArgs.Srv;
 	TonemapInputArgs.BloomInput				= BloomArgs.Output1[1]; // Output1[1] contains final upsampled bloom texture
 	TonemapInputArgs.BloomInputSrv			= BloomArgs.Output1Srvs[1];
-	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, WorldRenderView->View, TonemapInputArgs, g_Tonemap);
+	TonemapParameters TonemapArgs			= AddTonemapPass(Graph, WorldRenderView->View, TonemapInputArgs, Tonemap);
 
 	// After render graph execution, we need to read tonemap output as part of imgui pipeline that is not part of the graph, so graph will automatically apply
 	// resource barrier transition for us
@@ -169,4 +164,9 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	// Builder.SaveAs(Application::ExecutableDirectory / "RenderGraph.dgml");
 
 	Viewport = reinterpret_cast<void*>(Registry.Get<RHI::D3D12ShaderResourceView>(TonemapArgs.Srv)->GetGpuHandle().ptr);
+}
+
+void PathIntegratorDXR1_1::ResetAccumulation()
+{
+	NumTemporalSamples = 0;
 }

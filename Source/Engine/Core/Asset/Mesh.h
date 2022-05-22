@@ -18,8 +18,8 @@ namespace Asset
 
 		bool GenerateMeshlets = false;
 
-		Vec3f				Translation	 = { 0.0f, 0.0f, 0.0f };
-		Vec3f				Rotation	 = { 0.0f, 0.0f, 0.0f };
+		Math::Vec3f			Translation	 = { 0.0f, 0.0f, 0.0f };
+		Math::Vec3f			Rotation	 = { 0.0f, 0.0f, 0.0f };
 		float				UniformScale = 1.0f;
 		DirectX::XMFLOAT4X4 Matrix;
 	};
@@ -51,7 +51,7 @@ namespace Asset
 		std::vector<uint8_t>				  UniqueVertexIndices;
 		std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
 
-		BoundingBox BoundingBox;
+		Math::BoundingBox BoundingBox;
 
 		RHI::D3D12Buffer			 VertexResource;
 		RHI::D3D12Buffer			 IndexResource;

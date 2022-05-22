@@ -1,4 +1,6 @@
 #include "Stopwatch.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 const i64 Stopwatch::Frequency = []
 {

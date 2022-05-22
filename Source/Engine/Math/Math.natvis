@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="Math::Matrix4x4">
+		<DisplayString>Matrix4x4</DisplayString>
+		<Expand>
+			<Synthetic Name ="Row 0" Optional="true">
+				<DisplayString>{_11}, {_12}, {_13}, {_14}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="Row 1" Optional="true">
+				<DisplayString>{_21}, {_22}, {_23}, {_24}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="Row 2" Optional="true">
+				<DisplayString>{_31}, {_32}, {_33}, {_34}</DisplayString>
+			</Synthetic>
+			<Synthetic Name ="Row 2" Optional="true">
+				<DisplayString>{_41}, {_42}, {_43}, {_44}</DisplayString>
+			</Synthetic>
+		</Expand>
+	</Type>
+</AutoVisualizer>
