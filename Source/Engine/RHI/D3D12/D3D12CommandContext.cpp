@@ -306,7 +306,7 @@ namespace RHI
 		UINT64		Size,
 		const void* Data)
 	{
-		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+		const D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
 		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
 		CommandListHandle->SetGraphicsRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
 	}
@@ -316,7 +316,7 @@ namespace RHI
 		UINT64		Size,
 		const void* Data)
 	{
-		D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
+		const D3D12Allocation Allocation = CpuConstantAllocator.Allocate(Size);
 		std::memcpy(Allocation.CpuVirtualAddress, Data, Size);
 		CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
 	}

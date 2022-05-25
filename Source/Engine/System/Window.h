@@ -24,8 +24,6 @@ class Window
 public:
 	static LPCWSTR const WindowClass;
 
-	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc);
-
 	[[nodiscard]] const WINDOW_DESC& GetDesc() const noexcept;
 	[[nodiscard]] HWND				 GetWindowHandle() const noexcept;
 	[[nodiscard]] std::int32_t		 GetWidth() const noexcept;
@@ -47,6 +45,10 @@ public:
 	void Resize(int Width, int Height);
 
 private:
+	friend class Application;
+
+	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc);
+
 	Application* OwningApplication = nullptr;
 	HINSTANCE	 HInstance		   = nullptr;
 

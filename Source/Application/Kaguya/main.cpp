@@ -112,9 +112,6 @@ public:
 
 	bool Initialize() override
 	{
-		std::string IniFile = (Process::ExecutableDirectory / "imgui.ini").string();
-		ImGui::LoadIniSettingsFromDisk(IniFile.data());
-
 		CreateRenderPath();
 
 		return true;
@@ -432,14 +429,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	Editor Editor;
 	GUI	   Gui;
 	Window MainWindow;
-	{
-		WINDOW_DESC WindowDesc = {};
-		WindowDesc.Name		   = L"Kaguya";
-		WindowDesc.Width	   = 1280;
-		WindowDesc.Height	   = 720;
-		WindowDesc.InitialSize = WindowInitialSize::Maximize;
-		Editor.AddWindow(nullptr, &MainWindow, WindowDesc);
-	}
+	Editor.AddWindow(nullptr, &MainWindow, WINDOW_DESC{ .Name = L"Kaguya", .Width = 1280, .Height = 720, .InitialSize = WindowInitialSize::Maximize });
 	Gui.Initialize(MainWindow.GetWindowHandle(), Kaguya::Device);
 
 	MainWindow.Show();

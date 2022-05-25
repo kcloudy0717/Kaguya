@@ -62,7 +62,7 @@ namespace RHI
 		, RootNode(this, -1, "", nullptr)
 		, CurrentNode(&RootNode)
 	{
-		D3D12_QUERY_HEAP_DESC QueryHeapDesc = {
+		const D3D12_QUERY_HEAP_DESC QueryHeapDesc = {
 			.Type	  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP,
 			.Count	  = MaxProfiles * 2,
 			.NodeMask = Parent->GetNodeMask()
@@ -70,8 +70,8 @@ namespace RHI
 		VERIFY_D3D12_API(Parent->GetDevice()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&TimestampQueryHeap)));
 		TimestampQueryHeap->SetName(L"Timestamp Query Heap");
 
-		D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK, Parent->GetNodeMask(), Parent->GetNodeMask());
-		D3D12_RESOURCE_DESC	  ResourceDesc	 = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(MaxProfiles) * FrameLatency * 2 * sizeof(UINT64));
+		const D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK, Parent->GetNodeMask(), Parent->GetNodeMask());
+		const D3D12_RESOURCE_DESC	ResourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(MaxProfiles) * FrameLatency * 2 * sizeof(UINT64));
 		VERIFY_D3D12_API(Parent->GetDevice()->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&TimestampQueryReadback)));
 		TimestampQueryReadback->SetName(L"Timestamp Query Readback");
 	}

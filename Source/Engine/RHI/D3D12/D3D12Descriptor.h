@@ -5,6 +5,39 @@
 
 namespace RHI
 {
+	namespace Internal
+	{
+		template<typename ViewDesc>
+		struct D3D12DescriptorTraits
+		{
+		};
+		template<>
+		struct D3D12DescriptorTraits<D3D12_RENDER_TARGET_VIEW_DESC>
+		{
+			static auto Create() { return &ID3D12Device::CreateRenderTargetView; }
+		};
+		template<>
+		struct D3D12DescriptorTraits<D3D12_DEPTH_STENCIL_VIEW_DESC>
+		{
+			static auto Create() { return &ID3D12Device::CreateDepthStencilView; }
+		};
+		template<>
+		struct D3D12DescriptorTraits<D3D12_SHADER_RESOURCE_VIEW_DESC>
+		{
+			static auto Create() { return &ID3D12Device::CreateShaderResourceView; }
+		};
+		template<>
+		struct D3D12DescriptorTraits<D3D12_UNORDERED_ACCESS_VIEW_DESC>
+		{
+			static auto Create() { return &ID3D12Device::CreateUnorderedAccessView; }
+		};
+		template<>
+		struct D3D12DescriptorTraits<D3D12_SAMPLER_DESC>
+		{
+			static auto Create() { return &ID3D12Device::CreateSampler; }
+		};
+	} // namespace Internal
+
 	class CSubresourceSubset
 	{
 	public:
@@ -95,25 +128,14 @@ namespace RHI
 		[[nodiscard]] UINT MaxSubresource() const;
 
 	private:
-		void Reduce()
+		void Reduce();
+		// Make compiler happy
+		CViewSubresourceSubset(
+			const D3D12_SAMPLER_DESC& Desc,
+			UINT8					  MipLevels,
+			UINT16					  ArraySize,
+			UINT8					  PlaneCount)
 		{
-			if (BeginMip == 0 && EndMip == MipLevels && BeginArray == 0 && EndArray == ArraySlices)
-			{
-				UINT startSubresource = D3D12CalcSubresource(0, 0, BeginPlane, MipLevels, ArraySlices);
-				UINT endSubresource	  = D3D12CalcSubresource(0, 0, EndPlane, MipLevels, ArraySlices);
-
-				// Only coalesce if the full-resolution UINTs fit in the UINT8s used
-				// for storage here
-				if (endSubresource < static_cast<UINT8>(-1))
-				{
-					BeginArray = 0;
-					EndArray   = 1;
-					BeginPlane = 0;
-					EndPlane   = 1;
-					BeginMip   = static_cast<UINT8>(startSubresource);
-					EndMip	   = static_cast<UINT8>(endSubresource);
-				}
-			}
 		}
 
 	protected:
@@ -215,31 +237,6 @@ namespace RHI
 		UINT8						  CurrentPlaneSlice;
 	};
 
-	template<typename ViewDesc>
-	struct D3D12DescriptorTraits
-	{
-	};
-	template<>
-	struct D3D12DescriptorTraits<D3D12_RENDER_TARGET_VIEW_DESC>
-	{
-		static auto Create() { return &ID3D12Device::CreateRenderTargetView; }
-	};
-	template<>
-	struct D3D12DescriptorTraits<D3D12_DEPTH_STENCIL_VIEW_DESC>
-	{
-		static auto Create() { return &ID3D12Device::CreateDepthStencilView; }
-	};
-	template<>
-	struct D3D12DescriptorTraits<D3D12_SHADER_RESOURCE_VIEW_DESC>
-	{
-		static auto Create() { return &ID3D12Device::CreateShaderResourceView; }
-	};
-	template<>
-	struct D3D12DescriptorTraits<D3D12_UNORDERED_ACCESS_VIEW_DESC>
-	{
-		static auto Create() { return &ID3D12Device::CreateUnorderedAccessView; }
-	};
-
 	template<typename ViewDesc, bool Dynamic>
 	class D3D12Descriptor : public D3D12LinkedDeviceChild
 	{
@@ -316,22 +313,27 @@ namespace RHI
 
 		void CreateDefaultView(ID3D12Resource* Resource)
 		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, nullptr, CpuHandle);
+			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, nullptr, CpuHandle);
 		}
 
 		void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CpuHandle);
+			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CpuHandle);
 		}
 
 		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
 		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
+			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
 		}
 
 		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 		{
-			(GetParentLinkedDevice()->GetDevice()->*D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
+			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
+		}
+
+		void CreateSampler(const ViewDesc& Desc)
+		{
+			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(&Desc, CpuHandle);
 		}
 
 	private:
@@ -362,7 +364,7 @@ namespace RHI
 	protected:
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = {};
 		D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle = {};
-		// If Dynamic is true, this represents bindless handle index in the descriptor heap
+		// If Dynamic is true, this represents bindless descriptor handle index in D3D12DescriptorHeap
 		// Else it represents descriptor heap entry index in CDescriptorHeapManager
 		UINT Index = UINT_MAX;
 	};
@@ -528,5 +530,14 @@ namespace RHI
 
 	private:
 		D3D12Resource* CounterResource = nullptr;
+	};
+
+	class D3D12Sampler : public D3D12View<D3D12_SAMPLER_DESC, true>
+	{
+	public:
+		D3D12Sampler() noexcept = default;
+		explicit D3D12Sampler(
+			D3D12LinkedDevice*		  Device,
+			const D3D12_SAMPLER_DESC& Desc);
 	};
 } // namespace RHI

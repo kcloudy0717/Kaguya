@@ -49,15 +49,6 @@ namespace RHI
 			, Parent(Parent)
 		{
 		}
-		~D3D12EventNode()
-		{
-			for (auto Child : Children)
-			{
-				delete Child;
-			}
-			Children.clear();
-			Lut.clear();
-		}
 
 		D3D12EventNode* GetChild(std::string_view Name)
 		{
@@ -67,10 +58,9 @@ namespace RHI
 				return Iterator->second;
 			}
 
-			auto EventNode = new D3D12EventNode(Profiler, Depth + 1, Name, this);
-			Children.push_back(EventNode);
-			Lut[Name] = EventNode;
-			return EventNode;
+			auto& Child = Children.emplace_back(std::make_unique<D3D12EventNode>(Profiler, Depth + 1, Name, this));
+			Lut[Name]	= Child.get();
+			return Child.get();
 		}
 
 		void StartTiming(D3D12CommandQueue* CommandQueue, ID3D12GraphicsCommandList* CommandList);
@@ -81,7 +71,7 @@ namespace RHI
 		std::string_view									  Name;
 		UINT												  Index = UINT_MAX;
 		D3D12EventNode*										  Parent;
-		std::vector<D3D12EventNode*>						  Children;
+		std::vector<std::unique_ptr<D3D12EventNode>>		  Children;
 		std::unordered_map<std::string_view, D3D12EventNode*> Lut;
 	};
 

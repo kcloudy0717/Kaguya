@@ -393,6 +393,27 @@ namespace RHI
 		return (*(--end())).second;
 	}
 
+	void CViewSubresourceSubset::Reduce()
+	{
+		if (BeginMip == 0 && EndMip == MipLevels && BeginArray == 0 && EndArray == ArraySlices)
+		{
+			UINT startSubresource = D3D12CalcSubresource(0, 0, BeginPlane, MipLevels, ArraySlices);
+			UINT endSubresource	  = D3D12CalcSubresource(0, 0, EndPlane, MipLevels, ArraySlices);
+
+			// Only coalesce if the full-resolution UINTs fit in the UINT8s used
+			// for storage here
+			if (endSubresource < static_cast<UINT8>(-1))
+			{
+				BeginArray = 0;
+				EndArray   = 1;
+				BeginPlane = 0;
+				EndPlane   = 1;
+				BeginMip   = static_cast<UINT8>(startSubresource);
+				EndMip	   = static_cast<UINT8>(endSubresource);
+			}
+		}
+	}
+
 	D3D12RenderTargetView::D3D12RenderTargetView(
 		D3D12LinkedDevice*					 Device,
 		const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
@@ -797,5 +818,13 @@ namespace RHI
 		}
 
 		return ViewDesc;
+	}
+
+	D3D12Sampler::D3D12Sampler(
+		D3D12LinkedDevice*		  Device,
+		const D3D12_SAMPLER_DESC& Desc)
+		: D3D12View(Device, Desc, nullptr)
+	{
+		Descriptor.CreateSampler(Desc);
 	}
 } // namespace RHI

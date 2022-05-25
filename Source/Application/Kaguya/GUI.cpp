@@ -9,6 +9,9 @@ GUI::GUI()
 	ImGui::StyleColorsDark();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
+	std::string IniFile = (Process::ExecutableDirectory / "imgui.ini").string();
+	ImGui::LoadIniSettingsFromDisk(IniFile.data());
+
 	ImFontConfig IconsConfig;
 	IconsConfig.OversampleH = 2;
 	IconsConfig.OversampleV = 2;
