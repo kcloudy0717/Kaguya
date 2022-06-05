@@ -206,6 +206,7 @@ namespace Math
 		return v.x && v.y;
 	}
 
+	using Vec2u = Vec<unsigned, 2>;
 	using Vec2i = Vec<int, 2>;
 	using Vec2f = Vec<float, 2>;
 	using Vec2d = Vec<double, 2>;

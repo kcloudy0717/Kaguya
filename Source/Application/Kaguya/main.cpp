@@ -444,8 +444,8 @@ int main(int /*argc*/, char* /*argv*/[])
 	Editor.SwapChain	   = &SwapChain;
 	Editor.World		   = &World;
 	Editor.WorldRenderView = &WorldRenderView;
-	// Editor.RenderPath	   = static_cast<int>(RENDER_PATH::DeferredRenderer);
-	//  Editor.RenderPath	   = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_0);
-	Editor.RenderPath = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_1);
+	Editor.RenderPath	   = static_cast<int>(RENDER_PATH::DeferredRenderer);
+	// Editor.RenderPath	   = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_0);
+	// Editor.RenderPath = static_cast<int>(RENDER_PATH::PathIntegratorDXR1_1);
 	Editor.Run();
 }

@@ -27,8 +27,10 @@ struct Material
 };
 
 // ==================== Light ====================
-#define LightType_Point (0)
-#define LightType_Quad	(1)
+#define LightType_Point		  (0)
+#define LightType_Quad		  (1)
+#define LightType_Directional (2)
+#define LightType_Spot		  (3)
 
 struct Light
 {
@@ -37,10 +39,13 @@ struct Light
 	float4 Orientation;
 	float  Width;
 	float  Height;
-	float3 Points[4]; // World-space points that are pre-computed on the Cpu so we don't have to compute them in shader
-					  // for every ray
+	float3 Points[4]; // World-space points for quad light type
 
 	float3 I;
+	float  Intensity;
+	float  Radius;
+	float  InnerAngle;
+	float  OuterAngle;
 };
 
 // ==================== Mesh ====================

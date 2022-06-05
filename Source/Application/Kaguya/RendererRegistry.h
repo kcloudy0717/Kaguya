@@ -14,7 +14,6 @@ struct Shaders
 	struct VS
 	{
 		inline static Shader FullScreenTriangle;
-		inline static Shader GBuffer;
 	};
 
 	// Mesh Shaders
@@ -26,8 +25,6 @@ struct Shaders
 	// Pixel Shaders
 	struct PS
 	{
-		inline static Shader GBuffer;
-
 		inline static Shader Meshlet;
 	};
 
@@ -68,13 +65,7 @@ struct Shaders
 				L"Shaders/FullScreenTriangle.hlsl",
 				Options);
 		}
-		{
-			ShaderCompileOptions Options(g_VSEntryPoint);
-			VS::GBuffer = Compiler->CompileShader(
-				RHI_SHADER_TYPE::Vertex,
-				L"Shaders/GBuffer.hlsl",
-				Options);
-		}
+		
 
 		// MS
 		{
@@ -86,13 +77,7 @@ struct Shaders
 		}
 
 		// PS
-		{
-			ShaderCompileOptions Options(g_PSEntryPoint);
-			PS::GBuffer = Compiler->CompileShader(
-				RHI_SHADER_TYPE::Pixel,
-				L"Shaders/GBuffer.hlsl",
-				Options);
-		}
+		
 		{
 			ShaderCompileOptions Options(g_PSEntryPoint);
 			PS::Meshlet = Compiler->CompileShader(
@@ -180,7 +165,6 @@ struct Libraries
 
 struct RootSignatures
 {
-	inline static RHI::RgResourceHandle GBuffer;
 	inline static RHI::RgResourceHandle IndirectCull;
 
 	inline static RHI::RgResourceHandle Meshlet;
@@ -207,17 +191,6 @@ struct RootSignatures
 				.AddShaderResourceView<1, 0>()				// g_Materials			register(t1, space0)
 				.AddShaderResourceView<2, 0>()				// g_Lights				register(t2, space0)
 				.AddShaderResourceView<3, 0>()				// g_Meshes				register(t3, space0)
-				.AllowResourceDescriptorHeapIndexing()
-				.AllowSampleDescriptorHeapIndexing()));
-
-		GBuffer = Registry.CreateRootSignature(Device->CreateRootSignature(
-			RHI::RootSignatureDesc()
-				.Add32BitConstants<0, 0>(1)
-				.AddConstantBufferView<1, 0>()
-				.AddShaderResourceView<0, 0>()
-				.AddShaderResourceView<1, 0>()
-				.AddShaderResourceView<2, 0>()
-				.AllowInputLayout()
 				.AllowResourceDescriptorHeapIndexing()
 				.AllowSampleDescriptorHeapIndexing()));
 
@@ -280,7 +253,6 @@ struct RootSignatures
 
 struct PipelineStates
 {
-	inline static RHI::RgResourceHandle GBuffer;
 	inline static RHI::RgResourceHandle IndirectCull;
 	inline static RHI::RgResourceHandle IndirectCullMeshShader;
 
@@ -313,42 +285,6 @@ struct PipelineStates
 			RTX::PathTrace = Registry.CreatePipelineState(Device->CreatePipelineState(L"RTX::PathTrace", Stream));
 		}
 
-		{
-			RHI::D3D12InputLayout InputLayout(3);
-			InputLayout.AddVertexLayoutElement("POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
-			InputLayout.AddVertexLayoutElement("TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0);
-			InputLayout.AddVertexLayoutElement("NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0);
-
-			RHIDepthStencilState DepthStencilState;
-			DepthStencilState.DepthEnable = true;
-
-			RHIRenderTargetState RenderTargetState;
-			RenderTargetState.RTFormats[0]	   = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			RenderTargetState.RTFormats[1]	   = DXGI_FORMAT_R32_UINT;
-			RenderTargetState.RTFormats[2]	   = DXGI_FORMAT_R16G16_FLOAT;
-			RenderTargetState.NumRenderTargets = 3;
-			RenderTargetState.DSFormat		   = DXGI_FORMAT_D32_FLOAT;
-
-			struct PsoStream
-			{
-				PipelineStateStreamRootSignature	 RootSignature;
-				PipelineStateStreamInputLayout		 InputLayout;
-				PipelineStateStreamPrimitiveTopology PrimitiveTopologyType;
-				PipelineStateStreamVS				 VS;
-				PipelineStateStreamPS				 PS;
-				PipelineStateStreamDepthStencilState DepthStencilState;
-				PipelineStateStreamRenderTargetState RenderTargetState;
-			} Stream;
-			Stream.RootSignature		 = Registry.GetRootSignature(RootSignatures::GBuffer);
-			Stream.InputLayout			 = &InputLayout;
-			Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
-			Stream.VS					 = &Shaders::VS::GBuffer;
-			Stream.PS					 = &Shaders::PS::GBuffer;
-			Stream.DepthStencilState	 = DepthStencilState;
-			Stream.RenderTargetState	 = RenderTargetState;
-
-			GBuffer = Registry.CreatePipelineState(Device->CreatePipelineState(L"GBuffer", Stream));
-		}
 		{
 			struct PsoStream
 			{

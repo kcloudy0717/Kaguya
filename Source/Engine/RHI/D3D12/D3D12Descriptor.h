@@ -518,6 +518,8 @@ namespace RHI
 
 		void RecreateView();
 
+		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetClearCpuHandle() const noexcept;
+
 	private:
 		static D3D12_UNORDERED_ACCESS_VIEW_DESC GetDesc(
 			D3D12Buffer* Buffer,
@@ -529,7 +531,8 @@ namespace RHI
 			std::optional<UINT> OptMipSlice);
 
 	private:
-		D3D12Resource* CounterResource = nullptr;
+		D3D12Resource*											 CounterResource = nullptr;
+		D3D12Descriptor<D3D12_UNORDERED_ACCESS_VIEW_DESC, false> ClearDescriptor;
 	};
 
 	class D3D12Sampler : public D3D12View<D3D12_SAMPLER_DESC, true>

@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 // Using uint2 version of D3D12_GPU_VIRTUAL_ADDRESS because command signature arguments needs to be 4 byte aligned
-// if i use uint64_t, it breaks alignment rules
 typedef uint2 D3D12_GPU_VIRTUAL_ADDRESS;
 // typedef uint64_t D3D12_GPU_VIRTUAL_ADDRESS;
 

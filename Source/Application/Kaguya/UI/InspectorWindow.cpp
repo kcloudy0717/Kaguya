@@ -321,6 +321,7 @@ void InspectorWindow::OnRender()
 			{
 			case ELightTypes::Point:
 				IsEdited |= RenderFloat3Control("I", &Component.I.x);
+				IsEdited |= RenderFloatControl("Radius", &Component.Radius, 1.0f);
 				break;
 			case ELightTypes::Quad:
 				IsEdited |= RenderFloat3Control("I", &Component.I.x);

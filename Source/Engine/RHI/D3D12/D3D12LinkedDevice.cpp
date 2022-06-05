@@ -30,6 +30,7 @@ namespace RHI
 		, Profiler(this, 1)
 		, RtvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CVar_DescriptorAllocatorPageSize)
 		, DsvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CVar_DescriptorAllocatorPageSize)
+		, UavHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_DescriptorAllocatorPageSize)
 		, ResourceDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_GlobalResourceViewHeapSize)
 		, SamplerDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, CVar_GlobalSamplerHeapSize)
 	{

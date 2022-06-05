@@ -29,6 +29,7 @@ namespace RHI
 		template<typename ViewDesc> CDescriptorHeapManager* GetHeapManager() noexcept;
 		template<> CDescriptorHeapManager* GetHeapManager<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return &RtvHeapManager; }
 		template<> CDescriptorHeapManager* GetHeapManager<D3D12_DEPTH_STENCIL_VIEW_DESC>() noexcept { return &DsvHeapManager; }
+		template<> CDescriptorHeapManager* GetHeapManager<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return &UavHeapManager; }
 
 		template<typename ViewDesc> D3D12DescriptorHeap* GetDescriptorHeap() noexcept;
 		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_CONSTANT_BUFFER_VIEW_DESC>() noexcept { return &ResourceDescriptorHeap; }
@@ -65,6 +66,7 @@ namespace RHI
 
 		CDescriptorHeapManager RtvHeapManager;
 		CDescriptorHeapManager DsvHeapManager;
+		CDescriptorHeapManager UavHeapManager;
 		D3D12DescriptorHeap	   ResourceDescriptorHeap;
 		D3D12DescriptorHeap	   SamplerDescriptorHeap;
 

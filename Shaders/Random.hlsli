@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Math.hlsli"
 
 // Raytracing Gems 2

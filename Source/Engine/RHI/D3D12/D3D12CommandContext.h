@@ -12,6 +12,7 @@ namespace RHI
 	class D3D12RootSignature;
 	class D3D12RenderTargetView;
 	class D3D12DepthStencilView;
+	class D3D12UnorderedAccessView;
 
 	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 	{
@@ -93,6 +94,9 @@ namespace RHI
 		void ClearRenderTarget(
 			Span<D3D12RenderTargetView* const> RenderTargetViews,
 			D3D12DepthStencilView*			   DepthStencilView);
+
+		void ClearUnorderedAccessView(
+			D3D12UnorderedAccessView* UnorderedAccessView);
 
 		void SetRenderTarget(
 			Span<D3D12RenderTargetView* const> RenderTargetViews,

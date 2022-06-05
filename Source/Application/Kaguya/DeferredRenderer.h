@@ -16,17 +16,6 @@ private:
 
 private:
 #pragma pack(push, 4)
-#if USE_MESH_SHADERS
-	struct CommandSignatureParams
-	{
-		u32							  MeshIndex;
-		D3D12_GPU_VIRTUAL_ADDRESS	  Vertices;
-		D3D12_GPU_VIRTUAL_ADDRESS	  Meshlets;
-		D3D12_GPU_VIRTUAL_ADDRESS	  UniqueVertexIndices;
-		D3D12_GPU_VIRTUAL_ADDRESS	  PrimitiveIndices;
-		D3D12_DISPATCH_MESH_ARGUMENTS DispatchMeshArguments;
-	};
-#else
 	struct CommandSignatureParams
 	{
 		u32							 MeshIndex;
@@ -34,13 +23,22 @@ private:
 		D3D12_INDEX_BUFFER_VIEW		 IndexBuffer;
 		D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments;
 	};
-#endif
 #pragma pack(pop)
 
 	static constexpr u64 TotalCommandBufferSizeInBytes = World::MeshLimit * sizeof(CommandSignatureParams);
 	static constexpr u64 CommandBufferCounterOffset	   = AlignUp(TotalCommandBufferSizeInBytes, D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT);
 
 	RHI::D3D12CommandSignature CommandSignature;
+
+	Shader					GBufferVS;
+	Shader					GBufferPS;
+	Shader					ShadingCS;
+
+	RHI::D3D12RootSignature GBufferRS;
+	RHI::D3D12RootSignature ShadingRS;
+
+	RHI::D3D12PipelineState GBufferPSO;
+	RHI::D3D12PipelineState ShadingPSO;
 
 	RHI::D3D12Buffer			  IndirectCommandBuffer;
 	RHI::D3D12UnorderedAccessView IndirectCommandBufferUav;

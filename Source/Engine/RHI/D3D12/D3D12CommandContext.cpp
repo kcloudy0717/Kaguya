@@ -243,6 +243,21 @@ namespace RHI
 		}
 	}
 
+	void D3D12CommandContext::ClearUnorderedAccessView(D3D12UnorderedAccessView* UnorderedAccessView)
+	{
+		const auto& ViewSubresourceSubset = UnorderedAccessView->GetViewSubresourceSubset();
+		for (auto Iter = ViewSubresourceSubset.begin(); Iter != ViewSubresourceSubset.end(); ++Iter)
+		{
+			for (UINT SubresourceIndex = Iter.StartSubresource(); SubresourceIndex < Iter.EndSubresource(); ++SubresourceIndex)
+			{
+				TransitionBarrier(UnorderedAccessView->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, SubresourceIndex);
+			}
+		}
+
+		D3D12_CLEAR_VALUE ClearValue = UnorderedAccessView->GetResource()->GetClearValue();
+		CommandListHandle->ClearUnorderedAccessViewFloat(UnorderedAccessView->GetGpuHandle(), UnorderedAccessView->GetClearCpuHandle(), UnorderedAccessView->GetResource()->GetResource(), ClearValue.Color, 0, nullptr);
+	}
+
 	void D3D12CommandContext::SetRenderTarget(
 		Span<D3D12RenderTargetView* const> RenderTargetViews,
 		D3D12DepthStencilView*			   DepthStencilView)

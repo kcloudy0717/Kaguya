@@ -17,15 +17,7 @@ struct GlobalConstants
 ConstantBuffer<GlobalConstants> g_GlobalConstants : register(b1, space0);
 
 StructuredBuffer<Material> g_Materials : register(t0, space0);
-StructuredBuffer<Light>	   g_Lights : register(t1, space0);
-StructuredBuffer<Mesh>	   g_Meshes : register(t2, space0);
-
-struct MRT
-{
-	float4 Normal : SV_Target0;
-	uint   MaterialIndex : SV_Target1;
-	float2 Motion : SV_Target2;
-};
+StructuredBuffer<Mesh>	   g_Meshes : register(t1, space0);
 
 struct VertexAttributes
 {
@@ -58,16 +50,37 @@ VertexAttributes VSMain(float3 Position : POSITION, float2 TextureCoord : TEXCOO
 	return output;
 }
 
+struct MRT
+{
+	float4 Albedo : SV_Target0;
+	float4 Normal : SV_Target1;
+	float2 Material : SV_Target2;
+	float2 Motion : SV_Target3;
+};
 MRT PSMain(VertexAttributes input)
 {
-	Mesh   mesh			  = g_Meshes[MeshIndex];
-	float3 currentPosNDC  = input.CurrPosition.xyz / input.CurrPosition.w;
-	float3 previousPosNDC = input.PrevPosition.xyz / input.PrevPosition.w;
-	float2 velocity		  = currentPosNDC.xy - previousPosNDC.xy;
+	Mesh	 mesh			= g_Meshes[MeshIndex];
+	Material material		= g_Materials[mesh.MaterialIndex];
+	float3	 currentPosNDC	= input.CurrPosition.xyz / input.CurrPosition.w;
+	float3	 previousPosNDC = input.PrevPosition.xyz / input.PrevPosition.w;
+	float2	 velocity		= currentPosNDC.xy - previousPosNDC.xy;
+
+	float4 albedo;
+
+	if (material.Albedo != -1)
+	{
+		Texture2D AlbedoTexture = ResourceDescriptorHeap[material.Albedo];
+		albedo					= AlbedoTexture.Sample(g_SamplerAnisotropicClamp, input.TexCoord);
+	}
+	else
+	{
+		albedo = float4(material.baseColor, 1.0f);
+	}
 
 	MRT mrt;
-	mrt.Normal		  = float4(input.N, 1.0f);
-	mrt.MaterialIndex = mesh.MaterialIndex;
-	mrt.Motion		  = velocity;
+	mrt.Albedo	 = albedo;
+	mrt.Normal	 = float4(input.N, 1.0f);
+	mrt.Material = float2(material.roughness, material.metallic);
+	mrt.Motion	 = velocity;
 	return mrt;
 }
