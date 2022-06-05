@@ -1,6 +1,8 @@
 #pragma once
 #include "RHI.h"
 
+#define HLSL_INVALID_RESOURCE_HANDLE (-1)
+
 struct HlslByteAddressBuffer
 {
 	HlslByteAddressBuffer() noexcept = default;
@@ -9,7 +11,7 @@ struct HlslByteAddressBuffer
 	{
 	}
 
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };
 
 struct HlslTexture2D
@@ -20,7 +22,7 @@ struct HlslTexture2D
 	{
 	}
 
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };
 
 struct HlslTexture2DArray
@@ -31,7 +33,7 @@ struct HlslTexture2DArray
 	{
 	}
 
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };
 
 struct HlslTextureCube
@@ -42,7 +44,7 @@ struct HlslTextureCube
 	{
 	}
 
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };
 
 struct HlslRWTexture2D
@@ -53,10 +55,10 @@ struct HlslRWTexture2D
 	{
 	}
 
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };
 
 struct HlslSamplerState
 {
-	u32 Handle;
+	u32 Handle = HLSL_INVALID_RESOURCE_HANDLE;
 };

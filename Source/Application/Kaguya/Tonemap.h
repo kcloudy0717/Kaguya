@@ -67,14 +67,9 @@ static TonemapParameters AddTonemapPass(
 				Args.BloomIntensity	   = Settings.BloomIntensity;
 				Args.Input			   = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.Srv);
 				Args.Output			   = Registry.Get<RHI::D3D12UnorderedAccessView>(TonemapArgs.Uav);
-
 				if (Inputs.BloomInput.IsValid())
 				{
 					Args.Bloom = Registry.Get<RHI::D3D12ShaderResourceView>(Inputs.BloomInputSrv);
-				}
-				else
-				{
-					Args.Bloom.Handle = -1;
 				}
 
 				Context.SetPipelineState(Registry.GetPipelineState(PipelineStates::Tonemap));

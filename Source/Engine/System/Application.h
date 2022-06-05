@@ -8,8 +8,6 @@ class IApplicationMessageHandler;
 class Application
 {
 public:
-	using MessageCallback = void (*)(void*, HWND, UINT, WPARAM, LPARAM);
-
 	Application();
 	virtual ~Application();
 
