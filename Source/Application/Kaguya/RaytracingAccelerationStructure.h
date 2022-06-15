@@ -11,7 +11,7 @@ public:
 	RaytracingAccelerationStructure() noexcept = default;
 	RaytracingAccelerationStructure(RHI::D3D12Device* Device, UINT NumHitGroups);
 
-	const RHI::D3D12ShaderResourceView& GetShaderResourceView() const { return IsValid() ? SRV : Null; }
+	RHI::D3D12ShaderResourceView* GetShaderResourceView() { return IsValid() ? &SRV : nullptr; }
 
 	[[nodiscard]] bool IsValid() const noexcept { return !TopLevelAccelerationStructure.empty(); }
 
@@ -40,6 +40,5 @@ public:
 	RHI::D3D12ASBuffer TlasResult;
 	RHI::D3D12Buffer   InstanceDescsBuffer;
 
-	RHI::D3D12ShaderResourceView Null;
 	RHI::D3D12ShaderResourceView SRV;
 };

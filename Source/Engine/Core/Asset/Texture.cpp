@@ -180,7 +180,7 @@ namespace Asset
 
 		RHI::D3D12Buffer ReadbackBuffer = RHI::D3D12Buffer(Device, TotalBytes, 0, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_FLAG_NONE);
 
-		RHI::D3D12CommandContext& Context = Device->GetCommandContext();
+		RHI::D3D12CommandContext& Context = Device->GetGraphicsContext();
 		Context.Open();
 		{
 			const CD3DX12_TEXTURE_COPY_LOCATION Dst(ReadbackBuffer.GetResource(), Layout);

@@ -30,13 +30,16 @@ private:
 
 	RHI::D3D12CommandSignature CommandSignature;
 
+	Shader					IndirectCullCS;
 	Shader					GBufferVS;
 	Shader					GBufferPS;
 	Shader					ShadingCS;
 
+	RHI::D3D12RootSignature IndirectCullRS;
 	RHI::D3D12RootSignature GBufferRS;
 	RHI::D3D12RootSignature ShadingRS;
 
+	RHI::D3D12PipelineState IndirectCullPSO;
 	RHI::D3D12PipelineState GBufferPSO;
 	RHI::D3D12PipelineState ShadingPSO;
 

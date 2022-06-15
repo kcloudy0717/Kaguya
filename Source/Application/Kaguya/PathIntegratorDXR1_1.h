@@ -1,7 +1,6 @@
 #pragma once
 #include "PathIntegratorDXR1_0.h"
-#include "Bloom.h"
-#include "Tonemap.h"
+#include "PostProcess.h"
 
 class PathIntegratorDXR1_1 final : public Renderer
 {
@@ -25,6 +24,9 @@ private:
 
 	PathIntegratorSettings Settings;
 
-	BloomSettings	Bloom;
-	TonemapSettings Tonemap;
+	Shader					PathTraceCS;
+	RHI::D3D12RootSignature PathTraceRS;
+	RHI::D3D12PipelineState PathTracePSO;
+
+	PostProcess PostProcess;
 };

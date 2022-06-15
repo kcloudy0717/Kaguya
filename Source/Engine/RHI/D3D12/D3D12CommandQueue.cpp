@@ -16,9 +16,9 @@ namespace RHI
 								  return D3D12_COMMAND_LIST_TYPE_DIRECT;
 							  case AsyncCompute:
 								  return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-							  case Copy1:
+							  case Copy:
 								  [[fallthrough]];
-							  case Copy2:
+							  case Upload:
 								  return D3D12_COMMAND_LIST_TYPE_COPY;
 							  }
 							  return D3D12_COMMAND_LIST_TYPE();
@@ -52,11 +52,11 @@ namespace RHI
 			CommandQueue->SetName(L"Async Compute");
 			Fence.Get()->SetName(L"Async Compute Fence");
 			break;
-		case Copy1:
+		case Copy:
 			CommandQueue->SetName(L"Copy 1");
 			Fence.Get()->SetName(L"Copy 1 Fence");
 			break;
-		case Copy2:
+		case Upload:
 			CommandQueue->SetName(L"Copy 2");
 			Fence.Get()->SetName(L"Copy 2 Fence");
 			break;

@@ -12,6 +12,7 @@ namespace RHI
 	class D3D12RootSignature;
 	class D3D12RenderTargetView;
 	class D3D12DepthStencilView;
+	class D3D12ShaderResourceView;
 	class D3D12UnorderedAccessView;
 
 	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
@@ -140,6 +141,14 @@ namespace RHI
 			SetComputeConstantBuffer(RootParameterIndex, sizeof(T), &Data);
 		}
 
+		void SetGraphicsRaytracingAccelerationStructure(
+			UINT					 RootParameterIndex,
+			D3D12ShaderResourceView* AccelerationStructure);
+
+		void SetComputeRaytracingAccelerationStructure(
+			UINT					 RootParameterIndex,
+			D3D12ShaderResourceView* AccelerationStructure);
+
 		// These version of the API calls should be used as it needs to flush resource barriers before any work
 		void DrawInstanced(
 			UINT VertexCount,
@@ -201,6 +210,23 @@ namespace RHI
 			D3D12Resource* CounterResource,
 			UINT64		   CounterOffset,
 			UINT		   Value = 0);
+
+		template<UINT ThreadSizeX, UINT ThreadSizeY, UINT ThreadSizeZ>
+		void CalculateDispatchArgument(UINT* ThreadGroupCountX, UINT* ThreadGroupCountY, UINT* ThreadGroupCountZ)
+		{
+			if (ThreadGroupCountX)
+			{
+				*ThreadGroupCountX = RoundUpAndDivide(*ThreadGroupCountX, ThreadSizeX);
+			}
+			if (ThreadGroupCountY)
+			{
+				*ThreadGroupCountY = RoundUpAndDivide(*ThreadGroupCountY, ThreadSizeY);
+			}
+			if (ThreadGroupCountZ)
+			{
+				*ThreadGroupCountZ = RoundUpAndDivide(*ThreadGroupCountZ, ThreadSizeZ);
+			}
+		}
 
 	private:
 		template<typename T>

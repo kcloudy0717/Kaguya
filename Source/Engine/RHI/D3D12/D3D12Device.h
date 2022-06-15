@@ -96,7 +96,6 @@ namespace RHI
 		}
 
 		void				  InternalCreateDxgiFactory(bool Debug);
-		void				  InitializeDxgiObjects();
 		Arc<ID3D12Device>	  InitializeDevice(const DeviceOptions& Options);
 		CD3DX12FeatureSupport InitializeFeatureSupport(const DeviceOptions& Options);
 		TDescriptorSizeCache  InitializeDescriptorSizeCache();

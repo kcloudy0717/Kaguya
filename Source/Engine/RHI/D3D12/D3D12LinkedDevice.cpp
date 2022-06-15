@@ -25,32 +25,24 @@ namespace RHI
 		, NodeMask(NodeMask)
 		, GraphicsQueue(this, RHID3D12CommandQueueType::Direct)
 		, AsyncComputeQueue(this, RHID3D12CommandQueueType::AsyncCompute)
-		, CopyQueue1(this, RHID3D12CommandQueueType::Copy1)
-		, CopyQueue2(this, RHID3D12CommandQueueType::Copy2)
+		, CopyQueue1(this, RHID3D12CommandQueueType::Copy)
+		, CopyQueue2(this, RHID3D12CommandQueueType::Upload)
 		, Profiler(this, 1)
 		, RtvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CVar_DescriptorAllocatorPageSize)
 		, DsvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CVar_DescriptorAllocatorPageSize)
-		, UavHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_DescriptorAllocatorPageSize)
+		, CbvSrvUavHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_DescriptorAllocatorPageSize)
 		, ResourceDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_GlobalResourceViewHeapSize)
 		, SamplerDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, CVar_GlobalSamplerHeapSize)
+		, GraphicsContext(this, RHID3D12CommandQueueType::Direct, D3D12_COMMAND_LIST_TYPE_DIRECT)
+		, ComputeContext(this, RHID3D12CommandQueueType::AsyncCompute, D3D12_COMMAND_LIST_TYPE_COMPUTE)
+		, CopyContext(this, RHID3D12CommandQueueType::Copy, D3D12_COMMAND_LIST_TYPE_COPY)
+		, UploadContext(this, RHID3D12CommandQueueType::Upload, D3D12_COMMAND_LIST_TYPE_COPY)
+		, NullRaytracingAccelerationStructure(this, nullptr)
 	{
 #if _DEBUG
 		ResourceDescriptorHeap.SetName(L"Resource Descriptor Heap");
 		SamplerDescriptorHeap.SetName(L"Sampler Descriptor Heap");
 #endif
-		constexpr size_t NumThreads = 1;
-		AvailableCommandContexts.reserve(NumThreads);
-		for (unsigned int i = 0; i < NumThreads; ++i)
-		{
-			AvailableCommandContexts.emplace_back(this, RHID3D12CommandQueueType::Direct, D3D12_COMMAND_LIST_TYPE_DIRECT);
-		}
-		AvailableAsyncCommandContexts.reserve(NumThreads);
-		for (unsigned int i = 0; i < NumThreads; ++i)
-		{
-			AvailableAsyncCommandContexts.emplace_back(this, RHID3D12CommandQueueType::AsyncCompute, D3D12_COMMAND_LIST_TYPE_COMPUTE);
-		}
-		CopyContext1 = D3D12CommandContext(this, RHID3D12CommandQueueType::Copy1, D3D12_COMMAND_LIST_TYPE_COPY);
-		CopyContext2 = D3D12CommandContext(this, RHID3D12CommandQueueType::Copy2, D3D12_COMMAND_LIST_TYPE_COPY);
 	}
 
 	D3D12LinkedDevice::~D3D12LinkedDevice()
@@ -84,8 +76,8 @@ namespace RHI
 			using enum RHID3D12CommandQueueType;
 		case Direct:		return &GraphicsQueue;
 		case AsyncCompute:	return &AsyncComputeQueue;
-		case Copy1:			return &CopyQueue1;
-		case Copy2:			return &CopyQueue2;
+		case Copy:			return &CopyQueue1;
+		case Upload:			return &CopyQueue2;
 		}
 		// clang-format on
 		return nullptr;
@@ -103,7 +95,7 @@ namespace RHI
 
 	D3D12CommandQueue* D3D12LinkedDevice::GetCopyQueue1() noexcept
 	{
-		return GetCommandQueue(RHID3D12CommandQueueType::Copy1);
+		return GetCommandQueue(RHID3D12CommandQueueType::Copy);
 	}
 
 	D3D12Profiler* D3D12LinkedDevice::GetProfiler() noexcept
@@ -121,21 +113,24 @@ namespace RHI
 		return SamplerDescriptorHeap;
 	}
 
-	D3D12CommandContext& D3D12LinkedDevice::GetCommandContext(UINT ThreadIndex /*= 0*/)
+	D3D12CommandContext& D3D12LinkedDevice::GetGraphicsContext()
 	{
-		assert(ThreadIndex < AvailableCommandContexts.size());
-		return AvailableCommandContexts[ThreadIndex];
+		return GraphicsContext;
 	}
 
-	D3D12CommandContext& D3D12LinkedDevice::GetAsyncComputeCommandContext(UINT ThreadIndex /*= 0*/)
+	D3D12CommandContext& D3D12LinkedDevice::GetComputeContext()
 	{
-		assert(ThreadIndex < AvailableAsyncCommandContexts.size());
-		return AvailableAsyncCommandContexts[ThreadIndex];
+		return ComputeContext;
 	}
 
-	D3D12CommandContext& D3D12LinkedDevice::GetCopyContext1()
+	D3D12CommandContext& D3D12LinkedDevice::GetCopyContext()
 	{
-		return CopyContext1;
+		return CopyContext;
+	}
+
+	D3D12ShaderResourceView* D3D12LinkedDevice::GetNullRaytracingAcceleraionStructure()
+	{
+		return &NullRaytracingAccelerationStructure;
 	}
 
 	void D3D12LinkedDevice::OnBeginFrame()
@@ -215,13 +210,13 @@ namespace RHI
 			TrackedResources.clear();
 		}
 
-		CopyContext2.Open();
+		UploadContext.Open();
 	}
 
 	D3D12SyncHandle D3D12LinkedDevice::EndResourceUpload(bool WaitForCompletion)
 	{
-		CopyContext2->Close();
-		UploadSyncHandle = CopyContext2.Execute(WaitForCompletion);
+		UploadContext->Close();
+		UploadSyncHandle = UploadContext.Execute(WaitForCompletion);
 		return UploadSyncHandle;
 	}
 
@@ -241,7 +236,7 @@ namespace RHI
 			IID_PPV_ARGS(UploadResource.ReleaseAndGetAddressOf())));
 
 		UpdateSubresources(
-			CopyContext2.GetGraphicsCommandList(),
+			UploadContext.GetGraphicsCommandList(),
 			Resource,
 			UploadResource.Get(),
 			0,
@@ -267,7 +262,7 @@ namespace RHI
 			IID_PPV_ARGS(UploadResource.ReleaseAndGetAddressOf())));
 
 		UpdateSubresources<1>(
-			CopyContext2.GetGraphicsCommandList(),
+			UploadContext.GetGraphicsCommandList(),
 			Resource,
 			UploadResource.Get(),
 			0,

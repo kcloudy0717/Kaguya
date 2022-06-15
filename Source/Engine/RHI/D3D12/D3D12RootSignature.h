@@ -21,77 +21,46 @@ namespace RHI
 	class D3D12DescriptorTable
 	{
 	public:
-		explicit D3D12DescriptorTable(size_t NumRanges)
-		{
-			DescriptorRanges.reserve(NumRanges);
-		}
+		explicit D3D12DescriptorTable(size_t NumRanges);
 
-		template<UINT BaseShaderRegister, UINT RegisterSpace>
 		D3D12DescriptorTable& AddSRVRange(
+			UINT						 BaseShaderRegister,
+			UINT						 RegisterSpace,
 			UINT						 NumDescriptors,
 			D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
-		{
-			return AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
-				D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				NumDescriptors,
-				Flags,
-				OffsetInDescriptorsFromTableStart);
-		}
+			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
-		template<UINT BaseShaderRegister, UINT RegisterSpace>
 		D3D12DescriptorTable& AddUAVRange(
+			UINT						 BaseShaderRegister,
+			UINT						 RegisterSpace,
 			UINT						 NumDescriptors,
 			D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
-		{
-			return AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
-				D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
-				NumDescriptors,
-				Flags,
-				OffsetInDescriptorsFromTableStart);
-		}
+			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
-		template<UINT BaseShaderRegister, UINT RegisterSpace>
 		D3D12DescriptorTable& AddCBVRange(
+			UINT						 BaseShaderRegister,
+			UINT						 RegisterSpace,
 			UINT						 NumDescriptors,
 			D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
-		{
-			return AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
-				D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-				NumDescriptors,
-				Flags,
-				OffsetInDescriptorsFromTableStart);
-		}
+			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
-		template<UINT BaseShaderRegister, UINT RegisterSpace>
 		D3D12DescriptorTable& AddSamplerRange(
+			UINT						 BaseShaderRegister,
+			UINT						 RegisterSpace,
 			UINT						 NumDescriptors,
 			D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
-		{
-			return AddDescriptorRange<BaseShaderRegister, RegisterSpace>(
-				D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
-				NumDescriptors,
-				Flags,
-				OffsetInDescriptorsFromTableStart);
-		}
+			UINT						 OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND);
 
-		template<UINT BaseShaderRegister, UINT RegisterSpace>
 		D3D12DescriptorTable& AddDescriptorRange(
+			UINT						 BaseShaderRegister,
+			UINT						 RegisterSpace,
 			D3D12_DESCRIPTOR_RANGE_TYPE	 Type,
 			UINT						 NumDescriptors,
 			D3D12_DESCRIPTOR_RANGE_FLAGS Flags,
-			UINT						 OffsetInDescriptorsFromTableStart)
-		{
-			CD3DX12_DESCRIPTOR_RANGE1& Range = DescriptorRanges.emplace_back();
-			Range.Init(Type, NumDescriptors, BaseShaderRegister, RegisterSpace, Flags, OffsetInDescriptorsFromTableStart);
-			return *this;
-		}
+			UINT						 OffsetInDescriptorsFromTableStart);
 
-		UINT						   size() const noexcept { return static_cast<UINT>(DescriptorRanges.size()); }
-		const D3D12_DESCRIPTOR_RANGE1* data() const noexcept { return DescriptorRanges.data(); }
+		UINT						   size() const noexcept;
+		const D3D12_DESCRIPTOR_RANGE1* data() const noexcept;
 
 	private:
 		std::vector<CD3DX12_DESCRIPTOR_RANGE1> DescriptorRanges;
@@ -104,8 +73,8 @@ namespace RHI
 
 		RootSignatureDesc& AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable);
 
-		template<UINT ShaderRegister, UINT RegisterSpace, typename T>
-		RootSignatureDesc& Add32BitConstants()
+		template<typename T>
+		RootSignatureDesc& Add32BitConstants(UINT ShaderRegister, UINT RegisterSpace)
 		{
 			static_assert(sizeof(T) % 4 == 0);
 			CD3DX12_ROOT_PARAMETER1 Parameter = {};
@@ -113,56 +82,51 @@ namespace RHI
 			return AddParameter(Parameter);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& Add32BitConstants(UINT Num32BitValues)
+		RootSignatureDesc& Add32BitConstants(UINT ShaderRegister, UINT RegisterSpace, UINT Num32BitValues)
 		{
 			CD3DX12_ROOT_PARAMETER1 Parameter = {};
 			Parameter.InitAsConstants(Num32BitValues, ShaderRegister, RegisterSpace);
 			return AddParameter(Parameter);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& AddConstantBufferView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+		RootSignatureDesc& AddConstantBufferView(UINT ShaderRegister, UINT RegisterSpace, D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 		{
 			CD3DX12_ROOT_PARAMETER1 Parameter = {};
 			Parameter.InitAsConstantBufferView(ShaderRegister, RegisterSpace, Flags);
 			return AddParameter(Parameter);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& AddShaderResourceView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+		RootSignatureDesc& AddShaderResourceView(UINT ShaderRegister, UINT RegisterSpace, D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 		{
 			CD3DX12_ROOT_PARAMETER1 Parameter = {};
 			Parameter.InitAsShaderResourceView(ShaderRegister, RegisterSpace, Flags);
 			return AddParameter(Parameter);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& AddUnorderedAccessView(D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
+		RootSignatureDesc& AddUnorderedAccessView(UINT ShaderRegister, UINT RegisterSpace, D3D12_ROOT_DESCRIPTOR_FLAGS Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE)
 		{
 			CD3DX12_ROOT_PARAMETER1 Parameter = {};
 			Parameter.InitAsUnorderedAccessView(ShaderRegister, RegisterSpace, Flags);
 			return AddParameter(Parameter);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& AddUnorderedAccessViewWithCounter(D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		RootSignatureDesc& AddUnorderedAccessViewWithCounter(UINT ShaderRegister, UINT RegisterSpace, D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			D3D12DescriptorTable DescriptorTable(1);
-			DescriptorTable.AddUAVRange<ShaderRegister, RegisterSpace>(1, Flags);
+			DescriptorTable.AddUAVRange(ShaderRegister, RegisterSpace, 1, Flags);
 			return AddDescriptorTable(DescriptorTable);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
-		RootSignatureDesc& AddRaytracingAccelerationStructure(D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
+		RootSignatureDesc& AddRaytracingAccelerationStructure(UINT ShaderRegister, UINT RegisterSpace, D3D12_DESCRIPTOR_RANGE_FLAGS Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE)
 		{
 			D3D12DescriptorTable DescriptorTable(1);
-			DescriptorTable.AddSRVRange<ShaderRegister, RegisterSpace>(1, Flags);
+			DescriptorTable.AddSRVRange(ShaderRegister, RegisterSpace, 1, Flags);
 			return AddDescriptorTable(DescriptorTable);
 		}
 
-		template<UINT ShaderRegister, UINT RegisterSpace>
 		RootSignatureDesc& AddSampler(
+			UINT					   ShaderRegister,
+			UINT					   RegisterSpace,
 			D3D12_FILTER			   Filter,
 			D3D12_TEXTURE_ADDRESS_MODE AddressUVW,
 			UINT					   MaxAnisotropy,

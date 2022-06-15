@@ -336,6 +336,28 @@ namespace RHI
 		CommandListHandle->SetComputeRootConstantBufferView(RootParameterIndex, Allocation.GpuVirtualAddress);
 	}
 
+	void D3D12CommandContext::SetGraphicsRaytracingAccelerationStructure(
+		UINT					 RootParameterIndex,
+		D3D12ShaderResourceView* AccelerationStructure)
+	{
+		if (!AccelerationStructure)
+		{
+			AccelerationStructure = GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
+		}
+		CommandListHandle->SetGraphicsRootDescriptorTable(RootParameterIndex, AccelerationStructure->GetGpuHandle());
+	}
+
+	void D3D12CommandContext::SetComputeRaytracingAccelerationStructure(
+		UINT					 RootParameterIndex,
+		D3D12ShaderResourceView* AccelerationStructure)
+	{
+		if (!AccelerationStructure)
+		{
+			AccelerationStructure = GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
+		}
+		CommandListHandle->SetComputeRootDescriptorTable(RootParameterIndex, AccelerationStructure->GetGpuHandle());
+	}
+
 	void D3D12CommandContext::DrawInstanced(
 		UINT VertexCount,
 		UINT InstanceCount,

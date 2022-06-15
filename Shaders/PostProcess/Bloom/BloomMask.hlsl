@@ -1,5 +1,5 @@
-#include "../Shader.hlsli"
-#include "../HlslDynamicResource.hlsli"
+#include "../../Shader.hlsli"
+#include "../../HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
@@ -16,10 +16,11 @@ float luminance(float3 x)
 	return dot(x, float3(0.212671f, 0.715160f, 0.072169f)); // Defined by sRGB/Rec.709 gamut
 }
 
-[numthreads(8, 8, 1)] void CSMain(CSParams Params)
+[numthreads(8, 8, 1)]
+void CSMain(CSParams Params)
 {
-	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
-	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
+	Texture2D			Input  = ResourceDescriptorHeap[InputIndex];
+	RWTexture2D<float4> Output = ResourceDescriptorHeap[OutputIndex];
 
 	// We need the scale factor and the size of one pixel so that our four samples are right in the middle
 	// of the quadrant they are covering.

@@ -70,7 +70,7 @@ MRT PSMain(VertexAttributes input)
 	if (material.Albedo != -1)
 	{
 		Texture2D AlbedoTexture = ResourceDescriptorHeap[material.Albedo];
-		albedo					= AlbedoTexture.Sample(g_SamplerAnisotropicClamp, input.TexCoord);
+		albedo					= AlbedoTexture.Sample(g_SamplerAnisotropicWrap, input.TexCoord);
 	}
 	else
 	{

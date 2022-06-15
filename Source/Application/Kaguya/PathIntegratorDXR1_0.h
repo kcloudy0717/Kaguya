@@ -1,6 +1,7 @@
 #pragma once
 #include "Renderer.h"
 #include "RaytracingAccelerationStructure.h"
+#include "PostProcess.h"
 
 struct PathIntegratorSettings
 {
@@ -45,4 +46,15 @@ private:
 	RHI::D3D12RaytracingShaderTable<void>*		   RayGenerationShaderTable = nullptr;
 	RHI::D3D12RaytracingShaderTable<void>*		   MissShaderTable			= nullptr;
 	RHI::D3D12RaytracingShaderTable<RootArgument>* HitGroupShaderTable		= nullptr;
+
+	Library							  RTLibrary;
+	RHI::D3D12RootSignature			  GlobalRS;
+	RHI::D3D12RootSignature			  LocalHitGroupRS;
+	RHI::D3D12RaytracingPipelineState RTPSO;
+	RHI::ShaderIdentifier			  g_RayGenerationSID;
+	RHI::ShaderIdentifier			  g_MissSID;
+	RHI::ShaderIdentifier			  g_ShadowMissSID;
+	RHI::ShaderIdentifier			  g_DefaultSID;
+
+	PostProcess PostProcess;
 };

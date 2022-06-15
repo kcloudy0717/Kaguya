@@ -92,7 +92,7 @@ namespace RHI
 		static Arc<ID3D12PipelineState> Compile(
 			D3D12Device*		Device,
 			const std::wstring& Name,
-			TDesc&				Desc);
+			const TDesc&		Desc);
 
 	private:
 		mutable Arc<ID3D12PipelineState>			PipelineState;

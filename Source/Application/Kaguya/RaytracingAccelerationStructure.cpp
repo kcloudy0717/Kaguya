@@ -5,7 +5,6 @@ RaytracingAccelerationStructure::RaytracingAccelerationStructure(RHI::D3D12Devic
 	, NumHitGroups(NumHitGroups)
 {
 	Manager = RHI::D3D12RaytracingManager(Device->GetLinkedDevice(), 6 * 1024 * 1024);
-	Null	= RHI::D3D12ShaderResourceView(Device->GetLinkedDevice(), nullptr);
 }
 
 void RaytracingAccelerationStructure::Reset()

@@ -1,7 +1,33 @@
 #include "RenderGraph.h"
+#include <cassert>
 
 namespace RHI
 {
+	RenderGraphAllocator::RenderGraphAllocator(size_t SizeInBytes)
+		: BaseAddress(std::make_unique<std::byte[]>(SizeInBytes))
+		, Ptr(BaseAddress.get())
+		, Sentinel(Ptr + SizeInBytes)
+		, CurrentMemoryUsage(0)
+	{
+	}
+
+	void* RenderGraphAllocator::Allocate(size_t SizeInBytes, size_t Alignment)
+	{
+		SizeInBytes = D3D12RHIUtils::AlignUp(SizeInBytes, Alignment);
+		assert(Ptr + SizeInBytes <= Sentinel);
+		std::byte* Result = Ptr + SizeInBytes;
+
+		Ptr += SizeInBytes;
+		CurrentMemoryUsage += SizeInBytes;
+		return Result;
+	}
+
+	void RenderGraphAllocator::Reset()
+	{
+		Ptr				   = BaseAddress.get();
+		CurrentMemoryUsage = 0;
+	}
+
 	RenderPass::RenderPass(std::string_view Name)
 		: Name(Name)
 	{
@@ -16,7 +42,6 @@ namespace RHI
 			{
 				assert(Resource.Type == RgResourceType::Buffer || Resource.Type == RgResourceType::Texture);
 				Reads.insert(Resource);
-				ReadWrites.insert(Resource);
 			}
 		}
 		return *this;
@@ -30,17 +55,20 @@ namespace RHI
 			if (Resource && Resource->IsValid())
 			{
 				assert(Resource->Type == RgResourceType::Buffer || Resource->Type == RgResourceType::Texture);
-				Resource->Version++;
-				Writes.insert(*Resource);
-				ReadWrites.insert(*Resource);
+				if (auto Iter = Reads.find(*Resource); Iter != Reads.end())
+				{
+					Resource->Version++;
+					Writes.insert(*Resource);
+					ReadWrites.insert(*Resource);
+				}
+				else
+				{
+					Resource->Version++;
+					Writes.insert(*Resource);
+				}
 			}
 		}
 		return *this;
-	}
-
-	bool RenderPass::HasDependency(RgResourceHandle Resource) const
-	{
-		return ReadWrites.contains(Resource);
 	}
 
 	bool RenderPass::WritesTo(RgResourceHandle Resource) const
@@ -55,7 +83,7 @@ namespace RHI
 
 	bool RenderPass::HasAnyDependencies() const noexcept
 	{
-		return !ReadWrites.empty();
+		return !Reads.empty() || !Writes.empty();
 	}
 
 	void RenderGraphDependencyLevel::AddRenderPass(RenderPass* RenderPass)
@@ -63,25 +91,44 @@ namespace RHI
 		RenderPasses.push_back(RenderPass);
 		Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
 		Writes.insert(RenderPass->Writes.begin(), RenderPass->Writes.end());
+		ReadWrites.insert(RenderPass->ReadWrites.begin(), RenderPass->ReadWrites.end());
 	}
 
 	void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandContext& Context)
 	{
+		robin_hood::unordered_set<D3D12Texture*> ReadWriteResources;
+		for (auto ReadWrite : ReadWrites)
+		{
+			D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(ReadWrite);
+			ReadWriteResources.insert(Texture);
+		}
+
 		// Figure out all the barriers needed for each level
 		// Handle resource transitions for all registered resources
 		for (auto Read : Reads)
 		{
+			D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Read);
+			if (ReadWriteResources.contains(Texture))
+			{
+				continue;
+			}
+
 			D3D12_RESOURCE_STATES ReadState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			if (RenderGraph->AllowUnorderedAccess(Read))
 			{
 				ReadState |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 			}
 
-			D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Read);
 			Context.TransitionBarrier(Texture, ReadState);
 		}
 		for (auto Write : Writes)
 		{
+			D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Write);
+			if (ReadWriteResources.contains(Texture))
+			{
+				continue;
+			}
+
 			D3D12_RESOURCE_STATES WriteState = D3D12_RESOURCE_STATE_COMMON;
 			if (RenderGraph->AllowRenderTarget(Write))
 			{
@@ -96,8 +143,12 @@ namespace RHI
 				WriteState |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 			}
 
-			D3D12Texture* Texture = RenderGraph->GetRegistry().Get<D3D12Texture>(Write);
 			Context.TransitionBarrier(Texture, WriteState);
+		}
+
+		for (auto Resource : ReadWriteResources)
+		{
+			Context.UAVBarrier(Resource);
 		}
 
 		Context.FlushResourceBarriers();

@@ -1,5 +1,4 @@
 #pragma once
-#include <cassert>
 #include <stack>
 
 #include "System.h"
@@ -12,24 +11,9 @@ namespace RHI
 	class RenderGraphAllocator
 	{
 	public:
-		explicit RenderGraphAllocator(size_t SizeInBytes)
-			: BaseAddress(std::make_unique<std::byte[]>(SizeInBytes))
-			, Ptr(BaseAddress.get())
-			, Sentinel(Ptr + SizeInBytes)
-			, CurrentMemoryUsage(0)
-		{
-		}
+		explicit RenderGraphAllocator(size_t SizeInBytes);
 
-		void* Allocate(size_t SizeInBytes, size_t Alignment)
-		{
-			SizeInBytes = D3D12RHIUtils::AlignUp(SizeInBytes, Alignment);
-			assert(Ptr + SizeInBytes <= Sentinel);
-			std::byte* Result = Ptr + SizeInBytes;
-
-			Ptr += SizeInBytes;
-			CurrentMemoryUsage += SizeInBytes;
-			return Result;
-		}
+		void* Allocate(size_t SizeInBytes, size_t Alignment);
 
 		template<typename T, typename... TArgs>
 		T* Construct(TArgs&&... Args)
@@ -44,11 +28,7 @@ namespace RHI
 			Ptr->~T();
 		}
 
-		void Reset()
-		{
-			Ptr				   = BaseAddress.get();
-			CurrentMemoryUsage = 0;
-		}
+		void Reset();
 
 	private:
 		std::unique_ptr<std::byte[]> BaseAddress;
@@ -73,7 +53,6 @@ namespace RHI
 			this->Callback = std::move(Callback);
 		}
 
-		[[nodiscard]] bool HasDependency(RgResourceHandle Resource) const;
 		[[nodiscard]] bool WritesTo(RgResourceHandle Resource) const;
 		[[nodiscard]] bool ReadsFrom(RgResourceHandle Resource) const;
 
@@ -102,6 +81,7 @@ namespace RHI
 		// Apply barriers at a dependency level to reduce redudant barriers
 		robin_hood::unordered_set<RgResourceHandle> Reads;
 		robin_hood::unordered_set<RgResourceHandle> Writes;
+		robin_hood::unordered_set<RgResourceHandle> ReadWrites;
 	};
 
 	class RenderGraph

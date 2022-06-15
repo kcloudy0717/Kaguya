@@ -242,7 +242,7 @@ namespace RHI
 		VERIFY_D3D12_API(CreateDXGIFactory2(FactoryFlags, IID_PPV_ARGS(&Factory6)));
 	}
 
-	void D3D12Device::InitializeDxgiObjects()
+	Arc<ID3D12Device> D3D12Device::InitializeDevice(const DeviceOptions& Options)
 	{
 		CreateDxgiFactory();
 
@@ -264,11 +264,6 @@ namespace RHI
 
 			++AdapterId;
 		}
-	}
-
-	Arc<ID3D12Device> D3D12Device::InitializeDevice(const DeviceOptions& Options)
-	{
-		InitializeDxgiObjects();
 
 		// Enable the D3D12 debug layer
 		if (Options.EnableDebugLayer || Options.EnableGpuBasedValidation)

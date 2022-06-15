@@ -3,7 +3,7 @@
 
 namespace RHI
 {
-	void UpdateProfileData(ProfileData& Data, UINT64 StartTime, UINT64 EndTime)
+	static void UpdateProfileData(ProfileData& Data, UINT64 StartTime, UINT64 EndTime)
 	{
 		Data.QueryFinished = false;
 
@@ -90,7 +90,7 @@ namespace RHI
 				UpdateProfileData(Profiles[i], StartTime, EndTime);
 			}
 
-			Data = { Profiles.begin(), Profiles.begin() + NumProfiles };
+			Data = { Profiles.data(), NumProfiles };
 
 			TimestampQueryReadback->Unmap(0, nullptr);
 		}
@@ -120,23 +120,20 @@ namespace RHI
 	UINT D3D12Profiler::StartProfile(ID3D12GraphicsCommandList* CommandList, std::string_view Name, INT Depth, UINT64 Frequency)
 	{
 		assert(NumProfiles < MaxProfiles);
-		UINT ProfileIdx			  = NumProfiles++;
-		Profiles[ProfileIdx].Name = Name;
-
-		ProfileData& ProfileData = Profiles[ProfileIdx];
+		const UINT	 Index		 = NumProfiles++;
+		ProfileData& ProfileData = Profiles[Index];
 		assert(ProfileData.QueryStarted == false);
 		assert(ProfileData.QueryFinished == false);
 
 		// Insert the start timestamp
-		UINT StartQueryIdx = ProfileIdx * 2;
+		UINT StartQueryIdx = Index * 2;
 		CommandList->EndQuery(TimestampQueryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, StartQueryIdx);
 
+		ProfileData.Name		 = Name;
 		ProfileData.QueryStarted = true;
-
-		ProfileData.Depth	  = Depth;
-		ProfileData.Frequency = Frequency;
-
-		return ProfileIdx;
+		ProfileData.Depth		 = Depth;
+		ProfileData.Frequency	 = Frequency;
+		return Index;
 	}
 
 	void D3D12Profiler::EndProfile(ID3D12GraphicsCommandList* CommandList, UINT Index)

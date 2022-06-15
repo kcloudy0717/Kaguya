@@ -6,11 +6,7 @@
 void ViewportWindow::OnRender()
 {
 	ImGuizmo::SetDrawlist();
-	ImGuizmo::SetRect(
-		ImGui::GetWindowPos().x,
-		ImGui::GetWindowPos().y,
-		ImGui::GetWindowWidth(),
-		ImGui::GetWindowHeight());
+	ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
 
 	auto ViewportOffset = ImGui::GetCursorPos(); // includes tab bar
 	auto ViewportPos	= ImGui::GetWindowPos();

@@ -1,6 +1,5 @@
 #pragma once
 #include "D3D12Core.h"
-#include "D3D12LinkedDevice.h"
 #include "D3D12Resource.h"
 
 namespace RHI
@@ -242,23 +241,7 @@ namespace RHI
 	{
 	public:
 		D3D12Descriptor() noexcept = default;
-		explicit D3D12Descriptor(D3D12LinkedDevice* Parent)
-			: D3D12LinkedDeviceChild(Parent)
-		{
-			if (Parent)
-			{
-				if constexpr (Dynamic)
-				{
-					D3D12DescriptorHeap* DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
-					DescriptorHeap->Allocate(CpuHandle, GpuHandle, Index);
-				}
-				else if constexpr (!Dynamic)
-				{
-					CDescriptorHeapManager* Manager = Parent->GetHeapManager<ViewDesc>();
-					CpuHandle						= Manager->AllocateHeapSlot(Index);
-				}
-			}
-		}
+		explicit D3D12Descriptor(D3D12LinkedDevice* Parent);
 		D3D12Descriptor(D3D12Descriptor&& D3D12Descriptor) noexcept
 			: D3D12LinkedDeviceChild(std::exchange(D3D12Descriptor.Parent, {}))
 			, CpuHandle(std::exchange(D3D12Descriptor.CpuHandle, {}))
@@ -311,55 +294,14 @@ namespace RHI
 			return Index;
 		}
 
-		void CreateDefaultView(ID3D12Resource* Resource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, nullptr, CpuHandle);
-		}
-
-		void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, nullptr, CpuHandle);
-		}
-
-		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
-		}
-
-		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
-		}
-
-		void CreateSampler(const ViewDesc& Desc)
-		{
-			(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(&Desc, CpuHandle);
-		}
+		void CreateDefaultView(ID3D12Resource* Resource);
+		void CreateDefaultView(ID3D12Resource* Resource, ID3D12Resource* CounterResource);
+		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource);
+		void CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource);
+		void CreateSampler(const ViewDesc& Desc);
 
 	private:
-		void InternalDestroy()
-		{
-			if (Parent && IsValid())
-			{
-				if constexpr (Dynamic)
-				{
-					D3D12DescriptorHeap* DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
-					DescriptorHeap->Release(Index);
-					Parent	  = nullptr;
-					CpuHandle = { NULL };
-					GpuHandle = { NULL };
-					Index	  = UINT_MAX;
-				}
-				else if constexpr (!Dynamic)
-				{
-					CDescriptorHeapManager* Manager = Parent->GetHeapManager<ViewDesc>();
-					Manager->FreeHeapSlot(CpuHandle, Index);
-					Parent	  = nullptr;
-					CpuHandle = { NULL };
-					Index	  = UINT_MAX;
-				}
-			}
-		}
+		void InternalDestroy();
 
 	protected:
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle = {};
@@ -531,7 +473,8 @@ namespace RHI
 			std::optional<UINT> OptMipSlice);
 
 	private:
-		D3D12Resource*											 CounterResource = nullptr;
+		D3D12Resource* CounterResource = nullptr;
+		// CPU descriptor used to clear UAVs
 		D3D12Descriptor<D3D12_UNORDERED_ACCESS_VIEW_DESC, false> ClearDescriptor;
 	};
 

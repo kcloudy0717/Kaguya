@@ -1,5 +1,5 @@
-#include "Shader.hlsli"
-#include "HlslDynamicResource.hlsli"
+#include "../Shader.hlsli"
+#include "../HlslDynamicResource.hlsli"
 
 #include "ACES.hlsli"
 
@@ -25,15 +25,15 @@ float3 sRGBToLinear(float3 x)
 
 [numthreads(8, 8, 1)] void CSMain(CSParams Params)
 {
-	Texture2D			Input  = HLSL_TEXTURE2D(InputIndex);
-	RWTexture2D<float4> Output = HLSL_RWTEXTURE2D(OutputIndex);
+	Texture2D			Input  = ResourceDescriptorHeap[InputIndex];
+	RWTexture2D<float4> Output = ResourceDescriptorHeap[OutputIndex];
 
 	float4 Color = Input[Params.DispatchThreadID.xy];
 
 	// Bloom
 	if (BloomIndex != -1)
 	{
-		Texture2D Bloom = HLSL_TEXTURE2D(BloomIndex);
+		Texture2D Bloom = ResourceDescriptorHeap[BloomIndex];
 		float2	  UV	= float2(Params.DispatchThreadID.xy + 0.5f) * InverseOutputSize;
 		Color += BloomIntensity * Bloom.SampleLevel(g_SamplerLinearClamp, UV, 0.0f);
 	}

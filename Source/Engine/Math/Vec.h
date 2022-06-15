@@ -19,9 +19,10 @@ namespace Math
 	{
 		return std::min(std::max(value, min), max);
 	}
+
 	template<typename T>
 	[[nodiscard]] constexpr T saturate(T value) noexcept
 	{
-		return clamp(value, static_cast<T>(0), static_cast<T>(1));
+		return Math::clamp(value, static_cast<T>(0), static_cast<T>(1));
 	}
 } // namespace Math

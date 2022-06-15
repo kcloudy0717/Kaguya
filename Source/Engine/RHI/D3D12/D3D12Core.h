@@ -23,8 +23,8 @@ namespace RHI
 	{
 		Direct,
 		AsyncCompute,
-		Copy1, // High frequency copies from upload to default heap
-		Copy2, // Data initialization during resource creation
+		Copy,	// High frequency copies from upload to default heap
+		Upload, // Data initialization during resource creation
 	};
 
 	class D3D12Exception : public Exception

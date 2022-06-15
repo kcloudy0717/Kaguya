@@ -178,29 +178,38 @@ namespace RHI
 		{
 			if (!Parser.MS)
 			{
-				D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
+				const D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
 					.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
 					.VS					   = RHITranslateD3D12(Parser.VS),
 					.PS					   = RHITranslateD3D12(Parser.PS),
 					.DS					   = RHITranslateD3D12(Parser.DS),
 					.HS					   = RHITranslateD3D12(Parser.HS),
 					.GS					   = RHITranslateD3D12(Parser.GS),
-					.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC(),
+					.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC{},
 					.BlendState			   = RHITranslateD3D12(Parser.BlendState),
-					.SampleMask			   = DefaultSampleMask(),
+					.SampleMask			   = DefaultSampleMask{},
 					.RasterizerState	   = RHITranslateD3D12(Parser.RasterizerState),
 					.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
 					.InputLayout		   = { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) },
 					.IBStripCutValue	   = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 					.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
 					.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
-					.DSVFormat			   = Parser.RenderTargetState.DSFormat,
-					.SampleDesc			   = DefaultSampleDesc(),
-					.NodeMask			   = Device->GetAllNodeMask(),
-					.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
-					.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
+					.RTVFormats			   = {
+						   Parser.RenderTargetState.RTFormats[0],
+						   Parser.RenderTargetState.RTFormats[1],
+						   Parser.RenderTargetState.RTFormats[2],
+						   Parser.RenderTargetState.RTFormats[3],
+						   Parser.RenderTargetState.RTFormats[4],
+						   Parser.RenderTargetState.RTFormats[5],
+						   Parser.RenderTargetState.RTFormats[6],
+						   Parser.RenderTargetState.RTFormats[7],
+					   },
+					.DSVFormat	= Parser.RenderTargetState.DSFormat,
+					.SampleDesc = DefaultSampleDesc{},
+					.NodeMask	= Device->GetAllNodeMask(),
+					.CachedPSO	= D3D12_CACHED_PIPELINE_STATE{},
+					.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE
 				};
-				memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
 				co_return Compile<D3D12_GRAPHICS_PIPELINE_STATE_DESC>(Device, Name, Desc);
 			}
 			else
@@ -215,16 +224,25 @@ namespace RHI
 					.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
 					.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
 					.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
-					.DSVFormat			   = Parser.RenderTargetState.DSFormat,
-					.SampleDesc			   = DefaultSampleDesc(),
-					.NodeMask			   = Device->GetAllNodeMask(),
-					.CachedPSO			   = D3D12_CACHED_PIPELINE_STATE(),
-					.Flags				   = D3D12_PIPELINE_STATE_FLAG_NONE
+					.RTVFormats			   = {
+						   Parser.RenderTargetState.RTFormats[0],
+						   Parser.RenderTargetState.RTFormats[1],
+						   Parser.RenderTargetState.RTFormats[2],
+						   Parser.RenderTargetState.RTFormats[3],
+						   Parser.RenderTargetState.RTFormats[4],
+						   Parser.RenderTargetState.RTFormats[5],
+						   Parser.RenderTargetState.RTFormats[6],
+						   Parser.RenderTargetState.RTFormats[7],
+					   },
+					.DSVFormat	= Parser.RenderTargetState.DSFormat,
+					.SampleDesc = DefaultSampleDesc(),
+					.NodeMask	= Device->GetAllNodeMask(),
+					.CachedPSO	= D3D12_CACHED_PIPELINE_STATE(),
+					.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE
 				};
-				memcpy(Desc.RTVFormats, Parser.RenderTargetState.RTFormats, sizeof(Desc.RTVFormats));
 
-				CD3DX12_PIPELINE_STATE_STREAM2	 Stream(Desc);
-				D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {
+				CD3DX12_PIPELINE_STATE_STREAM2		   Stream(Desc);
+				const D3D12_PIPELINE_STATE_STREAM_DESC StreamDesc = {
 					.SizeInBytes				   = sizeof(Stream),
 					.pPipelineStateSubobjectStream = &Stream
 				};
@@ -233,7 +251,7 @@ namespace RHI
 		}
 		else if (Type == RHI_PIPELINE_STATE_TYPE::Compute)
 		{
-			D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {
+			const D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {
 				.pRootSignature = Parser.RootSignature->GetApiHandle(),
 				.CS				= RHITranslateD3D12(Parser.CS),
 				.NodeMask		= Device->GetAllNodeMask(),
@@ -245,16 +263,15 @@ namespace RHI
 	}
 
 	template<typename TDesc>
-	Arc<ID3D12PipelineState> D3D12PipelineState::Compile(D3D12Device* Device, const std::wstring& Name, TDesc& Desc)
+	Arc<ID3D12PipelineState> D3D12PipelineState::Compile(D3D12Device* Device, const std::wstring& Name, const TDesc& Desc)
 	{
 		ScopedTimer Timer(
 			[&](i64 Milliseconds)
 			{
-				KAGUYA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: {} in {}ms", GetCurrentThreadId(), Name, Milliseconds);
+				KAGUYA_LOG(D3D12RHI, Info, L"Thread: {} has finished compiling PSO: \"{}\" in {}ms", GetCurrentThreadId(), Name, Milliseconds);
 			});
 
-		ID3D12Device2* Device2 = Device->GetD3D12Device5();
-
+		ID3D12Device2*			 Device2 = Device->GetD3D12Device5();
 		Arc<ID3D12PipelineState> PipelineState;
 		VERIFY_D3D12_API((Device2->*D3D12PipelineStateTraits<TDesc>::Create())(&Desc, IID_PPV_ARGS(&PipelineState)));
 		return PipelineState;

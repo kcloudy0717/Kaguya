@@ -114,62 +114,25 @@ namespace RHI
 
 		[[nodiscard]] bool operator==(const RgTextureDesc& RgTextureDesc) const noexcept
 		{
-			return memcmp(this, &RgTextureDesc, sizeof(RgTextureDesc)) == 0;
+			return Name == RgTextureDesc.Name &&
+				   Format == RgTextureDesc.Format &&
+				   Type == RgTextureDesc.Type &&
+				   Width == RgTextureDesc.Width &&
+				   Height == RgTextureDesc.Height &&
+				   DepthOrArraySize == RgTextureDesc.DepthOrArraySize &&
+				   MipLevels == RgTextureDesc.MipLevels &&
+				   memcmp(&ClearValue, &RgTextureDesc.ClearValue, sizeof(ClearValue)) == 0 &&
+				   AllowRenderTarget == RgTextureDesc.AllowRenderTarget &&
+				   AllowDepthStencil == RgTextureDesc.AllowDepthStencil &&
+				   AllowUnorderedAccess == RgTextureDesc.AllowUnorderedAccess;
 		}
 		[[nodiscard]] bool operator!=(const RgTextureDesc& RgTextureDesc) const noexcept
 		{
 			return !(*this == RgTextureDesc);
 		}
 
-		RgTextureDesc& SetFormat(DXGI_FORMAT Format)
-		{
-			this->Format = Format;
-			return *this;
-		}
-
-		RgTextureDesc& SetType(RgTextureType Type)
-		{
-			this->Type = Type;
-			return *this;
-		}
-
-		RgTextureDesc& SetExtent(u32 Width, u32 Height, u32 DepthOrArraySize = 1)
-		{
-			this->Width			   = Width;
-			this->Height		   = Height;
-			this->DepthOrArraySize = DepthOrArraySize;
-			return *this;
-		}
-
-		RgTextureDesc& SetMipLevels(u16 MipLevels)
-		{
-			this->MipLevels = MipLevels;
-			return *this;
-		}
-
-		RgTextureDesc& SetAllowRenderTarget()
-		{
-			AllowRenderTarget = true;
-			return *this;
-		}
-
-		RgTextureDesc& SetAllowDepthStencil()
-		{
-			AllowDepthStencil = true;
-			return *this;
-		}
-
-		RgTextureDesc& SetAllowUnorderedAccess()
-		{
-			AllowUnorderedAccess = true;
-			return *this;
-		}
-
-		RgTextureDesc& SetClearValue(const RgClearValue& ClearValue)
-		{
-			this->ClearValue = ClearValue;
-			return *this;
-		}
+		static RgTextureDesc Texture2D(std::string_view Name, DXGI_FORMAT Format, u32 Width, u32 Height, u16 MipLevels, RgClearValue ClearValue, bool AllowRenderTarget, bool AllowDepthStencil, bool AllowUnorderedAccess);
+		static RgTextureDesc Texture2DArray(std::string_view Name, DXGI_FORMAT Format, u32 Width, u32 Height, u32 ArraySize, u16 MipLevels, RgClearValue ClearValue, bool AllowRenderTarget, bool AllowDepthStencil, bool AllowUnorderedAccess);
 
 		std::string_view Name;
 		DXGI_FORMAT		 Format				  = DXGI_FORMAT_UNKNOWN;
@@ -178,10 +141,10 @@ namespace RHI
 		u32				 Height				  = 1;
 		u32				 DepthOrArraySize	  = 1;
 		u16				 MipLevels			  = 1;
+		RgClearValue	 ClearValue			  = {};
 		bool			 AllowRenderTarget	  = false;
 		bool			 AllowDepthStencil	  = false;
 		bool			 AllowUnorderedAccess = false;
-		RgClearValue	 ClearValue			  = {};
 	};
 
 	enum class RgViewType

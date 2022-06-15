@@ -99,7 +99,7 @@ namespace RHI
 
 	public:
 		// Read only
-		std::span<ProfileData> Data;
+		Span<ProfileData> Data;
 
 	private:
 		UINT StartProfile(ID3D12GraphicsCommandList* CommandList, std::string_view Name, INT Depth, UINT64 Frequency);

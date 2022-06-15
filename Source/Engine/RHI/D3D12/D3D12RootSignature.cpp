@@ -3,6 +3,48 @@
 
 namespace RHI
 {
+	D3D12DescriptorTable::D3D12DescriptorTable(size_t NumRanges)
+	{
+		DescriptorRanges.reserve(NumRanges);
+	}
+
+	D3D12DescriptorTable& D3D12DescriptorTable::AddSRVRange(UINT BaseShaderRegister, UINT RegisterSpace, UINT NumDescriptors, D3D12_DESCRIPTOR_RANGE_FLAGS Flags, UINT OffsetInDescriptorsFromTableStart /*= D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND*/)
+	{
+		return AddDescriptorRange(BaseShaderRegister, RegisterSpace, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, NumDescriptors, Flags, OffsetInDescriptorsFromTableStart);
+	}
+
+	D3D12DescriptorTable& D3D12DescriptorTable::AddUAVRange(UINT BaseShaderRegister, UINT RegisterSpace, UINT NumDescriptors, D3D12_DESCRIPTOR_RANGE_FLAGS Flags, UINT OffsetInDescriptorsFromTableStart /*= D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND*/)
+	{
+		return AddDescriptorRange(BaseShaderRegister, RegisterSpace, D3D12_DESCRIPTOR_RANGE_TYPE_UAV, NumDescriptors, Flags, OffsetInDescriptorsFromTableStart);
+	}
+
+	D3D12DescriptorTable& D3D12DescriptorTable::AddCBVRange(UINT BaseShaderRegister, UINT RegisterSpace, UINT NumDescriptors, D3D12_DESCRIPTOR_RANGE_FLAGS Flags, UINT OffsetInDescriptorsFromTableStart /*= D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND*/)
+	{
+		return AddDescriptorRange(BaseShaderRegister, RegisterSpace, D3D12_DESCRIPTOR_RANGE_TYPE_CBV, NumDescriptors, Flags, OffsetInDescriptorsFromTableStart);
+	}
+
+	D3D12DescriptorTable& D3D12DescriptorTable::AddSamplerRange(UINT BaseShaderRegister, UINT RegisterSpace, UINT NumDescriptors, D3D12_DESCRIPTOR_RANGE_FLAGS Flags, UINT OffsetInDescriptorsFromTableStart /*= D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND*/)
+	{
+		return AddDescriptorRange(BaseShaderRegister, RegisterSpace, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, NumDescriptors, Flags, OffsetInDescriptorsFromTableStart);
+	}
+
+	D3D12DescriptorTable& D3D12DescriptorTable::AddDescriptorRange(UINT BaseShaderRegister, UINT RegisterSpace, D3D12_DESCRIPTOR_RANGE_TYPE Type, UINT NumDescriptors, D3D12_DESCRIPTOR_RANGE_FLAGS Flags, UINT OffsetInDescriptorsFromTableStart)
+	{
+		CD3DX12_DESCRIPTOR_RANGE1& Range = DescriptorRanges.emplace_back();
+		Range.Init(Type, NumDescriptors, BaseShaderRegister, RegisterSpace, Flags, OffsetInDescriptorsFromTableStart);
+		return *this;
+	}
+
+	UINT D3D12DescriptorTable::size() const noexcept
+	{
+		return static_cast<UINT>(DescriptorRanges.size());
+	}
+
+	const D3D12_DESCRIPTOR_RANGE1* D3D12DescriptorTable::data() const noexcept
+	{
+		return DescriptorRanges.data();
+	}
+
 	RootSignatureDesc::RootSignatureDesc()
 	{
 		// Worst case number of root parameters is 64
@@ -143,8 +185,10 @@ namespace RHI
 			// signature
 			AddBindlessParameters(Desc);
 		}
+		Desc.AllowResourceDescriptorHeapIndexing();
+		Desc.AllowSampleDescriptorHeapIndexing();
 
-		D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {
+		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {
 			.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1,
 			.Desc_1_1 = Desc.Build()
 		};
@@ -226,19 +270,19 @@ namespace RHI
 		Desc.AddDescriptorTable(
 				// ShaderResource
 				D3D12DescriptorTable(4)
-					.AddSRVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_ByteAddressBufferTable
-					.AddSRVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DTable
-					.AddSRVRange<0, 102>(UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DArrayTable
-					.AddSRVRange<0, 103>(UINT_MAX, DescriptorDataVolatile, 0)) // g_TextureCubeTable
+					.AddSRVRange(0, 100, UINT_MAX, DescriptorDataVolatile, 0)  // g_ByteAddressBufferTable
+					.AddSRVRange(0, 101, UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DTable
+					.AddSRVRange(0, 102, UINT_MAX, DescriptorDataVolatile, 0)  // g_Texture2DArrayTable
+					.AddSRVRange(0, 103, UINT_MAX, DescriptorDataVolatile, 0)) // g_TextureCubeTable
 			.AddDescriptorTable(
 				// UnorderedAccess
 				D3D12DescriptorTable(2)
-					.AddUAVRange<0, 100>(UINT_MAX, DescriptorDataVolatile, 0)  // g_RWTexture2DTable
-					.AddUAVRange<0, 101>(UINT_MAX, DescriptorDataVolatile, 0)) // g_RWTexture2DArrayTable
+					.AddUAVRange(0, 100, UINT_MAX, DescriptorDataVolatile, 0)  // g_RWTexture2DTable
+					.AddUAVRange(0, 101, UINT_MAX, DescriptorDataVolatile, 0)) // g_RWTexture2DArrayTable
 			.AddDescriptorTable(
 				// Sampler
 				D3D12DescriptorTable(1)
-					.AddSamplerRange<0, 100>(UINT_MAX, DescriptorVolatile, 0)); // g_SamplerTable
+					.AddSamplerRange(0, 100, UINT_MAX, DescriptorVolatile, 0)); // g_SamplerTable
 
 		constexpr D3D12_FILTER				 PointFilter  = D3D12_FILTER_MIN_MAG_MIP_POINT;
 		constexpr D3D12_FILTER				 LinearFilter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -246,14 +290,12 @@ namespace RHI
 		constexpr D3D12_TEXTURE_ADDRESS_MODE Wrap		  = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		constexpr D3D12_TEXTURE_ADDRESS_MODE Clamp		  = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 		constexpr D3D12_TEXTURE_ADDRESS_MODE Border		  = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		Desc.AddSampler<0, 101>(PointFilter, Wrap, 16)	// g_SamplerPointWrap
-			.AddSampler<1, 101>(PointFilter, Clamp, 16) // g_SamplerPointClamp
-
-			.AddSampler<2, 101>(LinearFilter, Wrap, 16)																					 // g_SamplerLinearWrap
-			.AddSampler<3, 101>(LinearFilter, Clamp, 16)																				 // g_SamplerLinearClamp
-			.AddSampler<4, 101>(LinearFilter, Border, 16, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK) // g_SamplerLinearBorder
-
-			.AddSampler<5, 101>(Anisotropic, Wrap, 16)	 // g_SamplerAnisotropicWrap
-			.AddSampler<6, 101>(Anisotropic, Clamp, 16); // g_SamplerAnisotropicClamp
+		Desc.AddSampler(0, 101, PointFilter, Wrap, 16)																					 // g_SamplerPointWrap
+			.AddSampler(1, 101, PointFilter, Clamp, 16)																					 // g_SamplerPointClamp
+			.AddSampler(2, 101, LinearFilter, Wrap, 16)																					 // g_SamplerLinearWrap
+			.AddSampler(3, 101, LinearFilter, Clamp, 16)																				 // g_SamplerLinearClamp
+			.AddSampler(4, 101, LinearFilter, Border, 16, D3D12_COMPARISON_FUNC_LESS_EQUAL, D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK) // g_SamplerLinearBorder
+			.AddSampler(5, 101, Anisotropic, Wrap, 16)																					 // g_SamplerAnisotropicWrap
+			.AddSampler(6, 101, Anisotropic, Clamp, 16);																				 // g_SamplerAnisotropicClamp
 	}
 } // namespace RHI
