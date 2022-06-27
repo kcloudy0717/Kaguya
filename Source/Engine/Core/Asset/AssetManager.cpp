@@ -66,7 +66,7 @@ namespace Asset
 		}
 
 		AssetTexture->DxTexture = RHI::D3D12Texture(Device, ResourceDesc, std::nullopt, AssetTexture->IsCubemap);
-		AssetTexture->Srv		= RHI::D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false, std::nullopt, std::nullopt);
+		AssetTexture->Srv		= RHI::D3D12ShaderResourceView(Device, &AssetTexture->DxTexture, false);
 
 		std::vector<D3D12_SUBRESOURCE_DATA> Subresources(AssetTexture->TexImage.GetImageCount());
 		const auto							pImages = AssetTexture->TexImage.GetImages();

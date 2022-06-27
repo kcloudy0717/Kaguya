@@ -18,7 +18,7 @@ using namespace Math;
 // https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/
 extern "C"
 {
-	_declspec(dllexport) extern const UINT D3D12SDKVersion = 602;
+	_declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION;
 	_declspec(dllexport) extern const char* D3D12SDKPath   = ".\\D3D12\\";
 }
 

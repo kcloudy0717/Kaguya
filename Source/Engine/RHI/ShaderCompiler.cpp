@@ -1,4 +1,5 @@
 #include "ShaderCompiler.h"
+#include "System/System.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -271,7 +272,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		}
 
 		// Save pdb
-		FileStream	 Stream(PdbPath, FileMode::Create, FileAccess::Write);
+		FileStream	 Stream = File::Create(PdbPath);
 		BinaryWriter Writer(Stream);
 		Writer.Write(Result.Pdb->GetBufferPointer(), Result.Pdb->GetBufferSize());
 	}

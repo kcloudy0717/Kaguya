@@ -43,12 +43,6 @@ public:
 		SeekOrigin RelativeOrigin) const;
 
 private:
-	wil::unique_handle InitializeHandle(
-		const std::filesystem::path& Path,
-		FileMode					 Mode,
-		FileAccess					 Access);
-
-private:
 	std::filesystem::path Path;
 	FileMode			  Mode;
 	FileAccess			  Access;

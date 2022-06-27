@@ -7,12 +7,11 @@ namespace RHI
 	struct ResourceStateDeterminer
 	{
 		ResourceStateDeterminer(const D3D12_RESOURCE_DESC& Desc, D3D12_HEAP_TYPE HeapType) noexcept
-			: ShaderResource((Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
+			: RenderTarget((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
 			, DepthStencil((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
-			, RenderTarget((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
+			, ShaderResource((Desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) == 0)
 			, UnorderedAccess((Desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
-			, Writable(DepthStencil || RenderTarget || UnorderedAccess)
-			, ShaderResourceOnly(ShaderResource && !Writable)
+			, ShaderResourceOnly(ShaderResource && !(RenderTarget || DepthStencil || UnorderedAccess))
 			, Buffer(Desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 			, DeviceLocal(HeapType == D3D12_HEAP_TYPE_DEFAULT)
 			, ReadbackResource(HeapType == D3D12_HEAP_TYPE_READBACK)
@@ -34,34 +33,30 @@ namespace RHI
 			{
 				return D3D12_RESOURCE_STATE_COMMON;
 			}
-			if (Writable)
+			if (RenderTarget)
 			{
-				if (DepthStencil)
-				{
-					return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-				}
-				if (RenderTarget)
-				{
-					return D3D12_RESOURCE_STATE_RENDER_TARGET;
-				}
-				if (UnorderedAccess)
-				{
-					return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-				}
+				return D3D12_RESOURCE_STATE_RENDER_TARGET;
+			}
+			if (DepthStencil)
+			{
+				return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+			}
+			if (UnorderedAccess)
+			{
+				return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 			}
 
 			return D3D12_RESOURCE_STATE_COMMON;
 		}
 
-		bool ShaderResource;
-		bool DepthStencil;
-		bool RenderTarget;
-		bool UnorderedAccess;
-		bool Writable;
-		bool ShaderResourceOnly;
-		bool Buffer;
-		bool DeviceLocal;
-		bool ReadbackResource;
+		UINT8 RenderTarget		 : 1;
+		UINT8 DepthStencil		 : 1;
+		UINT8 ShaderResource	 : 1;
+		UINT8 UnorderedAccess	 : 1;
+		UINT8 ShaderResourceOnly : 1;
+		UINT8 Buffer			 : 1;
+		UINT8 DeviceLocal		 : 1;
+		UINT8 ReadbackResource	 : 1;
 	};
 
 	CResourceState::CResourceState(u32 NumSubresources, D3D12_RESOURCE_STATES InitialResourceState)

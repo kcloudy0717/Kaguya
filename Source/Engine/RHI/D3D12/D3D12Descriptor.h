@@ -345,6 +345,34 @@ namespace RHI
 		CViewSubresourceSubset			   ViewSubresourceSubset;
 	};
 
+	struct TextureSubresource
+	{
+		static constexpr UINT AllMipLevels	 = UINT(~0);
+		static constexpr UINT AllArraySlices = UINT(~0);
+
+		UINT MipSlice		= 0;
+		UINT NumMipLevels	= AllMipLevels;
+		UINT ArraySlice		= 0;
+		UINT NumArraySlices = AllArraySlices;
+
+		static TextureSubresource SRV(UINT MipSlice, UINT NumMipLevels, UINT ArraySlice, UINT NumArraySlices) noexcept
+		{
+			return { MipSlice, NumMipLevels, ArraySlice, NumArraySlices };
+		}
+		static TextureSubresource UAV(UINT MipSlice, UINT ArraySlice, UINT NumArraySlices) noexcept
+		{
+			return { MipSlice, 1, ArraySlice, NumArraySlices };
+		}
+		static TextureSubresource RTV(UINT MipSlice, UINT ArraySlice, UINT NumArraySlices) noexcept
+		{
+			return { MipSlice, 1, ArraySlice, NumArraySlices };
+		}
+		static TextureSubresource DSV(UINT MipSlice, UINT ArraySlice, UINT NumArraySlices) noexcept
+		{
+			return { MipSlice, 1, ArraySlice, NumArraySlices };
+		}
+	};
+
 	class D3D12RenderTargetView : public D3D12View<D3D12_RENDER_TARGET_VIEW_DESC, false>
 	{
 	public:
@@ -354,22 +382,12 @@ namespace RHI
 			const D3D12_RENDER_TARGET_VIEW_DESC& Desc,
 			D3D12Resource*						 Resource);
 		explicit D3D12RenderTargetView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt,
-			bool				sRGB		  = false);
+			D3D12LinkedDevice*		  Device,
+			D3D12Texture*			  Texture,
+			bool					  sRGB		  = false,
+			const TextureSubresource& Subresource = TextureSubresource{});
 
 		void RecreateView();
-
-	private:
-		static D3D12_RENDER_TARGET_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice,
-			std::optional<UINT> OptMipSlice,
-			std::optional<UINT> OptArraySize,
-			bool				sRGB);
 	};
 
 	class D3D12DepthStencilView : public D3D12View<D3D12_DEPTH_STENCIL_VIEW_DESC, false>
@@ -381,20 +399,11 @@ namespace RHI
 			const D3D12_DEPTH_STENCIL_VIEW_DESC& Desc,
 			D3D12Resource*						 Resource);
 		explicit D3D12DepthStencilView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt);
+			D3D12LinkedDevice*		  Device,
+			D3D12Texture*			  Texture,
+			const TextureSubresource& Subresource = TextureSubresource{});
 
 		void RecreateView();
-
-	private:
-		static D3D12_DEPTH_STENCIL_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice = std::nullopt,
-			std::optional<UINT> OptMipSlice	  = std::nullopt,
-			std::optional<UINT> OptArraySize  = std::nullopt);
 	};
 
 	class D3D12ShaderResourceView : public D3D12View<D3D12_SHADER_RESOURCE_VIEW_DESC, true>
@@ -415,27 +424,12 @@ namespace RHI
 			UINT			   FirstElement,
 			UINT			   NumElements);
 		explicit D3D12ShaderResourceView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			bool				sRGB,
-			std::optional<UINT> OptMostDetailedMip,
-			std::optional<UINT> OptMipLevels);
+			D3D12LinkedDevice*		  Device,
+			D3D12Texture*			  Texture,
+			bool					  sRGB,
+			const TextureSubresource& Subresource = TextureSubresource{});
 
 		void RecreateView();
-
-	private:
-		static D3D12_SHADER_RESOURCE_VIEW_DESC GetDesc(
-			D3D12ASBuffer* ASBuffer);
-		static D3D12_SHADER_RESOURCE_VIEW_DESC GetDesc(
-			D3D12Buffer* Buffer,
-			bool		 Raw,
-			UINT		 FirstElement,
-			UINT		 NumElements);
-		static D3D12_SHADER_RESOURCE_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			bool				sRGB,
-			std::optional<UINT> OptMostDetailedMip,
-			std::optional<UINT> OptMipLevels);
 	};
 
 	class D3D12UnorderedAccessView : public D3D12View<D3D12_UNORDERED_ACCESS_VIEW_DESC, true>
@@ -453,24 +447,13 @@ namespace RHI
 			UINT			   NumElements,
 			UINT64			   CounterOffsetInBytes);
 		explicit D3D12UnorderedAccessView(
-			D3D12LinkedDevice*	Device,
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice,
-			std::optional<UINT> OptMipSlice);
+			D3D12LinkedDevice*		  Device,
+			D3D12Texture*			  Texture,
+			const TextureSubresource& Subresource = TextureSubresource{});
 
 		void RecreateView();
 
 		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetClearCpuHandle() const noexcept;
-
-	private:
-		static D3D12_UNORDERED_ACCESS_VIEW_DESC GetDesc(
-			D3D12Buffer* Buffer,
-			UINT		 NumElements,
-			UINT64		 CounterOffsetInBytes);
-		static D3D12_UNORDERED_ACCESS_VIEW_DESC GetDesc(
-			D3D12Texture*		Texture,
-			std::optional<UINT> OptArraySlice,
-			std::optional<UINT> OptMipSlice);
 
 	private:
 		D3D12Resource* CounterResource = nullptr;

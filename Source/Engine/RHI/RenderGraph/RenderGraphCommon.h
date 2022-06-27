@@ -160,15 +160,15 @@ namespace RHI
 	struct RgRtv
 	{
 		bool sRGB;
-		u32	 ArraySlice;
 		u32	 MipSlice;
+		u32	 ArraySlice;
 		u32	 ArraySize;
 	};
 
 	struct RgDsv
 	{
-		u32 ArraySlice;
 		u32 MipSlice;
+		u32 ArraySlice;
 		u32 ArraySize;
 	};
 
@@ -188,14 +188,14 @@ namespace RHI
 	struct RgTextureSrv
 	{
 		bool sRGB;
-		u32	 MostDetailedMip;
-		u32	 MipLevels;
+		u32	 MipSlice;
+		u32	 NumMipLevels;
 	};
 
 	struct RgTextureUav
 	{
-		u32 ArraySlice;
 		u32 MipSlice;
+		u32 ArraySlice;
 	};
 
 	struct RgViewDesc
@@ -215,22 +215,22 @@ namespace RHI
 			return *this;
 		}
 
-		RgViewDesc& AsRtv(bool sRGB, std::optional<UINT> OptArraySlice = std::nullopt, std::optional<UINT> OptMipSlice = std::nullopt, std::optional<UINT> OptArraySize = std::nullopt)
+		RgViewDesc& AsRtv(bool sRGB, u32 MipSlice = 0, u32 ArraySlice = 0, u32 ArraySize = -1)
 		{
 			Type		   = RgViewType::Rtv;
 			Rtv.sRGB	   = sRGB;
-			Rtv.ArraySlice = OptArraySlice.value_or(-1);
-			Rtv.MipSlice   = OptMipSlice.value_or(-1);
-			Rtv.ArraySize  = OptArraySize.value_or(-1);
+			Rtv.MipSlice   = MipSlice;
+			Rtv.ArraySlice = ArraySlice;
+			Rtv.ArraySize  = ArraySize;
 			return *this;
 		}
 
-		RgViewDesc& AsDsv(std::optional<UINT> OptArraySlice = std::nullopt, std::optional<UINT> OptMipSlice = std::nullopt, std::optional<UINT> OptArraySize = std::nullopt)
+		RgViewDesc& AsDsv(u32 MipSlice = 0, u32 ArraySlice = 0, u32 ArraySize = -1)
 		{
 			Type		   = RgViewType::Dsv;
-			Dsv.ArraySlice = OptArraySlice.value_or(-1);
-			Dsv.MipSlice   = OptMipSlice.value_or(-1);
-			Dsv.ArraySize  = OptArraySize.value_or(-1);
+			Dsv.MipSlice   = MipSlice;
+			Dsv.ArraySlice = ArraySlice;
+			Dsv.ArraySize  = ArraySize;
 			return *this;
 		}
 
@@ -251,20 +251,20 @@ namespace RHI
 			return *this;
 		}
 
-		RgViewDesc& AsTextureSrv(bool sRGB = false, std::optional<u32> MostDetailedMip = std::nullopt, std::optional<u32> MipLevels = std::nullopt)
+		RgViewDesc& AsTextureSrv(bool sRGB = false, u32 MipSlice = 0, u32 NumMipLevels = -1)
 		{
-			Type					   = RgViewType::TextureSrv;
-			TextureSrv.sRGB			   = sRGB;
-			TextureSrv.MostDetailedMip = MostDetailedMip.value_or(-1);
-			TextureSrv.MipLevels	   = MipLevels.value_or(-1);
+			Type					= RgViewType::TextureSrv;
+			TextureSrv.sRGB			= sRGB;
+			TextureSrv.MipSlice		= MipSlice;
+			TextureSrv.NumMipLevels = NumMipLevels;
 			return *this;
 		}
 
-		RgViewDesc& AsTextureUav(std::optional<u32> ArraySlice = std::nullopt, std::optional<u32> MipSlice = std::nullopt)
+		RgViewDesc& AsTextureUav(u32 MipSlice = 0, u32 ArraySlice = 0)
 		{
 			Type				  = RgViewType::TextureUav;
-			TextureUav.ArraySlice = ArraySlice.value_or(-1);
-			TextureUav.MipSlice	  = MipSlice.value_or(-1);
+			TextureUav.MipSlice	  = MipSlice;
+			TextureUav.ArraySlice = ArraySlice;
 			return *this;
 		}
 

@@ -148,16 +148,21 @@ namespace RHI
 				continue;
 			}
 
-			std::optional<UINT> ArraySlice = RgView.Desc.Rtv.ArraySlice != -1 ? RgView.Desc.Rtv.ArraySlice : std::optional<UINT>{};
-			std::optional<UINT> MipSlice   = RgView.Desc.Rtv.MipSlice != -1 ? RgView.Desc.Rtv.MipSlice : std::optional<UINT>{};
-			std::optional<UINT> ArraySize  = RgView.Desc.Rtv.ArraySize != -1 ? RgView.Desc.Rtv.ArraySize : std::optional<UINT>{};
 			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				RtvCache[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.Rtv.sRGB);
+				RtvCache[i] = D3D12RenderTargetView(
+					Device->GetLinkedDevice(),
+					GetImportedResource(RgView.Desc.AssociatedResource),
+					RgView.Desc.Rtv.sRGB,
+					TextureSubresource::RTV(RgView.Desc.Rtv.MipSlice, RgView.Desc.Rtv.ArraySlice, RgView.Desc.Rtv.ArraySize));
 			}
 			else
 			{
-				RtvCache[i] = D3D12RenderTargetView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize, RgView.Desc.Rtv.sRGB);
+				RtvCache[i] = D3D12RenderTargetView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Texture>(RgView.Desc.AssociatedResource),
+					RgView.Desc.Rtv.sRGB,
+					TextureSubresource::RTV(RgView.Desc.Rtv.MipSlice, RgView.Desc.Rtv.ArraySlice, RgView.Desc.Rtv.ArraySize));
 			}
 		}
 
@@ -169,16 +174,19 @@ namespace RHI
 				continue;
 			}
 
-			std::optional<UINT> ArraySlice = RgView.Desc.Dsv.ArraySlice != -1 ? RgView.Desc.Dsv.ArraySlice : std::optional<UINT>{};
-			std::optional<UINT> MipSlice   = RgView.Desc.Dsv.MipSlice != -1 ? RgView.Desc.Dsv.MipSlice : std::optional<UINT>{};
-			std::optional<UINT> ArraySize  = RgView.Desc.Dsv.ArraySize != -1 ? RgView.Desc.Dsv.ArraySize : std::optional<UINT>{};
 			if (RgView.Desc.AssociatedResource.IsImported())
 			{
-				DsvCache[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), GetImportedResource(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
+				DsvCache[i] = D3D12DepthStencilView(
+					Device->GetLinkedDevice(),
+					GetImportedResource(RgView.Desc.AssociatedResource),
+					TextureSubresource::DSV(RgView.Desc.Rtv.MipSlice, RgView.Desc.Rtv.ArraySlice, RgView.Desc.Rtv.ArraySize));
 			}
 			else
 			{
-				DsvCache[i] = D3D12DepthStencilView(Device->GetLinkedDevice(), Get<D3D12Texture>(RgView.Desc.AssociatedResource), ArraySlice, MipSlice, ArraySize);
+				DsvCache[i] = D3D12DepthStencilView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Texture>(RgView.Desc.AssociatedResource),
+					TextureSubresource::DSV(RgView.Desc.Rtv.MipSlice, RgView.Desc.Rtv.ArraySlice, RgView.Desc.Rtv.ArraySize));
 			}
 		}
 
@@ -194,17 +202,22 @@ namespace RHI
 			{
 			case RgViewType::BufferSrv:
 			{
-				SrvCache[i] = D3D12ShaderResourceView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferSrv.Raw, RgView.Desc.BufferSrv.FirstElement, RgView.Desc.BufferSrv.NumElements);
+				SrvCache[i] = D3D12ShaderResourceView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Buffer>(RgView.Desc.AssociatedResource),
+					RgView.Desc.BufferSrv.Raw,
+					RgView.Desc.BufferSrv.FirstElement,
+					RgView.Desc.BufferSrv.NumElements);
 			}
 			break;
 
 			case RgViewType::TextureSrv:
 			{
-				D3D12Texture*		Resource		= Get<D3D12Texture>(RgView.Desc.AssociatedResource);
-				bool				sRGB			= RgView.Desc.TextureSrv.sRGB;
-				std::optional<UINT> MostDetailedMip = RgView.Desc.TextureSrv.MostDetailedMip != -1 ? RgView.Desc.TextureSrv.MostDetailedMip : std::optional<UINT>{};
-				std::optional<UINT> MipLevels		= RgView.Desc.TextureSrv.MipLevels != -1 ? RgView.Desc.TextureSrv.MipLevels : std::optional<UINT>{};
-				SrvCache[i]							= D3D12ShaderResourceView(Device->GetLinkedDevice(), Resource, sRGB, MostDetailedMip, MipLevels);
+				SrvCache[i] = D3D12ShaderResourceView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Texture>(RgView.Desc.AssociatedResource),
+					RgView.Desc.TextureSrv.sRGB,
+					TextureSubresource::SRV(RgView.Desc.TextureSrv.MipSlice, TextureSubresource::AllMipLevels, 0, TextureSubresource::AllArraySlices));
 			}
 			break;
 
@@ -225,16 +238,20 @@ namespace RHI
 			{
 			case RgViewType::BufferUav:
 			{
-				UavCache[i] = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Get<D3D12Buffer>(RgView.Desc.AssociatedResource), RgView.Desc.BufferUav.NumElements, RgView.Desc.BufferUav.CounterOffsetInBytes);
+				UavCache[i] = D3D12UnorderedAccessView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Buffer>(RgView.Desc.AssociatedResource),
+					RgView.Desc.BufferUav.NumElements,
+					RgView.Desc.BufferUav.CounterOffsetInBytes);
 			}
 			break;
 
 			case RgViewType::TextureUav:
 			{
-				D3D12Texture*		Resource   = Get<D3D12Texture>(RgView.Desc.AssociatedResource);
-				std::optional<UINT> ArraySlice = RgView.Desc.TextureUav.ArraySlice != -1 ? RgView.Desc.TextureUav.ArraySlice : std::optional<UINT>{};
-				std::optional<UINT> MipSlice   = RgView.Desc.TextureUav.MipSlice != -1 ? RgView.Desc.TextureUav.MipSlice : std::optional<UINT>{};
-				UavCache[i]					   = D3D12UnorderedAccessView(Device->GetLinkedDevice(), Resource, ArraySlice, MipSlice);
+				UavCache[i] = D3D12UnorderedAccessView(
+					Device->GetLinkedDevice(),
+					Get<D3D12Texture>(RgView.Desc.AssociatedResource),
+					TextureSubresource::UAV(RgView.Desc.TextureUav.MipSlice, RgView.Desc.TextureUav.ArraySlice, -1));
 			}
 			break;
 

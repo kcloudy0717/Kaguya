@@ -72,26 +72,27 @@ namespace RHI
 		D3D12_HEAP_TYPE		  HeapType,
 		D3D12_RESOURCE_STATES InitialResourceState)
 		: D3D12LinkedDeviceChild(Parent)
-		, Resource([&]
-				   {
-					   Arc<ID3D12Resource>	 Resource;
-					   D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask());
-					   D3D12_RESOURCE_DESC	 ResourceDesc	= CD3DX12_RESOURCE_DESC::Buffer(PageSize);
+		, Resource(
+			  [&]
+			  {
+				  Arc<ID3D12Resource>	Resource;
+				  D3D12_HEAP_PROPERTIES HeapProperties = CD3DX12_HEAP_PROPERTIES(HeapType, Parent->GetNodeMask(), Parent->GetNodeMask());
+				  D3D12_RESOURCE_DESC	ResourceDesc   = CD3DX12_RESOURCE_DESC::Buffer(PageSize);
 
-					   if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
-					   {
-						   ResourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-					   }
+				  if (HeapType == D3D12_HEAP_TYPE_DEFAULT)
+				  {
+					  ResourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+				  }
 
-					   VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommittedResource(
-						   &HeapProperties,
-						   D3D12_HEAP_FLAG_NONE,
-						   &ResourceDesc,
-						   InitialResourceState,
-						   nullptr,
-						   IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
-					   return Resource;
-				   }())
+				  VERIFY_D3D12_API(GetParentLinkedDevice()->GetDevice()->CreateCommittedResource(
+					  &HeapProperties,
+					  D3D12_HEAP_FLAG_NONE,
+					  &ResourceDesc,
+					  InitialResourceState,
+					  nullptr,
+					  IID_PPV_ARGS(Resource.ReleaseAndGetAddressOf())));
+				  return Resource;
+			  }())
 		, PageSize(PageSize)
 		, VirtualAddress(Resource->GetGPUVirtualAddress())
 	{

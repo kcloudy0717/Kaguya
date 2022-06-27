@@ -1,6 +1,6 @@
 #pragma once
+#include <filesystem>
 #include "Shader.h"
-#include "System/System.h"
 
 DECLARE_LOG_CATEGORY(Dxc);
 
