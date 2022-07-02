@@ -121,8 +121,8 @@ namespace Asset
 				.IndexBuffer  = IndexAddress,
 				.VertexBuffer = {
 					.StartAddress  = VertexAddress,
-					.StrideInBytes = sizeof(Vertex) },
-
+					.StrideInBytes = sizeof(Vertex),
+				},
 			}
 		};
 		AssetMesh->Blas.AddGeometry(RaytracingGeometryDesc);

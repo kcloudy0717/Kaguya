@@ -1,4 +1,6 @@
 #include "FileSystemWatcher.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 FileSystemWatcher::FileSystemWatcher(std::filesystem::path Path)
 	: Path(std::move(Path))
@@ -21,7 +23,7 @@ FileSystemWatcher::FileSystemWatcher(std::filesystem::path Path)
 FileSystemWatcher::~FileSystemWatcher()
 {
 	Running = false;
-	CancelIoEx(FileHandle.get(), nullptr);
+	CancelIoEx(FileHandle.Get(), nullptr);
 }
 
 void FileSystemWatcher::Watch()
@@ -45,7 +47,7 @@ void FileSystemWatcher::Watch()
 		dwNotifyFilter |= EnumMaskBitSet(NotifyFilter, NotifyFilters::Security) ? FILE_NOTIFY_CHANGE_SECURITY : 0;
 
 		if (ReadDirectoryChangesW(
-				FileHandle.get(),
+				FileHandle.Get(),
 				lpBuffer.get(),
 				nBufferLength,
 				bWatchSubtree,

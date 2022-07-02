@@ -103,7 +103,7 @@ namespace Asset
 					Matrix);
 
 				// Parse index data
-				std::vector<std::uint32_t> Indices;
+				std::vector<u32> Indices;
 				Indices.reserve(static_cast<size_t>(paiMesh->mNumFaces) * 3);
 				std::span Faces = { paiMesh->mFaces, paiMesh->mNumFaces };
 				for (const auto& Face : Faces)
@@ -188,9 +188,9 @@ namespace Asset
 
 			Writer.Write<MeshHeader>(Header);
 			Writer.Write(Mesh->Vertices.data(), Mesh->Vertices.size() * sizeof(Vertex));
-			Writer.Write(Mesh->Indices.data(), Mesh->Indices.size() * sizeof(std::uint32_t));
+			Writer.Write(Mesh->Indices.data(), Mesh->Indices.size() * sizeof(u32));
 			Writer.Write(Mesh->Meshlets.data(), Mesh->Meshlets.size() * sizeof(DirectX::Meshlet));
-			Writer.Write(Mesh->UniqueVertexIndices.data(), Mesh->UniqueVertexIndices.size() * sizeof(uint8_t));
+			Writer.Write(Mesh->UniqueVertexIndices.data(), Mesh->UniqueVertexIndices.size() * sizeof(u8));
 			Writer.Write(Mesh->PrimitiveIndices.data(), Mesh->PrimitiveIndices.size() * sizeof(DirectX::MeshletTriangle));
 		}
 	}
@@ -215,15 +215,15 @@ namespace Asset
 
 			auto								  Header = Reader.Read<MeshHeader>();
 			std::vector<Vertex>					  Vertices(Header.NumVertices);
-			std::vector<uint32_t>				  Indices(Header.NumIndices);
+			std::vector<u32>					  Indices(Header.NumIndices);
 			std::vector<DirectX::Meshlet>		  Meshlets(Header.NumMeshlets);
-			std::vector<uint8_t>				  UniqueVertexIndices(Header.NumUniqueVertexIndices);
+			std::vector<u8>						  UniqueVertexIndices(Header.NumUniqueVertexIndices);
 			std::vector<DirectX::MeshletTriangle> PrimitiveIndices(Header.NumPrimitiveIndices);
 
 			Reader.Read(Vertices.data(), Vertices.size() * sizeof(Vertex));
-			Reader.Read(Indices.data(), Indices.size() * sizeof(std::uint32_t));
+			Reader.Read(Indices.data(), Indices.size() * sizeof(u32));
 			Reader.Read(Meshlets.data(), Meshlets.size() * sizeof(DirectX::Meshlet));
-			Reader.Read(UniqueVertexIndices.data(), UniqueVertexIndices.size() * sizeof(uint8_t));
+			Reader.Read(UniqueVertexIndices.data(), UniqueVertexIndices.size() * sizeof(u8));
 			Reader.Read(PrimitiveIndices.data(), PrimitiveIndices.size() * sizeof(DirectX::MeshletTriangle));
 
 			Asset		   = AssetManager->CreateAsset<Mesh>();
@@ -303,12 +303,12 @@ namespace Asset
 			}
 		}
 
-		Texture* Asset	  = AssetManager->CreateAsset<Texture>();
-		Asset->Options	  = Options;
-		Asset->Extent = Math::Vec2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
-		Asset->IsCubemap  = TexMetadata.IsCubemap();
-		Asset->Name		  = Path.filename().string();
-		Asset->TexImage	  = std::move(OutImage);
+		Texture* Asset	 = AssetManager->CreateAsset<Texture>();
+		Asset->Options	 = Options;
+		Asset->Extent	 = Math::Vec2i(static_cast<int>(TexMetadata.width), static_cast<int>(TexMetadata.height));
+		Asset->IsCubemap = TexMetadata.IsCubemap();
+		Asset->Name		 = Path.filename().string();
+		Asset->TexImage	 = std::move(OutImage);
 		AssetManager->RequestUpload(Asset);
 		return Asset->Handle;
 	}

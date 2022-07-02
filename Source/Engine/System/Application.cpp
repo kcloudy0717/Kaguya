@@ -1,7 +1,8 @@
 #include "Application.h"
 #include "IApplicationMessageHandler.h"
 #include "Platform.h"
-
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <ShObjIdl.h>
 
 Application::PlatformWindows::PlatformWindows()
@@ -32,7 +33,7 @@ Application::Application()
 		.hCursor	   = ::LoadCursor(nullptr, IDC_ARROW),
 		.hbrBackground = nullptr,
 		.lpszMenuName  = nullptr,
-		.lpszClassName = Window::WindowClass,
+		.lpszClassName = Window::WindowClass.data(),
 		.hIconSm	   = nullptr
 	};
 	if (!RegisterClassExW(&ClassDesc))
@@ -43,7 +44,7 @@ Application::Application()
 
 Application::~Application()
 {
-	UnregisterClassW(Window::WindowClass, HInstance);
+	UnregisterClassW(Window::WindowClass.data(), HInstance);
 }
 
 void Application::Run()
@@ -80,7 +81,7 @@ void Application::SetMessageHandler(IApplicationMessageHandler* MessageHandler)
 	this->MessageHandler = MessageHandler;
 }
 
-void Application::AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc)
+void Application::AddWindow(Window* Parent, Window* Window, const WindowDesc& Desc)
 {
 	Windows.push_back(Window);
 	Window->Initialize(this, Parent, HInstance, Desc);
@@ -91,50 +92,50 @@ void Application::SetRawInputMode(bool Enable, Window* Window)
 	Window->SetRawInput(Enable);
 }
 
-LRESULT CALLBACK Application::WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam)
+LRESULT WINDOWS_CALLING_CONVENTION Application::WindowProc(HWND HWnd, u32 Message, WPARAM WParam, LPARAM LParam)
 {
 	Application* WindowsApplication;
-	if (uMsg == WM_NCCREATE)
+	if (Message == WM_NCCREATE)
 	{
 		// Save the Application* passed in to CreateWindow.
-		auto CreateStruct  = std::bit_cast<LPCREATESTRUCT>(lParam);
+		auto CreateStruct  = std::bit_cast<LPCREATESTRUCT>(LParam);
 		WindowsApplication = static_cast<Application*>(CreateStruct->lpCreateParams);
-		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(WindowsApplication));
+		SetWindowLongPtr(HWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(WindowsApplication));
 	}
 	else
 	{
-		WindowsApplication = reinterpret_cast<Application*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+		WindowsApplication = reinterpret_cast<Application*>(GetWindowLongPtr(HWnd, GWLP_USERDATA));
 	}
 
 	if (WindowsApplication)
 	{
-		return WindowsApplication->ProcessMessage(hWnd, uMsg, wParam, lParam);
+		return WindowsApplication->ProcessMessage(HWnd, Message, WParam, LParam);
 	}
 
-	return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	return DefWindowProc(HWnd, Message, WParam, LParam);
 }
 
-LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT Application::ProcessMessage(HWND HWnd, u32 Message, WPARAM WParam, LPARAM LParam)
 {
 	auto WindowIter = std::ranges::find_if(
 		Windows,
 		[=](Window* Window)
 		{
-			return Window->GetWindowHandle() == hWnd;
+			return Window->GetWindowHandle() == HWnd;
 		});
 	if (WindowIter == Windows.end())
 	{
-		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+		return DefWindowProc(HWnd, Message, WParam, LParam);
 	}
 	Window* CurrentWindow = *WindowIter;
 
-	Callbacks(CurrentWindow->GetWindowHandle(), uMsg, wParam, lParam);
+	Callbacks(CurrentWindow->GetWindowHandle(), Message, WParam, LParam);
 
-	switch (uMsg)
+	switch (Message)
 	{
 	case WM_GETMINMAXINFO: // Catch this message so to prevent the window from becoming too small.
 	{
-		auto Info			 = std::bit_cast<MINMAXINFO*>(lParam);
+		auto Info			 = std::bit_cast<MINMAXINFO*>(LParam);
 		Info->ptMinTrackSize = { GetSystemMetrics(SM_CXMINTRACK), GetSystemMetrics(SM_CYMINTRACK) };
 	}
 	break;
@@ -148,11 +149,11 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
 	{
-		auto VirtualKey = static_cast<unsigned char>(wParam);
-		bool IsRepeat	= (lParam & 0x40000000) != 0;
+		auto VirtualKey = static_cast<unsigned char>(WParam);
+		bool IsRepeat	= (LParam & 0x40000000) != 0;
 
 		MessageHandler->OnKeyDown(VirtualKey, IsRepeat);
-		if (!(lParam & 0x40000000) || InputManager.AutoRepeat) // Filter AutoRepeat
+		if (!(LParam & 0x40000000) || InputManager.AutoRepeat) // Filter AutoRepeat
 		{
 			InputManager.OnKeyDown(VirtualKey);
 		}
@@ -162,7 +163,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_SYSKEYUP:
 	case WM_KEYUP:
 	{
-		auto VirtualKey = static_cast<unsigned char>(wParam);
+		auto VirtualKey = static_cast<unsigned char>(WParam);
 		MessageHandler->OnKeyUp(VirtualKey);
 		InputManager.OnKeyUp(VirtualKey);
 	}
@@ -170,17 +171,17 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 	case WM_CHAR:
 	{
-		auto Character = static_cast<unsigned char>(wParam);
-		bool IsRepeat  = (lParam & 0x40000000) != 0;
+		auto Character = static_cast<unsigned char>(WParam);
+		bool IsRepeat  = (LParam & 0x40000000) != 0;
 		MessageHandler->OnKeyChar(Character, IsRepeat);
 	}
 	break;
 
 	case WM_MOUSEMOVE:
 	{
-		auto [x, y]		= MAKEPOINTS(lParam);
+		auto [x, y]		= MAKEPOINTS(LParam);
 		RECT ClientRect = {};
-		::GetClientRect(hWnd, &ClientRect);
+		::GetClientRect(HWnd, &ClientRect);
 		LONG Width	= ClientRect.right - ClientRect.left;
 		LONG Height = ClientRect.bottom - ClientRect.top;
 
@@ -196,20 +197,20 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_RBUTTONDOWN:
 	{
 		auto Button = EMouseButton::NumButtons;
-		if (uMsg == WM_LBUTTONDOWN)
+		if (Message == WM_LBUTTONDOWN)
 		{
 			Button = EMouseButton::Left;
 		}
-		if (uMsg == WM_MBUTTONDOWN)
+		if (Message == WM_MBUTTONDOWN)
 		{
 			Button = EMouseButton::Middle;
 		}
-		if (uMsg == WM_RBUTTONDOWN)
+		if (Message == WM_RBUTTONDOWN)
 		{
 			Button = EMouseButton::Right;
 		}
 
-		auto [x, y] = MAKEPOINTS(lParam);
+		auto [x, y] = MAKEPOINTS(LParam);
 		MessageHandler->OnMouseDown(CurrentWindow, Button, x, y);
 		InputManager.OnButtonDown(Button);
 	}
@@ -220,20 +221,20 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_RBUTTONUP:
 	{
 		auto Button = EMouseButton::NumButtons;
-		if (uMsg == WM_LBUTTONUP)
+		if (Message == WM_LBUTTONUP)
 		{
 			Button = EMouseButton::Left;
 		}
-		if (uMsg == WM_MBUTTONUP)
+		if (Message == WM_MBUTTONUP)
 		{
 			Button = EMouseButton::Middle;
 		}
-		if (uMsg == WM_RBUTTONUP)
+		if (Message == WM_RBUTTONUP)
 		{
 			Button = EMouseButton::Right;
 		}
 
-		auto [x, y] = MAKEPOINTS(lParam);
+		auto [x, y] = MAKEPOINTS(LParam);
 		MessageHandler->OnMouseUp(Button, x, y);
 		InputManager.OnButtonUp(Button);
 	}
@@ -244,20 +245,20 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_RBUTTONDBLCLK:
 	{
 		auto Button = EMouseButton::NumButtons;
-		if (uMsg == WM_LBUTTONDBLCLK)
+		if (Message == WM_LBUTTONDBLCLK)
 		{
 			Button = EMouseButton::Left;
 		}
-		if (uMsg == WM_MBUTTONDBLCLK)
+		if (Message == WM_MBUTTONDBLCLK)
 		{
 			Button = EMouseButton::Middle;
 		}
-		if (uMsg == WM_RBUTTONDBLCLK)
+		if (Message == WM_RBUTTONDBLCLK)
 		{
 			Button = EMouseButton::Right;
 		}
 
-		auto [x, y] = MAKEPOINTS(lParam);
+		auto [x, y] = MAKEPOINTS(LParam);
 		MessageHandler->OnMouseDoubleClick(CurrentWindow, Button, x, y);
 	}
 	break;
@@ -265,9 +266,9 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	case WM_MOUSEWHEEL:
 	{
 		static constexpr float WheelScale = 1.0f / 120.0f;
-		int					   WheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+		int					   WheelDelta = GET_WHEEL_DELTA_WPARAM(WParam);
 
-		auto [x, y] = MAKEPOINTS(lParam);
+		auto [x, y] = MAKEPOINTS(LParam);
 		MessageHandler->OnMouseWheel(static_cast<float>(WheelDelta) * WheelScale, x, y);
 	}
 	break;
@@ -280,7 +281,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 
 		UINT Size = 0;
-		GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, nullptr, &Size, sizeof(RAWINPUTHEADER));
+		GetRawInputData(reinterpret_cast<HRAWINPUT>(LParam), RID_INPUT, nullptr, &Size, sizeof(RAWINPUTHEADER));
 
 		if (!Size)
 		{
@@ -288,7 +289,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 		}
 
 		auto Buffer = std::make_unique<BYTE[]>(Size);
-		GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, Buffer.get(), &Size, sizeof(RAWINPUTHEADER));
+		GetRawInputData(reinterpret_cast<HRAWINPUT>(LParam), RID_INPUT, Buffer.get(), &Size, sizeof(RAWINPUTHEADER));
 
 		auto RawInput = reinterpret_cast<RAWINPUT*>(Buffer.get());
 
@@ -341,24 +342,24 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 	case WM_SIZE:
 	{
-		int WindowWidth	 = LOWORD(lParam);
-		int WindowHeight = HIWORD(lParam);
+		int WindowWidth	 = LOWORD(LParam);
+		int WindowHeight = HIWORD(LParam);
 		CurrentWindow->Resize(WindowWidth, WindowHeight);
 
 		bool ShouldResize = false;
 
-		if (wParam == SIZE_MINIMIZED)
+		if (WParam == SIZE_MINIMIZED)
 		{
 			Minimized = true;
 			Maximized = false;
 		}
-		else if (wParam == SIZE_MAXIMIZED)
+		else if (WParam == SIZE_MAXIMIZED)
 		{
 			Minimized	 = false;
 			Maximized	 = true;
 			ShouldResize = true;
 		}
-		else if (wParam == SIZE_RESTORED)
+		else if (WParam == SIZE_RESTORED)
 		{
 			// Restoring from minimized state?
 			if (Minimized)
@@ -404,7 +405,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	{
 		if (Initialized)
 		{
-			MessageHandler->OnWindowMove(CurrentWindow, LOWORD(lParam), HIWORD(lParam));
+			MessageHandler->OnWindowMove(CurrentWindow, LOWORD(LParam), HIWORD(LParam));
 		}
 	}
 	break;
@@ -423,7 +424,7 @@ LRESULT Application::ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 	break;
 
 	default:
-		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+		return DefWindowProc(HWnd, Message, WParam, LParam);
 	}
 
 	return 0;

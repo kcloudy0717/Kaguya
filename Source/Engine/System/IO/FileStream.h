@@ -1,19 +1,14 @@
 #pragma once
 #include <filesystem>
-#include <wil/resource.h>
 #include "Types.h"
+#include "Platform.h"
 
 class FileStream
 {
 public:
 	FileStream() noexcept = default;
-	explicit FileStream(
-		std::filesystem::path Path,
-		FileMode			  Mode,
-		FileAccess			  Access);
-	explicit FileStream(
-		std::filesystem::path Path,
-		FileMode			  Mode);
+	explicit FileStream(std::filesystem::path Path, FileMode Mode, FileAccess Access);
+	explicit FileStream(std::filesystem::path Path, FileMode Mode);
 
 	FileStream(FileStream&&) noexcept = default;
 	FileStream& operator=(FileStream&&) noexcept = default;
@@ -26,25 +21,17 @@ public:
 	[[nodiscard]] bool	CanRead() const noexcept;
 	[[nodiscard]] bool	CanWrite() const noexcept;
 
-	void Reset();
-
 	[[nodiscard]] std::unique_ptr<std::byte[]> ReadAll() const;
 
-	u64 Read(
-		void* Buffer,
-		u64	  SizeInBytes) const;
+	u64 Read(void* Buffer, u64 SizeInBytes) const;
 
-	u64 Write(
-		const void* Buffer,
-		u64			SizeInBytes) const;
+	u64 Write(const void* Buffer, u64 SizeInBytes) const;
 
-	void Seek(
-		i64		   Offset,
-		SeekOrigin RelativeOrigin) const;
+	void Seek(i64 Offset, SeekOrigin RelativeOrigin) const;
 
 private:
 	std::filesystem::path Path;
-	FileMode			  Mode;
-	FileAccess			  Access;
-	wil::unique_handle	  Handle;
+	FileMode			  Mode	 = FileMode::Unknown;
+	FileAccess			  Access = FileAccess::Unknown;
+	ScopedFileHandle	  Handle;
 };

@@ -141,10 +141,12 @@ namespace RHI
 			SetComputeConstantBuffer(RootParameterIndex, sizeof(T), &Data);
 		}
 
+		// Set nullptr to AcceleraionStructure to force a miss
 		void SetGraphicsRaytracingAccelerationStructure(
 			UINT					 RootParameterIndex,
 			D3D12ShaderResourceView* AccelerationStructure);
 
+		// Set nullptr to AcceleraionStructure to force a miss
 		void SetComputeRaytracingAccelerationStructure(
 			UINT					 RootParameterIndex,
 			D3D12ShaderResourceView* AccelerationStructure);

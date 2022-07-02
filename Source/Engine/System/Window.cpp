@@ -1,18 +1,24 @@
 ﻿#include "Window.h"
 #include "Application.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <hidusage.h>
 
-LPCWSTR const Window::WindowClass = L"KaguyaWindow";
-
-void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc)
+void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WindowDesc& Desc)
 {
 	this->OwningApplication = Application;
 	this->HInstance			= HInstance;
 	this->Desc				= Desc;
 
+	this->Desc.Width  = this->Desc.Width == WindowDesc::SystemDefault ? CW_USEDEFAULT : this->Desc.Width;
+	this->Desc.Height = this->Desc.Height == WindowDesc::SystemDefault ? CW_USEDEFAULT : this->Desc.Height;
+	this->Desc.x	  = this->Desc.x == WindowDesc::SystemDefault ? CW_USEDEFAULT : this->Desc.x;
+	this->Desc.y	  = this->Desc.y == WindowDesc::SystemDefault ? CW_USEDEFAULT : this->Desc.y;
+
 	// Create window
 	DWORD	ExStyle	   = 0;
-	LPCWSTR WindowName = Desc.Name;
+	LPCWSTR ClassName  = WindowClass.data();
+	LPCWSTR WindowName = Desc.Name.data();
 	DWORD	Style	   = WS_OVERLAPPEDWINDOW;
 	Style |= Desc.InitialSize == WindowInitialSize::Maximize ? WS_MAXIMIZE : 0;
 
@@ -21,11 +27,10 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 
 	WindowWidth	 = WindowRect.right - WindowRect.left;
 	WindowHeight = WindowRect.bottom - WindowRect.top;
-	AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 
-	WindowHandle = wil::unique_hwnd(CreateWindowExW(
+	WindowHandle = ScopedWindowHandle{ CreateWindowExW(
 		ExStyle,
-		WindowClass,
+		ClassName,
 		WindowName,
 		Style,
 		Desc.x,
@@ -35,43 +40,43 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 		Parent ? Parent->GetWindowHandle() : nullptr,
 		nullptr, // No menus
 		HInstance,
-		Application));
+		Application) };
 	if (!WindowHandle)
 	{
 		throw std::runtime_error("CreateWindowExW");
 	}
 
 	RECT ClientRect = {};
-	::GetClientRect(WindowHandle.get(), &ClientRect);
+	::GetClientRect(WindowHandle.Get(), &ClientRect);
 	Resize(ClientRect.right - ClientRect.left, ClientRect.bottom - ClientRect.top);
 
 	RAWINPUTDEVICE RawInputDevice = {};
 	RawInputDevice.usUsagePage	  = HID_USAGE_PAGE_GENERIC;
 	RawInputDevice.usUsage		  = HID_USAGE_GENERIC_MOUSE;
 	RawInputDevice.dwFlags		  = RIDEV_INPUTSINK;
-	RawInputDevice.hwndTarget	  = WindowHandle.get();
+	RawInputDevice.hwndTarget	  = WindowHandle.Get();
 	if (!RegisterRawInputDevices(&RawInputDevice, 1, sizeof(RAWINPUTDEVICE)))
 	{
 		throw std::runtime_error("RegisterRawInputDevices");
 	}
 }
 
-const WINDOW_DESC& Window::GetDesc() const noexcept
+const WindowDesc& Window::GetDesc() const noexcept
 {
 	return Desc;
 }
 
 HWND Window::GetWindowHandle() const noexcept
 {
-	return WindowHandle.get();
+	return WindowHandle.Get();
 }
 
-std::int32_t Window::GetWidth() const noexcept
+i32 Window::GetWidth() const noexcept
 {
 	return WindowWidth;
 }
 
-std::int32_t Window::GetHeight() const noexcept
+i32 Window::GetHeight() const noexcept
 {
 	return WindowHeight;
 }
@@ -81,8 +86,7 @@ void Window::Show()
 	if (!Visible)
 	{
 		Visible = true;
-
-		ShowWindow(WindowHandle.get(), SW_SHOW);
+		ShowWindow(WindowHandle.Get(), SW_SHOW);
 	}
 }
 
@@ -91,13 +95,13 @@ void Window::Hide()
 	if (Visible)
 	{
 		Visible = false;
-		ShowWindow(WindowHandle.get(), SW_HIDE);
+		ShowWindow(WindowHandle.Get(), SW_HIDE);
 	}
 }
 
 void Window::Destroy()
 {
-	WindowHandle.reset();
+	WindowHandle.Reset();
 }
 
 void Window::SetRawInput(bool Enable)
@@ -107,12 +111,12 @@ void Window::SetRawInput(bool Enable)
 
 bool Window::IsMaximized() const noexcept
 {
-	return IsZoomed(WindowHandle.get());
+	return IsZoomed(WindowHandle.Get());
 }
 
 bool Window::IsMinimized() const noexcept
 {
-	return IsIconic(WindowHandle.get());
+	return IsIconic(WindowHandle.Get());
 }
 
 bool Window::IsVisible() const noexcept
@@ -122,7 +126,7 @@ bool Window::IsVisible() const noexcept
 
 bool Window::IsForeground() const noexcept
 {
-	return GetForegroundWindow() == WindowHandle.get();
+	return GetForegroundWindow() == WindowHandle.Get();
 }
 
 bool Window::IsUsingRawInput() const noexcept
@@ -130,11 +134,11 @@ bool Window::IsUsingRawInput() const noexcept
 	return RawInput;
 }
 
-bool Window::IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept
+bool Window::IsPointInWindow(i32 X, i32 Y) const noexcept
 {
-	bool Result = false;
+	bool Result		= false;
 	RECT WindowRect = {};
-	GetWindowRect(WindowHandle.get(), &WindowRect);
+	GetWindowRect(WindowHandle.Get(), &WindowRect);
 	if (HRGN Region = CreateRectRgn(0, 0, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top);
 		Region)
 	{
@@ -145,9 +149,8 @@ bool Window::IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept
 	return Result;
 }
 
-void Window::Resize(int Width, int Height)
+void Window::Resize(i32 Width, i32 Height)
 {
 	WindowWidth	 = Width;
 	WindowHeight = Height;
-	AspectRatio	 = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
 }

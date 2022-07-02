@@ -8,10 +8,10 @@ public:
 
 	Stopwatch() noexcept;
 
-	[[nodiscard]] double GetDeltaTime() const noexcept;
-	[[nodiscard]] double GetTotalTime() const noexcept;
-	[[nodiscard]] double GetTotalTimePrecise() const noexcept;
-	[[nodiscard]] bool	 IsPaused() const noexcept;
+	[[nodiscard]] f64  GetDeltaTime() const noexcept;
+	[[nodiscard]] f64  GetTotalTime() const noexcept;
+	[[nodiscard]] f64  GetTotalTimePrecise() const noexcept;
+	[[nodiscard]] bool IsPaused() const noexcept;
 
 	void Resume() noexcept;
 	void Pause() noexcept;
@@ -21,14 +21,14 @@ public:
 	static const i64 Frequency; // Ticks per second
 
 private:
-	i64	   StartTime	= {};
-	i64	   TotalTime	= {};
-	i64	   PausedTime	= {};
-	i64	   StopTime		= {};
-	i64	   PreviousTime = {};
-	i64	   CurrentTime	= {};
-	double Period		= 0.0;
-	double DeltaTime	= 0.0;
+	i64 StartTime	 = {};
+	i64 TotalTime	 = {};
+	i64 PausedTime	 = {};
+	i64 StopTime	 = {};
+	i64 PreviousTime = {};
+	i64 CurrentTime	 = {};
+	f64 Period		 = 0.0;
+	f64 DeltaTime	 = 0.0;
 
 	bool Paused = false;
 };
@@ -44,8 +44,8 @@ public:
 	}
 	~ScopedTimer()
 	{
-		i64 End				   = Stopwatch::GetTimestamp();
-		i64 Elapsed			   = End - Start;
+		i64 End					= Stopwatch::GetTimestamp();
+		i64 Elapsed				= End - Start;
 		i64 ElapsedMilliseconds = Elapsed * 1000 / Stopwatch::Frequency;
 		Callback(ElapsedMilliseconds);
 	}

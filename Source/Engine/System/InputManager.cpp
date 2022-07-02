@@ -1,5 +1,7 @@
 #include "InputManager.h"
 #include "Window.h"
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
 bool InputManager::IsPressed(EMouseButton Button) const
 {

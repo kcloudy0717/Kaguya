@@ -18,28 +18,28 @@ i64 Stopwatch::GetTimestamp()
 
 Stopwatch::Stopwatch() noexcept
 	: StartTime(GetTimestamp())
-	, Period(1.0 / static_cast<double>(Frequency))
+	, Period(1.0 / static_cast<f64>(Frequency))
 {
 }
 
-double Stopwatch::GetDeltaTime() const noexcept
+f64 Stopwatch::GetDeltaTime() const noexcept
 {
 	return DeltaTime;
 }
 
-double Stopwatch::GetTotalTime() const noexcept
+f64 Stopwatch::GetTotalTime() const noexcept
 {
 	if (Paused)
 	{
-		return static_cast<double>((StopTime - PausedTime) - TotalTime) * Period;
+		return static_cast<f64>((StopTime - PausedTime) - TotalTime) * Period;
 	}
-	return static_cast<double>((CurrentTime - PausedTime) - TotalTime) * Period;
+	return static_cast<f64>((CurrentTime - PausedTime) - TotalTime) * Period;
 }
 
-double Stopwatch::GetTotalTimePrecise() const noexcept
+f64 Stopwatch::GetTotalTimePrecise() const noexcept
 {
 	i64 Now = GetTimestamp();
-	return static_cast<double>(Now - StartTime) * Period;
+	return static_cast<f64>(Now - StartTime) * Period;
 }
 
 bool Stopwatch::IsPaused() const noexcept
@@ -79,7 +79,7 @@ void Stopwatch::Signal() noexcept
 	}
 	CurrentTime = GetTimestamp();
 
-	DeltaTime = static_cast<double>(CurrentTime - PreviousTime) * Period;
+	DeltaTime = static_cast<f64>(CurrentTime - PreviousTime) * Period;
 
 	PreviousTime = CurrentTime;
 

@@ -2,25 +2,25 @@
 
 Mutex::Mutex()
 {
-	InitializeCriticalSectionEx(&Handle, 0, 0);
+	Kaguya::Windows::InitializeCriticalSectionEx(&Handle);
 }
 
 Mutex::~Mutex()
 {
-	DeleteCriticalSection(&Handle);
+	Kaguya::Windows::DeleteCriticalSection(&Handle);
 }
 
 void Mutex::Enter()
 {
-	EnterCriticalSection(&Handle);
+	Kaguya::Windows::EnterCriticalSection(&Handle);
 }
 
 void Mutex::Leave()
 {
-	LeaveCriticalSection(&Handle);
+	Kaguya::Windows::LeaveCriticalSection(&Handle);
 }
 
 bool Mutex::TryEnter()
 {
-	return TryEnterCriticalSection(&Handle);
+	return Kaguya::Windows::TryEnterCriticalSection(&Handle);
 }

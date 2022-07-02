@@ -48,8 +48,6 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 
 #include <Windows.h>
 
-#include <wil/resource.h>
-
 // DXGI
 #include <dxgi1_6.h>
 #if defined(_DEBUG)

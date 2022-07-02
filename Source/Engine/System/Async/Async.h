@@ -4,7 +4,7 @@
 #include <coroutine>
 #include <stdexcept>
 #include <utility>
-#include <wil/resource.h>
+#include "Sync/Event.h"
 
 // Learning coroutines
 // These are highly unstable
@@ -129,7 +129,7 @@ namespace Async
 		{
 			Promise()
 			{
-				Event.create();
+				Event.Create();
 			}
 
 			auto get_return_object() noexcept
@@ -244,7 +244,7 @@ namespace Async
 			}
 
 			std::atomic<AsyncStatus> Status = AsyncStatus::Started;
-			wil::unique_event		 Event;
+			Event					 Event;
 			std::exception_ptr		 Exception;
 		};
 	} // namespace Internal

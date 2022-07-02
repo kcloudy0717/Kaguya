@@ -1,10 +1,9 @@
 #include "FileStream.h"
 #include <cassert>
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 
-FileStream::FileStream(
-	std::filesystem::path Path,
-	FileMode			  Mode,
-	FileAccess			  Access)
+FileStream::FileStream(std::filesystem::path Path, FileMode Mode, FileAccess Access)
 	: Path(std::move(Path))
 	, Mode(Mode)
 	, Access(Access)
@@ -73,14 +72,14 @@ FileStream::FileStream(
 				  return dwDesiredAccess;
 			  }();
 
-			  auto Handle = wil::unique_handle(CreateFile(
+			  auto Handle = ScopedFileHandle{ CreateFile(
 				  this->Path.c_str(),
 				  DesiredAccess,
 				  0,
 				  nullptr,
 				  CreationDisposition,
 				  0,
-				  nullptr));
+				  nullptr) };
 			  if (!Handle)
 			  {
 				  DWORD Error = GetLastError();
@@ -107,22 +106,20 @@ FileStream::FileStream(
 {
 }
 
-FileStream::FileStream(
-	std::filesystem::path Path,
-	FileMode			  Mode)
+FileStream::FileStream(std::filesystem::path Path, FileMode Mode)
 	: FileStream(std::move(Path), Mode, FileAccess::ReadWrite)
 {
 }
 
 void* FileStream::GetHandle() const noexcept
 {
-	return Handle.get();
+	return Handle.Get();
 }
 
 u64 FileStream::GetSizeInBytes() const noexcept
 {
 	LARGE_INTEGER FileSize = {};
-	if (GetFileSizeEx(Handle.get(), &FileSize))
+	if (GetFileSizeEx(Handle.Get(), &FileSize))
 	{
 		return FileSize.QuadPart;
 	}
@@ -139,11 +136,6 @@ bool FileStream::CanWrite() const noexcept
 	return Access == FileAccess::Write || Access == FileAccess::ReadWrite;
 }
 
-void FileStream::Reset()
-{
-	Handle.reset();
-}
-
 std::unique_ptr<std::byte[]> FileStream::ReadAll() const
 {
 	u64 FileSize = GetSizeInBytes();
@@ -151,22 +143,20 @@ std::unique_ptr<std::byte[]> FileStream::ReadAll() const
 	DWORD NumberOfBytesRead	  = 0;
 	DWORD NumberOfBytesToRead = static_cast<DWORD>(FileSize);
 	auto  Buffer			  = std::make_unique<std::byte[]>(FileSize);
-	if (ReadFile(Handle.get(), Buffer.get(), NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
+	if (ReadFile(Handle.Get(), Buffer.get(), NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
 	{
 		assert(NumberOfBytesToRead == NumberOfBytesRead);
 	}
 	return Buffer;
 }
 
-u64 FileStream::Read(
-	void* Buffer,
-	u64	  SizeInBytes) const
+u64 FileStream::Read(void* Buffer, u64 SizeInBytes) const
 {
 	if (Buffer)
 	{
 		DWORD NumberOfBytesRead	  = 0;
 		DWORD NumberOfBytesToRead = static_cast<DWORD>(SizeInBytes);
-		if (ReadFile(Handle.get(), Buffer, NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
+		if (ReadFile(Handle.Get(), Buffer, NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
 		{
 			return NumberOfBytesRead;
 		}
@@ -174,15 +164,13 @@ u64 FileStream::Read(
 	return 0;
 }
 
-u64 FileStream::Write(
-	const void* Buffer,
-	u64			SizeInBytes) const
+u64 FileStream::Write(const void* Buffer, u64 SizeInBytes) const
 {
 	if (Buffer)
 	{
 		DWORD NumberOfBytesWritten = 0;
 		DWORD NumberOfBytesToWrite = static_cast<DWORD>(SizeInBytes);
-		if (WriteFile(Handle.get(), Buffer, NumberOfBytesToWrite, &NumberOfBytesWritten, nullptr))
+		if (WriteFile(Handle.Get(), Buffer, NumberOfBytesToWrite, &NumberOfBytesWritten, nullptr))
 		{
 			return NumberOfBytesWritten;
 		}
@@ -190,9 +178,7 @@ u64 FileStream::Write(
 	return 0;
 }
 
-void FileStream::Seek(
-	i64		   Offset,
-	SeekOrigin RelativeOrigin) const
+void FileStream::Seek(i64 Offset, SeekOrigin RelativeOrigin) const
 {
 	DWORD MoveMethod = [RelativeOrigin]()
 	{
@@ -208,5 +194,5 @@ void FileStream::Seek(
 	}();
 	LARGE_INTEGER liDistanceToMove = {};
 	liDistanceToMove.QuadPart	   = Offset;
-	SetFilePointerEx(Handle.get(), liDistanceToMove, nullptr, MoveMethod);
+	SetFilePointerEx(Handle.Get(), liDistanceToMove, nullptr, MoveMethod);
 }

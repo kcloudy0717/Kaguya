@@ -59,7 +59,7 @@ public:
 
 	void Wait() const noexcept
 	{
-		bool Succeeded = Handle.promise().Event.wait();
+		bool Succeeded = Handle.promise().Event.Wait();
 		assert(Succeeded);
 	}
 

@@ -3,8 +3,8 @@
 #include <filesystem>
 #include <mutex>
 #include <thread>
-#include <wil/resource.h>
 #include "Types.h"
+#include "Platform.h"
 #include "Delegate.h"
 
 class FileSystemWatcher
@@ -21,7 +21,7 @@ private:
 
 private:
 	std::filesystem::path Path;
-	wil::unique_handle	  FileHandle;
+	ScopedFileHandle	  FileHandle;
 
 public:
 	std::atomic<bool>		   IncludeSubdirectories = false;

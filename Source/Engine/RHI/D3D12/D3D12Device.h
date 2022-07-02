@@ -150,7 +150,7 @@ namespace RHI
 
 			Arc<ID3D12Fence>  DeviceRemovedFence;
 			HANDLE			  DeviceRemovedWaitHandle;
-			wil::unique_event DeviceRemovedEvent;
+			Event			  DeviceRemovedEvent;
 		} Dred;
 
 		// Represents a single node

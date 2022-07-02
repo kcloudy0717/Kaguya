@@ -488,12 +488,12 @@ namespace RHI
 			// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device5-removedevice#remarks
 			VERIFY_D3D12_API(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&DeviceRemovedFence)));
 
-			DeviceRemovedEvent.create();
+			DeviceRemovedEvent.Create();
 			// When a device is removed, it signals all fences to UINT64_MAX, we can use this to register events prior
 			// to what happened.
-			VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.get()));
+			VERIFY_D3D12_API(DeviceRemovedFence->SetEventOnCompletion(UINT64_MAX, DeviceRemovedEvent.Get()));
 
-			RegisterWaitForSingleObject(&DeviceRemovedWaitHandle, DeviceRemovedEvent.get(), OnDeviceRemoved, Device, INFINITE, 0);
+			RegisterWaitForSingleObject(&DeviceRemovedWaitHandle, DeviceRemovedEvent.Get(), OnDeviceRemoved, Device, INFINITE, 0);
 		}
 	}
 

@@ -2,30 +2,29 @@
 
 RwLock::RwLock()
 {
-	InitializeSRWLock(&Handle);
+	Kaguya::Windows::InitializeSRWLock(&Handle);
 }
 
 RwLock::~RwLock()
 {
-	UNREFERENCED_PARAMETER(Handle);
 }
 
 void RwLock::AcquireShared()
 {
-	AcquireSRWLockShared(&Handle);
+	Kaguya::Windows::AcquireSRWLockShared(&Handle);
 }
 
 void RwLock::ReleaseShared()
 {
-	ReleaseSRWLockShared(&Handle);
+	Kaguya::Windows::ReleaseSRWLockShared(&Handle);
 }
 
 void RwLock::AcquireExclusive()
 {
-	AcquireSRWLockExclusive(&Handle);
+	Kaguya::Windows::AcquireSRWLockExclusive(&Handle);
 }
 
 void RwLock::ReleaseExclusive()
 {
-	ReleaseSRWLockExclusive(&Handle);
+	Kaguya::Windows::ReleaseSRWLockExclusive(&Handle);
 }

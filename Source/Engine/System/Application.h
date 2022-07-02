@@ -15,7 +15,7 @@ public:
 
 	void SetMessageHandler(IApplicationMessageHandler* MessageHandler);
 
-	void AddWindow(Window* Parent, Window* Window, const WINDOW_DESC& Desc);
+	void AddWindow(Window* Parent, Window* Window, const WindowDesc& Desc);
 
 	void SetRawInputMode(bool Enable, Window* Window);
 
@@ -24,9 +24,8 @@ public:
 	virtual void Update() {}
 
 private:
-	static LRESULT CALLBACK WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPARAM wParam, _In_ LPARAM lParam);
-
-	LRESULT ProcessMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	static LRESULT WINDOWS_CALLING_CONVENTION WindowProc(HWND HWnd, u32 Message, WPARAM WParam, LPARAM LParam);
+	LRESULT									  ProcessMessage(HWND HWnd, u32 Message, WPARAM WParam, LPARAM LParam);
 
 public:
 	inline static InputManager InputManager;
@@ -56,5 +55,5 @@ private:
 	std::vector<Window*>		Windows;
 
 public:
-	MulticastDelegate<HWND /*HWnd*/, UINT /*Message*/, WPARAM /*WParam*/, LPARAM /*LParam*/> Callbacks;
+	MulticastDelegate<HWND /*HWnd*/, u32 /*Message*/, WPARAM /*WParam*/, LPARAM /*LParam*/> Callbacks;
 };

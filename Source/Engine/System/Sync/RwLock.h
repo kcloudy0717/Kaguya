@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <wil/resource.h>
+#include "Platform.h"
 
 class RwLock
 {
@@ -21,5 +21,5 @@ public:
 	void ReleaseExclusive();
 
 private:
-	SRWLOCK Handle;
+	Kaguya::Windows::SRWLOCK Handle;
 };

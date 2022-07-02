@@ -429,7 +429,7 @@ int main(int /*argc*/, char* /*argv*/[])
 	Editor Editor;
 	GUI	   Gui;
 	Window MainWindow;
-	Editor.AddWindow(nullptr, &MainWindow, WINDOW_DESC{ .Name = L"Kaguya", .Width = 1280, .Height = 720, .InitialSize = WindowInitialSize::Maximize });
+	Editor.AddWindow(nullptr, &MainWindow, WindowDesc{ .Name = L"Kaguya", .Width = 1280, .Height = 720, .InitialSize = WindowInitialSize::Maximize });
 	Gui.Initialize(MainWindow.GetWindowHandle(), Kaguya::Device);
 
 	MainWindow.Show();

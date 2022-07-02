@@ -1,7 +1,7 @@
 ﻿#include "ThreadPool.h"
 #include <cassert>
 #define WIN32_LEAN_AND_MEAN
-#include <Window.h>
+#include <Windows.h>
 
 struct WorkEntry
 {

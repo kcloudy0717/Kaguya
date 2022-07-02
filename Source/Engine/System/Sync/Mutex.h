@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <wil/resource.h>
+#include "Platform.h"
 
 class Mutex
 {
@@ -19,5 +19,5 @@ public:
 	bool TryEnter();
 
 private:
-	CRITICAL_SECTION Handle;
+	Kaguya::Windows::CRITICAL_SECTION Handle;
 };

@@ -12,11 +12,11 @@ namespace Asset
 
 	void Mesh::UpdateInfo()
 	{
-		VertexCount		 = static_cast<u32>(Vertices.size());
-		IndexCount		 = static_cast<u32>(Indices.size());
-		MeshletCount	 = static_cast<u32>(Meshlets.size());
-		VertexIndexCount = static_cast<u32>(UniqueVertexIndices.size());
-		PrimitiveCount	 = static_cast<u32>(PrimitiveIndices.size());
+		NumVertices		 = static_cast<u32>(Vertices.size());
+		NumIndices		 = static_cast<u32>(Indices.size());
+		NumMeshlets		 = static_cast<u32>(Meshlets.size());
+		NumVertexIndices = static_cast<u32>(UniqueVertexIndices.size());
+		NumPrimitives	 = static_cast<u32>(PrimitiveIndices.size());
 	}
 
 	void Mesh::Release()

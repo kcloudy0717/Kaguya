@@ -39,16 +39,16 @@ namespace Asset
 
 		std::string Name;
 
-		u32 VertexCount		 = 0;
-		u32 IndexCount		 = 0;
-		u32 MeshletCount	 = 0;
-		u32 VertexIndexCount = 0;
-		u32 PrimitiveCount	 = 0;
+		u32 NumVertices		 = 0;
+		u32 NumIndices		 = 0;
+		u32 NumMeshlets		 = 0;
+		u32 NumVertexIndices = 0;
+		u32 NumPrimitives	 = 0;
 
 		std::vector<Vertex>					  Vertices;
-		std::vector<uint32_t>				  Indices;
+		std::vector<u32>					  Indices;
 		std::vector<DirectX::Meshlet>		  Meshlets;
-		std::vector<uint8_t>				  UniqueVertexIndices;
+		std::vector<u8>						  UniqueVertexIndices;
 		std::vector<DirectX::MeshletTriangle> PrimitiveIndices;
 
 		Math::BoundingBox BoundingBox;

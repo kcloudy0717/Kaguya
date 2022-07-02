@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include <wil/resource.h>
+#include "Types.h"
+#include "Platform.h"
 
 class Application;
 
@@ -9,25 +10,27 @@ enum class WindowInitialSize
 	Maximize
 };
 
-struct WINDOW_DESC
+struct WindowDesc
 {
-	LPCWSTR			  Name		  = nullptr;
-	int				  Width		  = CW_USEDEFAULT;
-	int				  Height	  = CW_USEDEFAULT;
-	int				  x			  = CW_USEDEFAULT;
-	int				  y			  = CW_USEDEFAULT;
+	static constexpr i32 SystemDefault = ~0;
+
+	std::wstring_view Name;
+	i32				  Width		  = SystemDefault;
+	i32				  Height	  = SystemDefault;
+	i32				  x			  = SystemDefault;
+	i32				  y			  = SystemDefault;
 	WindowInitialSize InitialSize = WindowInitialSize::Default;
 };
 
 class Window
 {
 public:
-	static LPCWSTR const WindowClass;
+	static constexpr std::wstring_view WindowClass = L"KaguyaWindow";
 
-	[[nodiscard]] const WINDOW_DESC& GetDesc() const noexcept;
-	[[nodiscard]] HWND				 GetWindowHandle() const noexcept;
-	[[nodiscard]] std::int32_t		 GetWidth() const noexcept;
-	[[nodiscard]] std::int32_t		 GetHeight() const noexcept;
+	[[nodiscard]] const WindowDesc& GetDesc() const noexcept;
+	[[nodiscard]] HWND				GetWindowHandle() const noexcept;
+	[[nodiscard]] i32				GetWidth() const noexcept;
+	[[nodiscard]] i32				GetHeight() const noexcept;
 
 	void Show();
 	void Hide();
@@ -40,24 +43,23 @@ public:
 	[[nodiscard]] bool IsVisible() const noexcept;
 	[[nodiscard]] bool IsForeground() const noexcept;
 	[[nodiscard]] bool IsUsingRawInput() const noexcept;
-	[[nodiscard]] bool IsPointInWindow(std::int32_t X, std::int32_t Y) const noexcept;
+	[[nodiscard]] bool IsPointInWindow(i32 X, i32 Y) const noexcept;
 
-	void Resize(int Width, int Height);
+	void Resize(i32 Width, i32 Height);
 
 private:
 	friend class Application;
 
-	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WINDOW_DESC& Desc);
+	void Initialize(Application* Application, Window* Parent, HINSTANCE HInstance, const WindowDesc& Desc);
 
 	Application* OwningApplication = nullptr;
 	HINSTANCE	 HInstance		   = nullptr;
 
-	WINDOW_DESC		 Desc = {};
-	wil::unique_hwnd WindowHandle;
+	WindowDesc		   Desc = {};
+	ScopedWindowHandle WindowHandle;
 
-	std::int32_t WindowWidth  = 0;
-	std::int32_t WindowHeight = 0;
-	float		 AspectRatio  = 1.0f;
+	i32 WindowWidth	 = 0;
+	i32 WindowHeight = 0;
 
 	bool Visible  = false;
 	bool RawInput = false;

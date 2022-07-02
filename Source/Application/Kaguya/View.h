@@ -244,7 +244,7 @@ struct WorldRenderView
 					RHI::D3D12Buffer& IndexBuffer  = StaticMesh.Mesh->IndexResource;
 
 					D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {};
-					DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->IndexCount;
+					DrawIndexedArguments.IndexCountPerInstance		  = StaticMesh.Mesh->NumIndices;
 					DrawIndexedArguments.InstanceCount				  = 1;
 					DrawIndexedArguments.StartIndexLocation			  = 0;
 					DrawIndexedArguments.BaseVertexLocation			  = 0;
@@ -262,7 +262,7 @@ struct WorldRenderView
 					Mesh.BoundingBox		  = StaticMesh.Mesh->BoundingBox;
 					Mesh.DrawIndexedArguments = DrawIndexedArguments;
 					Mesh.MaterialIndex		  = NumMaterials;
-					Mesh.NumMeshlets		  = StaticMesh.Mesh->MeshletCount;
+					Mesh.NumMeshlets		  = StaticMesh.Mesh->NumMeshlets;
 					Mesh.VertexView			  = StaticMesh.Mesh->VertexView.GetIndex();
 					Mesh.IndexView			  = StaticMesh.Mesh->IndexView.GetIndex();
 
