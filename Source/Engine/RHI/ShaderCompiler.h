@@ -45,18 +45,6 @@ public:
 		const std::filesystem::path& Path,
 		const ShaderCompileOptions&	 Options) const;
 
-	[[nodiscard]] Shader CompileHS(
-		const std::filesystem::path& Path,
-		const ShaderCompileOptions&	 Options) const;
-
-	[[nodiscard]] Shader CompileDS(
-		const std::filesystem::path& Path,
-		const ShaderCompileOptions&	 Options) const;
-
-	[[nodiscard]] Shader CompileGS(
-		const std::filesystem::path& Path,
-		const ShaderCompileOptions&	 Options) const;
-
 	[[nodiscard]] Shader CompilePS(
 		const std::filesystem::path& Path,
 		const ShaderCompileOptions&	 Options) const;

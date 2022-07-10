@@ -91,9 +91,12 @@ namespace RHI
 
 		Arc& operator=(const Arc& Other) noexcept
 		{
-			if (this->Ptr != Other.Ptr)
+			if (this != &Other)
 			{
-				Arc(Other).Swap(*this);
+				if (this->Ptr != Other.Ptr)
+				{
+					Arc(Other).Swap(*this);
+				}
 			}
 			return *this;
 		}

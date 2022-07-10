@@ -61,6 +61,8 @@ namespace RHI
 		void Upload(const D3D12_SUBRESOURCE_DATA& Subresource, ID3D12Resource* Resource);
 		void Upload(const void* Data, UINT64 SizeInBytes, ID3D12Resource* Resource);
 
+		void ReleaseDescriptor(DeferredDeleteDescriptor Descriptor);
+
 	private:
 		D3D12NodeMask	  NodeMask;
 		D3D12CommandQueue GraphicsQueue;
@@ -88,6 +90,8 @@ namespace RHI
 
 		D3D12SyncHandle					 UploadSyncHandle;
 		std::vector<Arc<ID3D12Resource>> TrackedResources;
+
+		DeferredDeleteQueue<DeferredDeleteDescriptor> DeferredDeleteDescriptorQueue;
 
 		// Null descriptors
 		D3D12ShaderResourceView NullRaytracingAccelerationStructure;
@@ -149,8 +153,11 @@ namespace RHI
 		{
 			if constexpr (Dynamic)
 			{
-				D3D12DescriptorHeap* DescriptorHeap = Parent->GetDescriptorHeap<ViewDesc>();
-				DescriptorHeap->Release(Index);
+				GetParentLinkedDevice()->ReleaseDescriptor(
+					DeferredDeleteDescriptor{
+						.OwningHeap = Parent->GetDescriptorHeap<ViewDesc>(),
+						.Index		= Index,
+					});
 				Parent	  = nullptr;
 				CpuHandle = { NULL };
 				GpuHandle = { NULL };

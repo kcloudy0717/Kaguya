@@ -30,9 +30,6 @@ namespace RHI
 		void InputLayoutCb(D3D12InputLayout* InputLayout) override;
 		void VSCb(Shader* VS) override;
 		void PSCb(Shader* PS) override;
-		void DSCb(Shader* DS) override;
-		void HSCb(Shader* HS) override;
-		void GSCb(Shader* GS) override;
 		void CSCb(Shader* CS) override;
 		void ASCb(Shader* AS) override;
 		void MSCb(Shader* MS) override;
@@ -51,9 +48,6 @@ namespace RHI
 		std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
 		Shader*								  VS = nullptr;
 		Shader*								  PS = nullptr;
-		Shader*								  DS = nullptr;
-		Shader*								  HS = nullptr;
-		Shader*								  GS = nullptr;
 		Shader*								  CS = nullptr;
 		Shader*								  AS = nullptr;
 		Shader*								  MS = nullptr;

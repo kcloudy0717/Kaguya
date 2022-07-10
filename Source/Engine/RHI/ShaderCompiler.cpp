@@ -48,7 +48,7 @@ std::string DxcException::GetError() const
 }
 
 ShaderCompiler::ShaderCompiler()
-	: ShaderModel(RHI_SHADER_MODEL::ShaderModel_6_5)
+	: ShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6)
 {
 	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&Compiler3)));
 	VERIFY_DXC_API(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&Utils)));
@@ -82,21 +82,6 @@ Shader ShaderCompiler::CompileShader(
 Shader ShaderCompiler::CompileVS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
 {
 	return CompileShader(RHI_SHADER_TYPE::Vertex, Path, Options);
-}
-
-Shader ShaderCompiler::CompileHS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
-{
-	return CompileShader(RHI_SHADER_TYPE::Hull, Path, Options);
-}
-
-Shader ShaderCompiler::CompileDS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
-{
-	return CompileShader(RHI_SHADER_TYPE::Domain, Path, Options);
-}
-
-Shader ShaderCompiler::CompileGS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
-{
-	return CompileShader(RHI_SHADER_TYPE::Geometry, Path, Options);
 }
 
 Shader ShaderCompiler::CompilePS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
@@ -133,9 +118,6 @@ std::wstring ShaderCompiler::GetShaderModelString() const
 	std::wstring ShaderModelString;
 	switch (ShaderModel)
 	{
-	case RHI_SHADER_MODEL::ShaderModel_6_5:
-		ShaderModelString = L"6_5";
-		break;
 	case RHI_SHADER_MODEL::ShaderModel_6_6:
 		ShaderModelString = L"6_6";
 		break;
@@ -152,15 +134,6 @@ std::wstring ShaderCompiler::ShaderProfileString(RHI_SHADER_TYPE ShaderType) con
 		using enum RHI_SHADER_TYPE;
 	case Vertex:
 		ProfileString = L"vs_";
-		break;
-	case Hull:
-		ProfileString = L"hs_";
-		break;
-	case Domain:
-		ProfileString = L"ds_";
-		break;
-	case Geometry:
-		ProfileString = L"gs_";
 		break;
 	case Pixel:
 		ProfileString = L"ps_";

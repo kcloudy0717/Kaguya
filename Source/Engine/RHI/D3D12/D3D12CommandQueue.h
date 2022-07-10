@@ -21,6 +21,8 @@ namespace RHI
 
 		[[nodiscard]] D3D12_COMMAND_LIST_TYPE GetType() const noexcept { return CommandListType; }
 		[[nodiscard]] ID3D12CommandQueue*	  GetCommandQueue() const noexcept { return CommandQueue.Get(); }
+		[[nodiscard]] D3D12Fence&			  GetFence() noexcept { return Fence; }
+		[[nodiscard]] D3D12SyncHandle		  GetSyncHandle() const noexcept { return SyncHandle; }
 		[[nodiscard]] bool					  SupportTimestamps() const noexcept { return Frequency.has_value(); }
 		[[nodiscard]] UINT64				  GetFrequency() const noexcept { return Frequency.value_or(0); }
 
@@ -46,7 +48,7 @@ namespace RHI
 		D3D12_COMMAND_LIST_TYPE CommandListType;
 		Arc<ID3D12CommandQueue> CommandQueue;
 		D3D12Fence				Fence;
-		D3D12SyncHandle			SyncHandle;
+		D3D12SyncHandle			SyncHandle; // Sync handle updated every ECL
 
 		// Command allocators used exclusively for resolving resource barriers
 		D3D12CommandAllocatorPool	ResourceBarrierCommandAllocatorPool;

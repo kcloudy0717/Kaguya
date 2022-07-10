@@ -230,12 +230,11 @@ namespace Asset
 			Asset->Options = Options;
 			Asset->Name	   = string;
 
-			Asset->Vertices			   = std::move(Vertices);
-			Asset->Indices			   = std::move(Indices);
-			Asset->Meshlets			   = std::move(Meshlets);
-			Asset->UniqueVertexIndices = std::move(UniqueVertexIndices);
-			Asset->PrimitiveIndices	   = std::move(PrimitiveIndices);
-			Asset->UpdateInfo();
+			Asset->SetVertices(std::move(Vertices));
+			Asset->SetIndices(std::move(Indices));
+			Asset->SetMeshlets(std::move(Meshlets));
+			Asset->SetUniqueVertexIndices(std::move(UniqueVertexIndices));
+			Asset->SetPrimitiveIndices(std::move(PrimitiveIndices));
 		}
 		return Meshes;
 	}

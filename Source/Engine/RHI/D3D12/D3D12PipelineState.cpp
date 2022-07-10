@@ -30,24 +30,6 @@ namespace RHI
 		this->PS = PS;
 	}
 
-	void D3D12PipelineParserCallbacks::DSCb(Shader* DS)
-	{
-		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->DS = DS;
-	}
-
-	void D3D12PipelineParserCallbacks::HSCb(Shader* HS)
-	{
-		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->HS = HS;
-	}
-
-	void D3D12PipelineParserCallbacks::GSCb(Shader* GS)
-	{
-		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->GS = GS;
-	}
-
 	void D3D12PipelineParserCallbacks::CSCb(Shader* CS)
 	{
 		Type	 = RHI_PIPELINE_STATE_TYPE::Compute;
@@ -182,9 +164,9 @@ namespace RHI
 					.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
 					.VS					   = RHITranslateD3D12(Parser.VS),
 					.PS					   = RHITranslateD3D12(Parser.PS),
-					.DS					   = RHITranslateD3D12(Parser.DS),
-					.HS					   = RHITranslateD3D12(Parser.HS),
-					.GS					   = RHITranslateD3D12(Parser.GS),
+					.DS					   = D3D12_SHADER_BYTECODE{},
+					.HS					   = D3D12_SHADER_BYTECODE{},
+					.GS					   = D3D12_SHADER_BYTECODE{},
 					.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC{},
 					.BlendState			   = RHITranslateD3D12(Parser.BlendState),
 					.SampleMask			   = DefaultSampleMask{},

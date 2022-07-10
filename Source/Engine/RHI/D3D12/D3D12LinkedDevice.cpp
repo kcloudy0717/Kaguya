@@ -141,6 +141,7 @@ namespace RHI
 	void D3D12LinkedDevice::OnEndFrame()
 	{
 		Profiler.OnEndFrame();
+		DeferredDeleteDescriptorQueue.Clean();
 	}
 
 	D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const
@@ -281,5 +282,17 @@ namespace RHI
 			.SlicePitch = static_cast<LONG_PTR>(SizeInBytes),
 		};
 		Upload(SubresourceData, Resource);
+	}
+
+	void D3D12LinkedDevice::ReleaseDescriptor(DeferredDeleteDescriptor Descriptor)
+	{
+		D3D12SyncHandle SyncHandle = GraphicsQueue.GetSyncHandle();
+		// No pending workload, we can release immediately
+		if (!SyncHandle)
+		{
+			Descriptor.Release();
+			return;
+		}
+		DeferredDeleteDescriptorQueue.Enqueue(SyncHandle, Descriptor);
 	}
 } // namespace RHI

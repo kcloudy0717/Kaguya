@@ -3,6 +3,8 @@
 
 namespace RHI
 {
+	class D3D12DescriptorHeap;
+
 	namespace Internal
 	{
 		struct DescriptorIndexPool
@@ -32,6 +34,14 @@ namespace RHI
 			UINT			 Index = 0;
 		};
 	} // namespace Internal
+
+	struct DeferredDeleteDescriptor
+	{
+		void Release();
+
+		D3D12DescriptorHeap* OwningHeap = nullptr;
+		UINT				 Index;
+	};
 
 	// Dynamic resource binding heap, descriptor index are maintained in a free list
 	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild

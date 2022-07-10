@@ -4,6 +4,11 @@
 
 namespace RHI
 {
+	void DeferredDeleteDescriptor::Release()
+	{
+		OwningHeap->Release(Index);
+	}
+
 	static Arc<ID3D12DescriptorHeap> CreateDescriptorHeap(
 		ID3D12Device*				Device,
 		D3D12_DESCRIPTOR_HEAP_TYPE	Type,

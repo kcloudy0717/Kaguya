@@ -193,6 +193,51 @@ namespace RHI
 		std::unique_ptr<std::mutex> Mutex;
 	};
 
+	template<typename T>
+	concept DeferredDeleteResourceConcept = requires(T Resource)
+	{
+		Resource.Release();
+	};
+
+	template<DeferredDeleteResourceConcept T>
+	class DeferredDeleteQueue
+	{
+	public:
+		void Enqueue(D3D12SyncHandle SyncHandle, T Resource)
+		{
+			MutexGuard Guard(*QueueMutex);
+			Queue.push(Entry{
+				.SyncHandle = SyncHandle,
+				.Resource	= Resource,
+			});
+		}
+
+		void Clean()
+		{
+			MutexGuard Guard(*QueueMutex);
+			while (!Queue.empty())
+			{
+				Entry& Entry = Queue.front();
+				if (!Entry.SyncHandle.IsComplete())
+				{
+					break;
+				}
+				Entry.Resource.Release();
+				Queue.pop();
+			}
+		}
+
+	private:
+		struct Entry
+		{
+			D3D12SyncHandle SyncHandle;
+			T				Resource;
+		};
+
+		std::queue<Entry>	   Queue;
+		std::unique_ptr<Mutex> QueueMutex = std::make_unique<Mutex>();
+	};
+
 	class D3D12InputLayout
 	{
 	public:

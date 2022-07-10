@@ -12,6 +12,12 @@ namespace Asset
 
 	void Mesh::UpdateInfo()
 	{
+		assert(Vertices.size() <= size_t(std::numeric_limits<u32>::max()));
+		assert(Indices.size() <= size_t(std::numeric_limits<u32>::max()));
+		assert(Meshlets.size() <= size_t(std::numeric_limits<u32>::max()));
+		assert(UniqueVertexIndices.size() <= size_t(std::numeric_limits<u32>::max()));
+		assert(PrimitiveIndices.size() <= size_t(std::numeric_limits<u32>::max()));
+
 		NumVertices		 = static_cast<u32>(Vertices.size());
 		NumIndices		 = static_cast<u32>(Indices.size());
 		NumMeshlets		 = static_cast<u32>(Meshlets.size());
@@ -35,4 +41,35 @@ namespace Asset
 		BlasValid			  = false;
 		BlasCompacted		  = false;
 	}
+
+	void Mesh::SetVertices(std::vector<Vertex>&& Vertices)
+	{
+		this->Vertices = std::move(Vertices);
+		NumVertices	   = static_cast<u32>(this->Vertices.size());
+	}
+
+	void Mesh::SetIndices(std::vector<u32>&& Indices)
+	{
+		this->Indices = std::move(Indices);
+		NumIndices	  = static_cast<u32>(this->Indices.size());
+	}
+
+	void Mesh::SetMeshlets(std::vector<DirectX::Meshlet>&& Meshlets)
+	{
+		this->Meshlets = std::move(Meshlets);
+		NumMeshlets	   = static_cast<u32>(this->Meshlets.size());
+	}
+
+	void Mesh::SetUniqueVertexIndices(std::vector<u8>&& UniqueVertexIndices)
+	{
+		this->UniqueVertexIndices = std::move(UniqueVertexIndices);
+		NumVertexIndices		  = static_cast<u32>(this->UniqueVertexIndices.size());
+	}
+
+	void Mesh::SetPrimitiveIndices(std::vector<DirectX::MeshletTriangle>&& PrimitiveIndices)
+	{
+		this->PrimitiveIndices = std::move(PrimitiveIndices);
+		NumPrimitives		   = static_cast<u32>(this->PrimitiveIndices.size());
+	}
+
 } // namespace Asset

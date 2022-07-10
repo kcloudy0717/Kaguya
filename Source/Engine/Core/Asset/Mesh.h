@@ -35,6 +35,12 @@ namespace Asset
 
 		void ResetRaytracingInfo();
 
+		void SetVertices(std::vector<Vertex>&& Vertices);
+		void SetIndices(std::vector<u32>&& Indices);
+		void SetMeshlets(std::vector<DirectX::Meshlet>&& Meshlets);
+		void SetUniqueVertexIndices(std::vector<u8>&& UniqueVertexIndices);
+		void SetPrimitiveIndices(std::vector<DirectX::MeshletTriangle>&& PrimitiveIndices);
+
 		MeshImportOptions Options;
 
 		std::string Name;

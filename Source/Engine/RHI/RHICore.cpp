@@ -48,18 +48,6 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 			Callbacks->PSCb(*reinterpret_cast<PipelineStateStreamPS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamPS);
 			break;
-		case DS:
-			Callbacks->DSCb(*reinterpret_cast<PipelineStateStreamDS*>(Stream));
-			SizeOfSubobject = sizeof(PipelineStateStreamPS);
-			break;
-		case HS:
-			Callbacks->HSCb(*reinterpret_cast<PipelineStateStreamHS*>(Stream));
-			SizeOfSubobject = sizeof(PipelineStateStreamHS);
-			break;
-		case GS:
-			Callbacks->GSCb(*reinterpret_cast<PipelineStateStreamGS*>(Stream));
-			SizeOfSubobject = sizeof(PipelineStateStreamGS);
-			break;
 		case CS:
 			Callbacks->CSCb(*reinterpret_cast<PipelineStateStreamCS*>(Stream));
 			SizeOfSubobject = sizeof(PipelineStateStreamCS);
@@ -97,4 +85,51 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 			return;
 		}
 	}
+}
+
+const char* GetRHIVendorString(RHI_VENDOR Vendor)
+{
+	switch (Vendor)
+	{
+		using enum RHI_VENDOR;
+	case NVIDIA:
+		return "NVIDIA";
+	case AMD:
+		return "AMD";
+	case Intel:
+		return "Intel";
+	}
+	return "Unknown";
+}
+
+const char* GetRHIPipelineStateSubobjectTypeString(RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type)
+{
+	switch (Type)
+	{
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature:
+		return "Root Signature";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout:
+		return "Input Layout";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS:
+		return "Vertex Shader";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS:
+		return "Pixel Shader";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS:
+		return "Compute Shader";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::AS:
+		return "Amplification Shader";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS:
+		return "Mesh Shader";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState:
+		return "Blend State";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState:
+		return "Rasterizer State";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState:
+		return "Depth Stencil State";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState:
+		return "Render Target State";
+	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology:
+		return "Primitive Topology";
+	}
+	return "Unknown";
 }

@@ -25,11 +25,6 @@ GlobalRHIContext::GlobalRHIContext()
 	Compiler = std::make_unique<ShaderCompiler>();
 	Device	 = std::make_unique<RHI::D3D12Device>(DeviceOptions);
 
-	if (Device->SupportsDynamicResources())
-	{
-		Compiler->SetShaderModel(RHI_SHADER_MODEL::ShaderModel_6_6);
-	}
-
 	Kaguya::Device	 = Device.get();
 	Kaguya::Compiler = Compiler.get();
 }

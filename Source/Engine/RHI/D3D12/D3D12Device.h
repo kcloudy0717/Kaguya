@@ -148,9 +148,9 @@ namespace RHI
 			Dred(ID3D12Device* Device);
 			~Dred();
 
-			Arc<ID3D12Fence>  DeviceRemovedFence;
-			HANDLE			  DeviceRemovedWaitHandle;
-			Event			  DeviceRemovedEvent;
+			Arc<ID3D12Fence> DeviceRemovedFence;
+			HANDLE			 DeviceRemovedWaitHandle;
+			Event			 DeviceRemovedEvent;
 		} Dred;
 
 		// Represents a single node

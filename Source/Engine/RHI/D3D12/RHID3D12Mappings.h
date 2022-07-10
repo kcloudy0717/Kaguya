@@ -5,17 +5,18 @@ namespace RHI
 {
 	constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE RHITranslateD3D12(RHI_PRIMITIVE_TOPOLOGY Topology)
 	{
-		// clang-format off
 		switch (Topology)
 		{
 			using enum RHI_PRIMITIVE_TOPOLOGY;
-		case Undefined: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-		case Point:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-		case Line:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-		case Triangle:	return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		case Patch:		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+		case Undefined:
+			return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+		case Point:
+			return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+		case Line:
+			return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case Triangle:
+			return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		}
-		// clang-format on
 		return {};
 	}
 
@@ -147,7 +148,7 @@ namespace RHI
 		{
 			auto& RHIRenderTarget = BlendState.RenderTargets[Index++];
 
-			RenderTarget.BlendEnable	= RHIRenderTarget.BlendEnable ? TRUE : FALSE;
+			RenderTarget.BlendEnable	= RHIRenderTarget.EnableBlend ? TRUE : FALSE;
 			RenderTarget.LogicOpEnable	= FALSE;
 			RenderTarget.SrcBlend		= RHITranslateD3D12(RHIRenderTarget.SrcBlendRgb);
 			RenderTarget.DestBlend		= RHITranslateD3D12(RHIRenderTarget.DstBlendRgb);
@@ -174,22 +175,22 @@ namespace RHI
 		Desc.DepthBiasClamp		   = RasterizerState.DepthBiasClamp;
 		Desc.SlopeScaledDepthBias  = RasterizerState.SlopeScaledDepthBias;
 		Desc.DepthClipEnable	   = RasterizerState.DepthClipEnable;
-		Desc.MultisampleEnable	   = RasterizerState.MultisampleEnable;
-		Desc.AntialiasedLineEnable = RasterizerState.AntialiasedLineEnable;
-		Desc.ForcedSampleCount	   = RasterizerState.ForcedSampleCount;
-		Desc.ConservativeRaster	   = RasterizerState.ConservativeRaster ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+		Desc.MultisampleEnable	   = FALSE;										// Default
+		Desc.AntialiasedLineEnable = FALSE;										// Default
+		Desc.ForcedSampleCount	   = 0;											// Default
+		Desc.ConservativeRaster	   = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF; // Default
 		return Desc;
 	}
 
 	inline D3D12_DEPTH_STENCIL_DESC RHITranslateD3D12(const RHIDepthStencilState& DepthStencilState)
 	{
 		D3D12_DEPTH_STENCIL_DESC Desc = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-		Desc.DepthEnable			  = DepthStencilState.DepthEnable;
+		Desc.DepthEnable			  = DepthStencilState.EnableDepthTest;
 		Desc.DepthWriteMask			  = DepthStencilState.DepthWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
 		Desc.DepthFunc				  = RHITranslateD3D12(DepthStencilState.DepthFunc);
-		Desc.StencilEnable			  = DepthStencilState.StencilEnable;
-		Desc.StencilReadMask		  = static_cast<UINT8>(DepthStencilState.StencilReadMask);
-		Desc.StencilWriteMask		  = static_cast<UINT8>(DepthStencilState.StencilWriteMask);
+		Desc.StencilEnable			  = DepthStencilState.EnableStencilTest;
+		Desc.StencilReadMask		  = DepthStencilState.StencilReadMask;
+		Desc.StencilWriteMask		  = DepthStencilState.StencilWriteMask;
 		Desc.FrontFace				  = RHITranslateD3D12(DepthStencilState.FrontFace);
 		Desc.BackFace				  = RHITranslateD3D12(DepthStencilState.BackFace);
 		return Desc;

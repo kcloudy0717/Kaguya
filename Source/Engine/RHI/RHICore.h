@@ -30,33 +30,15 @@ enum class RHI_VENDOR
 	AMD	   = 0x1002,
 	Intel  = 0x8086
 };
-inline const char* GetRHIVendorString(RHI_VENDOR Vendor)
-{
-	switch (Vendor)
-	{
-		using enum RHI_VENDOR;
-	case NVIDIA:
-		return "NVIDIA";
-	case AMD:
-		return "AMD";
-	case Intel:
-		return "Intel";
-	}
-	return "<unknown>";
-}
 
 enum class RHI_SHADER_MODEL
 {
-	ShaderModel_6_5,
 	ShaderModel_6_6
 };
 
 enum class RHI_SHADER_TYPE
 {
 	Vertex,
-	Hull,
-	Domain,
-	Geometry,
 	Pixel,
 	Compute,
 	Amplification,
@@ -75,9 +57,6 @@ enum class RHI_PIPELINE_STATE_SUBOBJECT_TYPE
 	InputLayout,
 	VS,
 	PS,
-	DS,
-	HS,
-	GS,
 	CS,
 	AS,
 	MS,
@@ -89,51 +68,13 @@ enum class RHI_PIPELINE_STATE_SUBOBJECT_TYPE
 
 	NumTypes
 };
-inline const char* GetRHIPipelineStateSubobjectTypeString(RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type)
-{
-	switch (Type)
-	{
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature:
-		return "Root Signature";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout:
-		return "Input Layout";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS:
-		return "Vertex Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS:
-		return "Pixel Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DS:
-		return "Domain Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::HS:
-		return "Hull Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::GS:
-		return "Geometry Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS:
-		return "Compute Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::AS:
-		return "Amplification Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS:
-		return "Mesh Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState:
-		return "Blend State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState:
-		return "Rasterizer State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState:
-		return "Depth Stencil State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState:
-		return "Render Target State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology:
-		return "Primitive Topology";
-	}
-	return "<unknown>";
-}
 
 enum class RHI_PRIMITIVE_TOPOLOGY
 {
 	Undefined,
 	Point,
 	Line,
-	Triangle,
-	Patch
+	Triangle
 };
 
 enum class RHI_COMPARISON_FUNC
@@ -195,7 +136,7 @@ enum class RHI_FACTOR
 
 struct RHIRenderTargetBlendDesc
 {
-	bool		 BlendEnable   = false;
+	bool		 EnableBlend   = false;
 	RHI_FACTOR	 SrcBlendRgb   = RHI_FACTOR::One;
 	RHI_FACTOR	 DstBlendRgb   = RHI_FACTOR::Zero;
 	RHI_BLEND_OP BlendOpRgb	   = RHI_BLEND_OP::Add;
@@ -256,65 +197,56 @@ struct RHIRasterizerState
 {
 	RHI_FILL_MODE FillMode				= RHI_FILL_MODE::Solid;
 	RHI_CULL_MODE CullMode				= RHI_CULL_MODE::Back;
+	i32			  DepthBias				= 0;
+	f32			  DepthBiasClamp		= 0.0f;
+	f32			  SlopeScaledDepthBias	= 0.0f;
 	bool		  FrontCounterClockwise = false;
-	int			  DepthBias				= 0;
-	float		  DepthBiasClamp		= 0.0f;
-	float		  SlopeScaledDepthBias	= 0.0f;
 	bool		  DepthClipEnable		= true;
-	bool		  MultisampleEnable		= false;
-	bool		  AntialiasedLineEnable = false;
-	unsigned int  ForcedSampleCount		= 0;
-	bool		  ConservativeRaster	= false;
 };
+static constexpr size_t SizeOfRHIRasterizerState = sizeof(RHIRasterizerState);
 
 struct RHIDepthStencilState
 {
-	// Default states
-	// https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_depth_stencil_desc#remarks
-	bool				  DepthEnable	   = true;
-	bool				  DepthWrite	   = true;
-	RHI_COMPARISON_FUNC	  DepthFunc		   = RHI_COMPARISON_FUNC::Less;
-	bool				  StencilEnable	   = false;
-	std::byte			  StencilReadMask  = std::byte{ 0xff };
-	std::byte			  StencilWriteMask = std::byte{ 0xff };
+	bool				  EnableDepthTest	= true;
+	bool				  EnableStencilTest = false;
+	bool				  DepthWrite		= true;
+	RHI_COMPARISON_FUNC	  DepthFunc			= RHI_COMPARISON_FUNC::Less;
+	u8					  StencilReadMask	= 0xff;
+	u8					  StencilWriteMask	= 0xff;
 	RHIDepthStencilOpDesc FrontFace;
 	RHIDepthStencilOpDesc BackFace;
 };
 
 struct RHIRenderTargetState
 {
-	DXGI_FORMAT	  RTFormats[8]	   = { DXGI_FORMAT_UNKNOWN };
-	std::uint32_t NumRenderTargets = 0;
-	DXGI_FORMAT	  DSFormat		   = DXGI_FORMAT_UNKNOWN;
+	DXGI_FORMAT RTFormats[8]	 = { DXGI_FORMAT_UNKNOWN };
+	u32			NumRenderTargets = 0;
+	DXGI_FORMAT DSFormat		 = DXGI_FORMAT_UNKNOWN;
 };
 
 struct RHIViewport
 {
-	float TopLeftX;
-	float TopLeftY;
-	float Width;
-	float Height;
-	float MinDepth;
-	float MaxDepth;
+	f32 TopLeftX;
+	f32 TopLeftY;
+	f32 Width;
+	f32 Height;
+	f32 MinDepth;
+	f32 MaxDepth;
 };
 
 struct RHIRect
 {
-	long Left;
-	long Top;
-	long Right;
-	long Bottom;
+	i32 Left;
+	i32 Top;
+	i32 Right;
+	i32 Bottom;
 };
 
 template<typename TDesc, RHI_PIPELINE_STATE_SUBOBJECT_TYPE TType>
 class alignas(void*) PipelineStateStreamSubobject
 {
 public:
-	PipelineStateStreamSubobject() noexcept
-		: Type(TType)
-		, Desc(TDesc())
-	{
-	}
+	PipelineStateStreamSubobject() noexcept = default;
 	PipelineStateStreamSubobject(const TDesc& Desc) noexcept
 		: Type(TType)
 		, Desc(Desc)
@@ -334,8 +266,8 @@ public:
 	TDesc& operator->() noexcept { return Desc; }
 
 private:
-	RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type;
-	TDesc							  Desc;
+	RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type = TType;
+	TDesc							  Desc = {};
 };
 
 namespace RHI
@@ -349,9 +281,6 @@ using PipelineStateStreamRootSignature	   = PipelineStateStreamSubobject<RHI::D3
 using PipelineStateStreamInputLayout	   = PipelineStateStreamSubobject<RHI::D3D12InputLayout*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout>;
 using PipelineStateStreamVS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS>;
 using PipelineStateStreamPS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS>;
-using PipelineStateStreamDS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DS>;
-using PipelineStateStreamHS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::HS>;
-using PipelineStateStreamGS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::GS>;
 using PipelineStateStreamCS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS>;
 using PipelineStateStreamAS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::AS>;
 using PipelineStateStreamMS				   = PipelineStateStreamSubobject<Shader*, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS>;
@@ -371,9 +300,6 @@ public:
 	virtual void InputLayoutCb(RHI::D3D12InputLayout*) {}
 	virtual void VSCb(Shader*) {}
 	virtual void PSCb(Shader*) {}
-	virtual void DSCb(Shader*) {}
-	virtual void HSCb(Shader*) {}
-	virtual void GSCb(Shader*) {}
 	virtual void CSCb(Shader*) {}
 	virtual void ASCb(Shader*) {}
 	virtual void MSCb(Shader*) {}
@@ -396,3 +322,6 @@ struct PipelineStateStreamDesc
 };
 
 void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParserCallbacks* Callbacks);
+
+const char* GetRHIVendorString(RHI_VENDOR Vendor);
+const char* GetRHIPipelineStateSubobjectTypeString(RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type);
