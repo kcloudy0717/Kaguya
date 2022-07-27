@@ -67,8 +67,8 @@ namespace Math
 
 	[[nodiscard]] inline Quaternion normalize(const Quaternion& v) noexcept
 	{
-		float ReciporcalLength = 1.0f / length(v);
-		return { v.x * ReciporcalLength, v.y * ReciporcalLength, v.z * ReciporcalLength, v.w * ReciporcalLength };
+		float s = 1.0f / length(v);
+		return { v.x * s, v.y * s, v.z * s, v.w * s };
 	}
 
 	[[nodiscard]] inline Quaternion conjugate(const Quaternion& q) noexcept
@@ -81,9 +81,9 @@ namespace Math
 		// q* x q x q^-1 = q*
 		// |q|^2 x q^-1 = q*
 		// q^-1 = q* / |q|^2
-		Quaternion Conjugate			   = conjugate(q);
-		float	   ReciporcalLengthSquared = 1.0f / lengthsquared(q);
-		return { Conjugate.x * ReciporcalLengthSquared, Conjugate.y * ReciporcalLengthSquared, Conjugate.z * ReciporcalLengthSquared, Conjugate.w * ReciporcalLengthSquared };
+		Quaternion c = conjugate(q);
+		float	   s = 1.0f / lengthsquared(q);
+		return { c.x * s, c.y * s, c.z * s, c.w * s };
 	}
 
 } // namespace Math

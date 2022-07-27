@@ -12,3 +12,8 @@ FileStream File::Create(const std::filesystem::path& Path)
 {
 	return FileStream(Path, FileMode::Create, FileAccess::Write);
 }
+
+FileStream File::Read(const std::filesystem::path& Path)
+{
+	return FileStream(Path, FileMode::Open, FileAccess::Read);
+}

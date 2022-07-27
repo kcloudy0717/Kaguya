@@ -3,18 +3,18 @@
 
 namespace RHI
 {
-	D3D12Exception::D3D12Exception(std::string_view File, int Line, HRESULT ErrorCode)
+	ExceptionD3D12::ExceptionD3D12(std::string_view File, int Line, HRESULT ErrorCode)
 		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}
 
-	const char* D3D12Exception::GetErrorType() const noexcept
+	const char* ExceptionD3D12::GetErrorType() const noexcept
 	{
 		return "[D3D12]";
 	}
 
-	std::string D3D12Exception::GetError() const
+	std::string ExceptionD3D12::GetError() const
 	{
 #define STRINGIFY(x) \
 	case x:          \

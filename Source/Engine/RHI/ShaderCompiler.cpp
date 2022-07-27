@@ -11,16 +11,16 @@ DEFINE_LOG_CATEGORY(Dxc);
 		HRESULT hr = expr;                              \
 		if (FAILED(hr))                                 \
 		{                                               \
-			throw DxcException(__FILE__, __LINE__, hr); \
+			throw ExceptionDxc(__FILE__, __LINE__, hr); \
 		}                                               \
 	} while (false)
 
-const char* DxcException::GetErrorType() const noexcept
+const char* ExceptionDxc::GetErrorType() const noexcept
 {
 	return "[Dxc]";
 }
 
-std::string DxcException::GetError() const
+std::string ExceptionDxc::GetError() const
 {
 #define DXCERR(x)   \
 	case x:         \

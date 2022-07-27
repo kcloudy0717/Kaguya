@@ -136,13 +136,13 @@ bool FileStream::CanWrite() const noexcept
 	return Access == FileAccess::Write || Access == FileAccess::ReadWrite;
 }
 
-std::unique_ptr<std::byte[]> FileStream::ReadAll() const
+std::unique_ptr<u8[]> FileStream::ReadAll() const
 {
 	u64 FileSize = GetSizeInBytes();
 
 	DWORD NumberOfBytesRead	  = 0;
 	DWORD NumberOfBytesToRead = static_cast<DWORD>(FileSize);
-	auto  Buffer			  = std::make_unique<std::byte[]>(FileSize);
+	auto  Buffer			  = std::make_unique<u8[]>(FileSize);
 	if (ReadFile(Handle.Get(), Buffer.get(), NumberOfBytesToRead, &NumberOfBytesRead, nullptr))
 	{
 		assert(NumberOfBytesToRead == NumberOfBytesRead);

@@ -141,10 +141,6 @@ namespace RHI
 
 		RootSignatureDesc& AllowInputLayout() noexcept;
 		RootSignatureDesc& DenyVSAccess() noexcept;
-		RootSignatureDesc& DenyHSAccess() noexcept;
-		RootSignatureDesc& DenyDSAccess() noexcept;
-		RootSignatureDesc& DenyTessellationShaderAccess() noexcept;
-		RootSignatureDesc& DenyGSAccess() noexcept;
 		RootSignatureDesc& DenyPSAccess() noexcept;
 		RootSignatureDesc& AsLocalRootSignature() noexcept;
 		RootSignatureDesc& DenyASAccess() noexcept;

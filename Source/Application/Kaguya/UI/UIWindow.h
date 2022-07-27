@@ -70,7 +70,7 @@ protected:
 	virtual void OnRender() = 0;
 
 protected:
-	bool IsHovered;
+	bool IsHovered = false;
 
 private:
 	std::string_view Name;

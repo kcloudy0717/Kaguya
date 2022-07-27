@@ -227,6 +227,13 @@ namespace Math
 		return v.x && v.y && v.z && v.w;
 	}
 
+	using uint4	  = Vec<unsigned, 4>;
+	using int4	  = Vec<int, 4>;
+	using float4  = Vec<float, 4>;
+	using double4 = Vec<double, 4>;
+	using bool4	  = Vec<bool, 4>;
+
+	using Vec4u = Vec<unsigned, 4>;
 	using Vec4i = Vec<int, 4>;
 	using Vec4f = Vec<float, 4>;
 	using Vec4d = Vec<double, 4>;

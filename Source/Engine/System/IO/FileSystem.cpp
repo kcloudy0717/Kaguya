@@ -26,19 +26,15 @@ std::filesystem::path FileSystem::OpenDialog(Span<const FilterDesc> FilterSpecs)
 
 		// Show the Open dialog box.
 		// Get the file name from the dialog box.
-		if (SUCCEEDED(FileOpen->Show(nullptr)))
+		ComPtr<IShellItem> Item;
+		PWSTR			   pszFilePath;
+		if (SUCCEEDED(FileOpen->Show(nullptr)) &&
+			SUCCEEDED(FileOpen->GetResult(&Item)) &&
+			SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
 		{
-			ComPtr<IShellItem> Item;
-			if (SUCCEEDED(FileOpen->GetResult(&Item)))
-			{
-				PWSTR pszFilePath;
-				// Display the file name to the user.
-				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-				{
-					Path = pszFilePath;
-					CoTaskMemFree(pszFilePath);
-				}
-			}
+			// Display the file name to the user.
+			Path = pszFilePath;
+			CoTaskMemFree(pszFilePath);
 		}
 	}
 
@@ -61,35 +57,26 @@ std::vector<std::filesystem::path> FileSystem::OpenDialogMultiple(Span<const Fil
 		FileOpen->SetFileTypes(static_cast<UINT>(Specs.size()), Specs.data());
 
 		DWORD Options;
-		if (SUCCEEDED(FileOpen->GetOptions(&Options)))
+		if (SUCCEEDED(FileOpen->GetOptions(&Options)) &&
+			SUCCEEDED(FileOpen->SetOptions(Options | FOS_ALLOWMULTISELECT)) &&
+			SUCCEEDED(FileOpen->Show(nullptr)))
 		{
-			if (SUCCEEDED(FileOpen->SetOptions(Options | FOS_ALLOWMULTISELECT)))
+			ComPtr<IShellItemArray> ItemArray;
+			DWORD					Count;
+			if (SUCCEEDED(FileOpen->GetResults(&ItemArray)) &&
+				SUCCEEDED(ItemArray->GetCount(&Count)))
 			{
-				if (SUCCEEDED(FileOpen->Show(nullptr)))
-				{
-					ComPtr<IShellItemArray> ItemArray;
-					if (SUCCEEDED(FileOpen->GetResults(&ItemArray)))
-					{
-						DWORD Count;
-						if (SUCCEEDED(ItemArray->GetCount(&Count)))
-						{
-							Paths.reserve(Count);
+				Paths.reserve(Count);
 
-							for (DWORD Index = 0; Index < Count; ++Index)
-							{
-								ComPtr<IShellItem> Item;
-								if (SUCCEEDED(ItemArray->GetItemAt(Index, &Item)))
-								{
-									PWSTR pszFilePath;
-									// Display the file name to the user.
-									if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-									{
-										Paths.emplace_back(pszFilePath);
-										CoTaskMemFree(pszFilePath);
-									}
-								}
-							}
-						}
+				ComPtr<IShellItem> Item;
+				PWSTR			   pszFilePath = nullptr;
+				for (DWORD Index = 0; Index < Count; ++Index)
+				{
+					if (SUCCEEDED(ItemArray->GetItemAt(Index, &Item)) &&
+						SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
+					{
+						Paths.emplace_back(pszFilePath);
+						CoTaskMemFree(pszFilePath);
 					}
 				}
 			}
@@ -116,19 +103,15 @@ std::filesystem::path FileSystem::SaveDialog(Span<const FilterDesc> FilterSpecs)
 
 		// Show the Save dialog box.
 		// Get the file name from the dialog box.
-		if (SUCCEEDED(FileSave->Show(nullptr)))
+		ComPtr<IShellItem> Item;
+		PWSTR			   pszFilePath = nullptr;
+		if (SUCCEEDED(FileSave->Show(nullptr)) &&
+			SUCCEEDED(FileSave->GetResult(&Item)) &&
+			SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
 		{
-			ComPtr<IShellItem> Item;
-			if (SUCCEEDED(FileSave->GetResult(&Item)))
-			{
-				PWSTR pszFilePath;
-				// Display the file name to the user.
-				if (SUCCEEDED(Item->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath)))
-				{
-					Path = pszFilePath;
-					CoTaskMemFree(pszFilePath);
-				}
-			}
+			// Display the file name to the user.
+			Path = pszFilePath;
+			CoTaskMemFree(pszFilePath);
 		}
 	}
 

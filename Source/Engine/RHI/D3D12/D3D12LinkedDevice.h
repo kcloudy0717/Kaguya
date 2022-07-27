@@ -67,8 +67,8 @@ namespace RHI
 		D3D12NodeMask	  NodeMask;
 		D3D12CommandQueue GraphicsQueue;
 		D3D12CommandQueue AsyncComputeQueue;
-		D3D12CommandQueue CopyQueue1;
-		D3D12CommandQueue CopyQueue2;
+		D3D12CommandQueue CopyQueue;
+		D3D12CommandQueue UploadQueue;
 		D3D12Profiler	  Profiler;
 
 		CDescriptorHeapManager RtvHeapManager;

@@ -19,6 +19,7 @@ namespace OS
 			_Inout_ PTP_WORK			  Work) noexcept
 		{
 			UNREFERENCED_PARAMETER(Instance);
+			assert(Context);
 			auto Entry = static_cast<WorkEntry*>(Context);
 			Entry->Work(Entry->Context);
 			delete Entry;
@@ -50,9 +51,9 @@ public:
 		SetThreadpoolCallbackPool(&Environment, Pool);
 		SetThreadpoolCallbackCleanupGroup(&Environment, CleanupGroup, nullptr);
 	}
-	~WindowsThreadPool()
+	~WindowsThreadPool() override
 	{
-		CloseThreadpoolCleanupGroupMembers(CleanupGroup, bCancelPendingWorkOnCleanup, nullptr);
+		CloseThreadpoolCleanupGroupMembers(CleanupGroup, TRUE, nullptr);
 		CloseThreadpoolCleanupGroup(CleanupGroup);
 		CloseThreadpool(Pool);
 		DestroyThreadpoolEnvironment(&Environment);
@@ -81,7 +82,6 @@ private:
 	TP_CALLBACK_ENVIRON Environment;
 	PTP_POOL			Pool						= nullptr;
 	PTP_CLEANUP_GROUP	CleanupGroup				= nullptr;
-	bool				bCancelPendingWorkOnCleanup = true;
 };
 
 std::unique_ptr<ThreadPool> ThreadPool::Create()

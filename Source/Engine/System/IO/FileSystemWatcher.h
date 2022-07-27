@@ -7,6 +7,11 @@
 #include "Platform.h"
 #include "Delegate.h"
 
+struct FileSystemEventArgs
+{
+	std::filesystem::path Path;
+};
+
 class FileSystemWatcher
 {
 public:

@@ -27,11 +27,12 @@ namespace RHI
 		Upload, // Data initialization during resource creation
 	};
 
-	class D3D12Exception : public Exception
+	class ExceptionD3D12 : public Exception
 	{
 	public:
-		D3D12Exception(std::string_view File, int Line, HRESULT ErrorCode);
+		ExceptionD3D12(std::string_view File, int Line, HRESULT ErrorCode);
 
+	private:
 		const char* GetErrorType() const noexcept override;
 		std::string GetError() const override;
 

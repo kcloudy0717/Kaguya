@@ -1,5 +1,5 @@
 #pragma once
-#include <filesystem>
+#include <type_traits>
 
 using i8  = signed char;
 using i16 = short;
@@ -144,8 +144,3 @@ enum class NotifyFilters
 	All = 0xff
 };
 ENABLE_BITMASK_OPERATORS(NotifyFilters);
-
-struct FileSystemEventArgs
-{
-	std::filesystem::path Path;
-};

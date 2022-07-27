@@ -21,7 +21,7 @@ public:
 	[[nodiscard]] bool	CanRead() const noexcept;
 	[[nodiscard]] bool	CanWrite() const noexcept;
 
-	[[nodiscard]] std::unique_ptr<std::byte[]> ReadAll() const;
+	[[nodiscard]] std::unique_ptr<u8[]> ReadAll() const;
 
 	u64 Read(void* Buffer, u64 SizeInBytes) const;
 

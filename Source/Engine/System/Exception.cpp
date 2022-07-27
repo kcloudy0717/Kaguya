@@ -15,7 +15,7 @@ const char* Exception::what() const noexcept
 
 const char* Exception::GetErrorType() const noexcept
 {
-	return "[Core]";
+	return "[Unknown]";
 }
 
 std::string Exception::GetError() const
@@ -25,14 +25,14 @@ std::string Exception::GetError() const
 
 std::string Exception::GetExceptionOrigin() const
 {
-	std::ostringstream oss;
-	oss << "[File] " << File << std::endl << "[Line] " << Line;
-	return oss.str();
+	std::ostringstream Stream;
+	Stream << "[File] " << File << std::endl << "[Line] " << Line;
+	return Stream.str();
 }
 
 std::string Exception::GetErrorString() const
 {
-	std::ostringstream oss;
-	oss << GetErrorType() << std::endl << GetExceptionOrigin() << std::endl << GetError();
-	return oss.str();
+	std::ostringstream Stream;
+	Stream << GetErrorType() << std::endl << GetExceptionOrigin() << std::endl << GetError();
+	return Stream.str();
 }

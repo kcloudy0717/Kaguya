@@ -52,6 +52,9 @@ namespace RHI
 		Parameters.reserve(D3D12_MAX_ROOT_COST);
 		DescriptorTableIndices.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
 		DescriptorTables.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
+		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
+		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
+		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 	}
 
 	RootSignatureDesc& RootSignatureDesc::AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable)
@@ -75,31 +78,6 @@ namespace RHI
 	RootSignatureDesc& RootSignatureDesc::DenyVSAccess() noexcept
 	{
 		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS;
-		return *this;
-	}
-
-	RootSignatureDesc& RootSignatureDesc::DenyHSAccess() noexcept
-	{
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
-		return *this;
-	}
-
-	RootSignatureDesc& RootSignatureDesc::DenyDSAccess() noexcept
-	{
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
-		return *this;
-	}
-
-	RootSignatureDesc& RootSignatureDesc::DenyTessellationShaderAccess() noexcept
-	{
-		DenyHSAccess();
-		DenyDSAccess();
-		return *this;
-	}
-
-	RootSignatureDesc& RootSignatureDesc::DenyGSAccess() noexcept
-	{
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 		return *this;
 	}
 

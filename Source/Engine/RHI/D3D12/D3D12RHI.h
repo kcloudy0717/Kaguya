@@ -89,7 +89,7 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 		HRESULT hr = expr;                                     \
 		if (FAILED(hr))                                        \
 		{                                                      \
-			throw RHI::D3D12Exception(__FILE__, __LINE__, hr); \
+			throw RHI::ExceptionD3D12(__FILE__, __LINE__, hr); \
 		}                                                      \
 	} while (false)
 

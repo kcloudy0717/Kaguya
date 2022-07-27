@@ -9,4 +9,7 @@ public:
 
 	// Creates or overwrites a file in the specified path.
 	[[nodiscard]] static FileStream Create(const std::filesystem::path& Path);
+	// Read a file from the specified path.
+	// throws if the file does not exist.
+	[[nodiscard]] static FileStream Read(const std::filesystem::path& Path);
 };

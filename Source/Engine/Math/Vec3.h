@@ -227,6 +227,13 @@ namespace Math
 		return dot(n, v) < 0.0f ? -n : n;
 	}
 
+	using uint3	  = Vec<unsigned, 3>;
+	using int3	  = Vec<int, 3>;
+	using float3  = Vec<float, 3>;
+	using double3 = Vec<double, 3>;
+	using bool3	  = Vec<bool, 3>;
+
+	using Vec3u = Vec<unsigned, 3>;
 	using Vec3i = Vec<int, 3>;
 	using Vec3f = Vec<float, 3>;
 	using Vec3d = Vec<double, 3>;

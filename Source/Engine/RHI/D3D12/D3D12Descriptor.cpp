@@ -357,11 +357,11 @@ namespace RHI
 		{
 			if (DSMode != ReadOrWrite)
 			{
-				bool bWritable = DSMode == WriteOnly;
-				bool bDepth	   = !(Desc.Flags & D3D12_DSV_FLAG_READ_ONLY_DEPTH) == bWritable;
-				bool bStencil  = !(Desc.Flags & D3D12_DSV_FLAG_READ_ONLY_STENCIL) == bWritable;
-				BeginPlane	   = (bDepth ? 0 : 1);
-				EndPlane	   = (bStencil ? 2 : 1);
+				bool IsWritable = DSMode == WriteOnly;
+				bool IsDepth	= !(Desc.Flags & D3D12_DSV_FLAG_READ_ONLY_DEPTH) == IsWritable;
+				bool IsStencil	= !(Desc.Flags & D3D12_DSV_FLAG_READ_ONLY_STENCIL) == IsWritable;
+				BeginPlane		= IsDepth ? 0 : 1;
+				EndPlane		= IsStencil ? 2 : 1;
 			}
 			else
 			{
@@ -397,19 +397,18 @@ namespace RHI
 	{
 		if (BeginMip == 0 && EndMip == MipLevels && BeginArray == 0 && EndArray == ArraySlices)
 		{
-			UINT startSubresource = D3D12CalcSubresource(0, 0, BeginPlane, MipLevels, ArraySlices);
-			UINT endSubresource	  = D3D12CalcSubresource(0, 0, EndPlane, MipLevels, ArraySlices);
-
+			UINT StartSubresource = D3D12CalcSubresource(0, 0, BeginPlane, MipLevels, ArraySlices);
+			UINT EndSubresource	  = D3D12CalcSubresource(0, 0, EndPlane, MipLevels, ArraySlices);
 			// Only coalesce if the full-resolution UINTs fit in the UINT8s used
 			// for storage here
-			if (endSubresource < static_cast<UINT8>(-1))
+			if (EndSubresource < static_cast<UINT8>(-1))
 			{
 				BeginArray = 0;
 				EndArray   = 1;
 				BeginPlane = 0;
 				EndPlane   = 1;
-				BeginMip   = static_cast<UINT8>(startSubresource);
-				EndMip	   = static_cast<UINT8>(endSubresource);
+				BeginMip   = static_cast<UINT8>(StartSubresource);
+				EndMip	   = static_cast<UINT8>(EndSubresource);
 			}
 		}
 	}
@@ -442,6 +441,11 @@ namespace RHI
 				  ViewDesc.Format						 = sRGB ? Internal::MakeSRGB(Desc.Format) : Desc.Format;
 				  switch (Desc.Dimension)
 				  {
+				  case D3D12_RESOURCE_DIMENSION_UNKNOWN:
+				  case D3D12_RESOURCE_DIMENSION_BUFFER:
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+					  assert(false && "Not implemented");
+
 				  case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
 					  if (Desc.DepthOrArraySize > 1)
 					  {
@@ -459,9 +463,8 @@ namespace RHI
 					  }
 					  break;
 
-				  default:
-					  std::unreachable();
-					  break;
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+					  assert(false && "Not implemented");
 				  }
 				  return ViewDesc;
 			  }(),
@@ -517,6 +520,11 @@ namespace RHI
 				  ViewDesc.Flags = D3D12_DSV_FLAG_NONE;
 				  switch (Desc.Dimension)
 				  {
+				  case D3D12_RESOURCE_DIMENSION_UNKNOWN:
+				  case D3D12_RESOURCE_DIMENSION_BUFFER:
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+					  assert(false && "Not implemented");
+
 				  case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
 					  if (Desc.DepthOrArraySize > 1)
 					  {
@@ -534,10 +542,6 @@ namespace RHI
 
 				  case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
 					  assert(false && "Invalid D3D12_RESOURCE_DIMENSION. Dimension: D3D12_RESOURCE_DIMENSION_TEXTURE3D");
-					  break;
-
-				  default:
-					  std::unreachable();
 					  break;
 				  }
 				  return ViewDesc;
@@ -636,7 +640,7 @@ namespace RHI
 				  D3D12_RESOURCE_DESC Desc = Texture->GetDesc();
 
 				  D3D12_SHADER_RESOURCE_VIEW_DESC ViewDesc = {};
-				  ViewDesc.Format						   = [](DXGI_FORMAT Format, bool sRGB)
+				  ViewDesc.Format						   = [sRGB](DXGI_FORMAT Format)
 				  {
 					  if (sRGB)
 					  {
@@ -650,10 +654,15 @@ namespace RHI
 					  }
 
 					  return Format;
-				  }(Desc.Format, sRGB);
+				  }(Desc.Format);
 				  ViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 				  switch (Desc.Dimension)
 				  {
+				  case D3D12_RESOURCE_DIMENSION_UNKNOWN:
+				  case D3D12_RESOURCE_DIMENSION_BUFFER:
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+					  assert(false && "Not implemented");
+
 				  case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
 				  {
 					  if (Desc.DepthOrArraySize > 1)
@@ -685,9 +694,8 @@ namespace RHI
 				  }
 				  break;
 
-				  default:
-					  std::unreachable();
-					  break;
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+					  assert(false && "Not implemented");
 				  }
 				  return ViewDesc;
 			  }(),
@@ -730,15 +738,17 @@ namespace RHI
 			  Device,
 			  [&]
 			  {
-				  D3D12_UNORDERED_ACCESS_VIEW_DESC ViewDesc = {};
-				  ViewDesc.Format							= DXGI_FORMAT_UNKNOWN;
-				  ViewDesc.ViewDimension					= D3D12_UAV_DIMENSION_BUFFER;
-				  ViewDesc.Buffer.FirstElement				= 0;
-				  ViewDesc.Buffer.NumElements				= NumElements;
-				  ViewDesc.Buffer.StructureByteStride		= Buffer->GetStride();
-				  ViewDesc.Buffer.CounterOffsetInBytes		= CounterOffsetInBytes;
-				  ViewDesc.Buffer.Flags						= D3D12_BUFFER_UAV_FLAG_NONE;
-				  return ViewDesc;
+				  return D3D12_UNORDERED_ACCESS_VIEW_DESC{
+					  .Format		 = DXGI_FORMAT_UNKNOWN,
+					  .ViewDimension = D3D12_UAV_DIMENSION_BUFFER,
+					  .Buffer		 = {
+								 .FirstElement		   = 0,
+								 .NumElements		   = NumElements,
+								 .StructureByteStride  = Buffer->GetStride(),
+								 .CounterOffsetInBytes = CounterOffsetInBytes,
+								 .Flags				   = D3D12_BUFFER_UAV_FLAG_NONE,
+						 },
+				  };
 			  }(),
 			  Buffer,
 			  Buffer)
@@ -759,6 +769,11 @@ namespace RHI
 				  ViewDesc.Format							= Desc.Format;
 				  switch (Desc.Dimension)
 				  {
+				  case D3D12_RESOURCE_DIMENSION_UNKNOWN:
+				  case D3D12_RESOURCE_DIMENSION_BUFFER:
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+					  assert(false && "Not implemented");
+
 				  case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
 					  if (Desc.DepthOrArraySize > 1)
 					  {
@@ -776,8 +791,8 @@ namespace RHI
 					  }
 					  break;
 
-				  default:
-					  break;
+				  case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+					  assert(false && "Not implemented");
 				  }
 				  return ViewDesc;
 			  }(),

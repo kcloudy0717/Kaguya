@@ -4,15 +4,16 @@
 
 DECLARE_LOG_CATEGORY(Dxc);
 
-class DxcException : public Exception
+class ExceptionDxc : public Exception
 {
 public:
-	DxcException(std::string_view File, int Line, HRESULT ErrorCode)
+	ExceptionDxc(std::string_view File, int Line, HRESULT ErrorCode)
 		: Exception(File, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}
 
+private:
 	const char* GetErrorType() const noexcept override;
 	std::string GetError() const override;
 

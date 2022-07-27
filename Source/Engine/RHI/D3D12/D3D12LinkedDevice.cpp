@@ -25,8 +25,8 @@ namespace RHI
 		, NodeMask(NodeMask)
 		, GraphicsQueue(this, RHID3D12CommandQueueType::Direct)
 		, AsyncComputeQueue(this, RHID3D12CommandQueueType::AsyncCompute)
-		, CopyQueue1(this, RHID3D12CommandQueueType::Copy)
-		, CopyQueue2(this, RHID3D12CommandQueueType::Upload)
+		, CopyQueue(this, RHID3D12CommandQueueType::Copy)
+		, UploadQueue(this, RHID3D12CommandQueueType::Upload)
 		, Profiler(this, 1)
 		, RtvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CVar_DescriptorAllocatorPageSize)
 		, DsvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CVar_DescriptorAllocatorPageSize)
@@ -76,8 +76,8 @@ namespace RHI
 			using enum RHID3D12CommandQueueType;
 		case Direct:		return &GraphicsQueue;
 		case AsyncCompute:	return &AsyncComputeQueue;
-		case Copy:			return &CopyQueue1;
-		case Upload:			return &CopyQueue2;
+		case Copy:			return &CopyQueue;
+		case Upload:		return &UploadQueue;
 		}
 		// clang-format on
 		return nullptr;
@@ -180,7 +180,6 @@ namespace RHI
 			// alignment is 64KiB for a texture whose most detailed mip can fit in an
 			// allocation less than 4MiB.
 			Desc->Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
-
 			D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(*Desc);
 			if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
@@ -189,10 +188,8 @@ namespace RHI
 				Desc->Alignment = 0;
 				return false;
 			}
-
 			return true;
 		}
-
 		return false;
 	}
 
@@ -200,8 +197,8 @@ namespace RHI
 	{
 		GraphicsQueue.WaitIdle();
 		AsyncComputeQueue.WaitIdle();
-		CopyQueue1.WaitIdle();
-		CopyQueue2.WaitIdle();
+		CopyQueue.WaitIdle();
+		UploadQueue.WaitIdle();
 	}
 
 	void D3D12LinkedDevice::BeginResourceUpload()
