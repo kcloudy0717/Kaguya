@@ -17,7 +17,7 @@ namespace RHI
 		: Device(InitializeDevice(Options))
 		, Device1(DeviceQueryInterface<ID3D12Device1>())
 		, Device5(DeviceQueryInterface<ID3D12Device5>())
-		, AllNodeMask(D3D12NodeMask::FromIndex(Device->GetNodeCount() - 1))
+		, AllNodeMask((1 << Device->GetNodeCount()) - 1)
 		, FeatureSupport(InitializeFeatureSupport(Options))
 		, DescriptorSizeCache(InitializeDescriptorSizeCache())
 		, Dred(Device.Get())
