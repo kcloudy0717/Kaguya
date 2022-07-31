@@ -245,19 +245,8 @@ public:
 			IsEdited |= UIWindow::RenderFloatControl("Vertical FoV", &EditorCamera.CameraComponent.FoVY, CameraComponent().FoVY, 45.0f, 85.0f);
 			IsEdited |= UIWindow::RenderFloatControl("Near", &EditorCamera.CameraComponent.NearZ, CameraComponent().NearZ, 0.1f, 1.0f);
 			IsEdited |= UIWindow::RenderFloatControl("Far", &EditorCamera.CameraComponent.FarZ, CameraComponent().FarZ, 10.0f, 10000.0f);
-
-			IsEdited |= UIWindow::RenderFloatControl(
-				"Movement Speed",
-				&EditorCamera.CameraComponent.MovementSpeed,
-				CameraComponent().MovementSpeed,
-				1.0f,
-				1000.0f);
-			IsEdited |= UIWindow::RenderFloatControl(
-				"Strafe Speed",
-				&EditorCamera.CameraComponent.StrafeSpeed,
-				CameraComponent().StrafeSpeed,
-				1.0f,
-				1000.0f);
+			IsEdited |= UIWindow::RenderFloatControl("Movement Speed", &EditorCamera.CameraComponent.MovementSpeed, CameraComponent().MovementSpeed, 1.0f, 1000.0f);
+			IsEdited |= UIWindow::RenderFloatControl("Strafe Speed", &EditorCamera.CameraComponent.StrafeSpeed, CameraComponent().StrafeSpeed, 1.0f, 1000.0f);
 			EditorCamera.CameraComponent.Dirty = IsEdited;
 		}
 		ImGui::End();

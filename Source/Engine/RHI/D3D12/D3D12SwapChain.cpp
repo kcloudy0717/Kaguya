@@ -100,7 +100,7 @@ namespace RHI
 
 	void D3D12SwapChain::EnsureSwapChainColorSpace(BitDepth BitDepth, bool EnableST2084)
 	{
-		DXGI_COLOR_SPACE_TYPE ColorSpace;
+		DXGI_COLOR_SPACE_TYPE ColorSpace = {};
 		switch (BitDepth)
 		{
 		case _8:

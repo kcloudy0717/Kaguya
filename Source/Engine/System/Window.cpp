@@ -1,4 +1,4 @@
-﻿#include "Window.h"
+#include "Window.h"
 #include "Application.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -50,11 +50,12 @@ void Window::Initialize(Application* Application, Window* Parent, HINSTANCE HIns
 	::GetClientRect(WindowHandle.Get(), &ClientRect);
 	Resize(ClientRect.right - ClientRect.left, ClientRect.bottom - ClientRect.top);
 
-	RAWINPUTDEVICE RawInputDevice = {};
-	RawInputDevice.usUsagePage	  = HID_USAGE_PAGE_GENERIC;
-	RawInputDevice.usUsage		  = HID_USAGE_GENERIC_MOUSE;
-	RawInputDevice.dwFlags		  = RIDEV_INPUTSINK;
-	RawInputDevice.hwndTarget	  = WindowHandle.Get();
+	const RAWINPUTDEVICE RawInputDevice = {
+		.usUsagePage = HID_USAGE_PAGE_GENERIC,
+		.usUsage	 = HID_USAGE_GENERIC_MOUSE,
+		.dwFlags	 = RIDEV_INPUTSINK,
+		.hwndTarget	 = WindowHandle.Get(),
+	};
 	if (!RegisterRawInputDevices(&RawInputDevice, 1, sizeof(RAWINPUTDEVICE)))
 	{
 		throw std::runtime_error("RegisterRawInputDevices");
