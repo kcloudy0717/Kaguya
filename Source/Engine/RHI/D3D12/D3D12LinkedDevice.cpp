@@ -1,11 +1,6 @@
 #include "D3D12LinkedDevice.h"
 #include "D3D12Device.h"
 
-static ConsoleVariable CVar_DescriptorAllocatorPageSize(
-	"D3D12.DescriptorAllocatorPageSize",
-	"Descriptor Allocator Page Size",
-	2048);
-
 static ConsoleVariable CVar_GlobalResourceViewHeapSize(
 	"D3D12.GlobalResourceViewHeapSize",
 	"Global Resource View Heap Size",
@@ -28,9 +23,10 @@ namespace RHI
 		, CopyQueue(this, RHID3D12CommandQueueType::Copy)
 		, UploadQueue(this, RHID3D12CommandQueueType::Upload)
 		, Profiler(this, 1)
-		, RtvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CVar_DescriptorAllocatorPageSize)
-		, DsvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, CVar_DescriptorAllocatorPageSize)
-		, CbvSrvUavHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_DescriptorAllocatorPageSize)
+		, RtvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256)
+		, DsvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256)
+		, SrvHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024)
+		, UavHeapManager(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024)
 		, ResourceDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, CVar_GlobalResourceViewHeapSize)
 		, SamplerDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, CVar_GlobalSamplerHeapSize)
 		, GraphicsContext(this, RHID3D12CommandQueueType::Direct, D3D12_COMMAND_LIST_TYPE_DIRECT)

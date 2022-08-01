@@ -5,12 +5,15 @@
 
 struct PathIntegratorSettings
 {
-	static constexpr UINT MinimumDepth = 1;
-	static constexpr UINT MaximumDepth = 32;
+	static constexpr u32 MinimumDepth		 = 1;
+	static constexpr u32 MaximumDepth		 = 32;
+	static constexpr u32 MinimumAccumulation = 1;
+	static constexpr u32 MaximumAccumulation = 2048;
 
-	float SkyIntensity = 1.0f;
-	UINT  MaxDepth	   = 16;
-	bool  Antialiasing = true;
+	float SkyIntensity	  = 1.0f;
+	u32	  MaxDepth		  = 16;
+	u32	  MaxAccumulation = 1024;
+	bool  Antialiasing	  = true;
 };
 
 class PathIntegratorDXR1_0 final : public Renderer

@@ -42,6 +42,7 @@ void PathIntegratorDXR1_1::RenderOptions()
 	ResetPathIntegrator |= ImGui::Checkbox("Anti-aliasing", &Settings.Antialiasing);
 	ResetPathIntegrator |= ImGui::SliderFloat("Sky Intensity", &Settings.SkyIntensity, 0.0f, 50.0f);
 	ResetPathIntegrator |= ImGui::SliderScalar("Max Depth", ImGuiDataType_U32, &Settings.MaxDepth, &PathIntegratorSettings::MinimumDepth, &PathIntegratorSettings::MaximumDepth);
+	ResetPathIntegrator |= ImGui::SliderScalar("Max Accumulation", ImGuiDataType_U32, &Settings.MaxAccumulation, &PathIntegratorSettings::MinimumAccumulation, &PathIntegratorSettings::MaximumAccumulation);
 	ResetPathIntegrator |= ImGui::Checkbox("Enable Bloom", &PostProcess.EnableBloom);
 	ImGui::SliderFloat("Bloom Threshold", &PostProcess.BloomThreshold, 0.0f, 50.0f);
 	ImGui::SliderFloat("Bloom Intensity", &PostProcess.BloomIntensity, 0.0f, 50.0f);
@@ -99,6 +100,11 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 		.Write({ &PathTraceArgs.Output })
 		.Execute([=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				 {
+					 if (NumTemporalSamples >= Settings.MaxAccumulation)
+					 {
+						 return;
+					 }
+
 					 _declspec(align(256)) struct GlobalConstants
 					 {
 						 Hlsl::Camera Camera;
