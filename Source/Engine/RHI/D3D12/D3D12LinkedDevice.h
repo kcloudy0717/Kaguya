@@ -18,14 +18,14 @@ namespace RHI
 
 		[[nodiscard]] ID3D12Device*		   GetDevice() const noexcept;
 		[[nodiscard]] ID3D12Device5*	   GetDevice5() const noexcept;
-		[[nodiscard]] D3D12NodeMask		   GetNodeMask() const noexcept;
+		[[nodiscard]] D3D12NodeMask		   GetNodeMask() const noexcept { return NodeMask; }
 		[[nodiscard]] D3D12CommandQueue*   GetCommandQueue(RHID3D12CommandQueueType Type) noexcept;
-		[[nodiscard]] D3D12CommandQueue*   GetGraphicsQueue() noexcept;
-		[[nodiscard]] D3D12CommandQueue*   GetAsyncComputeQueue() noexcept;
-		[[nodiscard]] D3D12CommandQueue*   GetCopyQueue1() noexcept;
-		[[nodiscard]] D3D12Profiler*	   GetProfiler() noexcept;
-		[[nodiscard]] D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept;
-		[[nodiscard]] D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept;
+		[[nodiscard]] D3D12CommandQueue*   GetGraphicsQueue() noexcept { return &GraphicsQueue; }
+		[[nodiscard]] D3D12CommandQueue*   GetAsyncComputeQueue() noexcept { return &AsyncComputeQueue; }
+		[[nodiscard]] D3D12CommandQueue*   GetCopyQueue() noexcept { return &CopyQueue; }
+		[[nodiscard]] D3D12Profiler*	   GetProfiler() noexcept { return &Profiler; }
+		[[nodiscard]] D3D12DescriptorHeap& GetResourceDescriptorHeap() noexcept { return ResourceDescriptorHeap; }
+		[[nodiscard]] D3D12DescriptorHeap& GetSamplerDescriptorHeap() noexcept { return SamplerDescriptorHeap; }
 		// clang-format off
 		template<typename ViewDesc> CDescriptorHeapManager* GetHeapManager() noexcept;
 		template<> CDescriptorHeapManager* GetHeapManager<D3D12_RENDER_TARGET_VIEW_DESC>() noexcept { return &RtvHeapManager; }
@@ -40,11 +40,10 @@ namespace RHI
 		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_UNORDERED_ACCESS_VIEW_DESC>() noexcept { return &ResourceDescriptorHeap; }
 		template<> D3D12DescriptorHeap* GetDescriptorHeap<D3D12_SAMPLER_DESC>() noexcept { return &SamplerDescriptorHeap; }
 		// clang-format on
-		[[nodiscard]] D3D12CommandContext& GetGraphicsContext();
-		[[nodiscard]] D3D12CommandContext& GetComputeContext();
-		[[nodiscard]] D3D12CommandContext& GetCopyContext();
-
-		[[nodiscard]] D3D12ShaderResourceView* GetNullRaytracingAcceleraionStructure();
+		[[nodiscard]] D3D12CommandContext&	   GetGraphicsContext() { return GraphicsContext; }
+		[[nodiscard]] D3D12CommandContext&	   GetComputeContext() { return ComputeContext; }
+		[[nodiscard]] D3D12CommandContext&	   GetCopyContext() { return CopyContext; }
+		[[nodiscard]] D3D12ShaderResourceView* GetNullRaytracingAcceleraionStructure() { return &NullRaytracingAccelerationStructure; }
 
 		void OnBeginFrame();
 		void OnEndFrame();

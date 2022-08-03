@@ -5,8 +5,45 @@ namespace RHI
 {
 	class D3D12DescriptorHeap;
 
-	namespace Internal
+	struct DeferredDeleteDescriptor
 	{
+		void Release();
+
+		D3D12DescriptorHeap* OwningHeap = nullptr;
+		UINT				 Index;
+	};
+
+	// Dynamic resource binding heap, descriptor index are maintained in a free list
+	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
+	{
+	public:
+		D3D12DescriptorHeap() noexcept = default;
+		explicit D3D12DescriptorHeap(
+			D3D12LinkedDevice*		   Parent,
+			D3D12_DESCRIPTOR_HEAP_TYPE Type,
+			UINT					   NumDescriptors);
+
+		[[nodiscard]] ID3D12DescriptorHeap* GetApiHandle() const noexcept { return DescriptorHeap; }
+
+		void SetName(LPCWSTR Name) const { DescriptorHeap->SetName(Name); }
+
+		void Allocate(
+			D3D12_CPU_DESCRIPTOR_HANDLE& CpuDescriptorHandle,
+			D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
+			UINT&						 Index);
+
+		void Release(UINT Index);
+
+		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuDescriptorHandle(UINT Index) const noexcept;
+		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(UINT Index) const noexcept;
+
+	private:
+		Arc<ID3D12DescriptorHeap>	DescriptorHeap;
+		D3D12_DESCRIPTOR_HEAP_DESC	Desc;
+		D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
+		UINT						DescriptorSize = 0;
+
 		struct DescriptorIndexPool
 		{
 			// Removes the first element from the free list and returns its index
@@ -32,50 +69,8 @@ namespace RHI
 
 			std::queue<UINT> IndexQueue;
 			UINT			 Index = 0;
-		};
-	} // namespace Internal
-
-	struct DeferredDeleteDescriptor
-	{
-		void Release();
-
-		D3D12DescriptorHeap* OwningHeap = nullptr;
-		UINT				 Index;
-	};
-
-	// Dynamic resource binding heap, descriptor index are maintained in a free list
-	class D3D12DescriptorHeap : public D3D12LinkedDeviceChild
-	{
-	public:
-		D3D12DescriptorHeap() noexcept = default;
-		explicit D3D12DescriptorHeap(
-			D3D12LinkedDevice*		   Parent,
-			D3D12_DESCRIPTOR_HEAP_TYPE Type,
-			UINT					   NumDescriptors);
-
-		void SetName(LPCWSTR Name) const { DescriptorHeap->SetName(Name); }
-
-		operator ID3D12DescriptorHeap*() const noexcept { return DescriptorHeap.Get(); }
-
-		void Allocate(
-			D3D12_CPU_DESCRIPTOR_HANDLE& CpuDescriptorHandle,
-			D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
-			UINT&						 Index);
-
-		void Release(UINT Index);
-
-		[[nodiscard]] D3D12_CPU_DESCRIPTOR_HANDLE GetCpuDescriptorHandle(UINT Index) const noexcept;
-		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(UINT Index) const noexcept;
-
-	private:
-		Arc<ID3D12DescriptorHeap>	DescriptorHeap;
-		D3D12_DESCRIPTOR_HEAP_DESC	Desc;
-		D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
-		D3D12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
-		UINT						DescriptorSize = 0;
-
-		Internal::DescriptorIndexPool IndexPool;
-		std::unique_ptr<Mutex>		  IndexMutex;
+		} IndexPool;
+		std::unique_ptr<Mutex> IndexMutex;
 	};
 
 	// Used for RTV/DSV Heaps, Source: https://github.com/microsoft/D3D12TranslationLayer/blob/master/include/ImmediateContext.hpp#L320

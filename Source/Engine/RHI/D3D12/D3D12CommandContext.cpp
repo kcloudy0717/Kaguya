@@ -57,21 +57,6 @@ namespace RHI
 		return GetParentLinkedDevice()->GetCommandQueue(Type);
 	}
 
-	ID3D12GraphicsCommandList* D3D12CommandContext::GetGraphicsCommandList() const noexcept
-	{
-		return CommandListHandle.GetGraphicsCommandList();
-	}
-
-	ID3D12GraphicsCommandList4* D3D12CommandContext::GetGraphicsCommandList4() const noexcept
-	{
-		return CommandListHandle.GetGraphicsCommandList4();
-	}
-
-	ID3D12GraphicsCommandList6* D3D12CommandContext::GetGraphicsCommandList6() const noexcept
-	{
-		return CommandListHandle.GetGraphicsCommandList6();
-	}
-
 	void D3D12CommandContext::Open()
 	{
 		if (!CommandAllocator)
@@ -83,8 +68,8 @@ namespace RHI
 		if (Type == RHID3D12CommandQueueType::Direct || Type == RHID3D12CommandQueueType::AsyncCompute)
 		{
 			ID3D12DescriptorHeap* const DescriptorHeaps[2] = {
-				GetParentLinkedDevice()->GetResourceDescriptorHeap(),
-				GetParentLinkedDevice()->GetSamplerDescriptorHeap(),
+				GetParentLinkedDevice()->GetResourceDescriptorHeap().GetApiHandle(),
+				GetParentLinkedDevice()->GetSamplerDescriptorHeap().GetApiHandle(),
 			};
 
 			CommandListHandle->SetDescriptorHeaps(2, DescriptorHeaps);

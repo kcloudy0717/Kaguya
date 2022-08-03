@@ -6,9 +6,7 @@
 #include <utility>
 #include "Sync/Event.h"
 
-// Learning coroutines
-// These are highly unstable
-
+// C++20 coroutines
 /*
  * A coroutine is a generalization of a subroutine
  *
@@ -174,7 +172,10 @@ namespace Async
 				Exception = std::current_exception();
 				try
 				{
-					std::rethrow_exception(Exception);
+					if (Exception)
+					{
+						std::rethrow_exception(Exception);
+					}
 				}
 				catch (const cancelled_promise&)
 				{

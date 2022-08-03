@@ -59,11 +59,6 @@ namespace RHI
 		return GetParentDevice()->GetD3D12Device5();
 	}
 
-	D3D12NodeMask D3D12LinkedDevice::GetNodeMask() const noexcept
-	{
-		return NodeMask;
-	}
-
 	D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(RHID3D12CommandQueueType Type) noexcept
 	{
 		// clang-format off
@@ -77,56 +72,6 @@ namespace RHI
 		}
 		// clang-format on
 		return nullptr;
-	}
-
-	D3D12CommandQueue* D3D12LinkedDevice::GetGraphicsQueue() noexcept
-	{
-		return GetCommandQueue(RHID3D12CommandQueueType::Direct);
-	}
-
-	D3D12CommandQueue* D3D12LinkedDevice::GetAsyncComputeQueue() noexcept
-	{
-		return GetCommandQueue(RHID3D12CommandQueueType::AsyncCompute);
-	}
-
-	D3D12CommandQueue* D3D12LinkedDevice::GetCopyQueue1() noexcept
-	{
-		return GetCommandQueue(RHID3D12CommandQueueType::Copy);
-	}
-
-	D3D12Profiler* D3D12LinkedDevice::GetProfiler() noexcept
-	{
-		return &Profiler;
-	}
-
-	D3D12DescriptorHeap& D3D12LinkedDevice::GetResourceDescriptorHeap() noexcept
-	{
-		return ResourceDescriptorHeap;
-	}
-
-	D3D12DescriptorHeap& D3D12LinkedDevice::GetSamplerDescriptorHeap() noexcept
-	{
-		return SamplerDescriptorHeap;
-	}
-
-	D3D12CommandContext& D3D12LinkedDevice::GetGraphicsContext()
-	{
-		return GraphicsContext;
-	}
-
-	D3D12CommandContext& D3D12LinkedDevice::GetComputeContext()
-	{
-		return ComputeContext;
-	}
-
-	D3D12CommandContext& D3D12LinkedDevice::GetCopyContext()
-	{
-		return CopyContext;
-	}
-
-	D3D12ShaderResourceView* D3D12LinkedDevice::GetNullRaytracingAcceleraionStructure()
-	{
-		return &NullRaytracingAccelerationStructure;
 	}
 
 	void D3D12LinkedDevice::OnBeginFrame()
