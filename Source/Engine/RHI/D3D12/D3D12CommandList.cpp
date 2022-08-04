@@ -4,11 +4,6 @@
 
 namespace RHI
 {
-	std::vector<PendingResourceBarrier>& D3D12ResourceStateTracker::GetPendingResourceBarriers()
-	{
-		return PendingResourceBarriers;
-	}
-
 	CResourceState& D3D12ResourceStateTracker::GetResourceState(D3D12Resource* Resource)
 	{
 		CResourceState& ResourceState = ResourceStates[Resource];

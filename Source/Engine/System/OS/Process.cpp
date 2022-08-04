@@ -17,3 +17,8 @@ const std::filesystem::path Process::ExecutableDirectory = []
 }();
 
 std::unique_ptr<ThreadPool> Process::ThreadPool = ThreadPool::Create();
+
+ThreadId Process::GetCurrentThreadId()
+{
+	return { ::GetCurrentThreadId() };
+}

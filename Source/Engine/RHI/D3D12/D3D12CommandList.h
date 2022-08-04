@@ -17,7 +17,7 @@ namespace RHI
 	public:
 		D3D12ResourceStateTracker() noexcept = default;
 
-		std::vector<PendingResourceBarrier>& GetPendingResourceBarriers();
+		std::vector<PendingResourceBarrier>& GetPendingResourceBarriers() { return PendingResourceBarriers; }
 
 		CResourceState& GetResourceState(D3D12Resource* Resource);
 
