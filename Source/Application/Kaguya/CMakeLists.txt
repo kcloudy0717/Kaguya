@@ -72,7 +72,7 @@ add_custom_command(
 
 		${CMAKE_SOURCE_DIR}/imgui.ini
 
-		$<TARGET_FILE_DIR:${PROJECTNAME}>
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
 	DEPENDS ${PROJECTNAME})
 
 add_custom_command(
@@ -81,7 +81,7 @@ add_custom_command(
 
 		${CMAKE_SOURCE_DIR}/Assets
 		
-		$<TARGET_FILE_DIR:${PROJECTNAME}>/Assets
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/Assets
 	DEPENDS ${PROJECTNAME})
 	
 add_custom_command(
@@ -90,5 +90,5 @@ add_custom_command(
 
 		${CMAKE_SOURCE_DIR}/Resources
 		
-		$<TARGET_FILE_DIR:${PROJECTNAME}>/Resources
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/Resources
 	DEPENDS ${PROJECTNAME})

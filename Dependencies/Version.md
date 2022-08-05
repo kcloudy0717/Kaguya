@@ -1,4 +1,0 @@
-- AgilitySDK: microsoft.direct3d.d3d12.1.606.3
-- DirectStorage: microsoft.direct3d.directstorage.1.0.2
-- dxc: 2022_07_13
-- WinPixEventRuntime: winpixeventruntime.1.0.220124001

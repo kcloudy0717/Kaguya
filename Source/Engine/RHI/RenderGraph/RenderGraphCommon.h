@@ -1,6 +1,5 @@
 #pragma once
 #include <compare>
-#include <robin_hood.h>
 #include "System/System.h"
 #include "RHI/RHI.h"
 
@@ -366,15 +365,6 @@ namespace RHI
 
 template<>
 struct std::hash<RHI::RgResourceHandle>
-{
-	size_t operator()(const RHI::RgResourceHandle& RenderResourceHandle) const noexcept
-	{
-		return Hash::Hash64(&RenderResourceHandle, sizeof(RenderResourceHandle));
-	}
-};
-
-template<>
-struct robin_hood::hash<RHI::RgResourceHandle>
 {
 	size_t operator()(const RHI::RgResourceHandle& RenderResourceHandle) const noexcept
 	{

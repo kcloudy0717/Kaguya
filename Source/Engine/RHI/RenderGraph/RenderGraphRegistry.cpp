@@ -72,7 +72,7 @@ namespace RHI
 
 		// This is used to check to see if any view associated with the texture needs to be updated in case if texture is dirty
 		// The view does not check for this, so do it here manually
-		robin_hood::unordered_set<RgResourceHandle> TextureDirtyHandles;
+		std::unordered_set<RgResourceHandle> TextureDirtyHandles;
 
 		for (size_t i = 0; i < Graph->Textures.size(); ++i)
 		{

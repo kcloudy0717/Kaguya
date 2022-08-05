@@ -37,7 +37,7 @@ void Log::Write(LogLevel Level, const LogMessage& Message)
 
 	u16 CurrentForegroudColor = GetForegroundColor();
 	SetForegroundColor(LogLevelColors[size_t(Level)]);
-	std::ignore = ::WriteConsoleA(StdOutputHandle, FormattedMessage.data(), FormattedMessage.size(), nullptr, nullptr);
+	std::ignore = ::WriteConsoleA(StdOutputHandle, FormattedMessage.data(), DWORD(FormattedMessage.size()), nullptr, nullptr);
 	SetForegroundColor(CurrentForegroudColor); // Restore foreground color
 }
 

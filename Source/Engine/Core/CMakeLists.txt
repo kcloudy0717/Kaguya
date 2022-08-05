@@ -42,5 +42,5 @@ add_custom_command(
 
 		${DEPDIR}/assimp/bin/release/assimp-vc143-mt.dll
 
-		$<TARGET_FILE_DIR:${PROJECTNAME}>
+		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
 	DEPENDS ${PROJECTNAME})

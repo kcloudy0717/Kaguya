@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+include(FetchContent)
 
 set(PROJECTNAME "RHI")
 
@@ -26,38 +27,103 @@ target_include_directories(${PROJECTNAME} PRIVATE ${RHI_DIR})
 target_include_directories(${PROJECTNAME} PRIVATE ${ENGINE_DIR})
 target_link_libraries(${PROJECTNAME} PRIVATE System)
 
-# Public include/linking for now until a RHI abstraction is build on top of it
-target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/AgilitySDK/Include")
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectStorage/Include")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/DirectStorage/Bin/x64/dstorage.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/WinPixEventRuntime/Include")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/dxc")
-target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/dxc/dxcompiler.lib)
 
-# Linking
+# D3D12 Agility SDK
+message("Fetching D3D12 Agility SDK")
+FetchContent_Declare(d3d12-agility-sdk URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.606.3)
+FetchContent_MakeAvailable(d3d12-agility-sdk)
+file(GLOB_RECURSE d3d12-agility-sdk_include "${d3d12-agility-sdk_SOURCE_DIR}/build/native/include/*.h")
+add_library(
+	D3D12AgilitySDK INTERFACE
+	${d3d12-agility-sdk_include}
+	"${d3d12-agility-sdk_SOURCE_DIR}/build/native/bin/x64/D3D12Core.dll"
+	"${d3d12-agility-sdk_SOURCE_DIR}/build/native/bin/x64/d3d12SDKLayers.dll")
+target_include_directories(D3D12AgilitySDK INTERFACE "${d3d12-agility-sdk_SOURCE_DIR}/build/native/include")
+target_link_libraries(D3D12AgilitySDK INTERFACE "d3d12.lib" "dxgi.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC D3D12AgilitySDK)
 
-# DLL
-add_custom_command(
-	TARGET ${PROJECTNAME} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy 
-		${DEPDIR}/dxc/dxcompiler.dll
-		${DEPDIR}/dxc/dxil.dll
-
-		${DEPDIR}/DirectStorage/Bin/x64/dstorage.dll
-		${DEPDIR}/DirectStorage/Bin/x64/dstoragecore.dll
-
-		${DEPDIR}/WinPixEventRuntime/Bin/x64/WinPixEventRuntime.dll
-
-		$<TARGET_FILE_DIR:${PROJECTNAME}>
-	DEPENDS ${PROJECTNAME})
-
-# D3D12
+# Copy DLLs
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-		${DEPDIR}/AgilitySDK/Bin/x64
+	"${d3d12-agility-sdk_SOURCE_DIR}/build/native/bin/x64"
 
-		$<TARGET_FILE_DIR:${PROJECTNAME}>/D3D12
-	DEPENDS ${PROJECTNAME})
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/D3D12
+	DEPENDS D3D12AgilitySDK)
+message("D3D12 Agility SDK fetched")
+
+# DXC
+message("Fetching DirectXShaderCompiler")
+FetchContent_Declare(dxc URL https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2207/dxc_2022_07_18.zip)
+FetchContent_MakeAvailable(dxc)
+file(MAKE_DIRECTORY ${dxc_SOURCE_DIR}/include)
+file(COPY ${dxc_SOURCE_DIR}/inc/d3d12shader.h DESTINATION ${dxc_SOURCE_DIR}/include/dxc)
+file(COPY ${dxc_SOURCE_DIR}/inc/dxcapi.h DESTINATION ${dxc_SOURCE_DIR}/include/dxc)
+add_library(
+	DirectXShaderCompiler
+	INTERFACE
+	"${dxc_SOURCE_DIR}/include/dxc/d3d12shader.h"
+	"${dxc_SOURCE_DIR}/include/dxc/dxcapi.h"
+	"${dxc_SOURCE_DIR}/bin/x64/dxcompiler.dll"
+	"${dxc_SOURCE_DIR}/bin/x64/dxil.dll")
+target_include_directories(DirectXShaderCompiler INTERFACE "${dxc_SOURCE_DIR}/include")
+target_link_libraries(DirectXShaderCompiler INTERFACE "${dxc_SOURCE_DIR}/lib/x64/dxcompiler.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC DirectXShaderCompiler)
+
+# Copy DLLs
+add_custom_command(
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"${dxc_SOURCE_DIR}/bin/x64/dxcompiler.dll"
+	"${dxc_SOURCE_DIR}/bin/x64/dxil.dll"
+
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
+	DEPENDS DirectXShaderCompiler)
+message("DirectXShaderCompiler fetched")
+
+# DirectStorage
+message("Fetching DirectStorage")
+FetchContent_Declare(direct-storage URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/1.0.2)
+FetchContent_MakeAvailable(direct-storage)
+file(GLOB_RECURSE direct-storage_include "${direct-storage_SOURCE_DIR}/native/include/*.h")
+add_library(
+	DirectStorage INTERFACE
+	${direct-storage_include}
+	"${direct-storage_SOURCE_DIR}/native/bin/x64/dstorage.dll"
+	"${direct-storage_SOURCE_DIR}/native/bin/x64/dstoragecore.dll")
+target_include_directories(DirectStorage INTERFACE "${direct-storage_SOURCE_DIR}/native/include")
+target_link_libraries(DirectStorage INTERFACE "${direct-storage_SOURCE_DIR}/native/lib/x64/dstorage.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC DirectStorage)
+
+# Copy DLLs
+add_custom_command(
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"${direct-storage_SOURCE_DIR}/native/bin/x64/dstorage.dll"
+	"${direct-storage_SOURCE_DIR}/native/bin/x64/dstoragecore.dll"
+
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
+	DEPENDS DirectStorage)
+message("DirectStorage fetched")
+
+# PIX
+message("Fetching PIX")
+FetchContent_Declare(pix URL https://www.nuget.org/api/v2/package/WinPixEventRuntime/1.0.220124001)
+FetchContent_MakeAvailable(pix)
+file(GLOB_RECURSE pix_include "${pix_SOURCE_DIR}/Include/WinPixEventRuntime/*.h")
+add_library(
+	PIX INTERFACE
+	${pix_include}
+	"${pix_SOURCE_DIR}/bin/x64/WinPixEventRuntime.dll")
+target_include_directories(PIX INTERFACE "${pix_SOURCE_DIR}/Include/WinPixEventRuntime")
+target_link_libraries(PIX INTERFACE "${pix_SOURCE_DIR}/bin/x64/WinPixEventRuntime.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC PIX)
+
+add_custom_command(
+	TARGET ${PROJECTNAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	"${pix_SOURCE_DIR}/bin/x64/WinPixEventRuntime.dll"
+
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
+	DEPENDS PIX)
+message("PIX fetched")

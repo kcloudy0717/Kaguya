@@ -99,9 +99,9 @@ namespace RHI
 		RaytracingPipelineStateRegistry RaytracingPipelineStateRegistry;
 
 		// Cached desc table based on resource handle to prevent unnecessary recreation of resources
-		robin_hood::unordered_map<RgResourceHandle, RgBufferDesc>  BufferDescTable;
-		robin_hood::unordered_map<RgResourceHandle, RgTextureDesc> TextureDescTable;
-		robin_hood::unordered_map<RgResourceHandle, RgViewDesc>	   ViewDescTable;
+		std::unordered_map<RgResourceHandle, RgBufferDesc>	BufferDescTable;
+		std::unordered_map<RgResourceHandle, RgTextureDesc> TextureDescTable;
+		std::unordered_map<RgResourceHandle, RgViewDesc>	ViewDescTable;
 
 		std::vector<D3D12Buffer>			  BufferCache;
 		std::vector<D3D12Texture>			  TextureCache;

@@ -1,5 +1,6 @@
 #pragma once
 #include <stack>
+#include <unordered_set>
 
 #include "System.h"
 #include "RHI/RHI.h"
@@ -61,9 +62,9 @@ namespace RHI
 		std::string_view Name;
 		size_t			 TopologicalIndex = 0;
 
-		robin_hood::unordered_set<RgResourceHandle> Reads;
-		robin_hood::unordered_set<RgResourceHandle> Writes;
-		robin_hood::unordered_set<RgResourceHandle> ReadWrites;
+		std::unordered_set<RgResourceHandle> Reads;
+		std::unordered_set<RgResourceHandle> Writes;
+		std::unordered_set<RgResourceHandle> ReadWrites;
 
 		ExecuteCallback Callback;
 	};
@@ -79,9 +80,9 @@ namespace RHI
 		std::vector<RenderPass*> RenderPasses;
 
 		// Apply barriers at a dependency level to reduce redudant barriers
-		robin_hood::unordered_set<RgResourceHandle> Reads;
-		robin_hood::unordered_set<RgResourceHandle> Writes;
-		robin_hood::unordered_set<RgResourceHandle> ReadWrites;
+		std::unordered_set<RgResourceHandle> Reads;
+		std::unordered_set<RgResourceHandle> Writes;
+		std::unordered_set<RgResourceHandle> ReadWrites;
 	};
 
 	class RenderGraph

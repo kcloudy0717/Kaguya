@@ -2,8 +2,8 @@
 #include <wrl/client.h>
 #include <map>
 
-#include "dxcapi.h"
-#include "d3d12shader.h"
+#include "dxc/dxcapi.h"
+#include "dxc/d3d12shader.h"
 #include "RHICore.h"
 
 struct ShaderCompileOptions
