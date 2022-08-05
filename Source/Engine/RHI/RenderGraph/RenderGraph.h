@@ -68,7 +68,7 @@ namespace RHI
 		ExecuteCallback Callback;
 	};
 
-	class RenderGraphDependencyLevel
+	class RenderGraphLayer
 	{
 	public:
 		void AddRenderPass(RenderPass* RenderPass);
@@ -207,6 +207,6 @@ namespace RHI
 		std::vector<std::vector<u64>> AdjacencyLists;
 		std::vector<RenderPass*>	  TopologicalSortedPasses;
 
-		std::vector<RenderGraphDependencyLevel> DependencyLevels;
+		std::vector<RenderGraphLayer> Layers;
 	};
 } // namespace RHI

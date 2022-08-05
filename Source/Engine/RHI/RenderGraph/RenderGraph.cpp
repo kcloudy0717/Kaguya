@@ -86,7 +86,7 @@ namespace RHI
 		return !Reads.empty() || !Writes.empty();
 	}
 
-	void RenderGraphDependencyLevel::AddRenderPass(RenderPass* RenderPass)
+	void RenderGraphLayer::AddRenderPass(RenderPass* RenderPass)
 	{
 		RenderPasses.push_back(RenderPass);
 		Reads.insert(RenderPass->Reads.begin(), RenderPass->Reads.end());
@@ -94,7 +94,7 @@ namespace RHI
 		ReadWrites.insert(RenderPass->ReadWrites.begin(), RenderPass->ReadWrites.end());
 	}
 
-	void RenderGraphDependencyLevel::Execute(RenderGraph* RenderGraph, D3D12CommandContext& Context)
+	void RenderGraphLayer::Execute(RenderGraph* RenderGraph, D3D12CommandContext& Context)
 	{
 		robin_hood::unordered_set<D3D12Texture*> ReadWriteResources;
 		for (auto ReadWrite : ReadWrites)
@@ -213,9 +213,9 @@ namespace RHI
 		Registry.RealizeResources(this, Context.GetParentLinkedDevice()->GetParentDevice());
 
 		D3D12ScopedEvent(Context, "Render Graph");
-		for (auto& DependencyLevel : DependencyLevels)
+		for (auto& Layer : Layers)
 		{
-			DependencyLevel.Execute(this, Context);
+			Layer.Execute(this, Context);
 		}
 	}
 
@@ -320,11 +320,11 @@ namespace RHI
 			}
 		}
 
-		DependencyLevels.resize(*std::ranges::max_element(Distances) + 1);
+		Layers.resize(*std::ranges::max_element(Distances) + 1);
 		for (size_t i = 0; i < TopologicalSortedPasses.size(); ++i)
 		{
 			int level = Distances[i];
-			DependencyLevels[level].AddRenderPass(TopologicalSortedPasses[i]);
+			Layers[level].AddRenderPass(TopologicalSortedPasses[i]);
 		}
 	}
 
