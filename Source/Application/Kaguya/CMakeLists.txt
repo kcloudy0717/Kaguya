@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
+# Process shaders first
+add_subdirectory(Shaders)
+
 set(PROJECTNAME Kaguya)
 set(Main "main.cpp")
 
@@ -55,7 +58,7 @@ if (MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()
 
-add_dependencies(${PROJECTNAME} Shaders)
+add_dependencies(${PROJECTNAME} KaguyaShaders)
 
 target_include_directories(${PROJECTNAME} PRIVATE "${ENGINE_DIR}")
 target_link_libraries(${PROJECTNAME} PRIVATE "System")
