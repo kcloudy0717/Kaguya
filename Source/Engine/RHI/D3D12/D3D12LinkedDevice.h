@@ -129,13 +129,13 @@ namespace RHI
 	}
 
 	template<typename ViewDesc, bool Dynamic>
-	void RHI::D3D12Descriptor<ViewDesc, Dynamic>::CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
+	void D3D12Descriptor<ViewDesc, Dynamic>::CreateView(const ViewDesc& Desc, ID3D12Resource* Resource)
 	{
 		(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, &Desc, CpuHandle);
 	}
 
 	template<typename ViewDesc, bool Dynamic>
-	void RHI::D3D12Descriptor<ViewDesc, Dynamic>::CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
+	void D3D12Descriptor<ViewDesc, Dynamic>::CreateView(const ViewDesc& Desc, ID3D12Resource* Resource, ID3D12Resource* CounterResource)
 	{
 		(GetParentLinkedDevice()->GetDevice()->*Internal::D3D12DescriptorTraits<ViewDesc>::Create())(Resource, CounterResource, &Desc, CpuHandle);
 	}
@@ -173,5 +173,4 @@ namespace RHI
 			}
 		}
 	}
-
 } // namespace RHI
