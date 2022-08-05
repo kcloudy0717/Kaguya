@@ -26,7 +26,7 @@ namespace RHI
 		void Add(const PendingResourceBarrier& PendingResourceBarrier);
 
 	private:
-		robin_hood::unordered_map<D3D12Resource*, CResourceState> ResourceStates;
+		std::unordered_map<D3D12Resource*, CResourceState> ResourceStates;
 
 		// Pending resource transitions are committed to a separate commandlist before this commandlist
 		// is executed on the command queue. This guarantees that resources will

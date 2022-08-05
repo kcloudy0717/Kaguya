@@ -27,7 +27,6 @@ target_include_directories(${PROJECTNAME} PRIVATE ${RHI_DIR})
 target_include_directories(${PROJECTNAME} PRIVATE ${ENGINE_DIR})
 target_link_libraries(${PROJECTNAME} PRIVATE System)
 
-
 # D3D12 Agility SDK
 message("Fetching D3D12 Agility SDK")
 FetchContent_Declare(d3d12-agility-sdk URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.606.3)
@@ -41,6 +40,7 @@ add_library(
 target_include_directories(D3D12AgilitySDK INTERFACE "${d3d12-agility-sdk_SOURCE_DIR}/build/native/include")
 target_link_libraries(D3D12AgilitySDK INTERFACE "d3d12.lib" "dxgi.lib")
 target_link_libraries(${PROJECTNAME} PUBLIC D3D12AgilitySDK)
+set_target_properties(D3D12AgilitySDK PROPERTIES FOLDER "Dependencies-RHI")
 
 # Copy DLLs
 add_custom_command(
@@ -69,6 +69,7 @@ add_library(
 target_include_directories(DirectXShaderCompiler INTERFACE "${dxc_SOURCE_DIR}/include")
 target_link_libraries(DirectXShaderCompiler INTERFACE "${dxc_SOURCE_DIR}/lib/x64/dxcompiler.lib")
 target_link_libraries(${PROJECTNAME} PUBLIC DirectXShaderCompiler)
+set_target_properties(DirectXShaderCompiler PROPERTIES FOLDER "Dependencies-RHI")
 
 # Copy DLLs
 add_custom_command(
@@ -94,6 +95,7 @@ add_library(
 target_include_directories(DirectStorage INTERFACE "${direct-storage_SOURCE_DIR}/native/include")
 target_link_libraries(DirectStorage INTERFACE "${direct-storage_SOURCE_DIR}/native/lib/x64/dstorage.lib")
 target_link_libraries(${PROJECTNAME} PUBLIC DirectStorage)
+set_target_properties(DirectStorage PROPERTIES FOLDER "Dependencies-RHI")
 
 # Copy DLLs
 add_custom_command(
@@ -118,6 +120,7 @@ add_library(
 target_include_directories(PIX INTERFACE "${pix_SOURCE_DIR}/Include/WinPixEventRuntime")
 target_link_libraries(PIX INTERFACE "${pix_SOURCE_DIR}/bin/x64/WinPixEventRuntime.lib")
 target_link_libraries(${PROJECTNAME} PUBLIC PIX)
+set_target_properties(PIX PROPERTIES FOLDER "Dependencies-RHI")
 
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD

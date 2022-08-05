@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+include(FetchContent)
 
 set(PROJECTNAME "Core")
 
@@ -29,12 +30,6 @@ target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/entt/single_include/
 target_include_directories(${PROJECTNAME} PRIVATE "${DEPDIR}/json/single_include")
 target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/assimp/include")
 target_link_libraries(${PROJECTNAME} PRIVATE ${DEPDIR}/assimp/lib/Release/assimp-vc143-mt.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXMesh/include")
-target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXMesh/lib/Debug/DirectXMesh.lib)
-target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXMesh/lib/Release/DirectXMesh.lib)
-target_include_directories(${PROJECTNAME} PUBLIC "${DEPDIR}/DirectXTex/include")
-target_link_libraries(${PROJECTNAME} PRIVATE debug ${DEPDIR}/DirectXTex/lib/Debug/DirectXTex.lib)
-target_link_libraries(${PROJECTNAME} PRIVATE optimized ${DEPDIR}/DirectXTex/lib/Release/DirectXTex.lib)
 
 add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
@@ -44,3 +39,33 @@ add_custom_command(
 
 		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
 	DEPENDS ${PROJECTNAME})
+
+# DirectXTex
+message("Fetching DirectXTex")
+FetchContent_Declare(directxtex URL https://www.nuget.org/api/v2/package/directxtex_desktop_win10/2022.7.30.1)
+FetchContent_MakeAvailable(directxtex)
+add_library(
+    DirectXTex INTERFACE 
+    "${directxtex_SOURCE_DIR}/include/DirectXTex.h"
+    "${directxtex_SOURCE_DIR}/include/DirectXTex.inl")
+target_include_directories(DirectXTex INTERFACE "${directxtex_SOURCE_DIR}/include/")
+target_link_directories(DirectXTex INTERFACE ${directxtex_SOURCE_DIR}/native/lib/x64/$<CONFIG>)
+target_link_libraries(DirectXTex INTERFACE "DirectXTex.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC DirectXTex)
+set_target_properties(DirectXTex PROPERTIES FOLDER "Dependencies-Core")
+message("DirectXTex fetched")
+
+# DirectXMesh
+message("Fetching DirectXMesh")
+FetchContent_Declare(directxmesh URL https://www.nuget.org/api/v2/package/directxmesh_desktop_win10/2022.7.30.1)
+FetchContent_MakeAvailable(directxmesh)
+add_library(
+	DirectXMesh INTERFACE 
+	"${directxmesh_SOURCE_DIR}/include/DirectXMesh.h"
+	"${directxmesh_SOURCE_DIR}/include/DirectXMesh.inl")
+target_include_directories(DirectXMesh INTERFACE "${directxmesh_SOURCE_DIR}/include/")
+target_link_directories(DirectXMesh INTERFACE ${directxmesh_SOURCE_DIR}/native/lib/x64/$<CONFIG>)
+target_link_libraries(DirectXMesh INTERFACE "DirectXMesh.lib")
+target_link_libraries(${PROJECTNAME} PUBLIC DirectXMesh)
+set_target_properties(DirectXMesh PROPERTIES FOLDER "Dependencies-Core")
+message("DirectXMesh fetched")
