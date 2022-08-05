@@ -66,11 +66,7 @@ static void AddNewComponent(std::string_view Name, Actor Actor)
 	{
 		if (Actor.HasComponent<T>())
 		{
-			MessageBoxA(
-				nullptr,
-				"Cannot add existing component",
-				"Add Component Error",
-				MB_OK | MB_ICONERROR | MB_DEFAULT_DESKTOP_ONLY);
+			throw std::runtime_error("Cannot add existing component");
 		}
 		else
 		{

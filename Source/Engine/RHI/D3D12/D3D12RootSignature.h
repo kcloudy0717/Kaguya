@@ -145,8 +145,6 @@ namespace RHI
 		RootSignatureDesc& AsLocalRootSignature() noexcept;
 		RootSignatureDesc& DenyASAccess() noexcept;
 		RootSignatureDesc& DenyMSAccess() noexcept;
-		RootSignatureDesc& AllowResourceDescriptorHeapIndexing() noexcept;
-		RootSignatureDesc& AllowSampleDescriptorHeapIndexing() noexcept;
 
 		[[nodiscard]] bool IsLocal() const noexcept;
 

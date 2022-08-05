@@ -52,9 +52,6 @@ namespace RHI
 		Parameters.reserve(D3D12_MAX_ROOT_COST);
 		DescriptorTableIndices.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
 		DescriptorTables.reserve(KAGUYA_RHI_D3D12_GLOBAL_ROOT_DESCRIPTOR_TABLE_LIMIT);
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 	}
 
 	RootSignatureDesc& RootSignatureDesc::AddDescriptorTable(const D3D12DescriptorTable& DescriptorTable)
@@ -105,18 +102,6 @@ namespace RHI
 		return *this;
 	}
 
-	RootSignatureDesc& RootSignatureDesc::AllowResourceDescriptorHeapIndexing() noexcept
-	{
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
-		return *this;
-	}
-
-	RootSignatureDesc& RootSignatureDesc::AllowSampleDescriptorHeapIndexing() noexcept
-	{
-		Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
-		return *this;
-	}
-
 	bool RootSignatureDesc::IsLocal() const noexcept
 	{
 		return Flags & D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
@@ -124,6 +109,16 @@ namespace RHI
 
 	D3D12_ROOT_SIGNATURE_DESC1 RootSignatureDesc::Build() noexcept
 	{
+		if (!IsLocal())
+		{
+			Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
+			Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS;
+			Flags |= D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+			Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+			Flags |= D3D12_ROOT_SIGNATURE_FLAG_SAMPLER_HEAP_DIRECTLY_INDEXED;
+		}
+
 		// Go through all the parameters, and set the actual addresses of the heap range descriptors based
 		// on their indices in the range indices vector
 		for (size_t i = 0; i < Parameters.size(); ++i)
@@ -163,8 +158,6 @@ namespace RHI
 			// signature
 			AddBindlessParameters(Desc);
 		}
-		Desc.AllowResourceDescriptorHeapIndexing();
-		Desc.AllowSampleDescriptorHeapIndexing();
 
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC ApiDesc = {
 			.Version  = D3D_ROOT_SIGNATURE_VERSION_1_1,

@@ -25,9 +25,7 @@ DeferredRenderer::DeferredRenderer(
 			.AddConstantBufferView(1, 0)
 			.AddShaderResourceView(0, 0)
 			.AddShaderResourceView(1, 0)
-			.AllowInputLayout()
-			.AllowResourceDescriptorHeapIndexing()
-			.AllowSampleDescriptorHeapIndexing());
+			.AllowInputLayout());
 	ShadingRS = Device->CreateRootSignature(
 		RootSignatureDesc()
 			.AddConstantBufferView(0, 0)

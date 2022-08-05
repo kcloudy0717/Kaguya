@@ -37,3 +37,19 @@ void Platform::Exit(std::wstring_view Message)
 	LocalFree(lpDisplayBuf);
 	ExitProcess(dw);
 }
+
+void Platform::Utf8ToWide(std::string_view Utf8, std::wstring& Wide)
+{
+	int Utf8Length = static_cast<int>(Utf8.size());
+	int Size	   = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Utf8.data(), Utf8Length, nullptr, 0);
+	Wide.resize(Size);
+	MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, Utf8.data(), Utf8Length, Wide.data(), Size);
+}
+
+void Platform::WideToUtf8(std::wstring_view Wide, std::string& Utf8)
+{
+	int WideLength = static_cast<int>(Wide.size());
+	int Size	   = WideCharToMultiByte(CP_UTF8, 0, Wide.data(), WideLength, nullptr, 0, nullptr, nullptr);
+	Utf8.resize(Size);
+	WideCharToMultiByte(CP_UTF8, 0, Wide.data(), WideLength, Utf8.data(), Size, nullptr, nullptr);
+}

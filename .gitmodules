@@ -10,9 +10,6 @@
 [submodule "Dependencies/json"]
 	path = Dependencies/json
 	url = https://github.com/nlohmann/json.git
-[submodule "Dependencies/spdlog"]
-	path = Dependencies/spdlog
-	url = https://github.com/gabime/spdlog.git
 [submodule "Dependencies/robin-hood-hashing"]
 	path = Dependencies/robin-hood-hashing
 	url = https://github.com/martinus/robin-hood-hashing.git
