@@ -16,8 +16,8 @@ add_library(
 	${src}
 	${natvis})
 
-if(MSVC)
-	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
+if (MSVC)
+	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # Warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()
 

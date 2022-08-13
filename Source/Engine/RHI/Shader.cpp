@@ -1,12 +1,10 @@
 #include "Shader.h"
 
 Shader::Shader(
-	RHI_SHADER_TYPE					 ShaderType,
-	DxcShaderHash					 ShaderHash,
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary,
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb)
+	RHI_SHADER_TYPE ShaderType,
+	Arc<IDxcBlob>	Binary,
+	Arc<IDxcBlob>	Pdb)
 	: ShaderType(ShaderType)
-	, ShaderHash(ShaderHash)
 	, Binary(Binary)
 	, Pdb(Pdb)
 {
@@ -22,17 +20,10 @@ size_t Shader::GetSize() const noexcept
 	return Binary->GetBufferSize();
 }
 
-DxcShaderHash Shader::GetShaderHash() const noexcept
-{
-	return ShaderHash;
-}
-
 Library::Library(
-	DxcShaderHash					 ShaderHash,
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary,
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb)
-	: ShaderHash(ShaderHash)
-	, Binary(Binary)
+	Arc<IDxcBlob> Binary,
+	Arc<IDxcBlob> Pdb)
+	: Binary(Binary)
 	, Pdb(Pdb)
 {
 }
@@ -45,9 +36,4 @@ void* Library::GetPointer() const noexcept
 size_t Library::GetSize() const noexcept
 {
 	return Binary->GetBufferSize();
-}
-
-DxcShaderHash Library::GetShaderHash() const noexcept
-{
-	return ShaderHash;
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <cassert>
 #include <mutex>
+#include <vector>
 #include "Types.h"
 
 // Delegate class can be used as an alternative to std::function, delegates are flexible

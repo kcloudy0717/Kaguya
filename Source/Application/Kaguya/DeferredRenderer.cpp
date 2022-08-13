@@ -70,7 +70,7 @@ DeferredRenderer::DeferredRenderer(
 		} Stream;
 		Stream.RootSignature		 = &GBufferRS;
 		Stream.InputLayout			 = &InputLayout;
-		Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY::Triangle;
+		Stream.PrimitiveTopologyType = RHI_PRIMITIVE_TOPOLOGY_TYPE::Triangle;
 		Stream.VS					 = &GBufferVS;
 		Stream.PS					 = &GBufferPS;
 		Stream.DepthStencilState	 = DepthStencilState;

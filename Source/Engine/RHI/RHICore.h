@@ -1,25 +1,5 @@
 ﻿#pragma once
-#include <cstddef>
-#include <cassert>
-
-#include <string>
-#include <string_view>
-#include <span>
-
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <filesystem>
-
-#include <array>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <queue>
-#include <set>
-
-#include <dxgiformat.h>
-
+#include "dxgiformat.h"
 #include "System/System.h"
 
 DECLARE_LOG_CATEGORY(RHI);
@@ -69,7 +49,7 @@ enum class RHI_PIPELINE_STATE_SUBOBJECT_TYPE
 	NumTypes
 };
 
-enum class RHI_PRIMITIVE_TOPOLOGY
+enum class RHI_PRIMITIVE_TOPOLOGY_TYPE
 {
 	Undefined,
 	Point,
@@ -203,7 +183,6 @@ struct RHIRasterizerState
 	bool		  FrontCounterClockwise = false;
 	bool		  DepthClipEnable		= true;
 };
-static constexpr size_t SizeOfRHIRasterizerState = sizeof(RHIRasterizerState);
 
 struct RHIDepthStencilState
 {
@@ -288,7 +267,7 @@ using PipelineStateStreamBlendState		   = PipelineStateStreamSubobject<RHIBlendS
 using PipelineStateStreamRasterizerState   = PipelineStateStreamSubobject<RHIRasterizerState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState>;
 using PipelineStateStreamDepthStencilState = PipelineStateStreamSubobject<RHIDepthStencilState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState>;
 using PipelineStateStreamRenderTargetState = PipelineStateStreamSubobject<RHIRenderTargetState, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState>;
-using PipelineStateStreamPrimitiveTopology = PipelineStateStreamSubobject<RHI_PRIMITIVE_TOPOLOGY, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology>;
+using PipelineStateStreamPrimitiveTopology = PipelineStateStreamSubobject<RHI_PRIMITIVE_TOPOLOGY_TYPE, RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology>;
 
 class IPipelineParserCallbacks
 {
@@ -307,7 +286,7 @@ public:
 	virtual void RasterizerStateCb(const RHIRasterizerState&) {}
 	virtual void DepthStencilStateCb(const RHIDepthStencilState&) {}
 	virtual void RenderTargetStateCb(const RHIRenderTargetState&) {}
-	virtual void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY) {}
+	virtual void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY_TYPE) {}
 
 	// Error Callbacks
 	virtual void ErrorBadInputParameter(size_t /*ParameterIndex*/) {}

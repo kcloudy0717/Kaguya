@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include "D3D12Core.h"
 #include "D3D12Fence.h"
 #include "D3D12CommandContext.h"

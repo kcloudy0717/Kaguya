@@ -13,9 +13,9 @@ void RHIParsePipelineStream(const PipelineStateStreamDesc& Desc, IPipelineParser
 	bool SubobjectSeen[static_cast<size_t>(RHI_PIPELINE_STATE_SUBOBJECT_TYPE::NumTypes)] = {};
 	for (size_t CurOffset = 0, SizeOfSubobject = 0; CurOffset < Desc.SizeInBytes; CurOffset += SizeOfSubobject)
 	{
-		std::byte* Stream		 = static_cast<std::byte*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
-		auto	   SubobjectType = *reinterpret_cast<RHI_PIPELINE_STATE_SUBOBJECT_TYPE*>(Stream);
-		size_t	   Index		 = static_cast<size_t>(SubobjectType);
+		u8*	   Stream		 = static_cast<u8*>(Desc.pPipelineStateSubobjectStream) + CurOffset;
+		auto   SubobjectType = *reinterpret_cast<RHI_PIPELINE_STATE_SUBOBJECT_TYPE*>(Stream);
+		size_t Index		 = static_cast<size_t>(SubobjectType);
 
 		if (Index < 0 || Index >= static_cast<size_t>(RHI_PIPELINE_STATE_SUBOBJECT_TYPE::NumTypes))
 		{
@@ -92,12 +92,9 @@ const char* GetRHIVendorString(RHI_VENDOR Vendor)
 	switch (Vendor)
 	{
 		using enum RHI_VENDOR;
-	case NVIDIA:
-		return "NVIDIA";
-	case AMD:
-		return "AMD";
-	case Intel:
-		return "Intel";
+	case NVIDIA: return "NVIDIA";
+	case AMD: return "AMD";
+	case Intel: return "Intel";
 	}
 	return "Unknown";
 }
@@ -106,30 +103,19 @@ const char* GetRHIPipelineStateSubobjectTypeString(RHI_PIPELINE_STATE_SUBOBJECT_
 {
 	switch (Type)
 	{
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RootSignature:
-		return "Root Signature";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::InputLayout:
-		return "Input Layout";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::VS:
-		return "Vertex Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PS:
-		return "Pixel Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::CS:
-		return "Compute Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::AS:
-		return "Amplification Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::MS:
-		return "Mesh Shader";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::BlendState:
-		return "Blend State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RasterizerState:
-		return "Rasterizer State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::DepthStencilState:
-		return "Depth Stencil State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::RenderTargetState:
-		return "Render Target State";
-	case RHI_PIPELINE_STATE_SUBOBJECT_TYPE::PrimitiveTopology:
-		return "Primitive Topology";
+		using enum RHI_PIPELINE_STATE_SUBOBJECT_TYPE;
+	case RootSignature: return "Root Signature";
+	case InputLayout: return "Input Layout";
+	case VS: return "Vertex Shader";
+	case PS: return "Pixel Shader";
+	case CS: return "Compute Shader";
+	case AS: return "Amplification Shader";
+	case MS: return "Mesh Shader";
+	case BlendState: return "Blend State";
+	case RasterizerState: return "Rasterizer State";
+	case DepthStencilState: return "Depth Stencil State";
+	case RenderTargetState: return "Render Target State";
+	case PrimitiveTopology: return "Primitive Topology";
 	}
 	return "Unknown";
 }

@@ -1,90 +1,202 @@
 ﻿#include "ThreadPool.h"
-#include <cassert>
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <vector>
+#include <atomic>
+#include <thread>
+#include <future>
+#include <deque>
+#include <queue>
 
-struct WorkEntry
-{
-	ThreadPool::ThreadpoolWork Work;
-	void*					   Context = nullptr;
-};
-
-namespace OS
-{
-	namespace Internal
-	{
-		static VOID NTAPI ThreadpoolWorkCallback(
-			_Inout_ PTP_CALLBACK_INSTANCE Instance,
-			_Inout_opt_ PVOID			  Context,
-			_Inout_ PTP_WORK			  Work) noexcept
-		{
-			UNREFERENCED_PARAMETER(Instance);
-			assert(Context);
-			auto Entry = static_cast<WorkEntry*>(Context);
-			Entry->Work(Entry->Context);
-			delete Entry;
-			CloseThreadpoolWork(Work);
-		}
-	} // namespace Internal
-} // namespace OS
-
-class WindowsThreadPool : public ThreadPool
+template<typename T>
+class ThreadSafeQueue
 {
 public:
-	WindowsThreadPool()
+	ThreadSafeQueue()
+		: Mutex(std::make_unique<std::mutex>())
 	{
-		InitializeThreadpoolEnvironment(&Environment);
-		Pool = CreateThreadpool(nullptr);
-		if (!Pool)
-		{
-			throw std::exception("CreateThreadpool failed");
-		}
-
-		CleanupGroup = CreateThreadpoolCleanupGroup();
-		if (!CleanupGroup)
-		{
-			CloseThreadpool(Pool);
-			throw std::exception("CreateThreadpoolCleanupGroup failed");
-		}
-
-		// No more failures
-		SetThreadpoolCallbackPool(&Environment, Pool);
-		SetThreadpoolCallbackCleanupGroup(&Environment, CleanupGroup, nullptr);
-	}
-	~WindowsThreadPool() override
-	{
-		CloseThreadpoolCleanupGroupMembers(CleanupGroup, TRUE, nullptr);
-		CloseThreadpoolCleanupGroup(CleanupGroup);
-		CloseThreadpool(Pool);
-		DestroyThreadpoolEnvironment(&Environment);
 	}
 
-	void QueueThreadpoolWork(ThreadpoolWork&& Callback, void* Context) override
+	ThreadSafeQueue(const ThreadSafeQueue&) = delete;
+	ThreadSafeQueue& operator=(const ThreadSafeQueue&) = delete;
+
+	ThreadSafeQueue(ThreadSafeQueue&&) noexcept = default;
+	ThreadSafeQueue& operator=(ThreadSafeQueue&&) noexcept = default;
+
+	void Push(T Item)
 	{
-		assert(Callback);
+		std::scoped_lock Lock(*Mutex);
+		Queue.push(std::move(Item));
+	}
 
-		std::unique_ptr<WorkEntry> Entry(new (std::nothrow) WorkEntry());
-		if (Entry)
+	bool TryPop(T& Item)
+	{
+		std::scoped_lock Lock(*Mutex);
+		if (Queue.empty())
 		{
-			Entry->Work	   = std::move(Callback);
-			Entry->Context = Context;
+			return false;
+		}
+		Item = std::move(Queue.front());
+		Queue.pop();
+		return true;
+	}
 
-			PTP_WORK Work = CreateThreadpoolWork(OS::Internal::ThreadpoolWorkCallback, Entry.release(), &Environment);
-			if (!Work)
+private:
+	std::queue<T>						Queue;
+	mutable std::unique_ptr<std::mutex> Mutex;
+};
+
+template<typename T>
+class WorkStealingQueue
+{
+public:
+	WorkStealingQueue()
+		: Mutex(std::make_unique<std::mutex>())
+	{
+	}
+
+	WorkStealingQueue(const WorkStealingQueue&) = delete;
+	WorkStealingQueue& operator=(const WorkStealingQueue&) = delete;
+
+	WorkStealingQueue(WorkStealingQueue&&) noexcept = default;
+	WorkStealingQueue& operator=(WorkStealingQueue&&) noexcept = default;
+
+	void Push(T Item)
+	{
+		std::scoped_lock Lock(*Mutex);
+		Queue.push_front(std::move(Item));
+	}
+
+	bool TryPop(T& Item)
+	{
+		std::scoped_lock Lock(*Mutex);
+		if (Queue.empty())
+		{
+			return false;
+		}
+		Item = std::move(Queue.front());
+		Queue.pop_front();
+		return true;
+	}
+
+	bool TrySteal(T& Item)
+	{
+		std::scoped_lock Lock(*Mutex);
+		if (Queue.empty())
+		{
+			return false;
+		}
+		Item = std::move(Queue.back());
+		Queue.pop_back();
+		return true;
+	}
+
+private:
+	std::deque<T>						Queue;
+	mutable std::unique_ptr<std::mutex> Mutex;
+};
+
+class stdThreadPool
+{
+public:
+	using ThreadpoolWork = std::function<void(void*)>;
+
+	struct WorkEntry
+	{
+		ThreadpoolWork Work;
+		void*		   Context = nullptr;
+	};
+
+	stdThreadPool()
+		: IsDone(false)
+	{
+		unsigned thread_count = std::thread::hardware_concurrency();
+
+		try
+		{
+			Queues.resize(thread_count);
+			Threads.reserve(thread_count);
+			for (unsigned i = 0; i < thread_count; ++i)
 			{
-				throw std::runtime_error("CreateThreadpoolWork");
+				Threads.emplace_back(std::jthread(&stdThreadPool::WorkerThread, this, i));
 			}
-			SubmitThreadpoolWork(Work);
+		}
+		catch (...)
+		{
+			IsDone = true;
+			throw;
+		}
+	}
+
+	~stdThreadPool()
+	{
+		IsDone = true;
+	}
+
+	void QueueThreadpoolWork(ThreadpoolWork&& Callback, void* Context)
+	{
+		WorkEntry Entry = {
+			.Work	 = std::move(Callback),
+			.Context = Context
+		};
+		if (ThreadLocalWorkQueue)
+		{
+			ThreadLocalWorkQueue->Push(std::move(Entry));
+		}
+		else
+		{
+			WorkPoolQueue.Push(std::move(Entry));
 		}
 	}
 
 private:
-	TP_CALLBACK_ENVIRON Environment;
-	PTP_POOL			Pool						= nullptr;
-	PTP_CLEANUP_GROUP	CleanupGroup				= nullptr;
-};
+	std::atomic_bool						  IsDone;
+	ThreadSafeQueue<WorkEntry>				  WorkPoolQueue;
+	std::vector<WorkStealingQueue<WorkEntry>> Queues;
+	std::vector<std::jthread>				  Threads;
 
-std::unique_ptr<ThreadPool> ThreadPool::Create()
-{
-	return std::make_unique<WindowsThreadPool>();
-}
+	static thread_local WorkStealingQueue<WorkEntry>* ThreadLocalWorkQueue;
+	static thread_local unsigned					  ThreadLocalIndex;
+
+	void WorkerThread(unsigned Index)
+	{
+		ThreadLocalIndex	 = Index;
+		ThreadLocalWorkQueue = &Queues[ThreadLocalIndex];
+		while (!IsDone)
+		{
+			WorkEntry Work;
+			if (PopTaskFromLocalQueue(Work) ||
+				PopTaskFromPoolQueue(Work) ||
+				PopTaskFromOtherThreadQueue(Work))
+			{
+				Work.Work(Work.Context);
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
+		}
+	}
+
+	bool PopTaskFromLocalQueue(WorkEntry& Work)
+	{
+		return ThreadLocalWorkQueue && ThreadLocalWorkQueue->TryPop(Work);
+	}
+
+	bool PopTaskFromPoolQueue(WorkEntry& Work)
+	{
+		return WorkPoolQueue.TryPop(Work);
+	}
+
+	bool PopTaskFromOtherThreadQueue(WorkEntry& Work)
+	{
+		for (unsigned i = 0; i < Queues.size(); ++i)
+		{
+			unsigned const index = (ThreadLocalIndex + i + 1) % Queues.size();
+			if (Queues[index].TrySteal(Work))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+};

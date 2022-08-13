@@ -11,9 +11,19 @@ BinaryReader::BinaryReader(FileStream& Stream)
 	Sentinel	= Ptr + Stream.GetSizeInBytes();
 }
 
-u8* BinaryReader::GetData() const noexcept
+u8* BinaryReader::GetBaseAddress() const noexcept
 {
 	return BaseAddress.get();
+}
+
+u8* BinaryReader::GetPtr() const noexcept
+{
+	return Ptr;
+}
+
+usize BinaryReader::GetSizeInBytes() const noexcept
+{
+	return Stream.GetSizeInBytes();
 }
 
 void BinaryReader::Read(void* DstData, u64 SizeInBytes) const noexcept

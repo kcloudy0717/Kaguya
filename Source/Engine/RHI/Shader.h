@@ -1,10 +1,9 @@
 #pragma once
-#include <wrl/client.h>
 #include <map>
-
+#include "D3D12/D3D12Core.h"
 #include "dxc/dxcapi.h"
 #include "dxc/d3d12shader.h"
-#include "RHICore.h"
+#include "Arc.h"
 
 struct ShaderCompileOptions
 {
@@ -25,21 +24,17 @@ class Shader
 public:
 	Shader() noexcept = default;
 	Shader(
-		RHI_SHADER_TYPE					 ShaderType,
-		DxcShaderHash					 ShaderHash,
-		Microsoft::WRL::ComPtr<IDxcBlob> Binary,
-		Microsoft::WRL::ComPtr<IDxcBlob> Pdb);
+		RHI_SHADER_TYPE ShaderType,
+		Arc<IDxcBlob>	Binary,
+		Arc<IDxcBlob>	Pdb);
 
-	[[nodiscard]] void*			GetPointer() const noexcept;
-	[[nodiscard]] size_t		GetSize() const noexcept;
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
+	[[nodiscard]] void*	 GetPointer() const noexcept;
+	[[nodiscard]] size_t GetSize() const noexcept;
 
 protected:
 	RHI_SHADER_TYPE ShaderType;
-	DxcShaderHash	ShaderHash = {};
-
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
+	Arc<IDxcBlob>	Binary;
+	Arc<IDxcBlob>	Pdb;
 };
 
 /*
@@ -53,16 +48,13 @@ class Library
 public:
 	Library() noexcept = default;
 	Library(
-		DxcShaderHash					 ShaderHash,
-		Microsoft::WRL::ComPtr<IDxcBlob> Binary,
-		Microsoft::WRL::ComPtr<IDxcBlob> Pdb);
+		Arc<IDxcBlob> Binary,
+		Arc<IDxcBlob> Pdb);
 
-	[[nodiscard]] void*			GetPointer() const noexcept;
-	[[nodiscard]] size_t		GetSize() const noexcept;
-	[[nodiscard]] DxcShaderHash GetShaderHash() const noexcept;
+	[[nodiscard]] void*	 GetPointer() const noexcept;
+	[[nodiscard]] size_t GetSize() const noexcept;
 
 private:
-	DxcShaderHash					 ShaderHash = {};
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
+	Arc<IDxcBlob> Binary;
+	Arc<IDxcBlob> Pdb;
 };

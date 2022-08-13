@@ -804,7 +804,7 @@ namespace RHI
 	void D3D12UnorderedAccessView::RecreateView()
 	{
 		Descriptor.CreateView(Desc, Resource->GetResource(), CounterResource ? CounterResource->GetResource() : nullptr);
-		ClearDescriptor.CreateView(Desc, Resource->GetResource(), CounterResource ? CounterResource->GetResource() : nullptr);
+		ClearDescriptor.CreateView(Desc, Resource->GetResource(), nullptr);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE D3D12UnorderedAccessView::GetClearCpuHandle() const noexcept

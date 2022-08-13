@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+#include <queue>
 #include "D3D12Core.h"
 #include "D3D12Resource.h"
 

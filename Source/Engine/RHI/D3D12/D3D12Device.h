@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include "D3D12Core.h"
 #include "D3D12LinkedDevice.h"
 #include "D3D12RootSignature.h"
@@ -11,6 +12,7 @@ namespace RHI
 		bool EnableDebugLayer;
 		bool EnableGpuBasedValidation;
 		bool EnableAutoDebugName;
+		bool EnablePixCapture;
 
 		D3D_FEATURE_LEVEL FeatureLevel;
 		bool			  WaveIntrinsics;
@@ -61,7 +63,7 @@ namespace RHI
 		void OnBeginFrame();
 		void OnEndFrame();
 
-		void BeginCapture(const std::filesystem::path& Path) const;
+		void BeginCapture(std::wstring_view Path) const;
 		void EndCapture() const;
 
 		void WaitIdle();
@@ -73,7 +75,7 @@ namespace RHI
 		template<typename PipelineStateStream>
 		[[nodiscard]] D3D12PipelineState CreatePipelineState(std::wstring Name, PipelineStateStream& Stream)
 		{
-			PipelineStateStreamDesc Desc;
+			PipelineStateStreamDesc Desc	   = {};
 			Desc.SizeInBytes				   = sizeof(Stream);
 			Desc.pPipelineStateSubobjectStream = &Stream;
 			return D3D12PipelineState(this, Name, Desc);
@@ -84,7 +86,6 @@ namespace RHI
 	private:
 		using TDescriptorSizeCache = std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES>;
 
-		static void ReportLiveObjects();
 		static void OnDeviceRemoved(PVOID Context, BOOLEAN);
 
 		template<typename T>
@@ -107,25 +108,15 @@ namespace RHI
 	private:
 		struct ReportLiveObjectGuard
 		{
-			~ReportLiveObjectGuard() { D3D12Device::ReportLiveObjects(); }
+			~ReportLiveObjectGuard();
 		} MemoryGuard;
 
-		/*struct WinPix
+		struct WinPix
 		{
-			WinPix()
-				: Module(PIXLoadLatestWinPixGpuCapturerLibrary())
-			{
-			}
-			~WinPix()
-			{
-				if (Module)
-				{
-					FreeLibrary(Module);
-				}
-			}
+			WinPix(bool EnablePixCapture);
 
-			HMODULE Module;
-		} WinPix;*/
+			ScopedModuleHandle Module;
+		} WinPix;
 
 		Arc<IDXGIFactory6> Factory6;
 		Arc<IDXGIAdapter3> Adapter3;
@@ -157,6 +148,7 @@ namespace RHI
 		// TODO: Add Multi-Adapter support
 		D3D12LinkedDevice LinkedDevice;
 
+		// PIX
 		mutable HRESULT CaptureStatus = S_FALSE;
 	};
 } // namespace RHI

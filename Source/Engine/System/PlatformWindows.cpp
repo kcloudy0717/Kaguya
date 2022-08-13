@@ -76,6 +76,21 @@ bool CommonHandle::IsValid(NativeHandle Handle)
 	return Handle != GetInvalidHandle();
 }
 
+ModuleHandle::NativeHandle ModuleHandle::GetInvalidHandle()
+{
+	return nullptr;
+}
+
+void ModuleHandle::Destruct(NativeHandle Handle)
+{
+	::FreeLibrary(Handle);
+}
+
+bool ModuleHandle::IsValid(NativeHandle Handle)
+{
+	return Handle != GetInvalidHandle();
+}
+
 WindowHandle::NativeHandle WindowHandle::GetInvalidHandle()
 {
 	return nullptr;

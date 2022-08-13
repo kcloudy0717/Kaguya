@@ -3,12 +3,6 @@
 
 namespace RHI
 {
-	ExceptionD3D12::ExceptionD3D12(std::string_view File, int Line, HRESULT ErrorCode)
-		: Exception(File, Line)
-		, ErrorCode(ErrorCode)
-	{
-	}
-
 	const char* ExceptionD3D12::GetErrorType() const noexcept
 	{
 		return "[D3D12]";
@@ -81,19 +75,19 @@ namespace RHI
 
 	UINT64 D3D12SyncHandle::GetValue() const noexcept
 	{
-		assert(static_cast<bool>(*this));
 		return Value;
 	}
 
 	bool D3D12SyncHandle::IsComplete() const
 	{
-		assert(static_cast<bool>(*this));
-		return Fence->IsFenceComplete(Value);
+		return Fence ? Fence->IsFenceComplete(Value) : true;
 	}
 
 	void D3D12SyncHandle::WaitForCompletion() const
 	{
-		assert(static_cast<bool>(*this));
-		Fence->HostWaitForValue(Value);
+		if (Fence)
+		{
+			Fence->HostWaitForValue(Value);
+		}
 	}
 } // namespace RHI

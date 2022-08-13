@@ -1,4 +1,7 @@
 #pragma once
+#include <queue>
+#include <bitset>
+#include <list>
 #include "D3D12Core.h"
 
 namespace RHI
@@ -49,6 +52,8 @@ namespace RHI
 			// Removes the first element from the free list and returns its index
 			UINT Allocate()
 			{
+				MutexGuard Guard(*IndexMutex);
+
 				UINT NewIndex;
 				if (!IndexQueue.empty())
 				{
@@ -64,13 +69,14 @@ namespace RHI
 
 			void Release(UINT Index)
 			{
+				MutexGuard Guard(*IndexMutex);
 				IndexQueue.push(Index);
 			}
 
-			std::queue<UINT> IndexQueue;
-			UINT			 Index = 0;
+			std::unique_ptr<Mutex> IndexMutex = std::make_unique<Mutex>();
+			std::queue<UINT>	   IndexQueue;
+			UINT				   Index = 0;
 		} IndexPool;
-		std::unique_ptr<Mutex> IndexMutex;
 	};
 
 	// Used for RTV/DSV Heaps, Source: https://github.com/microsoft/D3D12TranslationLayer/blob/master/include/ImmediateContext.hpp#L320

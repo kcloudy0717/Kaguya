@@ -14,6 +14,8 @@ using u64 = unsigned long long;
 using f32 = float;
 using f64 = double;
 
+using usize = size_t;
+
 // http://blog.bitwigglers.org/using-enum-classes-as-type-safe-bitmasks/
 
 template<typename Enum>

@@ -4,11 +4,11 @@
 
 DECLARE_LOG_CATEGORY(Dxc);
 
-class ExceptionDxc : public Exception
+class ExceptionDxc final : public Exception
 {
 public:
-	ExceptionDxc(std::string_view File, int Line, HRESULT ErrorCode)
-		: Exception(File, Line)
+	ExceptionDxc(std::string_view Source, int Line, HRESULT ErrorCode)
+		: Exception(Source, Line)
 		, ErrorCode(ErrorCode)
 	{
 	}
@@ -18,15 +18,14 @@ private:
 	std::string GetError() const override;
 
 private:
-	const HRESULT ErrorCode;
+	HRESULT ErrorCode;
 };
 
 struct ShaderCompilationResult
 {
-	Microsoft::WRL::ComPtr<IDxcBlob> Binary;
-	std::wstring					 PdbName;
-	Microsoft::WRL::ComPtr<IDxcBlob> Pdb;
-	DxcShaderHash					 ShaderHash;
+	Arc<IDxcBlob> Binary;
+	std::wstring  PdbName;
+	Arc<IDxcBlob> Pdb;
 };
 
 class ShaderCompiler
@@ -79,8 +78,8 @@ private:
 		const std::vector<DxcDefine>& ShaderDefines) const;
 
 private:
-	Microsoft::WRL::ComPtr<IDxcCompiler3>	   Compiler3;
-	Microsoft::WRL::ComPtr<IDxcUtils>		   Utils;
-	Microsoft::WRL::ComPtr<IDxcIncludeHandler> DefaultIncludeHandler;
-	RHI_SHADER_MODEL						   ShaderModel;
+	Arc<IDxcCompiler3>		Compiler3;
+	Arc<IDxcUtils>			Utils;
+	Arc<IDxcIncludeHandler> DefaultIncludeHandler;
+	RHI_SHADER_MODEL		ShaderModel;
 };

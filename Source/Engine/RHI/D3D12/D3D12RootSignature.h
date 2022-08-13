@@ -1,4 +1,6 @@
 #pragma once
+#include <vector>
+#include <bitset>
 #include "D3D12Core.h"
 
 namespace RHI

@@ -9,7 +9,9 @@ class BinaryReader
 public:
 	explicit BinaryReader(FileStream& Stream);
 
-	u8* GetData() const noexcept;
+	u8*	  GetBaseAddress() const noexcept;
+	u8*	  GetPtr() const noexcept;
+	usize GetSizeInBytes() const noexcept;
 
 	void Read(void* DstData, u64 SizeInBytes) const noexcept;
 
@@ -22,7 +24,7 @@ public:
 		return Result;
 	}
 
-	u8	ReadByte() const noexcept;
+	u8 ReadByte() const noexcept;
 	// Lifetime of the returned pointer is tied to the BinaryReader for efficiency reasons.
 	u8* ReadBytes(u64 SizeInBytes) const noexcept;
 

@@ -1,8 +1,6 @@
 #include "ShaderCompiler.h"
 #include "System/System.h"
 
-using Microsoft::WRL::ComPtr;
-
 DEFINE_LOG_CATEGORY(Dxc);
 
 #define VERIFY_DXC_API(expr)                            \
@@ -76,7 +74,7 @@ Shader ShaderCompiler::CompileShader(
 	}
 
 	ShaderCompilationResult Result = Compile(Path, Options.EntryPoint, ProfileString.data(), Defines);
-	return { ShaderType, Result.ShaderHash, Result.Binary, Result.Pdb };
+	return { ShaderType, Result.Binary, Result.Pdb };
 }
 
 Shader ShaderCompiler::CompileVS(const std::filesystem::path& Path, const ShaderCompileOptions& Options) const
@@ -110,7 +108,7 @@ Library ShaderCompiler::CompileLibrary(
 	std::wstring ProfileString = LibraryProfileString();
 
 	ShaderCompilationResult Result = Compile(Path, L"", ProfileString.data(), {});
-	return { Result.ShaderHash, Result.Binary, Result.Pdb };
+	return { Result.Binary, Result.Pdb };
 }
 
 std::wstring ShaderCompiler::GetShaderModelString() const
@@ -193,7 +191,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	};
 
 	// Build arguments
-	ComPtr<IDxcCompilerArgs> DxcCompilerArgs;
+	Arc<IDxcCompilerArgs> DxcCompilerArgs;
 	VERIFY_DXC_API(Utils->BuildArguments(
 		Path.c_str(),
 		EntryPoint.data(),
@@ -204,7 +202,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		static_cast<UINT32>(ShaderDefines.size()),
 		&DxcCompilerArgs));
 
-	ComPtr<IDxcBlobEncoding> Source;
+	Arc<IDxcBlobEncoding> Source;
 	VERIFY_DXC_API(Utils->LoadFile(Path.c_str(), nullptr, &Source));
 
 	const DxcBuffer SourceBuffer = {
@@ -212,7 +210,7 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		.Size	  = Source->GetBufferSize(),
 		.Encoding = DXC_CP_ACP
 	};
-	ComPtr<IDxcResult> DxcResult;
+	Arc<IDxcResult> DxcResult;
 	VERIFY_DXC_API(Compiler3->Compile(
 		&SourceBuffer,
 		DxcCompilerArgs->GetArguments(),
@@ -225,20 +223,19 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	{
 		if (FAILED(Status))
 		{
-			ComPtr<IDxcBlobUtf8>  Errors;
-			ComPtr<IDxcBlobUtf16> OutputName;
+			Arc<IDxcBlobUtf8>  Errors;
+			Arc<IDxcBlobUtf16> OutputName;
 			VERIFY_DXC_API(DxcResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&Errors), &OutputName));
-			KAGUYA_LOG(RHI, Error, "Shader compile error: {}", std::bit_cast<char*>(Errors->GetBufferPointer()));
+			KAGUYA_LOG(Dxc, Error, "Shader compile error: {}", std::bit_cast<char*>(Errors->GetBufferPointer()));
 			throw std::runtime_error("Failed to compile shader");
 		}
 	}
 
-	DxcResult->GetResult(&Result.Binary);
-
+	VERIFY_DXC_API(DxcResult->GetResult(&Result.Binary));
 	if (DxcResult->HasOutput(DXC_OUT_PDB))
 	{
-		ComPtr<IDxcBlobUtf16> Name;
-		DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&Result.Pdb), &Name);
+		Arc<IDxcBlobUtf16> Name;
+		VERIFY_DXC_API(DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&Result.Pdb), &Name));
 		if (Name)
 		{
 			Result.PdbName = Name->GetStringPointer();
@@ -248,17 +245,6 @@ ShaderCompilationResult ShaderCompiler::Compile(
 		FileStream	 Stream = File::Create(PdbPath);
 		BinaryWriter Writer(Stream);
 		Writer.Write(Result.Pdb->GetBufferPointer(), Result.Pdb->GetBufferSize());
-	}
-
-	if (DxcResult->HasOutput(DXC_OUT_SHADER_HASH))
-	{
-		ComPtr<IDxcBlob>	  ShaderHash;
-		ComPtr<IDxcBlobUtf16> OutputName;
-		DxcResult->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&ShaderHash), &OutputName);
-		if (ShaderHash)
-		{
-			Result.ShaderHash = *static_cast<DxcShaderHash*>(ShaderHash->GetBufferPointer());
-		}
 	}
 
 	return Result;

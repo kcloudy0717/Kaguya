@@ -1,5 +1,9 @@
 #pragma once
 #include <string_view>
+#include <ranges>
+#include <algorithm>
+#include <string>
+#include <ios>
 #include "Delegate.h"
 
 class IConsoleObject

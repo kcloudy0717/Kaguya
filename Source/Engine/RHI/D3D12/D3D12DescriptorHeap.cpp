@@ -37,7 +37,6 @@ namespace RHI
 		, CpuBaseAddress(DescriptorHeap->GetCPUDescriptorHandleForHeapStart())
 		, GpuBaseAddress(DescriptorHeap->GetGPUDescriptorHandleForHeapStart())
 		, DescriptorSize(Parent->GetParentDevice()->GetSizeOfDescriptor(Type))
-		, IndexMutex(std::make_unique<Mutex>())
 	{
 	}
 
@@ -46,7 +45,6 @@ namespace RHI
 		D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
 		UINT&						 Index)
 	{
-		MutexGuard Guard(*IndexMutex);
 		Index				= IndexPool.Allocate();
 		CpuDescriptorHandle = this->GetCpuDescriptorHandle(Index);
 		GpuDescriptorHandle = this->GetGpuDescriptorHandle(Index);
@@ -54,7 +52,6 @@ namespace RHI
 
 	void D3D12DescriptorHeap::Release(UINT Index)
 	{
-		MutexGuard Guard(*IndexMutex);
 		IndexPool.Release(Index);
 	}
 

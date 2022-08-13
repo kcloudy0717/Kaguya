@@ -11,13 +11,14 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${natvis})
 
-add_library(${PROJECTNAME} STATIC
+add_library(
+	${PROJECTNAME} STATIC
 	${inc}
 	${src}
 	${natvis})
 
 if (MSVC)
-	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
+	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # Warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()
 
@@ -29,7 +30,7 @@ target_link_libraries(${PROJECTNAME} PRIVATE System)
 
 # D3D12 Agility SDK
 message("Fetching D3D12 Agility SDK")
-FetchContent_Declare(d3d12-agility-sdk URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.606.3)
+FetchContent_Declare(d3d12-agility-sdk URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.606.3 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(d3d12-agility-sdk)
 file(GLOB_RECURSE d3d12-agility-sdk_include "${d3d12-agility-sdk_SOURCE_DIR}/build/native/include/*.h")
 add_library(
@@ -38,7 +39,7 @@ add_library(
 	"${d3d12-agility-sdk_SOURCE_DIR}/build/native/bin/x64/D3D12Core.dll"
 	"${d3d12-agility-sdk_SOURCE_DIR}/build/native/bin/x64/d3d12SDKLayers.dll")
 target_include_directories(D3D12AgilitySDK INTERFACE "${d3d12-agility-sdk_SOURCE_DIR}/build/native/include")
-target_link_libraries(D3D12AgilitySDK INTERFACE "d3d12.lib" "dxgi.lib")
+target_link_libraries(D3D12AgilitySDK INTERFACE "d3d12.lib" "dxgi.lib" "dxguid.lib")
 target_link_libraries(${PROJECTNAME} PUBLIC D3D12AgilitySDK)
 set_target_properties(D3D12AgilitySDK PROPERTIES FOLDER "Dependencies-RHI")
 
@@ -54,7 +55,7 @@ message("D3D12 Agility SDK fetched")
 
 # DXC
 message("Fetching DirectXShaderCompiler")
-FetchContent_Declare(dxc URL https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2207/dxc_2022_07_18.zip)
+FetchContent_Declare(dxc URL https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2207/dxc_2022_07_18.zip DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(dxc)
 file(MAKE_DIRECTORY ${dxc_SOURCE_DIR}/include)
 file(COPY ${dxc_SOURCE_DIR}/inc/d3d12shader.h DESTINATION ${dxc_SOURCE_DIR}/include/dxc)
@@ -84,7 +85,7 @@ message("DirectXShaderCompiler fetched")
 
 # DirectStorage
 message("Fetching DirectStorage")
-FetchContent_Declare(direct-storage URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/1.0.2)
+FetchContent_Declare(direct-storage URL https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DirectStorage/1.0.2 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(direct-storage)
 file(GLOB_RECURSE direct-storage_include "${direct-storage_SOURCE_DIR}/native/include/*.h")
 add_library(
@@ -110,7 +111,7 @@ message("DirectStorage fetched")
 
 # PIX
 message("Fetching PIX")
-FetchContent_Declare(pix URL https://www.nuget.org/api/v2/package/WinPixEventRuntime/1.0.220124001)
+FetchContent_Declare(pix URL https://www.nuget.org/api/v2/package/WinPixEventRuntime/1.0.220124001 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(pix)
 file(GLOB_RECURSE pix_include "${pix_SOURCE_DIR}/Include/WinPixEventRuntime/*.h")
 add_library(

@@ -53,35 +53,15 @@ DECLARE_LOG_CATEGORY(D3D12RHI);
 #if defined(_DEBUG)
 #include <dxgidebug.h>
 #endif
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "dxguid.lib")
 
 // D3D12
 #include "d3d12.h"
 #include "d3dx12.h"
 #include "d3d12sdklayers.h"
 #include "d3d12shader.h"
-#pragma comment(lib, "d3d12.lib")
-#include <pix3.h>
+#include "pix3.h"
 // DirectStorage
 #include "dstorage.h"
-
-#include <cstddef>
-#include <cassert>
-
-#include <string_view>
-
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <filesystem>
-
-#include <array>
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <queue>
-#include <bitset>
 
 #define VERIFY_D3D12_API(expr)                                 \
 	do                                                         \

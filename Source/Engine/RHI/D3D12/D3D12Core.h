@@ -1,4 +1,5 @@
 #pragma once
+#include <queue>
 #include "D3D12RHI.h"
 #include "RHICore.h"
 #include "System/System.h"
@@ -27,17 +28,21 @@ namespace RHI
 		Upload, // Data initialization during resource creation
 	};
 
-	class ExceptionD3D12 : public Exception
+	class ExceptionD3D12 final : public Exception
 	{
 	public:
-		ExceptionD3D12(std::string_view File, int Line, HRESULT ErrorCode);
+		ExceptionD3D12(std::string_view Source, int Line, HRESULT ErrorCode)
+			: Exception(Source, Line)
+			, ErrorCode(ErrorCode)
+		{
+		}
 
 	private:
 		const char* GetErrorType() const noexcept override;
 		std::string GetError() const override;
 
 	private:
-		const HRESULT ErrorCode;
+		HRESULT ErrorCode;
 	};
 
 	struct D3D12NodeMask
@@ -104,7 +109,6 @@ namespace RHI
 		}
 
 		D3D12SyncHandle(std::nullptr_t) noexcept
-			: D3D12SyncHandle()
 		{
 		}
 
@@ -153,7 +157,7 @@ namespace RHI
 			return *this;
 		}
 
-		CFencePool(const CFencePool&) = delete;
+		CFencePool(const CFencePool&)			 = delete;
 		CFencePool& operator=(const CFencePool&) = delete;
 
 		void ReturnToPool(TResourceType&& Resource, D3D12SyncHandle SyncHandle) noexcept
@@ -204,12 +208,13 @@ namespace RHI
 	class DeferredDeleteQueue
 	{
 	public:
-		void Enqueue(D3D12SyncHandle SyncHandle, T Resource)
+		void Enqueue(D3D12SyncHandle GraphicsSyncHandle, D3D12SyncHandle ComputeSyncHandle, T Resource)
 		{
 			MutexGuard Guard(*QueueMutex);
 			Queue.push(Entry{
-				.SyncHandle = SyncHandle,
-				.Resource	= Resource,
+				.GraphicsSyncHandle = GraphicsSyncHandle,
+				.ComputeSyncHandle	= ComputeSyncHandle,
+				.Resource			= Resource,
 			});
 		}
 
@@ -219,7 +224,8 @@ namespace RHI
 			while (!Queue.empty())
 			{
 				Entry& Entry = Queue.front();
-				if (!Entry.SyncHandle.IsComplete())
+				if (!Entry.GraphicsSyncHandle.IsComplete() ||
+					!Entry.ComputeSyncHandle.IsComplete())
 				{
 					break;
 				}
@@ -231,7 +237,8 @@ namespace RHI
 	private:
 		struct Entry
 		{
-			D3D12SyncHandle SyncHandle;
+			D3D12SyncHandle GraphicsSyncHandle;
+			D3D12SyncHandle ComputeSyncHandle;
 			T				Resource;
 		};
 

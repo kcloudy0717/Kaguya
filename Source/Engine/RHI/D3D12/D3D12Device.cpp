@@ -14,7 +14,8 @@ static ConsoleVariable CVar_AsyncPsoCompilation(
 namespace RHI
 {
 	D3D12Device::D3D12Device(const DeviceOptions& Options)
-		: Device(InitializeDevice(Options))
+		: WinPix(Options.EnablePixCapture)
+		, Device(InitializeDevice(Options))
 		, Device1(DeviceQueryInterface<ID3D12Device1>())
 		, Device5(DeviceQueryInterface<ID3D12Device5>())
 		, AllNodeMask((1 << Device->GetNodeCount()) - 1)
@@ -131,10 +132,14 @@ namespace RHI
 		LinkedDevice.OnEndFrame();
 	}
 
-	void D3D12Device::BeginCapture(const std::filesystem::path& Path) const
+	void D3D12Device::BeginCapture(std::wstring_view Path) const
 	{
+		if (!WinPix.Module)
+		{
+			return;
+		}
 		PIXCaptureParameters CaptureParameters			= {};
-		CaptureParameters.GpuCaptureParameters.FileName = Path.c_str();
+		CaptureParameters.GpuCaptureParameters.FileName = Path.data();
 		CaptureStatus									= PIXBeginCapture(PIX_CAPTURE_GPU, &CaptureParameters);
 	}
 
@@ -169,17 +174,6 @@ namespace RHI
 	}
 
 	// ======================================== Private ========================================
-	void D3D12Device::ReportLiveObjects()
-	{
-#ifdef _DEBUG
-		Arc<IDXGIDebug> Debug;
-		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&Debug))))
-		{
-			Debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-		}
-#endif
-	}
-
 	void D3D12Device::OnDeviceRemoved(PVOID Context, BOOLEAN)
 	{
 		auto	D3D12Device	  = static_cast<ID3D12Device*>(Context);
@@ -479,6 +473,17 @@ namespace RHI
 #undef STRINGIFY
 	}
 
+	D3D12Device::ReportLiveObjectGuard::~ReportLiveObjectGuard()
+	{
+#ifdef _DEBUG
+		Arc<IDXGIDebug> Debug;
+		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&Debug))))
+		{
+			Debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+		}
+#endif
+	}
+
 	D3D12Device::Dred::Dred(ID3D12Device* Device)
 		: DeviceRemovedWaitHandle(INVALID_HANDLE_VALUE) // Don't need to call CloseHandle based on RegisterWaitForSingleObject doc
 	{
@@ -506,5 +511,10 @@ namespace RHI
 			BOOL b = UnregisterWaitEx(DeviceRemovedWaitHandle, INVALID_HANDLE_VALUE);
 			assert(b);
 		}
+	}
+
+	D3D12Device::WinPix::WinPix(bool EnablePixCapture)
+		: Module(EnablePixCapture ? PIXLoadLatestWinPixGpuCapturerLibrary() : nullptr)
+	{
 	}
 } // namespace RHI

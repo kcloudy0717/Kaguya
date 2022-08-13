@@ -12,7 +12,7 @@ class Process
 public:
 	static const std::filesystem::path ExecutableDirectory;
 
-	static std::unique_ptr<ThreadPool> ThreadPool;
+	static ThreadPool& GetThreadPool();
 
 	static ThreadId GetCurrentThreadId();
 };

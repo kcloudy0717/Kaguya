@@ -2,15 +2,13 @@
 #include "D3D12Device.h"
 #include "D3D12RootSignature.h"
 #include "ShaderCompiler.h"
-#include "RHID3D12Mappings.h"
-
 #include <unordered_set>
 
 namespace RHI
 {
 	void D3D12PipelineParserCallbacks::RootSignatureCb(D3D12RootSignature* RootSignature)
 	{
-		this->RootSignature = RootSignature;
+		this->RootSignature = RootSignature->GetApiHandle();
 	}
 
 	void D3D12PipelineParserCallbacks::InputLayoutCb(D3D12InputLayout* InputLayout)
@@ -21,61 +19,183 @@ namespace RHI
 	void D3D12PipelineParserCallbacks::VSCb(Shader* VS)
 	{
 		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->VS = VS;
+		this->VS = { .pShaderBytecode = VS->GetPointer(), .BytecodeLength = VS->GetSize() };
 	}
 
 	void D3D12PipelineParserCallbacks::PSCb(Shader* PS)
 	{
 		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->PS = PS;
+		this->PS = { .pShaderBytecode = PS->GetPointer(), .BytecodeLength = PS->GetSize() };
 	}
 
 	void D3D12PipelineParserCallbacks::CSCb(Shader* CS)
 	{
 		Type	 = RHI_PIPELINE_STATE_TYPE::Compute;
-		this->CS = CS;
+		this->CS = { .pShaderBytecode = CS->GetPointer(), .BytecodeLength = CS->GetSize() };
 	}
 
 	void D3D12PipelineParserCallbacks::ASCb(Shader* AS)
 	{
-		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->AS = AS;
+		Type			   = RHI_PIPELINE_STATE_TYPE::Graphics;
+		ContainsMeshShader = true;
+		this->AS		   = { .pShaderBytecode = AS->GetPointer(), .BytecodeLength = AS->GetSize() };
 	}
 
 	void D3D12PipelineParserCallbacks::MSCb(Shader* MS)
 	{
-		Type	 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->MS = MS;
+		Type			   = RHI_PIPELINE_STATE_TYPE::Graphics;
+		ContainsMeshShader = true;
+		this->MS		   = { .pShaderBytecode = MS->GetPointer(), .BytecodeLength = MS->GetSize() };
 	}
 
 	void D3D12PipelineParserCallbacks::BlendStateCb(const RHIBlendState& BlendState)
 	{
-		Type			 = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->BlendState = BlendState;
+		static constexpr D3D12_BLEND BlendFactors[] = {
+			D3D12_BLEND_ZERO,			  // Zero
+			D3D12_BLEND_ONE,			  // One
+			D3D12_BLEND_SRC_COLOR,		  // SrcColor
+			D3D12_BLEND_INV_SRC_COLOR,	  // OneMinusSrcColor
+			D3D12_BLEND_DEST_COLOR,		  // DstColor
+			D3D12_BLEND_INV_DEST_COLOR,	  // OneMinusDstColor
+			D3D12_BLEND_SRC_ALPHA,		  // SrcAlpha
+			D3D12_BLEND_INV_SRC_ALPHA,	  // OneMinusSrcAlpha
+			D3D12_BLEND_DEST_ALPHA,		  // DstAlpha
+			D3D12_BLEND_INV_DEST_ALPHA,	  // OneMinusDstAlpha
+			D3D12_BLEND_BLEND_FACTOR,	  // BlendFactor
+			D3D12_BLEND_INV_BLEND_FACTOR, // OneMinusBlendFactor
+			D3D12_BLEND_SRC_ALPHA_SAT,	  // SrcAlphaSaturate
+			D3D12_BLEND_SRC1_COLOR,		  // Src1Color
+			D3D12_BLEND_INV_SRC1_COLOR,	  // OneMinusSrc1Color
+			D3D12_BLEND_SRC1_ALPHA,		  // Src1Alpha
+			D3D12_BLEND_INV_SRC1_ALPHA,	  // OneMinusSrc1Alpha
+		};
+		static constexpr D3D12_BLEND_OP BlendOps[] = {
+			D3D12_BLEND_OP_ADD,			 // Add
+			D3D12_BLEND_OP_SUBTRACT,	 // Subtract
+			D3D12_BLEND_OP_REV_SUBTRACT, // ReverseSubtract
+			D3D12_BLEND_OP_MIN,			 // Min
+			D3D12_BLEND_OP_MAX,			 // Max
+		};
+
+		Type						= RHI_PIPELINE_STATE_TYPE::Graphics;
+		D3D12_BLEND_DESC& Desc		= this->BlendState;
+		Desc.AlphaToCoverageEnable	= BlendState.AlphaToCoverageEnable;
+		Desc.IndependentBlendEnable = BlendState.IndependentBlendEnable;
+		for (size_t i = 0; i < 8; ++i)
+		{
+			const auto& RHIRenderTarget = BlendState.RenderTargets[i];
+			auto&		RenderTarget	= Desc.RenderTarget[i];
+			RenderTarget.BlendEnable	= RHIRenderTarget.EnableBlend ? TRUE : FALSE;
+			RenderTarget.LogicOpEnable	= FALSE; // Default
+			RenderTarget.SrcBlend		= BlendFactors[size_t(RHIRenderTarget.SrcBlendRgb)];
+			RenderTarget.DestBlend		= BlendFactors[size_t(RHIRenderTarget.DstBlendRgb)];
+			RenderTarget.BlendOp		= BlendOps[size_t(RHIRenderTarget.BlendOpRgb)];
+			RenderTarget.SrcBlendAlpha	= BlendFactors[size_t(RHIRenderTarget.SrcBlendAlpha)];
+			RenderTarget.DestBlendAlpha = BlendFactors[size_t(RHIRenderTarget.DstBlendAlpha)];
+			RenderTarget.BlendOpAlpha	= BlendOps[size_t(RHIRenderTarget.BlendOpAlpha)];
+			RenderTarget.LogicOp		= D3D12_LOGIC_OP_CLEAR;
+			RenderTarget.RenderTargetWriteMask |= RHIRenderTarget.WriteMask.R ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
+			RenderTarget.RenderTargetWriteMask |= RHIRenderTarget.WriteMask.G ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
+			RenderTarget.RenderTargetWriteMask |= RHIRenderTarget.WriteMask.B ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
+			RenderTarget.RenderTargetWriteMask |= RHIRenderTarget.WriteMask.A ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
+		}
 	}
 
 	void D3D12PipelineParserCallbacks::RasterizerStateCb(const RHIRasterizerState& RasterizerState)
 	{
-		Type				  = RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->RasterizerState = RasterizerState;
+		static constexpr D3D12_FILL_MODE FillModes[] = {
+			D3D12_FILL_MODE_WIREFRAME, // Wireframe
+			D3D12_FILL_MODE_SOLID,	   // Solid
+		};
+		static constexpr D3D12_CULL_MODE CullModes[] = {
+			D3D12_CULL_MODE_NONE,  // None
+			D3D12_CULL_MODE_FRONT, // Front
+			D3D12_CULL_MODE_BACK,  // Back
+		};
+
+		Type						= RHI_PIPELINE_STATE_TYPE::Graphics;
+		D3D12_RASTERIZER_DESC& Desc = this->RasterizerState;
+		Desc.FillMode				= FillModes[size_t(RasterizerState.FillMode)];
+		Desc.CullMode				= CullModes[size_t(RasterizerState.CullMode)];
+		Desc.FrontCounterClockwise	= RasterizerState.FrontCounterClockwise;
+		Desc.DepthBias				= RasterizerState.DepthBias;
+		Desc.DepthBiasClamp			= RasterizerState.DepthBiasClamp;
+		Desc.SlopeScaledDepthBias	= RasterizerState.SlopeScaledDepthBias;
+		Desc.DepthClipEnable		= RasterizerState.DepthClipEnable;
+		Desc.MultisampleEnable		= FALSE;									 // Default
+		Desc.AntialiasedLineEnable	= FALSE;									 // Default
+		Desc.ForcedSampleCount		= 0;										 // Default
+		Desc.ConservativeRaster		= D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF; // Default
 	}
 
 	void D3D12PipelineParserCallbacks::DepthStencilStateCb(const RHIDepthStencilState& DepthStencilState)
 	{
-		Type					= RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->DepthStencilState = DepthStencilState;
+		static constexpr D3D12_COMPARISON_FUNC ComparisonFuncs[] = {
+			D3D12_COMPARISON_FUNC_NEVER,		 // Never
+			D3D12_COMPARISON_FUNC_LESS,			 // Less
+			D3D12_COMPARISON_FUNC_EQUAL,		 // Equal
+			D3D12_COMPARISON_FUNC_LESS_EQUAL,	 // LessEqual
+			D3D12_COMPARISON_FUNC_GREATER,		 // Greater
+			D3D12_COMPARISON_FUNC_NOT_EQUAL,	 // NotEqual
+			D3D12_COMPARISON_FUNC_GREATER_EQUAL, // GreaterEqual
+			D3D12_COMPARISON_FUNC_ALWAYS,		 // Always
+		};
+
+		static constexpr D3D12_STENCIL_OP StencilOps[] = {
+			D3D12_STENCIL_OP_KEEP,	   // Keep
+			D3D12_STENCIL_OP_ZERO,	   // Zero
+			D3D12_STENCIL_OP_REPLACE,  // Replace
+			D3D12_STENCIL_OP_INCR_SAT, // IncreaseSaturate
+			D3D12_STENCIL_OP_DECR_SAT, // DecreaseSaturate
+			D3D12_STENCIL_OP_INVERT,   // Invert
+			D3D12_STENCIL_OP_INCR,	   // Increase
+			D3D12_STENCIL_OP_DECR,	   // Decrease
+		};
+
+		Type							  = RHI_PIPELINE_STATE_TYPE::Graphics;
+		D3D12_DEPTH_STENCIL_DESC& Desc	  = this->DepthStencilState;
+		Desc.DepthEnable				  = DepthStencilState.EnableDepthTest;
+		Desc.DepthWriteMask				  = DepthStencilState.DepthWrite ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+		Desc.DepthFunc					  = ComparisonFuncs[size_t(DepthStencilState.DepthFunc)];
+		Desc.StencilEnable				  = DepthStencilState.EnableStencilTest;
+		Desc.StencilReadMask			  = DepthStencilState.StencilReadMask;
+		Desc.StencilWriteMask			  = DepthStencilState.StencilWriteMask;
+		Desc.FrontFace.StencilFailOp	  = StencilOps[size_t(DepthStencilState.FrontFace.StencilFailOp)];
+		Desc.FrontFace.StencilDepthFailOp = StencilOps[size_t(DepthStencilState.FrontFace.StencilDepthFailOp)];
+		Desc.FrontFace.StencilPassOp	  = StencilOps[size_t(DepthStencilState.FrontFace.StencilPassOp)];
+		Desc.FrontFace.StencilFunc		  = ComparisonFuncs[size_t(DepthStencilState.FrontFace.StencilFunc)];
+		Desc.BackFace.StencilFailOp		  = StencilOps[size_t(DepthStencilState.BackFace.StencilFailOp)];
+		Desc.BackFace.StencilDepthFailOp  = StencilOps[size_t(DepthStencilState.BackFace.StencilDepthFailOp)];
+		Desc.BackFace.StencilPassOp		  = StencilOps[size_t(DepthStencilState.BackFace.StencilPassOp)];
+		Desc.BackFace.StencilFunc		  = ComparisonFuncs[size_t(DepthStencilState.BackFace.StencilFunc)];
 	}
 
 	void D3D12PipelineParserCallbacks::RenderTargetStateCb(const RHIRenderTargetState& RenderTargetState)
 	{
-		Type					= RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->RenderTargetState = RenderTargetState;
+		Type			 = RHI_PIPELINE_STATE_TYPE::Graphics;
+		RTFormats[0]	 = RenderTargetState.RTFormats[0];
+		RTFormats[1]	 = RenderTargetState.RTFormats[1];
+		RTFormats[2]	 = RenderTargetState.RTFormats[2];
+		RTFormats[3]	 = RenderTargetState.RTFormats[3];
+		RTFormats[4]	 = RenderTargetState.RTFormats[4];
+		RTFormats[5]	 = RenderTargetState.RTFormats[5];
+		RTFormats[6]	 = RenderTargetState.RTFormats[6];
+		RTFormats[7]	 = RenderTargetState.RTFormats[7];
+		NumRenderTargets = RenderTargetState.NumRenderTargets;
+		DSFormat		 = RenderTargetState.DSFormat;
 	}
 
-	void D3D12PipelineParserCallbacks::PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY PrimitiveTopology)
+	void D3D12PipelineParserCallbacks::PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopology)
 	{
+		static constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyTypes[] = {
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED, // Undefined
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT,	 // Point
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,		 // Line
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,	 // Triangle
+		};
+
 		Type					= RHI_PIPELINE_STATE_TYPE::Graphics;
-		this->PrimitiveTopology = PrimitiveTopology;
+		this->PrimitiveTopology = PrimitiveTopologyTypes[size_t(PrimitiveTopology)];
 	}
 
 	void D3D12PipelineParserCallbacks::ErrorBadInputParameter(size_t Index)
@@ -93,15 +213,6 @@ namespace RHI
 		KAGUYA_LOG(D3D12RHI, Error, "Unknown subobject at {}", Index);
 	}
 
-	D3D12_SHADER_BYTECODE RHITranslateD3D12(Shader* Shader)
-	{
-		if (Shader)
-		{
-			return { .pShaderBytecode = Shader->GetPointer(), .BytecodeLength = Shader->GetSize() };
-		}
-		return {};
-	}
-
 	struct awaitable_CompilePsoThread
 	{
 		constexpr bool await_ready() const noexcept { return false; }
@@ -110,7 +221,7 @@ namespace RHI
 
 		void await_suspend(std::coroutine_handle<> handle) const
 		{
-			Process::ThreadPool->QueueThreadpoolWork(
+			Process::GetThreadPool().QueueThreadpoolWork(
 				[](void* Context)
 				{
 					std::coroutine_handle<>::from_address(Context)();
@@ -158,65 +269,29 @@ namespace RHI
 
 		if (Type == RHI_PIPELINE_STATE_TYPE::Graphics)
 		{
-			if (!Parser.MS)
-			{
-				const D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
-					.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
-					.VS					   = RHITranslateD3D12(Parser.VS),
-					.PS					   = RHITranslateD3D12(Parser.PS),
-					.DS					   = D3D12_SHADER_BYTECODE{},
-					.HS					   = D3D12_SHADER_BYTECODE{},
-					.GS					   = D3D12_SHADER_BYTECODE{},
-					.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC{},
-					.BlendState			   = RHITranslateD3D12(Parser.BlendState),
-					.SampleMask			   = DefaultSampleMask{},
-					.RasterizerState	   = RHITranslateD3D12(Parser.RasterizerState),
-					.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
-					.InputLayout		   = { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) },
-					.IBStripCutValue	   = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-					.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
-					.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
-					.RTVFormats			   = {
-						   Parser.RenderTargetState.RTFormats[0],
-						   Parser.RenderTargetState.RTFormats[1],
-						   Parser.RenderTargetState.RTFormats[2],
-						   Parser.RenderTargetState.RTFormats[3],
-						   Parser.RenderTargetState.RTFormats[4],
-						   Parser.RenderTargetState.RTFormats[5],
-						   Parser.RenderTargetState.RTFormats[6],
-						   Parser.RenderTargetState.RTFormats[7],
-					   },
-					.DSVFormat	= Parser.RenderTargetState.DSFormat,
-					.SampleDesc = DefaultSampleDesc{},
-					.NodeMask	= Device->GetAllNodeMask(),
-					.CachedPSO	= D3D12_CACHED_PIPELINE_STATE{},
-					.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE
-				};
-				co_return Compile<D3D12_GRAPHICS_PIPELINE_STATE_DESC>(Device, Name, Desc);
-			}
-			else
+			if (Parser.ContainsMeshShader)
 			{
 				D3DX12_MESH_SHADER_PIPELINE_STATE_DESC Desc = {
-					.pRootSignature		   = Parser.RootSignature->GetApiHandle(),
-					.MS					   = RHITranslateD3D12(Parser.MS),
-					.PS					   = RHITranslateD3D12(Parser.PS),
-					.BlendState			   = RHITranslateD3D12(Parser.BlendState),
+					.pRootSignature		   = Parser.RootSignature,
+					.MS					   = Parser.MS,
+					.PS					   = Parser.PS,
+					.BlendState			   = Parser.BlendState,
 					.SampleMask			   = DefaultSampleMask(),
-					.RasterizerState	   = RHITranslateD3D12(Parser.RasterizerState),
-					.DepthStencilState	   = RHITranslateD3D12(Parser.DepthStencilState),
-					.PrimitiveTopologyType = RHITranslateD3D12(Parser.PrimitiveTopology),
-					.NumRenderTargets	   = Parser.RenderTargetState.NumRenderTargets,
+					.RasterizerState	   = Parser.RasterizerState,
+					.DepthStencilState	   = Parser.DepthStencilState,
+					.PrimitiveTopologyType = Parser.PrimitiveTopology,
+					.NumRenderTargets	   = Parser.NumRenderTargets,
 					.RTVFormats			   = {
-						   Parser.RenderTargetState.RTFormats[0],
-						   Parser.RenderTargetState.RTFormats[1],
-						   Parser.RenderTargetState.RTFormats[2],
-						   Parser.RenderTargetState.RTFormats[3],
-						   Parser.RenderTargetState.RTFormats[4],
-						   Parser.RenderTargetState.RTFormats[5],
-						   Parser.RenderTargetState.RTFormats[6],
-						   Parser.RenderTargetState.RTFormats[7],
+								   Parser.RTFormats[0],
+								   Parser.RTFormats[1],
+								   Parser.RTFormats[2],
+								   Parser.RTFormats[3],
+								   Parser.RTFormats[4],
+								   Parser.RTFormats[5],
+								   Parser.RTFormats[6],
+								   Parser.RTFormats[7],
 					   },
-					.DSVFormat	= Parser.RenderTargetState.DSFormat,
+					.DSVFormat	= Parser.DSFormat,
 					.SampleDesc = DefaultSampleDesc(),
 					.NodeMask	= Device->GetAllNodeMask(),
 					.CachedPSO	= D3D12_CACHED_PIPELINE_STATE(),
@@ -230,12 +305,48 @@ namespace RHI
 				};
 				co_return Compile<D3D12_PIPELINE_STATE_STREAM_DESC>(Device, Name, StreamDesc);
 			}
+			else
+			{
+				const D3D12_GRAPHICS_PIPELINE_STATE_DESC Desc = {
+					.pRootSignature		   = Parser.RootSignature,
+					.VS					   = Parser.VS,
+					.PS					   = Parser.PS,
+					.DS					   = D3D12_SHADER_BYTECODE{},
+					.HS					   = D3D12_SHADER_BYTECODE{},
+					.GS					   = D3D12_SHADER_BYTECODE{},
+					.StreamOutput		   = D3D12_STREAM_OUTPUT_DESC{},
+					.BlendState			   = Parser.BlendState,
+					.SampleMask			   = DefaultSampleMask{},
+					.RasterizerState	   = Parser.RasterizerState,
+					.DepthStencilState	   = Parser.DepthStencilState,
+					.InputLayout		   = { Parser.InputElements.data(), static_cast<UINT>(Parser.InputElements.size()) },
+					.IBStripCutValue	   = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+					.PrimitiveTopologyType = Parser.PrimitiveTopology,
+					.NumRenderTargets	   = Parser.NumRenderTargets,
+					.RTVFormats			   = {
+								   Parser.RTFormats[0],
+								   Parser.RTFormats[1],
+								   Parser.RTFormats[2],
+								   Parser.RTFormats[3],
+								   Parser.RTFormats[4],
+								   Parser.RTFormats[5],
+								   Parser.RTFormats[6],
+								   Parser.RTFormats[7],
+					   },
+					.DSVFormat	= Parser.DSFormat,
+					.SampleDesc = DefaultSampleDesc{},
+					.NodeMask	= Device->GetAllNodeMask(),
+					.CachedPSO	= D3D12_CACHED_PIPELINE_STATE{},
+					.Flags		= D3D12_PIPELINE_STATE_FLAG_NONE
+				};
+				co_return Compile<D3D12_GRAPHICS_PIPELINE_STATE_DESC>(Device, Name, Desc);
+			}
 		}
 		else if (Type == RHI_PIPELINE_STATE_TYPE::Compute)
 		{
 			const D3D12_COMPUTE_PIPELINE_STATE_DESC Desc = {
-				.pRootSignature = Parser.RootSignature->GetApiHandle(),
-				.CS				= RHITranslateD3D12(Parser.CS),
+				.pRootSignature = Parser.RootSignature,
+				.CS				= Parser.CS,
 				.NodeMask		= Device->GetAllNodeMask(),
 				.CachedPSO		= D3D12_CACHED_PIPELINE_STATE(),
 				.Flags			= D3D12_PIPELINE_STATE_FLAG_NONE

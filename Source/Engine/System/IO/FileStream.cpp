@@ -1,4 +1,5 @@
 #include "FileStream.h"
+#include "Exception.h"
 #include <cassert>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -85,7 +86,7 @@ FileStream::FileStream(std::filesystem::path Path, FileMode Mode, FileAccess Acc
 				  DWORD Error = GetLastError();
 				  if (Mode == FileMode::CreateNew && Error == ERROR_ALREADY_EXISTS)
 				  {
-					  throw std::runtime_error("ERROR_ALREADY_EXISTS");
+					  throw ExceptionIO(__FILE__, __LINE__);
 				  }
 				  if (Mode == FileMode::Create && Error == ERROR_ALREADY_EXISTS)
 				  {
@@ -93,7 +94,11 @@ FileStream::FileStream(std::filesystem::path Path, FileMode Mode, FileAccess Acc
 				  }
 				  if (Mode == FileMode::Open && Error == ERROR_FILE_NOT_FOUND)
 				  {
-					  throw std::runtime_error("ERROR_FILE_NOT_FOUND");
+					  throw ExceptionFileNotFound(__FILE__, __LINE__);
+				  }
+				  if (Mode == FileMode::Open && Error == ERROR_PATH_NOT_FOUND)
+				  {
+					  throw ExceptionPathNotFound(__FILE__, __LINE__);
 				  }
 				  if (Mode == FileMode::OpenOrCreate && Error == ERROR_ALREADY_EXISTS)
 				  {

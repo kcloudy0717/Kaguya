@@ -4,9 +4,7 @@
 class ThreadPool
 {
 public:
-	using ThreadpoolWork = Delegate<void(void* /*Context*/)>;
-
-	static std::unique_ptr<ThreadPool> Create();
+	using ThreadPoolWork = Delegate<void(void* /*Context*/)>;
 
 	ThreadPool() noexcept = default;
 	virtual ~ThreadPool() = default;
@@ -17,5 +15,5 @@ public:
 	ThreadPool& operator=(const ThreadPool&) = delete;
 	ThreadPool& operator=(ThreadPool&&) = delete;
 
-	virtual void QueueThreadpoolWork(ThreadpoolWork&& Callback, void* Context) = 0;
+	virtual void QueueThreadpoolWork(ThreadPoolWork&& Callback, void* Context) = 0;
 };

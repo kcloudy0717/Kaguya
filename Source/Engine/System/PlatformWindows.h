@@ -15,6 +15,7 @@ using HANDLE = void*;
 
 PLATFORM_WINDOWS_DECLARE_HANDLE(HINSTANCE);
 PLATFORM_WINDOWS_DECLARE_HANDLE(HWND);
+using HMODULE = HINSTANCE;
 
 template<typename HandleType>
 class ScopedHandle
@@ -73,11 +74,6 @@ public:
 		return HandleType::IsValid(Handle);
 	}
 
-	operator NativeHandle()
-	{
-		return Handle;
-	}
-
 	NativeHandle Get() const noexcept
 	{
 		return Handle;
@@ -118,6 +114,15 @@ struct EventHandle : CommonHandle
 {
 };
 
+struct ModuleHandle
+{
+	using NativeHandle = HMODULE;
+
+	static NativeHandle GetInvalidHandle();
+	static void			Destruct(NativeHandle Handle);
+	static bool			IsValid(NativeHandle Handle);
+};
+
 struct WindowHandle
 {
 	using NativeHandle = HWND;
@@ -131,6 +136,7 @@ using ScopedProcessHandle = ScopedHandle<ProcessHandle>;
 using ScopedThreadHandle  = ScopedHandle<ThreadHandle>;
 using ScopedFileHandle	  = ScopedHandle<FileHandle>;
 using ScopedEventHandle	  = ScopedHandle<EventHandle>;
+using ScopedModuleHandle  = ScopedHandle<ModuleHandle>;
 using ScopedWindowHandle  = ScopedHandle<WindowHandle>;
 
 namespace Kaguya

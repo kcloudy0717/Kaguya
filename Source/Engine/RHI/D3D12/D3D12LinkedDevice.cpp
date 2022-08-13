@@ -61,16 +61,14 @@ namespace RHI
 
 	D3D12CommandQueue* D3D12LinkedDevice::GetCommandQueue(RHID3D12CommandQueueType Type) noexcept
 	{
-		// clang-format off
 		switch (Type)
 		{
 			using enum RHID3D12CommandQueueType;
-		case Direct:		return &GraphicsQueue;
-		case AsyncCompute:	return &AsyncComputeQueue;
-		case Copy:			return &CopyQueue;
-		case Upload:		return &UploadQueue;
+		case Direct: return &GraphicsQueue;
+		case AsyncCompute: return &AsyncComputeQueue;
+		case Copy: return &CopyQueue;
+		case Upload: return &UploadQueue;
 		}
-		// clang-format on
 		return nullptr;
 	}
 
@@ -120,7 +118,7 @@ namespace RHI
 			// When dealing with MSAA textures the rules are similar, but the minimum
 			// alignment is 64KiB for a texture whose most detailed mip can fit in an
 			// allocation less than 4MiB.
-			Desc->Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+			Desc->Alignment										  = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 			D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(*Desc);
 			if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
@@ -224,13 +222,14 @@ namespace RHI
 
 	void D3D12LinkedDevice::ReleaseDescriptor(DeferredDeleteDescriptor Descriptor)
 	{
-		D3D12SyncHandle SyncHandle = GraphicsQueue.GetSyncHandle();
+		D3D12SyncHandle GraphicsSyncHandle = GraphicsQueue.GetSyncHandle();
+		D3D12SyncHandle ComputeSyncHandle  = AsyncComputeQueue.GetSyncHandle();
 		// No pending workload, we can release immediately
-		if (!SyncHandle)
+		if (!GraphicsSyncHandle && !ComputeSyncHandle)
 		{
 			Descriptor.Release();
 			return;
 		}
-		DeferredDeleteDescriptorQueue.Enqueue(SyncHandle, Descriptor);
+		DeferredDeleteDescriptorQueue.Enqueue(GraphicsSyncHandle, ComputeSyncHandle, Descriptor);
 	}
 } // namespace RHI

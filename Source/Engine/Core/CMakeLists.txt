@@ -13,8 +13,8 @@ add_library(${PROJECTNAME} STATIC
 	${inc}
 	${src})
 
-if (MSVC)
-	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # warning level 3
+if(MSVC)
+	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # Warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()
 
@@ -35,19 +35,19 @@ add_custom_command(
 	TARGET ${PROJECTNAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy
 
-		${DEPDIR}/assimp/bin/release/assimp-vc143-mt.dll
+	${DEPDIR}/assimp/bin/release/assimp-vc143-mt.dll
 
-		${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
+	${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>
 	DEPENDS ${PROJECTNAME})
 
 # DirectXTex
 message("Fetching DirectXTex")
-FetchContent_Declare(directxtex URL https://www.nuget.org/api/v2/package/directxtex_desktop_win10/2022.7.30.1)
+FetchContent_Declare(directxtex URL https://www.nuget.org/api/v2/package/directxtex_desktop_win10/2022.7.30.1 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(directxtex)
 add_library(
-    DirectXTex INTERFACE 
-    "${directxtex_SOURCE_DIR}/include/DirectXTex.h"
-    "${directxtex_SOURCE_DIR}/include/DirectXTex.inl")
+	DirectXTex INTERFACE
+	"${directxtex_SOURCE_DIR}/include/DirectXTex.h"
+	"${directxtex_SOURCE_DIR}/include/DirectXTex.inl")
 target_include_directories(DirectXTex INTERFACE "${directxtex_SOURCE_DIR}/include/")
 target_link_directories(DirectXTex INTERFACE ${directxtex_SOURCE_DIR}/native/lib/x64/$<CONFIG>)
 target_link_libraries(DirectXTex INTERFACE "DirectXTex.lib")
@@ -57,10 +57,10 @@ message("DirectXTex fetched")
 
 # DirectXMesh
 message("Fetching DirectXMesh")
-FetchContent_Declare(directxmesh URL https://www.nuget.org/api/v2/package/directxmesh_desktop_win10/2022.7.30.1)
+FetchContent_Declare(directxmesh URL https://www.nuget.org/api/v2/package/directxmesh_desktop_win10/2022.7.30.1 DOWNLOAD_EXTRACT_TIMESTAMP true)
 FetchContent_MakeAvailable(directxmesh)
 add_library(
-	DirectXMesh INTERFACE 
+	DirectXMesh INTERFACE
 	"${directxmesh_SOURCE_DIR}/include/DirectXMesh.h"
 	"${directxmesh_SOURCE_DIR}/include/DirectXMesh.inl")
 target_include_directories(DirectXMesh INTERFACE "${directxmesh_SOURCE_DIR}/include/")

@@ -37,25 +37,28 @@ namespace RHI
 		void RasterizerStateCb(const RHIRasterizerState& RasterizerState) override;
 		void DepthStencilStateCb(const RHIDepthStencilState& DepthStencilState) override;
 		void RenderTargetStateCb(const RHIRenderTargetState& RenderTargetState) override;
-		void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY PrimitiveTopology) override;
+		void PrimitiveTopologyTypeCb(RHI_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopology) override;
 
 		void ErrorBadInputParameter(size_t Index) override;
 		void ErrorDuplicateSubobject(RHI_PIPELINE_STATE_SUBOBJECT_TYPE Type) override;
 		void ErrorUnknownSubobject(size_t Index) override;
 
 		RHI_PIPELINE_STATE_TYPE				  Type;
-		D3D12RootSignature*					  RootSignature = nullptr;
+		bool								  ContainsMeshShader = false;
+		ID3D12RootSignature*				  RootSignature		 = nullptr;
 		std::vector<D3D12_INPUT_ELEMENT_DESC> InputElements;
-		Shader*								  VS = nullptr;
-		Shader*								  PS = nullptr;
-		Shader*								  CS = nullptr;
-		Shader*								  AS = nullptr;
-		Shader*								  MS = nullptr;
-		RHIBlendState						  BlendState;
-		RHIRasterizerState					  RasterizerState;
-		RHIDepthStencilState				  DepthStencilState;
-		RHIRenderTargetState				  RenderTargetState;
-		RHI_PRIMITIVE_TOPOLOGY				  PrimitiveTopology = RHI_PRIMITIVE_TOPOLOGY::Undefined;
+		D3D12_SHADER_BYTECODE				  VS				= {};
+		D3D12_SHADER_BYTECODE				  PS				= {};
+		D3D12_SHADER_BYTECODE				  CS				= {};
+		D3D12_SHADER_BYTECODE				  AS				= {};
+		D3D12_SHADER_BYTECODE				  MS				= {};
+		D3D12_BLEND_DESC					  BlendState		= CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		D3D12_RASTERIZER_DESC				  RasterizerState	= CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		D3D12_DEPTH_STENCIL_DESC			  DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		DXGI_FORMAT							  RTFormats[8]		= {};
+		UINT								  NumRenderTargets	= 0;
+		DXGI_FORMAT							  DSFormat			= DXGI_FORMAT_UNKNOWN;
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE		  PrimitiveTopology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 	};
 
 	class D3D12PipelineState : public D3D12DeviceChild
@@ -67,10 +70,10 @@ namespace RHI
 			std::wstring				   Name,
 			const PipelineStateStreamDesc& Desc);
 
-		D3D12PipelineState(D3D12PipelineState&&) noexcept = default;
+		D3D12PipelineState(D3D12PipelineState&&) noexcept			 = default;
 		D3D12PipelineState& operator=(D3D12PipelineState&&) noexcept = default;
 
-		D3D12PipelineState(const D3D12RootSignature&) = delete;
+		D3D12PipelineState(const D3D12RootSignature&)			 = delete;
 		D3D12PipelineState& operator=(const D3D12PipelineState&) = delete;
 
 		[[nodiscard]] ID3D12PipelineState* GetApiHandle() const noexcept;
@@ -194,10 +197,10 @@ namespace RHI
 			D3D12Device*				 Parent,
 			RaytracingPipelineStateDesc& Desc);
 
-		D3D12RaytracingPipelineState(D3D12RaytracingPipelineState&&) noexcept = default;
+		D3D12RaytracingPipelineState(D3D12RaytracingPipelineState&&) noexcept			 = default;
 		D3D12RaytracingPipelineState& operator=(D3D12RaytracingPipelineState&&) noexcept = default;
 
-		D3D12RaytracingPipelineState(const D3D12RaytracingPipelineState&) = delete;
+		D3D12RaytracingPipelineState(const D3D12RaytracingPipelineState&)			 = delete;
 		D3D12RaytracingPipelineState& operator=(const D3D12RaytracingPipelineState&) = delete;
 
 		[[nodiscard]] ID3D12StateObject* GetApiHandle() const { return StateObject.Get(); }
