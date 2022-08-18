@@ -53,7 +53,7 @@ PathIntegratorDXR1_0::PathIntegratorDXR1_0(
 	g_ShadowMissSID	   = RTPSO.GetShaderIdentifier(g_ShadowMiss);
 	g_DefaultSID	   = RTPSO.GetShaderIdentifier(g_HitGroupExport);
 
-	AccelerationStructure = RaytracingAccelerationStructure(Device, 1);
+	RTScene = RHI::D3D12RaytracingAccelerationStructure(Device->GetLinkedDevice());
 
 	RayGenerationShaderTable = ShaderBindingTable.AddRayGenerationShaderTable<void>(1);
 	RayGenerationShaderTable->AddShaderRecord(g_RayGenerationSID);
@@ -95,7 +95,7 @@ void PathIntegratorDXR1_0::RenderOptions()
 
 void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context)
 {
-	WorldRenderView->Update(World, &AccelerationStructure);
+	WorldRenderView->Update(World, &RTScene);
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
 		World->WorldState  = EWorldState_Render;
@@ -103,27 +103,27 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 	}
 
 	RHI::D3D12SyncHandle CopySyncHandle, ASBuildSyncHandle;
-	if (AccelerationStructure.IsValid())
+	if (RTScene.IsValid())
 	{
 		RHI::D3D12CommandContext& Copy = Device->GetLinkedDevice()->GetCopyContext();
 		Copy.Open();
 		{
 			// Update shader table
 			HitGroupShaderTable->Reset();
-			for (size_t i = 0; i < AccelerationStructure.StaticMeshes.size(); ++i)
+			for (size_t i = 0; i < RTScene.size(); ++i)
 			{
-				StaticMeshComponent* MeshComponent = AccelerationStructure.StaticMeshes[i];
-				ID3D12Resource*		 VertexBuffer  = MeshComponent->Mesh->VertexResource.GetResource();
-				ID3D12Resource*		 IndexBuffer   = MeshComponent->Mesh->IndexResource.GetResource();
+				auto& Instance = RTScene[i];
+				for (size_t j = 0; j < Instance.Geometry->Size(); ++j)
+				{
+					RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
+					Record.ShaderIdentifier										 = g_DefaultSID;
+					Record.RootArguments.MaterialIndex							 = static_cast<UINT>(i);
+					Record.RootArguments.Padding								 = 0xDEADBEEF;
+					Record.RootArguments.VertexBuffer							 = Instance.Geometry->GetVertexBufferAt(j);
+					Record.RootArguments.IndexBuffer							 = Instance.Geometry->GetIndexBufferAt(j);
 
-				RHI::D3D12RaytracingShaderTable<RootArgument>::Record Record = {};
-				Record.ShaderIdentifier										 = g_DefaultSID;
-				Record.RootArguments.MaterialIndex							 = static_cast<UINT>(i);
-				Record.RootArguments.Padding								 = 0xDEADBEEF;
-				Record.RootArguments.VertexBuffer							 = VertexBuffer->GetGPUVirtualAddress();
-				Record.RootArguments.IndexBuffer							 = IndexBuffer->GetGPUVirtualAddress();
-
-				HitGroupShaderTable->AddShaderRecord(Record);
+					HitGroupShaderTable->AddShaderRecord(Record);
+				}
 			}
 			ShaderBindingTable.WriteToGpu(Copy.GetGraphicsCommandList());
 		}
@@ -134,12 +134,10 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 		AsyncCompute.Open();
 		{
 			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
-			AccelerationStructure.Build(AsyncCompute);
+			AsyncCompute.BuildRaytracingAccelerationStructure(&RTScene);
 		}
 		AsyncCompute.Close();
 		ASBuildSyncHandle = AsyncCompute.Execute(false);
-
-		AccelerationStructure.PostBuild(ASBuildSyncHandle);
 	}
 
 	Context.GetCommandQueue()->WaitForSyncHandle(CopySyncHandle);
@@ -195,7 +193,7 @@ void PathIntegratorDXR1_0::Render(World* World, WorldRenderView* WorldRenderView
 					 Context.SetPipelineState(&RTPSO);
 					 Context.SetComputeRootSignature(&GlobalRS);
 					 Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-					 Context.SetComputeRaytracingAccelerationStructure(1, AccelerationStructure.GetShaderResourceView());
+					 Context.SetComputeRaytracingAccelerationStructure(1, &RTScene);
 					 Context->SetComputeRootShaderResourceView(2, WorldRenderView->Materials.GetGpuVirtualAddress());
 					 Context->SetComputeRootShaderResourceView(3, WorldRenderView->Lights.GetGpuVirtualAddress());
 

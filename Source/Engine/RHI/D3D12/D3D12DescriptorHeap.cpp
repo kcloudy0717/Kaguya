@@ -45,14 +45,14 @@ namespace RHI
 		D3D12_GPU_DESCRIPTOR_HANDLE& GpuDescriptorHandle,
 		UINT&						 Index)
 	{
-		Index				= IndexPool.Allocate();
+		Index				= AllocateIndex();
 		CpuDescriptorHandle = this->GetCpuDescriptorHandle(Index);
 		GpuDescriptorHandle = this->GetGpuDescriptorHandle(Index);
 	}
 
 	void D3D12DescriptorHeap::Release(UINT Index)
 	{
-		IndexPool.Release(Index);
+		ReleaseIndex(Index);
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::GetCpuDescriptorHandle(UINT Index) const noexcept
@@ -63,6 +63,29 @@ namespace RHI
 	D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeap::GetGpuDescriptorHandle(UINT Index) const noexcept
 	{
 		return CD3DX12_GPU_DESCRIPTOR_HANDLE(GpuBaseAddress, static_cast<INT>(Index), DescriptorSize);
+	}
+
+	UINT D3D12DescriptorHeap::AllocateIndex()
+	{
+		MutexGuard Guard(*IndexMutex);
+
+		UINT NewIndex;
+		if (!IndexQueue.empty())
+		{
+			NewIndex = IndexQueue.front();
+			IndexQueue.pop();
+		}
+		else
+		{
+			NewIndex = Index++;
+		}
+		return NewIndex;
+	}
+
+	void D3D12DescriptorHeap::ReleaseIndex(UINT Index)
+	{
+		MutexGuard Guard(*IndexMutex);
+		IndexQueue.push(Index);
 	}
 
 	CDescriptorHeapManager::CDescriptorHeapManager(D3D12LinkedDevice* Parent, D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT PageSize)

@@ -1,5 +1,5 @@
 #pragma once
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 #include "D3D12CommandList.h"
 #include "D3D12ResourceAllocator.h"
 #include "D3D12Profiler.h"
@@ -14,6 +14,7 @@ namespace RHI
 	class D3D12DepthStencilView;
 	class D3D12ShaderResourceView;
 	class D3D12UnorderedAccessView;
+	class D3D12RaytracingAccelerationStructure;
 
 	class D3D12CommandAllocatorPool : public D3D12LinkedDeviceChild
 	{
@@ -43,10 +44,10 @@ namespace RHI
 			RHID3D12CommandQueueType Type,
 			D3D12_COMMAND_LIST_TYPE	 CommandListType);
 
-		D3D12CommandContext(D3D12CommandContext&&) noexcept = default;
+		D3D12CommandContext(D3D12CommandContext&&) noexcept			   = default;
 		D3D12CommandContext& operator=(D3D12CommandContext&&) noexcept = default;
 
-		D3D12CommandContext(const D3D12CommandContext&) = delete;
+		D3D12CommandContext(const D3D12CommandContext&)			   = delete;
 		D3D12CommandContext& operator=(const D3D12CommandContext&) = delete;
 
 		[[nodiscard]] D3D12CommandQueue*		  GetCommandQueue() const noexcept;
@@ -143,13 +144,13 @@ namespace RHI
 
 		// Set nullptr to AcceleraionStructure to force a miss
 		void SetGraphicsRaytracingAccelerationStructure(
-			UINT					 RootParameterIndex,
-			D3D12ShaderResourceView* AccelerationStructure);
+			UINT								  RootParameterIndex,
+			D3D12RaytracingAccelerationStructure* AccelerationStructure);
 
 		// Set nullptr to AcceleraionStructure to force a miss
 		void SetComputeRaytracingAccelerationStructure(
-			UINT					 RootParameterIndex,
-			D3D12ShaderResourceView* AccelerationStructure);
+			UINT								  RootParameterIndex,
+			D3D12RaytracingAccelerationStructure* AccelerationStructure);
 
 		// These version of the API calls should be used as it needs to flush resource barriers before any work
 		void DrawInstanced(
@@ -213,22 +214,8 @@ namespace RHI
 			UINT64		   CounterOffset,
 			UINT		   Value = 0);
 
-		template<UINT ThreadSizeX, UINT ThreadSizeY, UINT ThreadSizeZ>
-		void CalculateDispatchArgument(UINT* ThreadGroupCountX, UINT* ThreadGroupCountY, UINT* ThreadGroupCountZ)
-		{
-			if (ThreadGroupCountX)
-			{
-				*ThreadGroupCountX = RoundUpAndDivide(*ThreadGroupCountX, ThreadSizeX);
-			}
-			if (ThreadGroupCountY)
-			{
-				*ThreadGroupCountY = RoundUpAndDivide(*ThreadGroupCountY, ThreadSizeY);
-			}
-			if (ThreadGroupCountZ)
-			{
-				*ThreadGroupCountZ = RoundUpAndDivide(*ThreadGroupCountZ, ThreadSizeZ);
-			}
-		}
+		void BuildRaytracingAccelerationStructure(
+			D3D12RaytracingAccelerationStructure* AccelerationStructure);
 
 	private:
 		template<typename T>
@@ -272,7 +259,8 @@ namespace RHI
 
 			struct
 			{
-				D3D12RaytracingPipelineState* RaytracingPipelineState;
+				D3D12RaytracingPipelineState*		  RaytracingPipelineState;
+				D3D12RaytracingAccelerationStructure* AccelerationStructure;
 			} Raytracing;
 		} Cache = {};
 	};

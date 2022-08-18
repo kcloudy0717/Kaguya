@@ -17,7 +17,7 @@ add_library(
 	${src}
 	${natvis})
 
-if (MSVC)
+if(MSVC)
 	target_compile_options(${PROJECTNAME} PRIVATE "/W3") # Warning level 3
 	target_compile_options(${PROJECTNAME} PRIVATE "/MP") # Multi-processor compilation
 endif()
@@ -26,7 +26,8 @@ set_property(TARGET ${PROJECTNAME} PROPERTY CXX_STANDARD 23)
 
 target_include_directories(${PROJECTNAME} PRIVATE ${RHI_DIR})
 target_include_directories(${PROJECTNAME} PRIVATE ${ENGINE_DIR})
-target_link_libraries(${PROJECTNAME} PRIVATE System)
+target_link_libraries(${PROJECTNAME} PRIVATE "Math")
+target_link_libraries(${PROJECTNAME} PRIVATE "System")
 
 # D3D12 Agility SDK
 message("Fetching D3D12 Agility SDK")

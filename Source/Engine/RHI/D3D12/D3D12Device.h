@@ -1,6 +1,5 @@
 #pragma once
-#include <filesystem>
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 #include "D3D12LinkedDevice.h"
 #include "D3D12RootSignature.h"
 #include "D3D12PipelineState.h"

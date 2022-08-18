@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <ios>
+#include <sstream>
 #include "Delegate.h"
 
 class IConsoleObject

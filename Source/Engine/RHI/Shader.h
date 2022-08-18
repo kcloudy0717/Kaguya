@@ -1,6 +1,6 @@
 #pragma once
 #include <map>
-#include "D3D12/D3D12Core.h"
+#include "D3D12/D3D12Types.h"
 #include "dxc/dxcapi.h"
 #include "dxc/d3d12shader.h"
 #include "Arc.h"
@@ -14,8 +14,7 @@ struct ShaderCompileOptions
 
 	void SetDefine(std::wstring_view Define, std::wstring_view Value) { Defines[Define] = Value; }
 
-	std::wstring_view EntryPoint;
-
+	std::wstring_view							   EntryPoint;
 	std::map<std::wstring_view, std::wstring_view> Defines;
 };
 

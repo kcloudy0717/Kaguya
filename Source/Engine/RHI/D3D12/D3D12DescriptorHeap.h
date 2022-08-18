@@ -2,7 +2,7 @@
 #include <queue>
 #include <bitset>
 #include <list>
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 
 namespace RHI
 {
@@ -41,42 +41,19 @@ namespace RHI
 		[[nodiscard]] D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(UINT Index) const noexcept;
 
 	private:
+		UINT AllocateIndex();
+		void ReleaseIndex(UINT Index);
+
+	private:
 		Arc<ID3D12DescriptorHeap>	DescriptorHeap;
 		D3D12_DESCRIPTOR_HEAP_DESC	Desc;
 		D3D12_CPU_DESCRIPTOR_HANDLE CpuBaseAddress = {};
 		D3D12_GPU_DESCRIPTOR_HANDLE GpuBaseAddress = {};
 		UINT						DescriptorSize = 0;
 
-		struct DescriptorIndexPool
-		{
-			// Removes the first element from the free list and returns its index
-			UINT Allocate()
-			{
-				MutexGuard Guard(*IndexMutex);
-
-				UINT NewIndex;
-				if (!IndexQueue.empty())
-				{
-					NewIndex = IndexQueue.front();
-					IndexQueue.pop();
-				}
-				else
-				{
-					NewIndex = Index++;
-				}
-				return NewIndex;
-			}
-
-			void Release(UINT Index)
-			{
-				MutexGuard Guard(*IndexMutex);
-				IndexQueue.push(Index);
-			}
-
-			std::unique_ptr<Mutex> IndexMutex = std::make_unique<Mutex>();
-			std::queue<UINT>	   IndexQueue;
-			UINT				   Index = 0;
-		} IndexPool;
+		std::unique_ptr<Mutex> IndexMutex = std::make_unique<Mutex>();
+		std::queue<UINT>	   IndexQueue;
+		UINT				   Index = 0;
 	};
 
 	// Used for RTV/DSV Heaps, Source: https://github.com/microsoft/D3D12TranslationLayer/blob/master/include/ImmediateContext.hpp#L320

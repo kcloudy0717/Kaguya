@@ -1,6 +1,6 @@
 #pragma once
 #include <unordered_map>
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 
 //=================================================================================================
 //

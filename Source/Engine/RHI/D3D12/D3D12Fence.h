@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 
 namespace RHI
 {

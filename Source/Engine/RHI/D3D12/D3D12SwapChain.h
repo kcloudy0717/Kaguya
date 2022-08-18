@@ -1,5 +1,5 @@
 #pragma once
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 #include "D3D12Fence.h"
 #include "D3D12Resource.h"
 #include "D3D12Descriptor.h"

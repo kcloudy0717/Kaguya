@@ -367,6 +367,9 @@ namespace RHI
 		ID3D12Device2*			 Device2 = Device->GetD3D12Device5();
 		Arc<ID3D12PipelineState> PipelineState;
 		VERIFY_D3D12_API((Device2->*D3D12PipelineStateTraits<TDesc>::Create())(&Desc, IID_PPV_ARGS(&PipelineState)));
+#if _DEBUG
+		PipelineState->SetName(Name.data());
+#endif
 		return PipelineState;
 	}
 

@@ -1,4 +1,4 @@
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 #include "D3D12Fence.h"
 
 namespace RHI

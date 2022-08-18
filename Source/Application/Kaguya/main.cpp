@@ -384,7 +384,7 @@ public:
 		Kaguya::AssetManager->GetMeshRegistry().EnumerateAsset(
 			[](Asset::AssetHandle Handle, Asset::Mesh* Mesh)
 			{
-				Mesh->ResetRaytracingInfo();
+				Mesh->Blas.ResetRaytracingInfo();
 			});
 	}
 

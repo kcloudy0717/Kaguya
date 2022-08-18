@@ -24,7 +24,6 @@ private:
 struct ShaderCompilationResult
 {
 	Arc<IDxcBlob> Binary;
-	std::wstring  PdbName;
 	Arc<IDxcBlob> Pdb;
 };
 

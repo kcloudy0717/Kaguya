@@ -1,11 +1,9 @@
-#include "../Common/ThreadGroupIDSwizzling.hlsli"
 #include "../Shader.hlsli"
 #include "../HlslDynamicResource.hlsli"
 
 cbuffer Parameters : register(b0)
 {
 	uint  OutputIndex;
-	uint2 DispatchArgument;
 };
 
 [numthreads(8, 8, 1)]
@@ -26,8 +24,7 @@ void CSMain(CSParams Params)
 
 	RWTexture2D<float4> Output = ResourceDescriptorHeap[OutputIndex];
 
-	uint2 Coordinate = ThreadGroupTilingX(DispatchArgument, uint2(8, 8), 8, Params.GroupThreadID.xy, Params.GroupID.xy);
-	// uint2 Coordinate = Params.DispatchThreadID.xy;
+	uint2 Coordinate = Params.DispatchThreadID.xy;
 
 	uint  x			 = Coordinate.x % Dimension;
 	uint  y			 = Coordinate.y % Dimension;

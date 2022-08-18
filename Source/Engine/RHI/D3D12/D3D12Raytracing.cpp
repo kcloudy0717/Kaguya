@@ -8,64 +8,6 @@ namespace RHI
 		RaytracingGeometryDescs.push_back(Desc);
 	}
 
-	void D3D12RaytracingScene::Reset() noexcept
-	{
-		RaytracingInstanceDescs.clear();
-		ScratchSizeInBytes = 0;
-		ResultSizeInBytes  = 0;
-	}
-
-	void D3D12RaytracingScene::AddInstance(const D3D12_RAYTRACING_INSTANCE_DESC& Desc)
-	{
-		RaytracingInstanceDescs.push_back(Desc);
-	}
-
-	void D3D12RaytracingScene::ComputeMemoryRequirements(
-		ID3D12Device5* Device,
-		UINT64*		   pScratchSizeInBytes,
-		UINT64*		   pResultSizeInBytes)
-	{
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {};
-		Inputs.Type													= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-		Inputs.Flags												= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
-		Inputs.NumDescs												= static_cast<UINT>(RaytracingInstanceDescs.size());
-
-		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
-		Device->GetRaytracingAccelerationStructurePrebuildInfo(&Inputs, &PrebuildInfo);
-
-		ScratchSizeInBytes = D3D12RHIUtils::AlignUp<UINT64>(PrebuildInfo.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-		ResultSizeInBytes  = D3D12RHIUtils::AlignUp<UINT64>(PrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
-
-		*pScratchSizeInBytes = ScratchSizeInBytes;
-		*pResultSizeInBytes	 = ResultSizeInBytes;
-	}
-
-	void D3D12RaytracingScene::Generate(
-		ID3D12GraphicsCommandList4* CommandList,
-		ID3D12Resource*				Scratch,
-		ID3D12Resource*				Result,
-		D3D12_GPU_VIRTUAL_ADDRESS	InstanceDescs)
-	{
-		assert(ScratchSizeInBytes > 0 && ResultSizeInBytes > 0 && "Invalid allocation - ComputeMemoryRequirements needs to be called before Generate");
-		assert(Result && Scratch && "Invalid Result, Scratch buffers");
-
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {
-			.Type		   = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
-			.Flags		   = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD,
-			.NumDescs	   = static_cast<UINT>(RaytracingInstanceDescs.size()),
-			.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY,
-			.InstanceDescs = InstanceDescs
-		};
-
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {
-			.DestAccelerationStructureData	  = Result->GetGPUVirtualAddress(),
-			.Inputs							  = Inputs,
-			.SourceAccelerationStructureData  = NULL,
-			.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
-		};
-		CommandList->BuildRaytracingAccelerationStructure(&Desc, 0, nullptr);
-	}
-
 	D3D12RaytracingMemoryPage::D3D12RaytracingMemoryPage(
 		D3D12LinkedDevice*	  Parent,
 		UINT64				  PageSize,
@@ -334,12 +276,12 @@ namespace RHI
 		AccelerationStructure.ResultSize = AccelerationStructure.ResultMemory.Size;
 
 		// Setup build desc and allocator scratch and result buffers
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {};
-		Desc.DestAccelerationStructureData						= AccelerationStructure.ResultMemory.VirtualAddress;
-		Desc.Inputs												= Inputs;
-		Desc.SourceAccelerationStructureData					= NULL;
-		Desc.ScratchAccelerationStructureData					= AccelerationStructure.ScratchMemory.VirtualAddress;
-
+		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {
+			.DestAccelerationStructureData	  = AccelerationStructure.ResultMemory.VirtualAddress,
+			.Inputs							  = Inputs,
+			.SourceAccelerationStructureData  = NULL,
+			.ScratchAccelerationStructureData = AccelerationStructure.ScratchMemory.VirtualAddress,
+		};
 		if (Inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION)
 		{
 			// Tag as not yet compacted
@@ -352,11 +294,10 @@ namespace RHI
 			AccelerationStructure.CompactedSizeCpuMemory = CompactedSizeCpuPool.Allocate(sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC));
 
 			// Request to get compaction size post build
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC PostbuildInfoDesc = {
+			const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC PostbuildInfoDesc = {
 				AccelerationStructure.CompactedSizeGpuMemory.VirtualAddress,
 				D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE
 			};
-
 			CommandList->BuildRaytracingAccelerationStructure(&Desc, 1, &PostbuildInfoDesc);
 		}
 		else
@@ -418,13 +359,8 @@ namespace RHI
 	{
 		D3D12AccelerationStructure& AccelerationStructure = AccelerationStructures[AccelerationStructureIndex];
 
-		if (!AccelerationStructure.SyncHandle)
-		{
-			return;
-		}
-
-		// Readback data not available yet
-		if (!AccelerationStructure.SyncHandle.IsComplete())
+		// Sync handle not valid/Readback data not available yet
+		if (!AccelerationStructure.SyncHandle || !AccelerationStructure.SyncHandle.IsComplete())
 		{
 			return;
 		}
@@ -563,5 +499,29 @@ namespace RHI
 										   .SizeInBytes	  = HitGroupShaderTableSizeInBytes,
 										   .StrideInBytes = HitGroupShaderRecordStride };
 		return Desc;
+	}
+
+	void D3D12RaytracingAccelerationStructure::Reset() noexcept
+	{
+		RaytracingInstanceDescs.clear();
+		Instances.clear();
+		Geometries.clear();
+		CurrentInstanceID						   = 0;
+		CurrentInstanceContributionToHitGroupIndex = 0;
+	}
+
+	void D3D12RaytracingAccelerationStructure::AddInstance(const D3D12RaytracingInstance& Instance)
+	{
+		D3D12_RAYTRACING_INSTANCE_DESC& RaytracingInstanceDesc = RaytracingInstanceDescs.emplace_back();
+		memcpy(RaytracingInstanceDesc.Transform, Instance.Transform, sizeof(float) * 12);
+		RaytracingInstanceDesc.InstanceID						   = CurrentInstanceID++;
+		RaytracingInstanceDesc.InstanceMask						   = Instance.InstanceMask;
+		RaytracingInstanceDesc.InstanceContributionToHitGroupIndex = CurrentInstanceContributionToHitGroupIndex;
+		RaytracingInstanceDesc.Flags							   = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+		RaytracingInstanceDesc.AccelerationStructure			   = NULL; // Resolved in Build
+		Instances.push_back(Instance);
+		Geometries.insert(Instance.Geometry);
+
+		CurrentInstanceContributionToHitGroupIndex += Instance.Geometry->Size() * NumHitGroups;
 	}
 } // namespace RHI

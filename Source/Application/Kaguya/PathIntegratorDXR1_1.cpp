@@ -26,7 +26,7 @@ PathIntegratorDXR1_1::PathIntegratorDXR1_1(
 		PathTracePSO		 = Device->CreatePipelineState(L"PathTrace", Stream);
 	}
 
-	AccelerationStructure = RaytracingAccelerationStructure(Device, 1);
+	RTScene = RHI::D3D12RaytracingAccelerationStructure(Device->GetLinkedDevice());
 }
 
 void PathIntegratorDXR1_1::RenderOptions()
@@ -60,7 +60,7 @@ void PathIntegratorDXR1_1::RenderOptions()
 
 void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context)
 {
-	WorldRenderView->Update(World, &AccelerationStructure);
+	WorldRenderView->Update(World, &RTScene);
 	if (World->WorldState & EWorldState::EWorldState_Update)
 	{
 		World->WorldState = EWorldState_Render;
@@ -68,19 +68,17 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 	}
 
 	RHI::D3D12SyncHandle ASBuildSyncHandle;
-	if (AccelerationStructure.IsValid())
+	if (RTScene.IsValid())
 	{
 		RHI::D3D12CommandContext& AsyncCompute = Device->GetLinkedDevice()->GetComputeContext();
 		AsyncCompute.Open();
 		{
 			D3D12ScopedEvent(AsyncCompute, "Acceleration Structure");
-			AccelerationStructure.Build(AsyncCompute);
+			AsyncCompute.BuildRaytracingAccelerationStructure(&RTScene);
 		}
 		AsyncCompute.Close();
 
 		ASBuildSyncHandle = AsyncCompute.Execute(false);
-
-		AccelerationStructure.PostBuild(ASBuildSyncHandle);
 	}
 
 	Context.GetCommandQueue()->WaitForSyncHandle(ASBuildSyncHandle);
@@ -142,7 +140,7 @@ void PathIntegratorDXR1_1::Render(World* World, WorldRenderView* WorldRenderView
 					 Context.SetPipelineState(&PathTracePSO);
 					 Context.SetComputeRootSignature(&PathTraceRS);
 					 Context.SetComputeConstantBuffer(0, sizeof(GlobalConstants), &g_GlobalConstants);
-					 Context.SetComputeRaytracingAccelerationStructure(1, AccelerationStructure.GetShaderResourceView());
+					 Context.SetComputeRaytracingAccelerationStructure(1, &RTScene);
 					 Context->SetComputeRootShaderResourceView(2, WorldRenderView->Materials.GetGpuVirtualAddress());
 					 Context->SetComputeRootShaderResourceView(3, WorldRenderView->Lights.GetGpuVirtualAddress());
 					 Context->SetComputeRootShaderResourceView(4, WorldRenderView->Meshes.GetGpuVirtualAddress());

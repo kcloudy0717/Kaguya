@@ -3,36 +3,6 @@
 
 namespace RHI
 {
-	auto RenderGraphRegistry::CreateRootSignature(D3D12RootSignature&& RootSignature) -> RgResourceHandle
-	{
-		return RootSignatureRegistry.Add(std::forward<D3D12RootSignature>(RootSignature));
-	}
-
-	auto RenderGraphRegistry::CreatePipelineState(D3D12PipelineState&& PipelineState) -> RgResourceHandle
-	{
-		return PipelineStateRegistry.Add(std::forward<D3D12PipelineState>(PipelineState));
-	}
-
-	auto RenderGraphRegistry::CreateRaytracingPipelineState(D3D12RaytracingPipelineState&& RaytracingPipelineState) -> RgResourceHandle
-	{
-		return RaytracingPipelineStateRegistry.Add(std::forward<D3D12RaytracingPipelineState>(RaytracingPipelineState));
-	}
-
-	D3D12RootSignature* RenderGraphRegistry::GetRootSignature(RgResourceHandle Handle)
-	{
-		return RootSignatureRegistry.GetResource(Handle);
-	}
-
-	D3D12PipelineState* RenderGraphRegistry::GetPipelineState(RgResourceHandle Handle)
-	{
-		return PipelineStateRegistry.GetResource(Handle);
-	}
-
-	D3D12RaytracingPipelineState* RenderGraphRegistry::GetRaytracingPipelineState(RgResourceHandle Handle)
-	{
-		return RaytracingPipelineStateRegistry.GetResource(Handle);
-	}
-
 	template<typename T>
 	bool ClearCache(bool ShouldClear, T& Cache, size_t NewSize)
 	{

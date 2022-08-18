@@ -1,6 +1,5 @@
 #pragma once
 #include "Renderer.h"
-#include "RaytracingAccelerationStructure.h"
 #include "PostProcess.h"
 
 struct PathIntegratorSettings
@@ -28,7 +27,7 @@ private:
 	void Render(World* World, WorldRenderView* WorldRenderView, RHI::D3D12CommandContext& Context) override;
 
 private:
-	RaytracingAccelerationStructure AccelerationStructure;
+	RHI::D3D12RaytracingAccelerationStructure RTScene;
 
 	// Temporal accumulation
 	UINT NumTemporalSamples = 0;

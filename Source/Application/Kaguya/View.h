@@ -1,7 +1,6 @@
 #pragma once
 #include <RHI/RHI.h>
 #include <Core/World/World.h>
-#include "RaytracingAccelerationStructure.h"
 
 namespace Hlsl
 {
@@ -222,7 +221,7 @@ struct WorldRenderView
 	{
 	}
 
-	void Update(World* World, /*Optional*/ RaytracingAccelerationStructure* RaytracingAccelerationStructure)
+	void Update(World* World, /*Optional*/ RHI::D3D12RaytracingAccelerationStructure* RaytracingAccelerationStructure)
 	{
 		NumMaterials = NumLights = NumMeshes = 0;
 		if (RaytracingAccelerationStructure)
@@ -270,7 +269,11 @@ struct WorldRenderView
 					pMeshes[NumMeshes]		= Mesh;
 					if (RaytracingAccelerationStructure)
 					{
-						RaytracingAccelerationStructure->AddInstance(Core.Transform, &StaticMesh);
+						RHI::D3D12RaytracingInstance Instance = {};
+						XMStoreFloat3x4(reinterpret_cast<DirectX::XMFLOAT3X4*>(Instance.Transform), Core.Transform.Matrix());
+						Instance.InstanceMask = 0xff;
+						Instance.Geometry	  = &StaticMesh.Mesh->Blas;
+						RaytracingAccelerationStructure->AddInstance(Instance);
 					}
 
 					++NumMaterials;

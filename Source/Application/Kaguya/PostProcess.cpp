@@ -302,17 +302,11 @@ PostProcessOutput PostProcess::Apply(RHI::RenderGraph& Graph, View View, PostPro
 			.Execute(
 				[=, this](RHI::RenderGraphRegistry& Registry, RHI::D3D12CommandContext& Context)
 				{
-					UINT ThreadGroupCountX = View.Width, ThreadGroupCountY = View.Height;
-					Context.CalculateDispatchArgument<8, 8, 1>(&ThreadGroupCountX, &ThreadGroupCountY, nullptr);
-
 					struct Parameters
 					{
 						HlslRWTexture2D Output;
-						Math::Vec2u		DispatchArgument;
 					} Args;
 					Args.Output			  = Registry.Get<RHI::D3D12UnorderedAccessView>(PostProcessOutput.OutputUav);
-					Args.DispatchArgument = { ThreadGroupCountX, ThreadGroupCountY };
-
 					Context.SetPipelineState(&BayerDitherPSO);
 					Context.SetComputeRootSignature(&PostProcessRS);
 					Context.SetComputeConstantBuffer(0, Args);

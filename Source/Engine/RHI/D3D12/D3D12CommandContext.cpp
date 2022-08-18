@@ -6,6 +6,7 @@
 #include "D3D12RootSignature.h"
 #include "D3D12Descriptor.h"
 #include "D3D12Resource.h"
+#include "D3D12Raytracing.h"
 
 namespace RHI
 {
@@ -92,6 +93,19 @@ namespace RHI
 		CommandAllocatorPool.DiscardCommandAllocator(std::exchange(CommandAllocator, nullptr), SyncHandle);
 
 		CpuConstantAllocator.Version(SyncHandle);
+
+		// Set sync handle for AS so they can be compacted
+		if (Cache.Raytracing.AccelerationStructure)
+		{
+			for (const auto& Geometry : Cache.Raytracing.AccelerationStructure->Geometries)
+			{
+				if (Geometry->GetBlasIndex() != UINT64_MAX)
+				{
+					Cache.Raytracing.AccelerationStructure->Manager.SetSyncHandle(Geometry->GetBlasIndex(), SyncHandle);
+				}
+			}
+		}
+
 		return SyncHandle;
 	}
 
@@ -322,25 +336,19 @@ namespace RHI
 	}
 
 	void D3D12CommandContext::SetGraphicsRaytracingAccelerationStructure(
-		UINT					 RootParameterIndex,
-		D3D12ShaderResourceView* AccelerationStructure)
+		UINT								  RootParameterIndex,
+		D3D12RaytracingAccelerationStructure* AccelerationStructure)
 	{
-		if (!AccelerationStructure)
-		{
-			AccelerationStructure = GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
-		}
-		CommandListHandle->SetGraphicsRootDescriptorTable(RootParameterIndex, AccelerationStructure->GetGpuHandle());
+		D3D12ShaderResourceView* SRV = AccelerationStructure && AccelerationStructure->IsValid() ? AccelerationStructure->GetView() : GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
+		CommandListHandle->SetGraphicsRootDescriptorTable(RootParameterIndex, SRV->GetGpuHandle());
 	}
 
 	void D3D12CommandContext::SetComputeRaytracingAccelerationStructure(
-		UINT					 RootParameterIndex,
-		D3D12ShaderResourceView* AccelerationStructure)
+		UINT								  RootParameterIndex,
+		D3D12RaytracingAccelerationStructure* AccelerationStructure)
 	{
-		if (!AccelerationStructure)
-		{
-			AccelerationStructure = GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
-		}
-		CommandListHandle->SetComputeRootDescriptorTable(RootParameterIndex, AccelerationStructure->GetGpuHandle());
+		D3D12ShaderResourceView* SRV = AccelerationStructure && AccelerationStructure->IsValid() ? AccelerationStructure->GetView() : GetParentLinkedDevice()->GetNullRaytracingAcceleraionStructure();
+		CommandListHandle->SetComputeRootDescriptorTable(RootParameterIndex, SRV->GetGpuHandle());
 	}
 
 	void D3D12CommandContext::DrawInstanced(
@@ -419,6 +427,109 @@ namespace RHI
 			Allocation.Resource,
 			Allocation.Offset,
 			sizeof(UINT));
+	}
+
+	void D3D12CommandContext::BuildRaytracingAccelerationStructure(
+		D3D12RaytracingAccelerationStructure* AccelerationStructure)
+	{
+		Cache.Raytracing.AccelerationStructure = AccelerationStructure;
+
+		// BLAS build
+		{
+			bool AnyBlasBuild = false;
+			for (auto Geometry : AccelerationStructure->Geometries)
+			{
+				if (Geometry->BlasValid)
+				{
+					continue;
+				}
+				Geometry->BlasValid = true;
+				AnyBlasBuild |= Geometry->BlasValid;
+
+				D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = Geometry->GetInputsDesc();
+				Geometry->BlasIndex											= AccelerationStructure->Manager.Build(CommandListHandle.GetGraphicsCommandList4(), Inputs);
+			}
+
+			if (AnyBlasBuild)
+			{
+				UAVBarrier(nullptr);
+				FlushResourceBarriers();
+				AccelerationStructure->Manager.Copy(CommandListHandle.GetGraphicsCommandList4());
+			}
+
+			// Compaction
+			for (auto Geometry : AccelerationStructure->Geometries)
+			{
+				AccelerationStructure->Manager.Compact(CommandListHandle.GetGraphicsCommandList4(), Geometry->BlasIndex);
+			}
+
+			// Update acceleration structure address (in the case if it got compacted)
+			for (auto Geometry : AccelerationStructure->Geometries)
+			{
+				Geometry->AccelerationStructure = AccelerationStructure->Manager.GetAddress(Geometry->BlasIndex);
+			}
+		}
+
+		// Setup TLAS
+		{
+			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {
+				.Type	  = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+				.Flags	  = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD,
+				.NumDescs = static_cast<UINT>(AccelerationStructure->Instances.size()),
+			};
+
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO PrebuildInfo = {};
+			GetParentLinkedDevice()->GetDevice5()->GetRaytracingAccelerationStructurePrebuildInfo(&Inputs, &PrebuildInfo);
+
+			UINT64 ScratchSizeInBytes  = D3D12RHIUtils::AlignUp<UINT64>(PrebuildInfo.ScratchDataSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+			UINT64 ResultSizeInBytes   = D3D12RHIUtils::AlignUp<UINT64>(PrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
+			UINT64 InstanceSizeInBytes = AccelerationStructure->Instances.size() * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+
+			// Create the buffers
+			if (!AccelerationStructure->Scratch || AccelerationStructure->Scratch.GetDesc().Width < ScratchSizeInBytes)
+			{
+				AccelerationStructure->Scratch = D3D12Buffer(GetParentLinkedDevice(), ScratchSizeInBytes, 0, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+			}
+			if (!AccelerationStructure->Result || AccelerationStructure->Result.GetDesc().Width < ResultSizeInBytes)
+			{
+				AccelerationStructure->Result = D3D12ASBuffer(GetParentLinkedDevice(), ResultSizeInBytes);
+				AccelerationStructure->SRV	  = D3D12ShaderResourceView(GetParentLinkedDevice(), &AccelerationStructure->Result);
+			}
+			if (!AccelerationStructure->InstanceDescsBuffer || AccelerationStructure->InstanceDescsBuffer.GetDesc().Width < InstanceSizeInBytes)
+			{
+				AccelerationStructure->InstanceDescsBuffer = D3D12Buffer(GetParentLinkedDevice(), InstanceSizeInBytes, sizeof(D3D12_RAYTRACING_INSTANCE_DESC), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE);
+			}
+
+			// Updated AS address
+			for (size_t i = 0, size = AccelerationStructure->RaytracingInstanceDescs.size(); i < size; ++i)
+			{
+				AccelerationStructure->RaytracingInstanceDescs[i].AccelerationStructure = AccelerationStructure->Instances[i].Geometry->AccelerationStructure;
+			}
+
+			auto Dst = AccelerationStructure->InstanceDescsBuffer.GetCpuVirtualAddress<D3D12_RAYTRACING_INSTANCE_DESC>();
+			std::memcpy(Dst, AccelerationStructure->RaytracingInstanceDescs.data(), InstanceSizeInBytes);
+		}
+
+		// TLAS build
+		{
+			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs = {
+				.Type		   = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+				.Flags		   = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD,
+				.NumDescs	   = static_cast<UINT>(AccelerationStructure->Instances.size()),
+				.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY,
+				.InstanceDescs = AccelerationStructure->InstanceDescsBuffer.GetGpuVirtualAddress()
+			};
+
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {
+				.DestAccelerationStructureData	  = AccelerationStructure->Result.GetGpuVirtualAddress(),
+				.Inputs							  = Inputs,
+				.SourceAccelerationStructureData  = NULL,
+				.ScratchAccelerationStructureData = AccelerationStructure->Scratch.GetGpuVirtualAddress()
+			};
+			CommandListHandle.GetGraphicsCommandList6()->BuildRaytracingAccelerationStructure(&Desc, 0, nullptr);
+			UAVBarrier(nullptr);
+			FlushResourceBarriers();
+		}
 	}
 
 	template<RHI_PIPELINE_STATE_TYPE PsoType>

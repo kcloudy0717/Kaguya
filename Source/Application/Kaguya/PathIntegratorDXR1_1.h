@@ -16,7 +16,7 @@ private:
 	void ResetAccumulation();
 
 private:
-	RaytracingAccelerationStructure AccelerationStructure;
+	RHI::D3D12RaytracingAccelerationStructure RTScene;
 
 	// Temporal accumulation
 	UINT NumTemporalSamples = 0;

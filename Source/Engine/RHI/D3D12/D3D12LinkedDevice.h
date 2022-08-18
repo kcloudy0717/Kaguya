@@ -1,5 +1,5 @@
 #pragma once
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12Profiler.h"
 #include "D3D12CommandContext.h"
@@ -48,9 +48,6 @@ namespace RHI
 		void OnBeginFrame();
 		void OnEndFrame();
 
-		[[nodiscard]] D3D12_RESOURCE_ALLOCATION_INFO GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const;
-		[[nodiscard]] bool							 ResourceSupport4KiBAlignment(D3D12_RESOURCE_DESC* Desc) const;
-
 		void WaitIdle();
 
 		void			BeginResourceUpload();
@@ -81,12 +78,6 @@ namespace RHI
 		D3D12CommandContext ComputeContext;
 		D3D12CommandContext CopyContext;
 		D3D12CommandContext UploadContext;
-
-		struct ResourceAllocationInfoTable
-		{
-			RwLock													Mutex;
-			std::unordered_map<u64, D3D12_RESOURCE_ALLOCATION_INFO> Table;
-		} mutable ResourceAllocationInfoTable;
 
 		D3D12SyncHandle					 UploadSyncHandle;
 		std::vector<Arc<ID3D12Resource>> TrackedResources;

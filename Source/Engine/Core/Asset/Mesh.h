@@ -33,8 +33,6 @@ namespace Asset
 
 		void Release();
 
-		void ResetRaytracingInfo();
-
 		void SetVertices(std::vector<Vertex>&& Vertices);
 		void SetIndices(std::vector<u32>&& Indices);
 		void SetMeshlets(std::vector<DirectX::Meshlet>&& Meshlets);
@@ -65,10 +63,6 @@ namespace Asset
 		RHI::D3D12Buffer			 UniqueVertexIndexResource;
 		RHI::D3D12Buffer			 PrimitiveIndexResource;
 		RHI::D3D12RaytracingGeometry Blas;
-		D3D12_GPU_VIRTUAL_ADDRESS	 AccelerationStructure = {}; // Managed by D3D12RaytracingManager
-		u64							 BlasIndex			   = UINT64_MAX;
-		bool						 BlasValid			   = false;
-		bool						 BlasCompacted		   = false;
 
 		RHI::D3D12ShaderResourceView VertexView;
 		RHI::D3D12ShaderResourceView IndexView;

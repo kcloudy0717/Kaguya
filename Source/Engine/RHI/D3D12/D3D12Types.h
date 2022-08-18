@@ -1,7 +1,7 @@
 #pragma once
 #include <queue>
 #include "D3D12RHI.h"
-#include "RHICore.h"
+#include "RHITypes.h"
 #include "System/System.h"
 #include "Arc.h"
 

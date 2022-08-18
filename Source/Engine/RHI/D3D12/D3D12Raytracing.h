@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
 #include <queue>
-#include "D3D12Core.h"
+#include <unordered_set>
+#include "D3D12Types.h"
 #include "D3D12Resource.h"
+#include "D3D12Descriptor.h"
 
 namespace RHI
 {
@@ -18,6 +20,13 @@ namespace RHI
 		auto begin() noexcept { return RaytracingGeometryDescs.begin(); }
 		auto end() noexcept { return RaytracingGeometryDescs.end(); }
 
+		void ResetRaytracingInfo()
+		{
+			BlasIndex	  = UINT64_MAX;
+			BlasValid	  = false;
+			BlasCompacted = false;
+		}
+
 		[[nodiscard]] UINT Size() const noexcept { return static_cast<UINT>(RaytracingGeometryDescs.size()); }
 
 		[[nodiscard]] D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS GetInputsDesc() const
@@ -32,49 +41,21 @@ namespace RHI
 			return Desc;
 		}
 
+		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetAddress() const noexcept { return AccelerationStructure; }
+		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetVertexBufferAt(size_t GeometryIndex) const noexcept { return RaytracingGeometryDescs[GeometryIndex].Triangles.VertexBuffer.StartAddress; }
+		[[nodiscard]] D3D12_GPU_VIRTUAL_ADDRESS GetIndexBufferAt(size_t GeometryIndex) const noexcept { return RaytracingGeometryDescs[GeometryIndex].Triangles.IndexBuffer; }
+		[[nodiscard]] UINT64					GetBlasIndex() const noexcept { return BlasIndex; }
+
 		void AddGeometry(const D3D12_RAYTRACING_GEOMETRY_DESC& Desc);
 
 	private:
+		friend class D3D12CommandContext;
+
 		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> RaytracingGeometryDescs;
-	};
-
-	// https://developer.nvidia.com/blog/rtx-best-practices/
-	// We should rebuild the TLAS rather than update, It's just easier to manage in most circumstances, and the cost savings
-	// to refit likely aren't worth sacrificing quality of TLAS.
-	class D3D12RaytracingScene
-	{
-	public:
-		D3D12RaytracingScene() noexcept = default;
-		explicit D3D12RaytracingScene(size_t Size)
-		{
-			RaytracingInstanceDescs.reserve(Size);
-		}
-
-		[[nodiscard]] auto begin() noexcept { return RaytracingInstanceDescs.begin(); }
-		[[nodiscard]] auto end() noexcept { return RaytracingInstanceDescs.end(); }
-
-		[[nodiscard]] auto begin() const noexcept { return RaytracingInstanceDescs.begin(); }
-		[[nodiscard]] auto end() const noexcept { return RaytracingInstanceDescs.end(); }
-
-		[[nodiscard]] size_t size() const noexcept { return RaytracingInstanceDescs.size(); }
-		[[nodiscard]] bool	 empty() const noexcept { return RaytracingInstanceDescs.empty(); }
-
-		void Reset() noexcept;
-
-		void AddInstance(const D3D12_RAYTRACING_INSTANCE_DESC& Desc);
-
-		void ComputeMemoryRequirements(ID3D12Device5* Device, UINT64* pScratchSizeInBytes, UINT64* pResultSizeInBytes);
-
-		void Generate(
-			ID3D12GraphicsCommandList4* CommandList,
-			ID3D12Resource*				Scratch,
-			ID3D12Resource*				Result,
-			D3D12_GPU_VIRTUAL_ADDRESS	InstanceDescs);
-
-	private:
-		std::vector<D3D12_RAYTRACING_INSTANCE_DESC> RaytracingInstanceDescs;
-		UINT64										ScratchSizeInBytes = 0;
-		UINT64										ResultSizeInBytes  = 0;
+		D3D12_GPU_VIRTUAL_ADDRESS					AccelerationStructure = {}; // Managed by D3D12RaytracingManager
+		UINT64										BlasIndex			  = UINT64_MAX;
+		bool										BlasValid			  = false;
+		bool										BlasCompacted		  = false;
 	};
 
 	// https://github.com/NVIDIAGameWorks/RTXMU, RTXMU is licensed under the MIT License.
@@ -221,8 +202,6 @@ namespace RHI
 	// MissShaderRecordAddress = D3D12_DISPATCH_RAYS_DESC.MissShaderTable.StartAddress +
 	// D3D12_DISPATCH_RAYS_DESC.MissShaderTable.StrideInBytes * MissShaderIndex
 	//
-
-	//
 	// ========== Hit group table indexing ==========
 	// HitGroupRecordAddress = D3D12_DISPATCH_RAYS_DESC.HitGroupTable.StartAddress +
 	// D3D12_DISPATCH_RAYS_DESC.HitGroupTable.StrideInBytes * HitGroupEntryIndex
@@ -233,7 +212,6 @@ namespace RHI
 	//
 	//	GeometryContributionToHitGroupIndex is a system generated index of geometry in BLAS (0,1,2,3..)
 	//
-
 	// This blog post by Will Usher is incredibly useful for calculating sbt in various graphics APIs
 	// https://www.willusher.io/graphics/2019/11/20/the-sbt-three-ways
 
@@ -395,5 +373,60 @@ namespace RHI
 
 		D3D12Buffer				SBTBuffer, SBTUploadBuffer;
 		std::unique_ptr<BYTE[]> CpuData;
+	};
+
+	// https://developer.nvidia.com/blog/rtx-best-practices/
+	// We should rebuild the TLAS rather than update, It's just easier to manage in most circumstances, and the cost savings
+	// to refit likely aren't worth sacrificing quality of TLAS.
+	struct D3D12RaytracingInstance
+	{
+		float					 Transform[3][4];
+		UINT					 InstanceMask;
+		D3D12RaytracingGeometry* Geometry;
+	};
+
+	class D3D12RaytracingAccelerationStructure : public D3D12LinkedDeviceChild
+	{
+	public:
+		D3D12RaytracingAccelerationStructure() noexcept = default;
+		D3D12RaytracingAccelerationStructure(D3D12LinkedDevice* Parent)
+			: D3D12LinkedDeviceChild(Parent)
+			, Manager(Parent, 6ull * 1024ull * 1024ull)
+		{
+		}
+		[[nodiscard]] auto							 begin() noexcept { return Instances.begin(); }
+		[[nodiscard]] auto							 end() noexcept { return Instances.end(); }
+		[[nodiscard]] auto							 begin() const noexcept { return Instances.begin(); }
+		[[nodiscard]] auto							 end() const noexcept { return Instances.end(); }
+		[[nodiscard]] size_t						 size() const noexcept { return Instances.size(); }
+		[[nodiscard]] bool							 empty() const noexcept { return Instances.empty(); }
+		[[nodiscard]] D3D12RaytracingInstance&		 operator[](size_t Index) noexcept { return Instances[Index]; }
+		[[nodiscard]] const D3D12RaytracingInstance& operator[](size_t Index) const noexcept { return Instances[Index]; }
+
+		[[nodiscard]] bool					   IsValid() const noexcept { return !Instances.empty(); }
+		[[nodiscard]] D3D12ShaderResourceView* GetView() noexcept { return &SRV; }
+
+		void SetNumHitGroups(UINT NumHitGroups) { this->NumHitGroups = NumHitGroups; }
+
+		void Reset() noexcept;
+
+		void AddInstance(const D3D12RaytracingInstance& Instance);
+
+	private:
+		friend class D3D12CommandContext;
+
+		D3D12RaytracingManager Manager;
+
+		std::vector<D3D12_RAYTRACING_INSTANCE_DESC>	 RaytracingInstanceDescs;
+		std::vector<D3D12RaytracingInstance>		 Instances;
+		std::unordered_set<D3D12RaytracingGeometry*> Geometries;
+		D3D12Buffer									 Scratch;
+		D3D12ASBuffer								 Result;
+		D3D12Buffer									 InstanceDescsBuffer;
+		D3D12ShaderResourceView						 SRV;
+
+		UINT NumHitGroups								= 1;
+		UINT CurrentInstanceID							= 0;
+		UINT CurrentInstanceContributionToHitGroupIndex = 0;
 	};
 } // namespace RHI

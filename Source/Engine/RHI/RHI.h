@@ -1,5 +1,5 @@
 #pragma once
-#include "D3D12/D3D12Core.h"
+#include "D3D12/D3D12Types.h"
 #include "D3D12/D3D12Device.h"
 #include "D3D12/D3D12LinkedDevice.h"
 #include "D3D12/D3D12Profiler.h"

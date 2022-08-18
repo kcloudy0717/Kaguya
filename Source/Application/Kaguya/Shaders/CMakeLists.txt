@@ -7,7 +7,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${inc})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${src})
 set_source_files_properties(${src} PROPERTIES VS_TOOL_OVERRIDE None)
 
-add_custom_target(KaguyaShaders ALL SOURCES ${inc} ${src})
+add_custom_target(KaguyaShaders ALL SOURCES ${inc} ${src} DEPENDS ${inc} ${src})
 add_custom_command(
 	TARGET KaguyaShaders
 	COMMAND ${CMAKE_COMMAND}

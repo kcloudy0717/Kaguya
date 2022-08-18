@@ -236,10 +236,6 @@ ShaderCompilationResult ShaderCompiler::Compile(
 	{
 		Arc<IDxcBlobUtf16> Name;
 		VERIFY_DXC_API(DxcResult->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&Result.Pdb), &Name));
-		if (Name)
-		{
-			Result.PdbName = Name->GetStringPointer();
-		}
 
 		// Save pdb
 		FileStream	 Stream = File::Create(PdbPath);

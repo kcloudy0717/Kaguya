@@ -34,14 +34,6 @@ namespace Asset
 		decltype(PrimitiveIndices)().swap(PrimitiveIndices);
 	}
 
-	void Mesh::ResetRaytracingInfo()
-	{
-		AccelerationStructure = {};
-		BlasIndex			  = UINT64_MAX;
-		BlasValid			  = false;
-		BlasCompacted		  = false;
-	}
-
 	void Mesh::SetVertices(std::vector<Vertex>&& Vertices)
 	{
 		this->Vertices = std::move(Vertices);

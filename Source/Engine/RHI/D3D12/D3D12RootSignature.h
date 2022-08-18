@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <bitset>
-#include "D3D12Core.h"
+#include "D3D12Types.h"
 
 namespace RHI
 {

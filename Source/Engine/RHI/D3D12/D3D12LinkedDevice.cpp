@@ -63,11 +63,10 @@ namespace RHI
 	{
 		switch (Type)
 		{
-			using enum RHID3D12CommandQueueType;
-		case Direct: return &GraphicsQueue;
-		case AsyncCompute: return &AsyncComputeQueue;
-		case Copy: return &CopyQueue;
-		case Upload: return &UploadQueue;
+		case RHID3D12CommandQueueType::Direct: return &GraphicsQueue;
+		case RHID3D12CommandQueueType::AsyncCompute: return &AsyncComputeQueue;
+		case RHID3D12CommandQueueType::Copy: return &CopyQueue;
+		case RHID3D12CommandQueueType::Upload: return &UploadQueue;
 		}
 		return nullptr;
 	}
@@ -81,55 +80,6 @@ namespace RHI
 	{
 		Profiler.OnEndFrame();
 		DeferredDeleteDescriptorQueue.Clean();
-	}
-
-	D3D12_RESOURCE_ALLOCATION_INFO D3D12LinkedDevice::GetResourceAllocationInfo(const D3D12_RESOURCE_DESC& Desc) const
-	{
-		const u64 Hash = Hash::Hash64(&Desc, sizeof(Desc));
-		{
-			RwLockReadGuard Guard(ResourceAllocationInfoTable.Mutex);
-			if (auto Iter = ResourceAllocationInfoTable.Table.find(Hash);
-				Iter != ResourceAllocationInfoTable.Table.end())
-			{
-				return Iter->second;
-			}
-		}
-
-		RwLockWriteGuard Guard(ResourceAllocationInfoTable.Mutex);
-
-		const D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetDevice()->GetResourceAllocationInfo(NodeMask, 1, &Desc);
-		ResourceAllocationInfoTable.Table.insert(std::make_pair(Hash, ResourceAllocationInfo));
-
-		return ResourceAllocationInfo;
-	}
-
-	bool D3D12LinkedDevice::ResourceSupport4KiBAlignment(D3D12_RESOURCE_DESC* Desc) const
-	{
-		// 4KiB alignment is only available for read only textures
-		if (!(Desc->Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET ||
-			  Desc->Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL ||
-			  Desc->Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) &&
-			Desc->SampleDesc.Count == 1)
-		{
-			// Since we are using small resources we can take advantage of 4KiB
-			// resource alignments. As long as the most detailed mip can fit in an
-			// allocation less than 64KiB, 4KiB alignments can be used.
-			//
-			// When dealing with MSAA textures the rules are similar, but the minimum
-			// alignment is 64KiB for a texture whose most detailed mip can fit in an
-			// allocation less than 4MiB.
-			Desc->Alignment										  = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
-			D3D12_RESOURCE_ALLOCATION_INFO ResourceAllocationInfo = GetResourceAllocationInfo(*Desc);
-			if (ResourceAllocationInfo.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
-			{
-				// If the alignment requested is not granted, then let D3D tell us
-				// the alignment that needs to be used for these resources.
-				Desc->Alignment = 0;
-				return false;
-			}
-			return true;
-		}
-		return false;
 	}
 
 	void D3D12LinkedDevice::WaitIdle()

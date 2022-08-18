@@ -1,4 +1,4 @@
-#include "RHICore.h"
+#include "RHITypes.h"
 
 DEFINE_LOG_CATEGORY(RHI);
 
