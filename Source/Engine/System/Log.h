@@ -67,14 +67,14 @@ private:
 	template<typename... TArgs>
 	void DispatchMessage(LogLevel Level, std::string_view Message, TArgs&&... Args)
 	{
-		std::string Buffer = std::vformat(Message, std::make_format_args(std::forward<TArgs>(Args)...));
+		std::string Buffer = std::vformat(Message, std::make_format_args(Args...));
 		Write(Level, LogMessage{ .Payload = std::string_view(Buffer.data(), Buffer.size()) });
 	}
 
 	template<typename... TArgs>
 	void DispatchMessage(LogLevel Level, std::wstring_view Message, TArgs&&... Args)
 	{
-		std::wstring WideBuffer = std::vformat(Message, std::make_wformat_args(std::forward<TArgs>(Args)...));
+		std::wstring WideBuffer = std::vformat(Message, std::make_wformat_args(Args...));
 		std::string	 Buffer;
 		Platform::WideToUtf8(WideBuffer, Buffer);
 		Write(Level, LogMessage{ .Payload = std::string_view(Buffer.data(), Buffer.size()) });

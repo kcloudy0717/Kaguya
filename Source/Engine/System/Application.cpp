@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "IApplicationMessageHandler.h"
 #include "Platform.h"
+#include <bit>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <ShObjIdl.h>
